@@ -52,13 +52,48 @@ All routes prefixed with `/api`:
 - `POST /writing/generate` — Generate paper with citations
 - `POST /writing/outline` — Generate outline
 - `POST /revision/submit` — AI paper revision
-- `POST /plagiarism/check` — AI & plagiarism detection
+- `POST /plagiarism/check` — AI & plagiarism detection (real cosine similarity + lexical diversity)
 - `POST /plagiarism/humanize` — Humanize AI text
+- `POST /plagiarism/code` — Code similarity via Winnowing algorithm (MOSS approach)
 - `GET /stem/subjects` — Available STEM subjects
 - `POST /stem/solve` — Step-by-step STEM solution
+- `GET /stem/papers` — Semantic Scholar paper search
+- `POST /stem/papers/recommend` — Paper recommendations
+- `GET /stem/biomodels` — EBI BioModels search (bio/chem)
+- `POST /stem/molecule` — PubChem molecule lookup (chemistry)
 - `GET /study/sessions` — List study sessions
 - `GET /study/sessions/:id/messages` — Session messages
 - `POST /study/ask` — Ask study assistant
+
+## Integrated GitHub Repos (5 total)
+
+### Repo 1: awesome-ai-for-science
+- Source: `stemResources.ts` — 200+ AI tools mapped by subject (Math, Physics, Chemistry, Biology, Engineering, CS, Stats)
+- Semantic Scholar integration: `/stem/papers` endpoint for real research paper search
+
+### Repo 2: AIAgents4Pharmabio
+- EBI BioModels search: `/stem/biomodels` (biology/chemistry subjects only)
+- Semantic Scholar paper recommendations: `/stem/papers/recommend`
+- Biology AI resources: Talk2BioModels, Talk2Scholars, Talk2KnowledgeGraphs, Talk2Cells
+
+### Repo 3: chemcrow-public
+- PubChem molecule lookup: `/stem/molecule` — mirrors ChemCrow Name2SMILES/Mol2CAS/SMILES2Weight toolchain
+- Molecule Lookup tab in StemSolver (chemistry only): SMILES, CAS, MW, formula, LogP, H-bond data, TPSA, GHS safety classification
+- Chemistry resource panel: ChemCrow tool suite (18 tools), IBM RXN4Chemistry, ChemSpace
+
+### Repo 4: copydetectcode
+- Winnowing algorithm ported to TypeScript: `lib/winnow.ts`
+- Code Similarity tab in AI & Plagiarism page: side-by-side code comparison with matched region highlighting
+- Real structural similarity detection (works even with renamed variables)
+- Algorithm: k-gram hashing + sliding window fingerprint selection (Stanford MOSS approach)
+- Attribution: Aiken et al. SIGMOD 2003
+
+### Repo 5: Plagiarism-Checker-and-AI-Text-Detection
+- Cosine similarity plagiarism detection: TF vector dot products against academic corpus
+- Lexical diversity AI detection: unique-word ratio heuristic (AI text → lower diversity)
+- `lib/textAnalysis.ts`: `analyseTextPlagiarism()` + `analyseAIContent()`
+- `lib/academicCorpus.ts`: 12 academic reference sources (AI/ML, research methods, climate science, biology, economics, psychology, mathematics, etc.)
+- UI enhancements: Writing Metrics card (lexical diversity + avg sentence length), AI flags, corpus matched words
 
 ## Key Commands
 

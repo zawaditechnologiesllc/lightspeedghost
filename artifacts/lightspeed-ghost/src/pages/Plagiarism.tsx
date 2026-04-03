@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useCheckPlagiarism, useHumanizeText, compareCode } from "@workspace/api-client-react";
 import type { PlagiarismResult, CodeCompareResult } from "@workspace/api-client-react";
-import { Loader2, ShieldCheck, ShieldAlert, Zap, AlertTriangle, Code2, FileText, ExternalLink } from "lucide-react";
+import { Loader2, ShieldCheck, ShieldAlert, Zap, AlertTriangle, Code2, FileText, ExternalLink, Info } from "lucide-react";
 
 type PageTab = "text" | "code";
 
@@ -144,6 +144,67 @@ export default function Plagiarism() {
                   <ScoreCard label="Plagiarism" score={result.plagiarismScore} color="red" />
                 </div>
 
+                {(result.lexicalDiversity !== undefined || result.avgSentenceLength !== undefined) && (
+                  <div className="bg-card border border-border rounded-xl p-4">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <Info size={13} className="text-muted-foreground" />
+                      <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">Writing Metrics</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {result.lexicalDiversity !== undefined && (
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Lexical Diversity</div>
+                          <div className="text-lg font-bold mt-0.5">{result.lexicalDiversity}%</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            {result.lexicalDiversity >= 60 ? "High — varied vocabulary" : result.lexicalDiversity >= 45 ? "Medium — some repetition" : "Low — repetitive (AI indicator)"}
+                          </div>
+                          <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${result.lexicalDiversity >= 60 ? "bg-green-500" : result.lexicalDiversity >= 45 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${result.lexicalDiversity}%` }} />
+                          </div>
+                        </div>
+                      )}
+                      {result.avgSentenceLength !== undefined && (
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Avg Sentence Length</div>
+                          <div className="text-lg font-bold mt-0.5">{result.avgSentenceLength} words</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            {result.avgSentenceLength <= 20 ? "Natural — human-length sentences" : result.avgSentenceLength <= 28 ? "Moderate — slightly long" : "Long — AI indicator"}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {result.aiFlags && result.aiFlags.length > 0 && (
+                      <div className="mt-3 space-y-1">
+                        {result.aiFlags.map((flag, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-[11px] text-yellow-700 dark:text-yellow-400">
+                            <AlertTriangle size={10} />
+                            {flag}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground mt-3 border-t border-border pt-2">
+                      AI detection via lexical diversity · Method from <a href="https://github.com/Churanta/Plagiarism-Checker-and-AI-Text-Detection" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-0.5">Plagiarism-Checker-and-AI-Text-Detection <ExternalLink size={8} /></a>
+                    </p>
+                  </div>
+                )}
+
+                {result.matchedWords && result.matchedWords.length > 0 && (
+                  <div className="bg-card border border-border rounded-xl p-4">
+                    <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-2.5">Words Matched in Academic Corpus</h3>
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                      {result.matchedWords.slice(0, 60).map((word) => (
+                        <span key={word} className="text-[11px] px-2 py-0.5 bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 rounded font-medium">
+                          {word}
+                        </span>
+                      ))}
+                      {result.matchedWords.length > 60 && (
+                        <span className="text-[11px] text-muted-foreground px-1">+{result.matchedWords.length - 60} more</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {result.aiSections.length > 0 && (
                   <div className="bg-card border border-border rounded-xl p-5">
                     <h3 className="font-semibold text-sm mb-3">Detected AI Sections</h3>
@@ -162,17 +223,17 @@ export default function Plagiarism() {
 
                 {result.plagiarismSources.length > 0 && (
                   <div className="bg-card border border-border rounded-xl p-5">
-                    <h3 className="font-semibold text-sm mb-3">Plagiarism Sources</h3>
+                    <h3 className="font-semibold text-sm mb-3">Corpus Matches</h3>
                     <div className="space-y-2">
                       {result.plagiarismSources.map((source, i) => (
                         <div key={i} className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900">
                           <div className="flex items-center justify-between mb-1">
-                            <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate flex-1">
-                              {source.url}
+                            <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate flex-1 flex items-center gap-0.5">
+                              {decodeURIComponent(source.url.split("q=")[1] ?? source.url)} <ExternalLink size={9} />
                             </a>
-                            <span className="text-xs font-bold text-red-600 dark:text-red-400 ml-2 shrink-0">{source.similarity}%</span>
+                            <span className="text-xs font-bold text-red-600 dark:text-red-400 ml-2 shrink-0">{source.similarity}% match</span>
                           </div>
-                          <p className="text-xs text-foreground/70 leading-relaxed line-clamp-2">{source.matchedText}</p>
+                          <p className="text-xs text-foreground/70 leading-relaxed line-clamp-1">Shared terms: {source.matchedText}</p>
                         </div>
                       ))}
                     </div>

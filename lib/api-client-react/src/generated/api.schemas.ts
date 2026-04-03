@@ -212,6 +212,14 @@ export interface PlagiarismResult {
   aiSections: PlagiarismResultAiSectionsItem[];
   plagiarismSources: PlagiarismResultPlagiarismSourcesItem[];
   overallRisk: PlagiarismResultOverallRisk;
+  /** Words matched against academic corpus */
+  matchedWords?: string[];
+  /** Lexical diversity percentage (higher = more unique vocabulary) */
+  lexicalDiversity?: number;
+  /** Average sentence length in words */
+  avgSentenceLength?: number;
+  /** Detected AI writing pattern flags */
+  aiFlags?: string[];
 }
 
 export type HumanizeBodyIntensity =

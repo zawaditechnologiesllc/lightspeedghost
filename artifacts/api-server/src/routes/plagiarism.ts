@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { CheckPlagiarismBody, HumanizeTextBody } from "@workspace/api-zod";
-import { compareDocuments, textSimilarityScore } from "../lib/winnow";
+import { compareDocuments } from "../lib/winnow";
+import { analyseTextPlagiarism, analyseAIContent } from "../lib/textAnalysis";
 
 const router = Router();
 
@@ -9,51 +10,58 @@ router.post("/plagiarism/check", async (req, res) => {
     const body = CheckPlagiarismBody.parse(req.body);
     const text = body.text;
 
-    const aiScore = Math.floor(Math.random() * 40) + 30;
+    const plagResult = analyseTextPlagiarism(text);
+    const aiResult = analyseAIContent(text);
 
-    const refTexts = [
-      "Machine learning algorithms are increasingly used in scientific research to identify patterns in large datasets.",
-      "The study of neural networks has advanced significantly in recent years with the advent of deep learning techniques.",
-      "Academic writing requires careful citation of sources and clear argumentation of ideas.",
-    ];
-    const rawSim = Math.max(...refTexts.map((ref) => textSimilarityScore(text, ref, 5)));
-    const plagiarismScore = Math.round(Math.min(rawSim * 1.5 + Math.random() * 5, 100));
+    const { plagiarismScore, matchedWords, sourceMatches } = plagResult;
+    const { aiScore, lexicalDiversity, avgSentenceLength, flags } = aiResult;
 
     const sentenceList = text.split(/(?<=[.!?])\s+/).filter((s) => s.length > 20);
-    const aiSections = sentenceList.slice(0, Math.min(3, sentenceList.length)).map((sentence) => {
-      const startIndex = text.indexOf(sentence);
-      return {
-        text: sentence,
-        score: Math.floor(Math.random() * 40) + 55,
-        startIndex,
-        endIndex: startIndex + sentence.length,
-      };
-    });
+    const aiSections = sentenceList
+      .filter((sentence) => {
+        const lower = sentence.toLowerCase();
+        return (
+          /furthermore|moreover|in conclusion|it is (important|worth|essential)|this (paper|essay|study)|one (important|key|significant)|facilitate|utilize|demonstrate/.test(lower)
+        );
+      })
+      .slice(0, 4)
+      .map((sentence) => {
+        const startIndex = text.indexOf(sentence);
+        const wordCount = sentence.split(/\s+/).length;
+        const sentenceScore = Math.min(
+          60 + (wordCount > 20 ? 15 : 0) + flags.length * 5,
+          95
+        );
+        return { text: sentence, score: sentenceScore, startIndex, endIndex: startIndex + sentence.length };
+      });
 
-    const plagiarismSources =
-      plagiarismScore > 10
-        ? [
-            {
-              url: "https://en.wikipedia.org/wiki/example",
-              similarity: Math.floor(Math.random() * 20) + 10,
-              matchedText: sentenceList[0] ?? text.slice(0, 100),
-            },
-            {
-              url: "https://scholar.google.com/example",
-              similarity: Math.floor(Math.random() * 15) + 5,
-              matchedText: sentenceList[1] ?? text.slice(50, 150),
-            },
-          ]
-        : [];
+    const plagiarismSources = sourceMatches
+      .filter((s) => s.similarity > 5)
+      .slice(0, 3)
+      .map((s) => ({
+        url: `https://scholar.google.com/search?q=${encodeURIComponent(s.label)}`,
+        similarity: s.similarity,
+        matchedText: s.matchedWords.slice(0, 12).join(", "),
+      }));
 
     const overallRisk: "low" | "medium" | "high" =
-      aiScore > 70 || plagiarismScore > 30
+      aiScore > 65 || plagiarismScore > 35
         ? "high"
-        : aiScore > 40 || plagiarismScore > 15
+        : aiScore > 35 || plagiarismScore > 15
           ? "medium"
           : "low";
 
-    res.json({ aiScore, plagiarismScore, aiSections, plagiarismSources, overallRisk });
+    res.json({
+      aiScore,
+      plagiarismScore,
+      aiSections,
+      plagiarismSources,
+      overallRisk,
+      matchedWords,
+      lexicalDiversity: Math.round(lexicalDiversity * 100),
+      avgSentenceLength: Math.round(avgSentenceLength),
+      aiFlags: flags,
+    });
   } catch (err) {
     req.log.error({ err }, "Error checking plagiarism");
     res.status(500).json({ error: "Internal server error" });
