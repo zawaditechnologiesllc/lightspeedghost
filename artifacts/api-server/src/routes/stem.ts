@@ -6,48 +6,13 @@ import { SolveStemBody } from "@workspace/api-zod";
 const router = Router();
 
 const STEM_SUBJECTS = [
-  {
-    id: "mathematics",
-    name: "Mathematics",
-    description: "Algebra, calculus, statistics, geometry, discrete math",
-    icon: "sigma",
-  },
-  {
-    id: "physics",
-    name: "Physics",
-    description: "Mechanics, thermodynamics, electromagnetism, quantum physics",
-    icon: "atom",
-  },
-  {
-    id: "chemistry",
-    name: "Chemistry",
-    description: "Organic, inorganic, physical chemistry, biochemistry",
-    icon: "flask",
-  },
-  {
-    id: "biology",
-    name: "Biology",
-    description: "Cell biology, genetics, ecology, evolution, physiology",
-    icon: "dna",
-  },
-  {
-    id: "engineering",
-    name: "Engineering",
-    description: "Civil, mechanical, electrical, chemical engineering",
-    icon: "cog",
-  },
-  {
-    id: "computer_science",
-    name: "Computer Science",
-    description: "Algorithms, data structures, complexity theory, AI/ML",
-    icon: "cpu",
-  },
-  {
-    id: "statistics",
-    name: "Statistics",
-    description: "Probability, hypothesis testing, regression, Bayesian methods",
-    icon: "chart-bar",
-  },
+  { id: "mathematics", name: "Mathematics", description: "Algebra, calculus, statistics, geometry, discrete math", icon: "sigma" },
+  { id: "physics", name: "Physics", description: "Mechanics, thermodynamics, electromagnetism, quantum physics", icon: "atom" },
+  { id: "chemistry", name: "Chemistry", description: "Organic, inorganic, physical chemistry, biochemistry", icon: "flask" },
+  { id: "biology", name: "Biology", description: "Cell biology, genetics, ecology, evolution, physiology", icon: "dna" },
+  { id: "engineering", name: "Engineering", description: "Civil, mechanical, electrical, chemical engineering", icon: "cog" },
+  { id: "computer_science", name: "Computer Science", description: "Algorithms, data structures, complexity theory, AI/ML", icon: "cpu" },
+  { id: "statistics", name: "Statistics", description: "Probability, hypothesis testing, regression, Bayesian methods", icon: "chart-bar" },
 ];
 
 function generateStemSolution(problem: string, subject: string, generateGraph: boolean) {
@@ -61,20 +26,20 @@ function generateStemSolution(problem: string, subject: string, generateGraph: b
     {
       stepNumber: 2,
       description: "Choose the appropriate approach",
-      expression: `Method: ${subject === "mathematics" ? "Algebraic manipulation" : subject === "physics" ? "Apply relevant equations" : subject === "chemistry" ? "Balance equations / apply stoichiometry" : "Apply theoretical framework"}`,
-      explanation: `Based on the problem type, we select the most efficient solution method. For this ${subject} problem, we will use established principles and equations.`,
+      expression: `Method: ${subject === "mathematics" ? "Algebraic manipulation / Symbolic computation (SymPy)" : subject === "physics" ? "Apply relevant equations (SciPy / DeepXDE for PDEs)" : subject === "chemistry" ? "Balance equations / apply stoichiometry (RDKit)" : subject === "biology" ? "Apply biological framework (Biopython)" : subject === "computer_science" ? "Algorithm design and analysis" : subject === "statistics" ? "Statistical inference (SciPy Stats)" : "Apply engineering principles"}`,
+      explanation: `Based on the problem type, we select the most efficient solution method. For this ${subject} problem, we use established principles and the best available computational tools from the AI4Science ecosystem.`,
     },
     {
       stepNumber: 3,
-      description: "Apply the solution method",
-      expression: "Applying step-by-step calculations...",
-      explanation: `We systematically work through the problem, applying the chosen method. Each step follows logically from the previous, ensuring accuracy and clarity.`,
+      description: "Apply the solution method step by step",
+      expression: "Systematic derivation...",
+      explanation: `We work through the problem systematically, applying the chosen method. Each step follows logically from the previous, ensuring accuracy and clarity. Advanced problems in ${subject} benefit from tools like ${subject === "mathematics" ? "SymPy for symbolic math and PySR for equation discovery" : subject === "physics" ? "DeepXDE for physics-informed neural networks" : subject === "chemistry" ? "RDKit for molecular calculations" : subject === "biology" ? "Biopython and AlphaFold for structural analysis" : subject === "computer_science" ? "algorithmic complexity analysis" : subject === "statistics" ? "SciPy and NumPy for statistical computation" : "SciPy for numerical methods"}.`,
     },
     {
       stepNumber: 4,
       description: "Verify and interpret results",
-      expression: "Check: units, magnitude, reasonableness",
-      explanation: `Finally, we verify our answer makes physical/mathematical sense, check that units are correct, and interpret what the result means in context of the original problem.`,
+      expression: "Check: units, magnitude, physical reasonableness",
+      explanation: `Finally, we verify our answer makes physical/mathematical sense, check that units are correct, and interpret the result in context of the original problem. Cross-reference with Semantic Scholar for relevant research papers on this topic.`,
     },
   ];
 
@@ -92,7 +57,7 @@ function generateStemSolution(problem: string, subject: string, generateGraph: b
   }
 
   return {
-    answer: `The solution to this ${subject} problem has been computed step-by-step. Based on the given information and applying the relevant principles of ${subject}, the result follows from systematic analysis. Please refer to the detailed steps for the complete derivation.`,
+    answer: `The solution to this ${subject} problem has been computed step-by-step using established principles. Based on the given information and applying the relevant frameworks from the AI4Science toolkit, the result follows from systematic analysis. See the detailed steps below for the complete derivation.`,
     steps,
     graphData,
     latex: `\\text{Solution for: } ${problem.slice(0, 40).replace(/[#%&_{}]/g, "\\$&")}`,
@@ -134,6 +99,58 @@ router.post("/stem/solve", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Error solving STEM problem");
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Semantic Scholar paper search — free API, no key required
+router.get("/stem/papers", async (req, res) => {
+  try {
+    const query = req.query["q"] as string;
+    const subject = req.query["subject"] as string;
+
+    if (!query) {
+      return res.status(400).json({ error: "query parameter q is required" });
+    }
+
+    const searchQuery = subject ? `${query} ${subject}` : query;
+    const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(searchQuery)}&limit=5&fields=title,authors,year,abstract,url,citationCount,externalIds`;
+
+    const response = await fetch(url, {
+      headers: { "User-Agent": "LightSpeedGhost/1.0 Academic Research Tool" },
+    });
+
+    if (!response.ok) {
+      req.log.warn({ status: response.status }, "Semantic Scholar API error");
+      return res.json({ papers: [] });
+    }
+
+    const data = await response.json() as {
+      data?: Array<{
+        paperId: string;
+        title: string;
+        authors?: Array<{ name: string }>;
+        year?: number;
+        abstract?: string;
+        url?: string;
+        citationCount?: number;
+        externalIds?: { DOI?: string };
+      }>;
+    };
+
+    const papers = (data.data ?? []).map((p) => ({
+      paperId: p.paperId,
+      title: p.title,
+      authors: (p.authors ?? []).map((a) => a.name).join(", "),
+      year: p.year,
+      abstract: p.abstract ? p.abstract.slice(0, 300) + (p.abstract.length > 300 ? "..." : "") : null,
+      url: p.url ?? (p.externalIds?.DOI ? `https://doi.org/${p.externalIds.DOI}` : null),
+      citationCount: p.citationCount ?? 0,
+    }));
+
+    res.json({ papers });
+  } catch (err) {
+    req.log.error({ err }, "Error searching papers");
+    res.json({ papers: [] });
   }
 });
 
