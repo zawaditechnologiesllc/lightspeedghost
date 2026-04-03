@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Light Speed Ghost"
+version = "1.0.0"
+id = "artifacts/lightspeed-ghost"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18522
+
+[services.development]
+run = "pnpm --filter @workspace/lightspeed-ghost run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/lightspeed-ghost", "run", "build" ]
+publicDir = "artifacts/lightspeed-ghost/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18522"
+BASE_PATH = "/"
