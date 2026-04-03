@@ -388,3 +388,26 @@ export const ListDocumentsType = {
   stem: "stem",
   study: "study",
 } as const;
+
+export interface CodeCompareBody {
+  doc1: string;
+  doc2: string;
+  language?: string;
+  kgramSize?: number;
+  windowSize?: number;
+}
+
+export interface CodeCompareResult {
+  similarity1: number;
+  similarity2: number;
+  overallSimilarity: number;
+  tokenOverlap: number;
+  slices1: Array<[number, number]>;
+  slices2: Array<[number, number]>;
+  highlightedDoc1: string;
+  highlightedDoc2: string;
+  riskLevel: "low" | "medium" | "high";
+  algorithm: string;
+  kgramSize: number;
+  windowSize: number;
+}
