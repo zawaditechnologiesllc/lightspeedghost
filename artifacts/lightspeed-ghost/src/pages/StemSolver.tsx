@@ -45,6 +45,24 @@ interface BioModel {
   url: string;
 }
 
+interface MoleculeData {
+  cid: number;
+  iupacName: string | null;
+  commonName: string | null;
+  casNumber: string | null;
+  smiles: string | null;
+  formula: string | null;
+  molecularWeight: number | null;
+  xLogP: number | null;
+  hBondDonors: number | null;
+  hBondAcceptors: number | null;
+  rotatableBonds: number | null;
+  tpsa: number | null;
+  ghsHazards: string[];
+  pubchemUrl: string;
+  synonyms: string[];
+}
+
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
 async function searchPapers(query: string, subject: string): Promise<Paper[]> {
@@ -79,6 +97,32 @@ async function getPaperRecommendations(paperId: string): Promise<Paper[]> {
   }
 }
 
+async function lookupMolecule(query: string): Promise<MoleculeData | { error: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/stem/molecule?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? "Molecule not found" };
+    return data as MoleculeData;
+  } catch {
+    return { error: "Request failed. Check your connection." };
+  }
+}
+
+const GHS_HAZARD_COLORS: Record<string, string> = {
+  "Flammable": "text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-950/40",
+  "Toxic": "text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/40",
+  "Health Hazard": "text-purple-600 dark:text-purple-400 border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950/40",
+  "Corrosive": "text-yellow-600 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-950/40",
+  "Irritant": "text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40",
+  "Environmental Hazard": "text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/40",
+};
+function ghsColor(hazard: string) {
+  for (const [key, val] of Object.entries(GHS_HAZARD_COLORS)) {
+    if (hazard.toLowerCase().includes(key.toLowerCase())) return val;
+  }
+  return "text-muted-foreground border-border bg-muted";
+}
+
 export default function StemSolver() {
   const [result, setResult] = useState<StemSolution | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
@@ -88,7 +132,11 @@ export default function StemSolver() {
   const [bioModelsLoading, setBioModelsLoading] = useState(false);
   const [recommendingFor, setRecommendingFor] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<Record<string, Paper[]>>({});
-  const [activeTab, setActiveTab] = useState<"solution" | "papers" | "biomodels">("solution");
+  const [moleculeQuery, setMoleculeQuery] = useState("");
+  const [moleculeData, setMoleculeData] = useState<MoleculeData | null>(null);
+  const [moleculeError, setMoleculeError] = useState<string | null>(null);
+  const [moleculeLoading, setMoleculeLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"solution" | "papers" | "biomodels" | "molecule">("solution");
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   const solveStem = useSolveStem();
@@ -136,6 +184,21 @@ export default function StemSolver() {
     const recs = await getPaperRecommendations(paperId);
     setRecommendations((prev) => ({ ...prev, [paperId]: recs }));
     setRecommendingFor(null);
+  };
+
+  const handleMoleculeLookup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!moleculeQuery.trim()) return;
+    setMoleculeLoading(true);
+    setMoleculeData(null);
+    setMoleculeError(null);
+    const result = await lookupMolecule(moleculeQuery.trim());
+    if ("error" in result) {
+      setMoleculeError(result.error);
+    } else {
+      setMoleculeData(result);
+    }
+    setMoleculeLoading(false);
   };
 
   const toggleGroup = (label: string) => {
@@ -323,6 +386,21 @@ export default function StemSolver() {
                       </span>
                     )}
                     {bioModelsLoading && <Loader2 size={11} className="animate-spin" />}
+                  </div>
+                </button>
+              )}
+              {selectedSubject === "chemistry" && (
+                <button
+                  onClick={() => setActiveTab("molecule")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    activeTab === "molecule"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card text-muted-foreground border-border hover:text-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <FlaskConical size={13} />
+                    Molecule Lookup
                   </div>
                 </button>
               )}
@@ -573,7 +651,159 @@ export default function StemSolver() {
             </div>
           )}
 
-          {!result && !papersLoading && (
+          {activeTab === "molecule" && selectedSubject === "chemistry" && (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-border flex items-center gap-2">
+                <FlaskConical size={14} className="text-primary" />
+                <span className="text-sm font-semibold">Molecule Lookup</span>
+                <span className="text-xs text-muted-foreground ml-auto">via PubChem · ChemCrow toolset</span>
+              </div>
+
+              <div className="px-5 py-4">
+                <form onSubmit={handleMoleculeLookup} className="flex gap-2">
+                  <input
+                    value={moleculeQuery}
+                    onChange={(e) => setMoleculeQuery(e.target.value)}
+                    placeholder="Enter molecule name or SMILES (e.g. aspirin, caffeine, CCO)"
+                    className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono"
+                  />
+                  <button
+                    type="submit"
+                    disabled={moleculeLoading || !moleculeQuery.trim()}
+                    className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    {moleculeLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                    Lookup
+                  </button>
+                </form>
+                <p className="text-[11px] text-muted-foreground mt-1.5">
+                  Searches PubChem for SMILES, CAS number, molecular weight, formula, LogP, H-bond data, and GHS safety classification
+                </p>
+              </div>
+
+              {moleculeLoading && (
+                <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground border-t border-border">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="text-sm">Querying PubChem...</span>
+                </div>
+              )}
+
+              {moleculeError && (
+                <div className="px-5 py-4 border-t border-border">
+                  <p className="text-sm text-destructive">{moleculeError}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Try a common name (e.g. "aspirin") or a valid SMILES string (e.g. "CC(=O)Oc1ccccc1C(=O)O")</p>
+                </div>
+              )}
+
+              {moleculeData && !moleculeLoading && (
+                <div className="border-t border-border">
+                  <div className="px-5 py-4 space-y-4">
+                    <div>
+                      <h3 className="text-base font-bold text-foreground">{moleculeData.commonName ?? moleculeData.iupacName ?? `PubChem CID ${moleculeData.cid}`}</h3>
+                      {moleculeData.iupacName && moleculeData.commonName && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{moleculeData.iupacName}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {moleculeData.casNumber && (
+                          <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded font-mono font-medium">CAS {moleculeData.casNumber}</span>
+                        )}
+                        {moleculeData.formula && (
+                          <span className="text-[10px] bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded font-mono font-medium">{moleculeData.formula}</span>
+                        )}
+                        <a href={moleculeData.pubchemUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-0.5">
+                          PubChem CID {moleculeData.cid} <ExternalLink size={9} />
+                        </a>
+                      </div>
+                    </div>
+
+                    {moleculeData.smiles && (
+                      <div>
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1">SMILES</label>
+                        <div className="px-3 py-2 bg-muted rounded-lg font-mono text-xs border border-border break-all select-all">{moleculeData.smiles}</div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {moleculeData.molecularWeight != null && (
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Mol. Weight</div>
+                          <div className="text-sm font-bold mt-0.5">{moleculeData.molecularWeight} g/mol</div>
+                        </div>
+                      )}
+                      {moleculeData.xLogP != null && (
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">XLogP</div>
+                          <div className="text-sm font-bold mt-0.5">{moleculeData.xLogP}</div>
+                        </div>
+                      )}
+                      {moleculeData.hBondDonors != null && (
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">H-Bond Donors</div>
+                          <div className="text-sm font-bold mt-0.5">{moleculeData.hBondDonors}</div>
+                        </div>
+                      )}
+                      {moleculeData.hBondAcceptors != null && (
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">H-Bond Acceptors</div>
+                          <div className="text-sm font-bold mt-0.5">{moleculeData.hBondAcceptors}</div>
+                        </div>
+                      )}
+                      {moleculeData.rotatableBonds != null && (
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Rotatable Bonds</div>
+                          <div className="text-sm font-bold mt-0.5">{moleculeData.rotatableBonds}</div>
+                        </div>
+                      )}
+                      {moleculeData.tpsa != null && (
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">TPSA (Å²)</div>
+                          <div className="text-sm font-bold mt-0.5">{moleculeData.tpsa}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {moleculeData.ghsHazards.length > 0 && (
+                      <div>
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">GHS Safety Classification</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {moleculeData.ghsHazards.map((h) => (
+                            <span key={h} className={`text-[11px] px-2 py-0.5 rounded border font-medium ${ghsColor(h)}`}>{h}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {moleculeData.synonyms.length > 0 && (
+                      <div>
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Known Names</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {moleculeData.synonyms.map((s) => (
+                            <span key={s} className="text-[11px] px-2 py-0.5 bg-muted text-muted-foreground rounded border border-border">{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="px-5 py-2.5 border-t border-border bg-muted/30">
+                    <p className="text-[10px] text-muted-foreground">
+                      Data from <a href="https://pubchem.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">PubChem</a> (NCBI) · Lookup pipeline from <a href="https://github.com/zawaditechnologiesllc/chemcrow-public" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ChemCrow</a> (Name2SMILES, Mol2CAS, SMILES2Weight tools)
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {!moleculeData && !moleculeLoading && !moleculeError && (
+                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground border-t border-border">
+                  <FlaskConical size={32} className="mb-2 opacity-30" />
+                  <p className="text-sm">Enter a molecule name or SMILES to look it up</p>
+                  <p className="text-xs mt-1 text-center max-w-xs">Try: aspirin, caffeine, glucose, ethanol, CC(=O)Oc1ccccc1C(=O)O</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!result && activeTab === "solution" && (
             <div className="bg-card border border-dashed border-border rounded-xl p-10 flex flex-col items-center justify-center text-muted-foreground">
               <FlaskConical size={40} className="mb-3 opacity-30" />
               <p className="text-sm font-medium">Enter a problem and click Solve</p>

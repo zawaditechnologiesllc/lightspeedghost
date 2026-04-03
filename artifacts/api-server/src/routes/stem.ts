@@ -102,6 +102,119 @@ router.post("/stem/solve", async (req, res) => {
   }
 });
 
+// Molecule lookup — PubChem REST API (free, no key required)
+// Mirrors ChemCrow's Query2SMILES, Mol2CAS, SMILES2Weight tools (chemcrow-public)
+router.get("/stem/molecule", async (req, res) => {
+  try {
+    const query = req.query["q"] as string;
+    if (!query) return res.status(400).json({ error: "query parameter q is required" });
+
+    const encoded = encodeURIComponent(query.trim());
+
+    // Step 1: resolve CID from name or SMILES
+    const cidMode = query.match(/^[A-Z0-9@+\-\[\]\(\)\\/#%=.*]{3,}$/i) && query.includes("C")
+      ? "smiles" : "name";
+    const cidUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/${cidMode}/${encoded}/cids/JSON`;
+    const cidRes = await fetch(cidUrl, { headers: { "User-Agent": "LightSpeedGhost/1.0" } });
+
+    if (!cidRes.ok) {
+      // try name fallback if smiles failed
+      if (cidMode === "smiles") {
+        const nameUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encoded}/cids/JSON`;
+        const nameRes = await fetch(nameUrl, { headers: { "User-Agent": "LightSpeedGhost/1.0" } });
+        if (!nameRes.ok) return res.status(404).json({ error: "Molecule not found in PubChem" });
+        const nameData = await nameRes.json() as { IdentifierList?: { CID: number[] } };
+        const cid = nameData.IdentifierList?.CID?.[0];
+        if (!cid) return res.status(404).json({ error: "Molecule not found in PubChem" });
+        return await fetchMoleculeData(cid, res, req);
+      }
+      return res.status(404).json({ error: "Molecule not found in PubChem" });
+    }
+
+    const cidData = await cidRes.json() as { IdentifierList?: { CID: number[] } };
+    const cid = cidData.IdentifierList?.CID?.[0];
+    if (!cid) return res.status(404).json({ error: "Molecule not found in PubChem" });
+
+    return await fetchMoleculeData(cid, res, req);
+  } catch (err) {
+    req.log.error({ err }, "Error in molecule lookup");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+async function fetchMoleculeData(cid: number, res: any, req: any) {
+  try {
+    // Fetch properties — same fields ChemCrow uses in pubchem_query2smiles + SMILES2Weight
+    const propUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/property/IsomericSMILES,MolecularFormula,MolecularWeight,IUPACName,XLogP,HBondDonorCount,HBondAcceptorCount,RotatableBondCount,TPSA/JSON`;
+    const synUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/synonyms/JSON`;
+
+    const [propRes, synRes] = await Promise.all([
+      fetch(propUrl, { headers: { "User-Agent": "LightSpeedGhost/1.0" } }),
+      fetch(synUrl, { headers: { "User-Agent": "LightSpeedGhost/1.0" } }),
+    ]);
+
+    const propData = await propRes.json() as {
+      PropertyTable?: { Properties: Array<{
+        CID: number; IsomericSMILES?: string; MolecularFormula?: string;
+        MolecularWeight?: number; IUPACName?: string; XLogP?: number;
+        HBondDonorCount?: number; HBondAcceptorCount?: number;
+        RotatableBondCount?: number; TPSA?: number;
+      }> };
+    };
+
+    const synData = await synRes.json() as {
+      InformationList?: { Information: Array<{ CID: number; Synonym?: string[] }> };
+    };
+
+    const props = propData.PropertyTable?.Properties?.[0];
+    if (!props) return res.status(404).json({ error: "Properties not found" });
+
+    const synonyms = synData.InformationList?.Information?.[0]?.Synonym ?? [];
+    // CAS numbers follow pattern: digits-digits-digit
+    const casNumber = synonyms.find((s) => /^\d{2,7}-\d{2}-\d$/.test(s)) ?? null;
+    // Common name: first non-CAS, non-SMILES-like synonym
+    const commonName = synonyms.find((s) => !/^\d{2,7}-\d{2}-\d$/.test(s) && s.length < 60) ?? null;
+
+    // GHS safety classification from PubChem (same endpoint ChemCrow's MoleculeSafety uses)
+    let ghsHazards: string[] = [];
+    try {
+      const safetyUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/${cid}/JSON?heading=Chemical+Safety`;
+      const safetyRes = await fetch(safetyUrl, { headers: { "User-Agent": "LightSpeedGhost/1.0" } });
+      if (safetyRes.ok) {
+        const safetyData = await safetyRes.json() as any;
+        const sections = safetyData?.Record?.Section ?? [];
+        for (const section of sections) {
+          if (section?.TOCHeading === "Chemical Safety") {
+            const markup = section?.Information?.[0]?.Value?.StringWithMarkup?.[0]?.Markup ?? [];
+            ghsHazards = markup.map((m: any) => m.Extra).filter(Boolean);
+          }
+        }
+      }
+    } catch { /* safety data is optional */ }
+
+    res.json({
+      cid,
+      iupacName: props.IUPACName,
+      commonName,
+      casNumber,
+      smiles: props.IsomericSMILES,
+      formula: props.MolecularFormula,
+      molecularWeight: props.MolecularWeight,
+      xLogP: props.XLogP,
+      hBondDonors: props.HBondDonorCount,
+      hBondAcceptors: props.HBondAcceptorCount,
+      rotatableBonds: props.RotatableBondCount,
+      tpsa: props.TPSA,
+      ghsHazards,
+      pubchemUrl: `https://pubchem.ncbi.nlm.nih.gov/compound/${cid}`,
+      synonyms: synonyms.slice(0, 6),
+    });
+  } catch (err) {
+    req.log.error({ err }, "Error fetching molecule data");
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 // EBI BioModels database search — free API, no key required
 // Inspired by AIAgents4Pharmabio / Talk2BioModels (uses basico + biomodels package)
 router.get("/stem/biomodels", async (req, res) => {

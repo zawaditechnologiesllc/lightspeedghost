@@ -80,12 +80,21 @@ export const stemResourcesBySubject: Record<string, StemResourceGroup[]> = {
 
   chemistry: [
     {
+      label: "ChemCrow Tool Suite (LLM Chemistry Agent)",
+      tools: [
+        { name: "ChemCrow (PubChem tools)", url: "https://github.com/zawaditechnologiesllc/chemcrow-public", description: "LLM agent with 18 chemistry tools — Name2SMILES, SMILES2CAS, FunctionalGroups, MolSimilarity, SafetyCheck, PatentCheck, retrosynthesis", type: "framework" },
+        { name: "PubChem REST API", url: "https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest", description: "Free API for molecular properties: SMILES, CAS, MW, formula, GHS safety — used directly by ChemCrow", type: "api" },
+        { name: "RDKit", url: "https://www.rdkit.org/", description: "Industry-standard cheminformatics — Tanimoto similarity, functional groups, molecular fingerprints (ChemCrow MolSimilarity tool)", type: "library" },
+        { name: "molbloom (SureChEMBL)", url: "https://github.com/PatWalters/molbloom", description: "Bloom filter for patent status lookup — used by ChemCrow PatentCheck tool", type: "library" },
+      ],
+    },
+    {
       label: "Cheminformatics & Molecular Design",
       tools: [
-        { name: "RDKit", url: "https://www.rdkit.org/", description: "Industry-standard cheminformatics and molecular manipulation", type: "library" },
         { name: "DeepChem", url: "https://deepchem.io/", description: "Drug discovery and quantum chemistry with deep learning", type: "library" },
-        { name: "ChemCrow", url: "https://github.com/ur-whitelab/chemcrow-public", description: "LLM agent for chemistry research with specialized tools", type: "tool" },
         { name: "DiffDock", url: "https://github.com/gcorso/DiffDock", description: "Diffusion-based molecular docking — SOTA blind docking (MIT, ICLR 2023)", type: "model" },
+        { name: "ChemSpace API", url: "https://chem-space.com/", description: "Chemical supplier search — 40B+ purchasable compounds, used by ChemCrow for compound availability", type: "api" },
+        { name: "IBM RXN4Chemistry", url: "https://rxn.res.ibm.com/", description: "AI-based reaction prediction and retrosynthesis planning (used by ChemCrow rxn4chem tool)", type: "api" },
       ],
     },
     {
