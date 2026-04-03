@@ -1,0 +1,104 @@
+LIGHT SPEED GHOST - https://lightspeedghost.com/
+This is an ai writing tool that writes new papers (with complete citations and bibliographies), revise papers, checks ai and plagiarism and corrects, STEM, and has an AI study assistant. The logo should be a blue feather writing on paper.
+STEM
+To cover all STEM subjects (Science, Technology, Engineering, and Math) in your tool, you shouldn't just rely on Claude's internal knowledge. Instead, use Claude as an orchestrator that calls specialized Python libraries or APIs for each specific field.
+The most effective way to do this is to integrate the Claude Scientific Skills repository. This project is specifically designed to give AI agents "plug-and-play" capabilities across multiple scientific disciplines. 
+I will use Claude and openai for all STEM solutions; I need this solve all complex problems in STEM, be able to analyze code, excel or any time of data and give results, give graphs, charts, everything in STEM. User should be able to export the results in the format they want.
+
+1. Key Libraries for Your STEM Toolkit
+You can define these as "tools" that Claude can trigger based on the user's request.
+•	Mathematics:
+o	SymPy: For symbolic math, calculus, and equation solving.
+o	NumPy: For high-speed matrix operations and linear algebra.
+•	Chemistry & Biology:
+o	RDKit: The industry standard for cheminformatics and molecular manipulation.
+o	DeepChem: For drug discovery and quantum chemistry.
+o	Biopython: Essential for genomics and biological data analysis.
+•	Physics & Engineering:
+o	SciPy: Handles integration, differential equations, and signal processing.
+o	DeepXDE: For solving physics-informed neural networks (PINNs) and complex differential equations.
+2. Recommended Repositories for Integration
+•	awesome-ai-for-science: A massive, curated list of the most advanced AI tools for science, including specialized models for weather, proteins, and particle physics.
+•	AIAgents4Pharma: Excellent if you want to include deep biological data or system modeling.
+•	ChemCrow: A specific implementation of an LLM agent for chemistry research using specialized tool integration
+3. Implementation Plan for Replit
+build a Tool Router in your Replit code.
+1.	Define the Tools: Create a Python dictionary of functions. For example, a solve_physics function that uses SciPy or a predict_molecule function using RDKit.
+2.	Claude Tool Use: When the user asks a question, send the list of these tool descriptions to Claude.
+3.	Execute & Return: Claude will reply with the name of the tool it wants to use (e.g., "calculate_integral"). Your Replit code runs that specific function and sends the result back to Claude to explain to the user.
+
+WRITING
+For the writing and revision core, combining OpenAI (GPT-4o) and Claude (3.5 Sonnet/Opus) is a powerful strategy. You can use them as specialized "agents" within your Replit project—one for high-level structuring and the other for nuanced academic prose. 
+1. Recommended Repositories for Writing Logic
+Instead of building the entire "writing brain" yourself, use these frameworks to manage the workflow:
+•	GPT Researcher: An excellent starting point for academic tools. It can be integrated as a Claude Skill to perform deep research and then aggregate findings into a comprehensive report.
+•	Claude Prism: An "offline-first" scientific writing tool. It features a Project Wizard for papers, theses, and literature reviews, and it even integrates with Zotero for citation management.
+•	Claude Scientific Writer: A dedicated plugin that generates publication-ready documents backed by real-time literature search and verified citations. 
+2. The "Hybrid" Writing Workflow
+A common professional pattern is to let each model do what it does best:
+•	OpenAI (The Architect): Use GPT-4o for the initial Outline & Structure. It is highly efficient at following strict formatting instructions and organizing a paper's flow.
+•	Claude (The Editor & Refiner): Use Claude for the actual Academic Drafting. Claude is widely preferred for research because its tone is more "human" and less mechanical than GPT's. It excels at mirroring your specific academic voice and identifying structural "blind spots" in a manuscript.
+3. Implementation in Replit
+To manage both models seamlessly, use a wrapper or proxy:
+•	Claude Code to OpenAI Proxy: This allows you to use OpenAI-compatible tools with Claude, making it easier to swap models within the same code structure.
+•	OpenAI Wrapper for Claude: Similar to the above, this provides an OpenAI-compatible interface specifically for Claude Code, which is helpful if your Replit project is already built around the OpenAI SDK
+4. Handling Citations (RAG)
+For academic papers, you cannot just "generate" text; you need Retrieval-Augmented Generation (RAG) to ensure accuracy and real citations.
+•	RAG-Anything: A multimodal RAG system that can process equations, tables, and charts—essential for STEM-heavy academic writing.
+•	Index-RAG: Solves the problem of citation accuracy by embedding specific document locations alongside the content.
+•	For references and intext citations, there should be one in every 200 words in the paper.
+•	This should handle all types of papers, if STEM is detected, system switches to STEM and asks customer to confirm for better results.
+Revision will have its own panel for users to interact with the system; user will be able to submit their marked paper, initial instructions, marks scored, and a A grade marking criteria section. (Also, some parts can be prefilled from uploads but system asks user for confirmation.
+
+AI STUDY ASSISTANT
+To build a study assistant that works exactly like Gauth, your architecture must focus on three core pillars: Visual Input (OCR), Step-by-Step Problem Solving, and Dynamic Document Interaction.
+1. The "Gauth" Core Features to Replicate
+Gauth's primary value is its ability to transform a photo or document into an interactive tutoring session. To mirror this, your tool needs: 
+•	Multimodal Input: Users should be able to scan handwritten math, upload a complex thesis PDF, or paste meeting transcripts.
+•	Step-by-Step Logic: Instead of just giving the answer, the AI must break down the process—especially for STEM—to foster understanding rather than just completion.
+•	Interactive Follow-ups: After a solution is generated, users must be able to ask "Why did you do this step?" or "Explain this in simpler terms," mimicking Gauth's live tutor feel.
+
+2. Recommended Implementation Path in Replit
+Since you are using Replit, you can leverage its Agent and built-in capabilities to set this up quickly. 
+•	For the "Scanner" (OCR): Use Tesseract or the Google Cloud Vision API. Gauth's success depends on accurately reading handwritten equations and complex diagrams.
+•	For Thesis & Meeting Interaction (RAG): Use LlamaIndex or LangChain. These frameworks are specifically designed to let users "chat" with long documents like a 100-page thesis or hours of meeting notes by only retrieving the most relevant sections for each query.
+•	For the "Tutor" Personality: Use Claude 3.5 Sonnet for the primary interaction. Claude is widely regarded as having a more pedagogical (teacher-like) tone compared to GPT-4, making it better for step-by-step explanations and summaries.
+•	3. Essential Frameworks & Repositories
+Feature 	Recommended Repo/Tool	Purpose
+Document Chat	PrivateGPT
+Local or cloud-based interaction with PDFs/thesis files without leaking data.
+STEM Solving	Wolfram Alpha API
+Connect your AI to Wolfram to ensure 100% accuracy on complex math and physics.
+Audio/Meetings	Whisper
+Convert meeting recordings into text before passing them to the AI for summarization.
+Agentic Workflow	CrewAI	Use this to create a "Researcher" agent (OpenAI) and a "Tutor" agent (Claude) that work together.
+•	Practical Advice for Your MVP
+•	Don't try to build the live human tutor feature immediately. Instead, focus on the "AI Tutor Mode." Use Claude as the default explainer and OpenAI's GPT-4o-vision for the initial photo/scan recognition, as it currently leads in visual understanding.
+
+
+Plagiarism and ai checker
+To build a high-performance AI and plagiarism checker in Replit that mimics Gauth's comprehensive approach, you should separate the two tasks: AI detection (identifying machine-like patterns) and Plagiarism detection (finding actual source matches). 
+1. AI Detection & Removal ("Humanizing")
+AI detectors look for high predictability and uniformity in sentence structure. To "remove" these patterns, your tool must rewrite text to increase "burstiness" (variation in sentence length) and "perplexity" (unpredictability). 
+•	Best Library for Detection: DetectGPT. This is a research-grade tool from Stanford that evaluates how text behaves when slightly changed—a highly reliable method for identifying LLM output.
+•	Best Repo for AI Removal: avoid-ai-writing. This tool specifically audits and rewrites content to remove common "AI-isms" like formulaic transitions and over-polished uniformity.
+•	Replit Integration:
+o	Use a pre-trained model like DeBERTa-v3 for local, cost-free detection.
+o	Create a "Humanize" button that triggers a Claude 3.5 Sonnet prompt designed to inject burstiness and conversational idioms into the text. 
+2. Plagiarism Checker
+Plagiarism detection requires comparing text against a database. For a student tool, you need to handle both web matches and peer-to-peer matches (one student copying another). 
+
+•	For Peer/Internal Similarity: Use PlagU. It uses Python's Sentence Transformers to calculate Cosine Similarity between documents, which is more effective than simple word matching because it understands meaning.
+•	For Peer/Internal Similarity: Use PlagU. It uses Python's Sentence Transformers to calculate Cosine Similarity between documents, which is more effective than simple word matching because it understands meaning.
+•	For Web/Academic Similarity: Use the Copyleaks Python SDK. While it requires an API key, it is the industry standard for academic papers and checks against billions of web pages and published journals.
+•	For Code Plagiarism: If your tool supports STEM, use Advanced-Code-Plagiarism-Detection-Tool. It uses AST (Abstract Syntax Tree) analysis to find logic matches even if the student renamed all the variables
+•	3. Recommended Multi-Model Architecture
+Feature 	Primary Engine	Role
+Detection	DetectGPT / DeBERTa	Flags suspicious sections based on statistical patterns.
+Plagiarism	Copyleaks / MOSS	Identifies specific source URLs or matching peer papers.
+Removal	Claude 3.5 Sonnet	Rewrites flagged text to vary sentence length and add personal voice.
+Check AI	GPT-4o	Best for high-speed initial scanning and identifying "AI-like" formatting.
+
+Implementation Advice for Replit
+To make it work like Gauth, your Replit Agent should set up a background worker. Plagiarism and AI scans take time; users should be able to upload their paper and see a "processing" bar while your Python backend runs these libraries in the background.
+
