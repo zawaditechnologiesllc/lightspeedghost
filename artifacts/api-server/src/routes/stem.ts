@@ -102,6 +102,101 @@ router.post("/stem/solve", async (req, res) => {
   }
 });
 
+// EBI BioModels database search — free API, no key required
+// Inspired by AIAgents4Pharmabio / Talk2BioModels (uses basico + biomodels package)
+router.get("/stem/biomodels", async (req, res) => {
+  try {
+    const query = req.query["q"] as string;
+    if (!query) return res.status(400).json({ error: "query parameter q is required" });
+
+    const url = `https://www.ebi.ac.uk/biomodels/search?query=${encodeURIComponent(query)}&numResults=5&format=json`;
+    const response = await fetch(url, {
+      headers: { "User-Agent": "LightSpeedGhost/1.0 Academic Research Tool", Accept: "application/json" },
+    });
+
+    if (!response.ok) {
+      req.log.warn({ status: response.status }, "EBI BioModels API error");
+      return res.json({ models: [] });
+    }
+
+    const data = await response.json() as {
+      models?: Array<{
+        id: string;
+        name: string;
+        description?: string;
+        lastModified?: string;
+        submissionDate?: string;
+        publicationCount?: number;
+        format?: { name?: string };
+        url?: string;
+      }>;
+      matches?: number;
+    };
+
+    const models = (data.models ?? []).map((m) => ({
+      id: m.id,
+      name: m.name,
+      description: m.description ? m.description.slice(0, 300) + (m.description.length > 300 ? "..." : "") : null,
+      lastModified: m.lastModified,
+      publicationCount: m.publicationCount ?? 0,
+      format: m.format?.name ?? "SBML",
+      url: `https://www.ebi.ac.uk/biomodels/${m.id}`,
+    }));
+
+    res.json({ models, total: data.matches ?? models.length });
+  } catch (err) {
+    req.log.error({ err }, "Error searching BioModels");
+    res.json({ models: [] });
+  }
+});
+
+// Semantic Scholar paper recommendations — free API, no key required
+// Inspired by AIAgents4Pharmabio / Talk2Scholars single_paper_rec tool
+router.get("/stem/papers/recommend", async (req, res) => {
+  try {
+    const paperId = req.query["paperId"] as string;
+    if (!paperId) return res.status(400).json({ error: "paperId parameter is required" });
+
+    const url = `https://api.semanticscholar.org/recommendations/v1/papers/forpaper/${paperId}?limit=4&fields=title,authors,year,abstract,url,citationCount,externalIds&from=all-cs`;
+    const response = await fetch(url, {
+      headers: { "User-Agent": "LightSpeedGhost/1.0 Academic Research Tool" },
+    });
+
+    if (!response.ok) {
+      req.log.warn({ status: response.status }, "Semantic Scholar recommendations API error");
+      return res.json({ papers: [] });
+    }
+
+    const data = await response.json() as {
+      recommendedPapers?: Array<{
+        paperId: string;
+        title: string;
+        authors?: Array<{ name: string }>;
+        year?: number;
+        abstract?: string;
+        url?: string;
+        citationCount?: number;
+        externalIds?: { DOI?: string };
+      }>;
+    };
+
+    const papers = (data.recommendedPapers ?? []).map((p) => ({
+      paperId: p.paperId,
+      title: p.title,
+      authors: (p.authors ?? []).map((a) => a.name).join(", "),
+      year: p.year,
+      abstract: p.abstract ? p.abstract.slice(0, 250) + (p.abstract.length > 250 ? "..." : "") : null,
+      url: p.url ?? (p.externalIds?.DOI ? `https://doi.org/${p.externalIds.DOI}` : null),
+      citationCount: p.citationCount ?? 0,
+    }));
+
+    res.json({ papers });
+  } catch (err) {
+    req.log.error({ err }, "Error fetching paper recommendations");
+    res.json({ papers: [] });
+  }
+});
+
 // Semantic Scholar paper search — free API, no key required
 router.get("/stem/papers", async (req, res) => {
   try {

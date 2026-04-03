@@ -1,4 +1,6 @@
-// Curated from: awesome-ai-for-science (github.com/zawaditechnologiesllc/awesome-ai-for-science)
+// Curated from:
+//   Repo 1: awesome-ai-for-science (github.com/zawaditechnologiesllc/awesome-ai-for-science)
+//   Repo 2: AIAgents4Pharmabio (github.com/zawaditechnologiesllc/AIAgents4Pharmabio)
 // Mapped to each STEM subject for the Light Speed Ghost STEM solver
 
 export interface StemTool {
@@ -95,15 +97,35 @@ export const stemResourcesBySubject: Record<string, StemResourceGroup[]> = {
       ],
     },
     {
-      label: "Literature Search",
+      label: "Literature & Knowledge Search",
       tools: [
         { name: "Semantic Scholar", url: "https://www.semanticscholar.org/", description: "AI-powered academic chemistry search", type: "api" },
         { name: "PaperQA2", url: "https://github.com/future-house/paper-qa", description: "High-accuracy RAG for scientific PDFs with citation support", type: "tool" },
+        { name: "Talk2Scholars (AIAgents4Pharmabio)", url: "https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio", description: "AI agent for pharmaceutical paper search, recommendations, and Zotero integration", type: "tool" },
+        { name: "Robin (FutureHouse)", url: "https://github.com/Future-House/robin", description: "End-to-end drug discovery agent — first AI-generated novel AMD therapeutic (2025)", type: "model" },
       ],
     },
   ],
 
   biology: [
+    {
+      label: "AI Pharma & Bio Agents (AIAgents4Pharmabio)",
+      tools: [
+        { name: "Talk2BioModels", url: "https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio", description: "Converse with curated EBI BioModels — simulate, scan parameters, analyze steady state", type: "framework" },
+        { name: "Talk2Scholars", url: "https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio", description: "AI agent for paper search, recommendations, Zotero integration (Semantic Scholar)", type: "tool" },
+        { name: "Talk2KnowledgeGraphs", url: "https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio", description: "GraphRAG reasoning over biological knowledge graphs — subgraph extraction & summarization", type: "framework" },
+        { name: "Talk2Cells", url: "https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio", description: "AI agent for cellular biology data analysis and interaction", type: "tool" },
+      ],
+    },
+    {
+      label: "BioModels Database & Simulation",
+      tools: [
+        { name: "EBI BioModels", url: "https://www.ebi.ac.uk/biomodels/", description: "8,000+ manually curated mathematical models of biological systems (EMBL-EBI)", type: "api" },
+        { name: "basico", url: "https://github.com/copasi/basico", description: "Python interface to COPASI for simulating BioModels (ODE/stochastic)", type: "library" },
+        { name: "COPASI", url: "http://copasi.org/", description: "Complex pathway simulator — ODE integration, parameter estimation, stochastic simulation", type: "tool" },
+        { name: "BioSimulators", url: "https://github.com/biosimulators/Biosimulators", description: "Standardized interfaces to 20+ biological simulation engines", type: "framework" },
+      ],
+    },
     {
       label: "Protein Structure & Drug Discovery",
       tools: [
@@ -118,15 +140,16 @@ export const stemResourcesBySubject: Record<string, StemResourceGroup[]> = {
       label: "Bioinformatics & Genomics",
       tools: [
         { name: "Biopython", url: "https://biopython.org/", description: "Essential tools for genomics and biological data analysis", type: "library" },
-        { name: "AIAgents4Pharma", url: "https://github.com/VirtualPatientEngine/AIAgents4Pharma", description: "AI agents for pharmaceutical and biological data analysis", type: "framework" },
         { name: "mint", url: "https://github.com/VarunUllanat/mint", description: "Learning the language of protein-protein interactions", type: "model" },
+        { name: "LabClaw (Stanford LabOS)", url: "https://github.com/wu-yc/LabClaw", description: "211 production-ready skill files across biology, pharmacology, medicine & data science", type: "framework" },
       ],
     },
     {
-      label: "Literature Search",
+      label: "Literature & Knowledge Search",
       tools: [
-        { name: "Semantic Scholar", url: "https://www.semanticscholar.org/", description: "AI-powered biology/medicine academic search", type: "api" },
-        { name: "OpenScholar", url: "https://github.com/AkariAsai/OpenScholar", description: "Retrieval-augmented LM synthesizing 45M scientific papers — human-expert level (Nature 2026)", type: "model" },
+        { name: "Semantic Scholar", url: "https://www.semanticscholar.org/", description: "AI-powered biology/medicine search — 200M+ papers (Allen AI)", type: "api" },
+        { name: "Zotero + PapersGPT", url: "https://github.com/papersgpt/papersgpt-for-zotero", description: "Multi-PDF conversation, retrieval, and citation in Zotero with Ollama/local models", type: "tool" },
+        { name: "OpenScholar", url: "https://github.com/AkariAsai/OpenScholar", description: "RAG over 45M scientific papers — human-expert level accuracy (Nature 2026)", type: "model" },
         { name: "PaperQA2", url: "https://github.com/future-house/paper-qa", description: "High-accuracy RAG for scientific PDFs with contradiction detection", type: "tool" },
       ],
     },

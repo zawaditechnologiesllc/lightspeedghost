@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSolveStem, useGetStemSubjects } from "@workspace/api-client-react";
-import { Loader2, FlaskConical, CheckCircle, BookOpen, Wrench, ExternalLink, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, FlaskConical, CheckCircle, BookOpen, Wrench, ExternalLink, Search, ChevronDown, ChevronUp, Dna, Sparkles } from "lucide-react";
 import type { StemSolution } from "@workspace/api-client-react";
 import {
   LineChart,
@@ -35,6 +35,16 @@ interface Paper {
   citationCount: number;
 }
 
+interface BioModel {
+  id: string;
+  name: string;
+  description: string | null;
+  lastModified: string | null;
+  publicationCount: number;
+  format: string;
+  url: string;
+}
+
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
 async function searchPapers(query: string, subject: string): Promise<Paper[]> {
@@ -48,11 +58,37 @@ async function searchPapers(query: string, subject: string): Promise<Paper[]> {
   }
 }
 
+async function searchBioModels(query: string): Promise<{ models: BioModel[]; total: number }> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/stem/biomodels?q=${encodeURIComponent(query)}`);
+    if (!res.ok) return { models: [], total: 0 };
+    return await res.json();
+  } catch {
+    return { models: [], total: 0 };
+  }
+}
+
+async function getPaperRecommendations(paperId: string): Promise<Paper[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/stem/papers/recommend?paperId=${encodeURIComponent(paperId)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.papers ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export default function StemSolver() {
   const [result, setResult] = useState<StemSolution | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [papersLoading, setPapersLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"solution" | "resources">("solution");
+  const [bioModels, setBioModels] = useState<BioModel[]>([]);
+  const [bioModelsTotal, setBioModelsTotal] = useState(0);
+  const [bioModelsLoading, setBioModelsLoading] = useState(false);
+  const [recommendingFor, setRecommendingFor] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<Record<string, Paper[]>>({});
+  const [activeTab, setActiveTab] = useState<"solution" | "papers" | "biomodels">("solution");
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   const solveStem = useSolveStem();
@@ -71,16 +107,35 @@ export default function StemSolver() {
   const resources = stemResourcesBySubject[selectedSubject] ?? [];
 
   const onSubmit = async (data: FormData) => {
-    const [res] = await Promise.all([
-      solveStem.mutateAsync(data),
-    ]);
+    setPapers([]);
+    setBioModels([]);
+    setRecommendations({});
+    const [res] = await Promise.all([solveStem.mutateAsync(data)]);
     setResult(res);
     setActiveTab("solution");
 
     setPapersLoading(true);
-    const foundPapers = await searchPapers(data.problem.slice(0, 100), data.subject);
+    const [foundPapers] = await Promise.all([
+      searchPapers(data.problem.slice(0, 100), data.subject),
+    ]);
     setPapers(foundPapers);
     setPapersLoading(false);
+
+    if (data.subject === "biology" || data.subject === "chemistry") {
+      setBioModelsLoading(true);
+      const bioResult = await searchBioModels(data.problem.slice(0, 80));
+      setBioModels(bioResult.models);
+      setBioModelsTotal(bioResult.total);
+      setBioModelsLoading(false);
+    }
+  };
+
+  const handleGetRecommendations = async (paperId: string) => {
+    if (recommendations[paperId] || recommendingFor === paperId) return;
+    setRecommendingFor(paperId);
+    const recs = await getPaperRecommendations(paperId);
+    setRecommendations((prev) => ({ ...prev, [paperId]: recs }));
+    setRecommendingFor(null);
   };
 
   const toggleGroup = (label: string) => {
@@ -218,8 +273,8 @@ export default function StemSolver() {
         </div>
 
         <div className="space-y-4">
-          {(result || papersLoading) && (
-            <div className="flex gap-2">
+          {result && (
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setActiveTab("solution")}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
@@ -233,9 +288,9 @@ export default function StemSolver() {
                 </div>
               </button>
               <button
-                onClick={() => setActiveTab("resources")}
+                onClick={() => setActiveTab("papers")}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                  activeTab === "resources"
+                  activeTab === "papers"
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-card text-muted-foreground border-border hover:text-foreground"
                 }`}
@@ -250,6 +305,27 @@ export default function StemSolver() {
                   )}
                 </div>
               </button>
+              {(selectedSubject === "biology" || selectedSubject === "chemistry") && (
+                <button
+                  onClick={() => setActiveTab("biomodels")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    activeTab === "biomodels"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card text-muted-foreground border-border hover:text-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Dna size={13} />
+                    EBI BioModels
+                    {bioModels.length > 0 && (
+                      <span className="bg-primary/20 text-primary text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        {bioModels.length}
+                      </span>
+                    )}
+                    {bioModelsLoading && <Loader2 size={11} className="animate-spin" />}
+                  </div>
+                </button>
+              )}
             </div>
           )}
 
@@ -311,7 +387,7 @@ export default function StemSolver() {
             </>
           )}
 
-          {activeTab === "resources" && (
+          {activeTab === "papers" && (
             <div className="bg-card border border-border rounded-xl overflow-hidden">
               <div className="px-5 py-3 border-b border-border flex items-center gap-2">
                 <BookOpen size={14} className="text-primary" />
@@ -329,14 +405,14 @@ export default function StemSolver() {
               {!papersLoading && papers.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <Search size={32} className="mb-2 opacity-30" />
-                  <p className="text-sm">Solve a problem to find related papers</p>
+                  <p className="text-sm">No papers found for this problem</p>
                 </div>
               )}
 
               {!papersLoading && papers.length > 0 && (
                 <div className="divide-y divide-border">
                   {papers.map((paper) => (
-                    <div key={paper.paperId} className="px-5 py-4">
+                    <div key={paper.paperId} className="px-5 py-4 space-y-2">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <a
@@ -375,6 +451,41 @@ export default function StemSolver() {
                           </a>
                         )}
                       </div>
+                      <button
+                        onClick={() => handleGetRecommendations(paper.paperId)}
+                        disabled={!!recommendations[paper.paperId] || recommendingFor === paper.paperId}
+                        className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary border border-border hover:border-primary/40 px-2.5 py-1 rounded-md transition-all disabled:opacity-40"
+                      >
+                        {recommendingFor === paper.paperId ? (
+                          <><Loader2 size={10} className="animate-spin" /> Finding similar...</>
+                        ) : recommendations[paper.paperId] ? (
+                          <><Sparkles size={10} className="text-primary" /> {recommendations[paper.paperId].length} similar papers shown</>
+                        ) : (
+                          <><Sparkles size={10} /> Get similar papers</>
+                        )}
+                      </button>
+                      {recommendations[paper.paperId] && recommendations[paper.paperId].length > 0 && (
+                        <div className="ml-4 border-l-2 border-primary/20 pl-3 space-y-2">
+                          {recommendations[paper.paperId].map((rec) => (
+                            <div key={rec.paperId}>
+                              <a
+                                href={rec.url ?? `https://www.semanticscholar.org/paper/${rec.paperId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-medium text-foreground hover:text-primary transition-colors block"
+                              >
+                                {rec.title}
+                              </a>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                {rec.year && <span className="text-[10px] text-muted-foreground">{rec.year}</span>}
+                                {rec.citationCount > 0 && (
+                                  <span className="text-[10px] text-muted-foreground">· {rec.citationCount.toLocaleString()} citations</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -382,7 +493,81 @@ export default function StemSolver() {
 
               <div className="px-5 py-2.5 border-t border-border bg-muted/30">
                 <p className="text-[10px] text-muted-foreground">
-                  Papers sourced from <a href="https://www.semanticscholar.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Semantic Scholar</a> (Allen AI) — 200M+ academic papers
+                  Papers from <a href="https://www.semanticscholar.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Semantic Scholar</a> (Allen AI) · Recommendations inspired by <a href="https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">AIAgents4Pharmabio / Talk2Scholars</a>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "biomodels" && (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-border flex items-center gap-2">
+                <Dna size={14} className="text-primary" />
+                <span className="text-sm font-semibold">EBI BioModels Database</span>
+                {bioModelsTotal > 0 && (
+                  <span className="text-xs text-muted-foreground ml-auto">{bioModelsTotal.toLocaleString()} total matches</span>
+                )}
+              </div>
+
+              {bioModelsLoading && (
+                <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="text-sm">Searching EBI BioModels...</span>
+                </div>
+              )}
+
+              {!bioModelsLoading && bioModels.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <Dna size={32} className="mb-2 opacity-30" />
+                  <p className="text-sm">No curated models found for this problem</p>
+                  <p className="text-xs mt-1">Try a biology or chemistry problem</p>
+                </div>
+              )}
+
+              {!bioModelsLoading && bioModels.length > 0 && (
+                <div className="divide-y divide-border">
+                  {bioModels.map((model) => (
+                    <div key={model.id} className="px-5 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <a
+                            href={model.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-semibold text-foreground hover:text-primary transition-colors block"
+                          >
+                            {model.name}
+                          </a>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium font-mono">{model.id}</span>
+                            <span className="text-[10px] bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded font-medium">{model.format}</span>
+                            {model.publicationCount > 0 && (
+                              <span className="text-[10px] bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">
+                                {model.publicationCount} {model.publicationCount === 1 ? "publication" : "publications"}
+                              </span>
+                            )}
+                          </div>
+                          {model.description && (
+                            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{model.description}</p>
+                          )}
+                        </div>
+                        <a
+                          href={model.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 p-1.5 rounded-lg border border-border hover:border-primary hover:text-primary transition-all text-muted-foreground"
+                        >
+                          <ExternalLink size={13} />
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="px-5 py-2.5 border-t border-border bg-muted/30">
+                <p className="text-[10px] text-muted-foreground">
+                  Curated mathematical models from <a href="https://www.ebi.ac.uk/biomodels/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">EBI BioModels</a> (EMBL-EBI) · Inspired by <a href="https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">AIAgents4Pharmabio / Talk2BioModels</a>
                 </p>
               </div>
             </div>
