@@ -376,10 +376,10 @@ export default function StemSolver() {
         </div>
       )}
 
-      {/* ── CENTERED input state (no result) ─────────────────────────────── */}
+      {/* ── Input state (no result) ───────────────────────────────────────── */}
       {!result && (
-        <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto px-4 py-8">
-          <div className="w-full max-w-2xl space-y-5">
+        <div className="flex-1 overflow-y-auto">
+        <div className="w-full max-w-2xl mx-auto px-4 py-6 sm:py-10 space-y-5">
 
             {/* LightSpeed AI brand */}
             <div className="text-center space-y-2">
@@ -411,6 +411,7 @@ export default function StemSolver() {
             {InputForm}
 
           </div>
+        </div>
         </div>
       )}
 

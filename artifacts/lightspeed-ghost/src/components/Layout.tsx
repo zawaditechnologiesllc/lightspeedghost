@@ -8,6 +8,8 @@ import {
   ShieldCheck,
   GraduationCap,
   Files,
+  RotateCcw,
+  History,
   Moon,
   Sun,
   LogOut,
@@ -32,10 +34,12 @@ const navItems = [
 ];
 
 const mobileBottomNav = [
-  { path: "/app",    label: "Home",    icon: LayoutDashboard },
-  { path: "/write",  label: "Write",   icon: PenLine },
-  { path: "/stem",   label: "STEM",    icon: FlaskConical },
-  { path: "/study",  label: "Study",   icon: GraduationCap },
+  { path: "/write",      label: "Write",   icon: PenLine },
+  { path: "/revision",   label: "Revise",  icon: RotateCcw },
+  { path: "/plagiarism", label: "Check",   icon: ShieldCheck },
+  { path: "/stem",       label: "STEM",    icon: FlaskConical },
+  { path: "/study",      label: "Study",   icon: GraduationCap },
+  { path: "/documents",  label: "History", icon: History },
 ];
 
 function NavItem({
@@ -79,11 +83,11 @@ function MobileBottomNavItem({ path, label, icon: Icon }: { path: string; label:
   return (
     <Link href={path} className="flex-1">
       <div className={cn(
-        "flex flex-col items-center gap-0.5 py-2 px-1 transition-colors",
+        "flex flex-col items-center gap-0.5 py-2 px-0.5 transition-colors w-full",
         isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40"
       )}>
-        <Icon size={20} />
-        <span className="text-[9px] font-semibold leading-tight">{label}</span>
+        <Icon size={17} />
+        <span className="text-[8px] font-semibold leading-tight truncate w-full text-center">{label}</span>
       </div>
     </Link>
   );
@@ -185,11 +189,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div
           className={cn(
             "border-t border-sidebar-border shrink-0",
-            collapsed ? "py-3 flex flex-col items-center gap-2" : "px-3 py-3"
+            (collapsed && !mobileOpen) ? "py-3 flex flex-col items-center gap-2" : "px-3 py-3"
           )}
         >
           {user && (
-            collapsed ? (
+            (collapsed && !mobileOpen) ? (
               <>
                 <div
                   title={userEmail}
@@ -224,7 +228,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
             )
           )}
-          {!collapsed && (
+          {(!collapsed || mobileOpen) && (
             <div className="text-sidebar-foreground/30 text-[10px] px-1">
               AI Academic Writing Platform
             </div>
@@ -260,18 +264,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* ── Mobile bottom nav bar ──────────────────────────────────────── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-sidebar border-t border-sidebar-border flex items-stretch safe-area-inset-bottom">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-sidebar border-t border-sidebar-border flex items-stretch" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         {mobileBottomNav.map((item) => (
           <MobileBottomNavItem key={item.path} {...item} />
         ))}
-        {/* More button opens full sidebar */}
-        <button
-          className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
-          onClick={() => setMobileOpen(true)}
-        >
-          <Menu size={20} />
-          <span className="text-[9px] font-semibold leading-tight">More</span>
-        </button>
       </nav>
     </div>
   );
