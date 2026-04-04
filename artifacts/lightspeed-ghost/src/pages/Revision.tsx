@@ -283,19 +283,19 @@ export default function Revision() {
     return (
       <div className="h-full flex flex-col overflow-hidden bg-background">
         {/* Header */}
-        <div className="shrink-0 border-b border-border bg-card px-6 py-5 text-center">
+        <div className="shrink-0 border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-5 text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
             <Zap size={16} className="text-primary" />
             <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Paper Revision</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Paper Revision</h1>
           <p className="text-sm text-muted-foreground mt-1">
             AI detection &amp; plagiarism scan first — then we rewrite to 92%+ with 0% AI
           </p>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-6 py-8 pb-16 space-y-6">
+          <div className="max-w-2xl mx-auto px-4 py-6 pb-16 sm:px-6 sm:py-8 space-y-6">
 
             {fromPlagiarism && (
               <div className="flex items-center justify-between gap-3 px-4 py-3 bg-primary/10 border border-primary/30 rounded-xl text-sm text-primary">
@@ -501,7 +501,7 @@ export default function Revision() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-xl mx-auto px-6 py-8 space-y-6">
+          <div className="max-w-xl mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-6">
 
             {error && (
               <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/30 text-sm text-destructive">
@@ -650,9 +650,9 @@ export default function Revision() {
           />
         </div>
 
-        <div className="flex-1 flex min-h-0">
+        <div className="flex-1 flex flex-col md:flex-row min-h-0">
           {/* Left: activity feed */}
-          <div className="w-80 shrink-0 border-r border-border flex flex-col overflow-hidden">
+          <div className="shrink-0 border-b md:border-b-0 md:w-72 md:border-r border-border flex flex-col overflow-hidden max-h-40 md:max-h-none">
             <div className="px-5 py-4 border-b border-border bg-muted/20 shrink-0">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Currently</p>
               <p className="text-sm font-medium text-foreground leading-snug min-h-[2.5rem]">
@@ -699,15 +699,15 @@ export default function Revision() {
           </div>
 
           {/* Right: info panel */}
-          <div className="flex-1 flex flex-col items-center justify-center p-8 gap-6 text-center">
+          <div className="flex-1 flex flex-col items-center justify-center p-5 sm:p-8 gap-4 sm:gap-6 text-center">
             <div className="space-y-2">
-              <TrendingUp size={36} className="text-primary/30 mx-auto" />
-              <h3 className="text-lg font-semibold">Raising your paper to {targetGrade || "Grade A / 92%+"}</h3>
+              <TrendingUp size={32} className="text-primary/30 mx-auto" />
+              <h3 className="text-base sm:text-lg font-semibold">Raising your paper to {targetGrade || "Grade A / 92%+"}</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
                 Every weak section is being rewritten to meet grade A standards — 4-part paragraph structure, citations every 150–200 words, zero AI-detectable prose.
               </p>
             </div>
-            <div className="flex gap-6 text-xs text-muted-foreground">
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500" />0% AI target</div>
               <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500" />&lt;8% plagiarism</div>
               <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-violet-500" />92%+ grade</div>
@@ -726,12 +726,12 @@ export default function Revision() {
     return (
       <div className="h-full flex flex-col overflow-hidden bg-background">
         {/* Header */}
-        <div className="shrink-0 border-b border-border bg-card px-5 py-3 flex items-center gap-3">
+        <div className="shrink-0 border-b border-border bg-card px-4 py-2.5 sm:px-5 sm:py-3 flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             <Zap size={16} className="text-primary" />
             <span className="text-sm font-bold text-primary">Paper Revision</span>
           </div>
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-1.5 ml-auto flex-wrap justify-end">
             <span className="text-xs text-green-600 dark:text-green-400 font-semibold bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full">
               {result.gradeEstimate}
             </span>
@@ -786,7 +786,7 @@ export default function Revision() {
 
           {/* Revised paper */}
           {resultTab === "revised" && (
-            <div className="max-w-3xl mx-auto px-6 py-6">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 {result.revisedText.split("\n").map((line, i) => {
                   if (/^# /.test(line)) return <h1 key={i} className="text-xl font-bold mt-6 mb-2">{line.slice(2)}</h1>;
@@ -810,7 +810,7 @@ export default function Revision() {
 
           {/* Changes */}
           {resultTab === "changes" && (
-            <div className="max-w-3xl mx-auto px-6 py-6 space-y-5">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5">
               {result.feedback && (
                 <div className="px-4 py-4 rounded-xl bg-primary/5 border border-primary/20">
                   <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-1">Revision Summary</p>
@@ -862,8 +862,8 @@ export default function Revision() {
 
           {/* Stats */}
           {resultTab === "stats" && (
-            <div className="max-w-2xl mx-auto px-6 py-6 space-y-5">
-              <div className="grid grid-cols-3 gap-3">
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-4 text-center">
                   <div className="text-3xl font-bold text-green-600 dark:text-green-400">{result.gradeEstimate.split(/[/ ]/)[0] || "A"}</div>
                   <div className="text-xs mt-1 text-muted-foreground">Estimated Grade</div>

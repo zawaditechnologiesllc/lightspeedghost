@@ -31,6 +31,13 @@ const navItems = [
   { path: "/documents", label: "History",          icon: Files },
 ];
 
+const mobileBottomNav = [
+  { path: "/app",    label: "Home",    icon: LayoutDashboard },
+  { path: "/write",  label: "Write",   icon: PenLine },
+  { path: "/stem",   label: "STEM",    icon: FlaskConical },
+  { path: "/study",  label: "Study",   icon: GraduationCap },
+];
+
 function NavItem({
   path,
   label,
@@ -54,16 +61,27 @@ function NavItem({
         )}
       >
         <Icon size={17} className="shrink-0" />
-
-        {/* Label — hidden when collapsed */}
         {!collapsed && <span className="truncate">{label}</span>}
-
-        {/* Tooltip when collapsed */}
         {collapsed && (
           <div className="absolute left-full ml-2.5 px-2.5 py-1.5 bg-popover border border-border text-popover-foreground text-xs font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
             {label}
           </div>
         )}
+      </div>
+    </Link>
+  );
+}
+
+function MobileBottomNavItem({ path, label, icon: Icon }: { path: string; label: string; icon: React.ElementType }) {
+  const [isActive] = useRoute(path === "/app" ? "/app" : path + "*");
+  return (
+    <Link href={path} className="flex-1">
+      <div className={cn(
+        "flex flex-col items-center gap-0.5 py-2 px-1 transition-colors",
+        isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40"
+      )}>
+        <Icon size={20} />
+        <span className="text-[9px] font-semibold leading-tight">{label}</span>
       </div>
     </Link>
   );
@@ -82,7 +100,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const [, navigate] = useLocation();
 
-  // Persist sidebar state
   useEffect(() => {
     try {
       localStorage.setItem("sidebar-collapsed", String(collapsed));
@@ -112,10 +129,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         className={cn(
           "fixed lg:static inset-y-0 left-0 z-30 bg-sidebar flex flex-col",
           "transition-[width,transform] duration-200 ease-in-out overflow-hidden",
-          // Desktop: width toggles between collapsed/expanded
           collapsed ? "lg:w-14" : "lg:w-60",
-          // Mobile: full width slides in/out
-          mobileOpen ? "translate-x-0 w-60" : "-translate-x-full lg:translate-x-0"
+          mobileOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0"
         )}
       >
         {/* Logo / toggle row */}
@@ -135,6 +150,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
           >
             {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
           </button>
+          {/* Mobile close button */}
+          {mobileOpen && (
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="lg:hidden ml-auto p-1.5 rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
+            >
+              <PanelLeftClose size={16} />
+            </button>
+          )}
         </div>
 
         {/* Nav */}
@@ -163,7 +187,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         >
           {user && (
             collapsed ? (
-              // Collapsed: just avatar + sign out stacked
               <>
                 <div
                   title={userEmail}
@@ -180,7 +203,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </button>
               </>
             ) : (
-              // Expanded: full user row
               <div className="flex items-center gap-2.5 mb-2 px-1">
                 <div className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0">
                   <span className="text-sidebar-primary-foreground text-xs font-bold">{userInitial}</span>
@@ -199,7 +221,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
             )
           )}
-
           {!collapsed && (
             <div className="text-sidebar-foreground/30 text-[10px] px-1">
               AI Academic Writing Platform
@@ -210,7 +231,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* ── Main area ───────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="flex items-center justify-between px-4 py-3 bg-card border-b border-border shadow-sm shrink-0">
+        <header className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 bg-card border-b border-border shadow-sm shrink-0">
           {/* Mobile hamburger */}
           <button
             className="lg:hidden p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground"
@@ -229,10 +250,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
+        {/* Page content — padded on mobile to avoid bottom nav overlap */}
+        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
           {children}
         </main>
       </div>
+
+      {/* ── Mobile bottom nav bar ──────────────────────────────────────── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-sidebar border-t border-sidebar-border flex items-stretch safe-area-inset-bottom">
+        {mobileBottomNav.map((item) => (
+          <MobileBottomNavItem key={item.path} {...item} />
+        ))}
+        {/* More button opens full sidebar */}
+        <button
+          className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
+          onClick={() => setMobileOpen(true)}
+        >
+          <Menu size={20} />
+          <span className="text-[9px] font-semibold leading-tight">More</span>
+        </button>
+      </nav>
     </div>
   );
 }

@@ -148,12 +148,12 @@ export default function Outline() {
     <div className="h-full flex flex-col overflow-hidden bg-background">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-b border-border bg-card px-6 py-5 text-center">
+      <div className="shrink-0 border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-5 text-center">
         <div className="flex items-center justify-center gap-2 mb-1">
           <Zap size={16} className="text-primary" />
           <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">Outline Generator</h1>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Outline Generator</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Structure your paper before writing — 0% AI · &lt;8% plagiarism · one click to full paper
         </p>
@@ -175,12 +175,12 @@ export default function Outline() {
           ]}
         />
       ) : (
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-auto md:overflow-hidden">
 
         {/* ── Form panel ─────────────────────────────────────────────────── */}
         <div className={cn(
-          "flex flex-col overflow-y-auto shrink-0 border-r border-border bg-card/50",
-          result ? "w-80" : "w-full max-w-xl mx-auto border-r-0"
+          "flex flex-col overflow-y-auto shrink-0 bg-card/50",
+          result ? "border-b md:border-b-0 md:border-r border-border md:w-80 max-h-[40vh] md:max-h-none" : "w-full max-w-xl mx-auto"
         )}>
           <div className="flex-1 px-5 py-5 space-y-5">
 

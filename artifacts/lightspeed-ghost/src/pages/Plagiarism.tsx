@@ -439,12 +439,12 @@ export default function PlagiarismChecker() {
     <div className="h-full flex flex-col overflow-hidden bg-background">
 
       {/* ── Page header ──────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-b border-border bg-card px-6 py-5 text-center">
+      <div className="shrink-0 border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-5 text-center">
         <div className="flex items-center justify-center gap-2 mb-1">
           <Zap size={16} className="text-primary" />
           <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">AI & Plagiarism Checker</h1>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">AI & Plagiarism Checker</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Detect AI content · Plagiarism risk · Code similarity · Download report · Smart revision routing
         </p>
@@ -490,12 +490,12 @@ export default function PlagiarismChecker() {
               ]}
             />
           ) : (
-          <div className={cn("flex-1 min-h-0", textPhase === "results" ? "flex overflow-hidden" : "overflow-y-auto")}>
+          <div className={cn("flex-1 min-h-0", textPhase === "results" ? "flex flex-col md:flex-row overflow-y-auto md:overflow-hidden" : "overflow-y-auto")}>
 
             {/* Input panel */}
             <div className={cn(
               "flex flex-col",
-              textPhase === "results" ? "w-[420px] shrink-0 border-r border-border overflow-y-auto" : "max-w-2xl mx-auto px-6 py-8 w-full"
+              textPhase === "results" ? "shrink-0 border-b md:border-b-0 md:w-[400px] md:border-r border-border overflow-y-auto max-h-[45vh] md:max-h-none" : "max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full"
             )}>
               <div className={cn("space-y-4", textPhase === "results" && "px-5 py-5")}>
                 {textPhase !== "results" && (

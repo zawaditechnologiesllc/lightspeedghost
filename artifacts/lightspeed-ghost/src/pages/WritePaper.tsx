@@ -370,9 +370,9 @@ export default function WritePaper() {
           />
         </div>
 
-        <div className="flex-1 flex min-h-0">
+        <div className="flex-1 flex flex-col md:flex-row min-h-0">
           {/* Left: narrative activity feed */}
-          <div className="w-80 shrink-0 border-r border-border flex flex-col overflow-hidden">
+          <div className="shrink-0 border-b md:border-b-0 md:w-80 md:border-r border-border flex flex-col overflow-hidden max-h-44 md:max-h-none">
             {/* Current action headline */}
             <div className="px-5 py-4 border-b border-border bg-muted/20 shrink-0">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Currently</p>
@@ -471,8 +471,8 @@ export default function WritePaper() {
     return (
       <div className="h-full flex flex-col bg-background overflow-hidden">
         {/* Stats header */}
-        <div className="shrink-0 px-5 py-3 border-b border-border bg-card flex items-center gap-3 flex-wrap">
-          <div className="flex gap-2 flex-wrap">
+        <div className="shrink-0 px-3 sm:px-5 py-2 sm:py-3 border-b border-border bg-card flex items-center gap-2 flex-wrap">
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap overflow-x-auto">
             <StatCard label="Est. Grade" value={`${stats.grade}%`} color={gradeColor} sublabel="Academic quality" />
             <StatCard label="AI Score" value={`${stats.aiScore}%`} color={aiColor} sublabel="AI detection est." />
             <StatCard label="Plagiarism" value={`${stats.plagiarismScore}%`} color={plagColor} sublabel="Originality est." />
@@ -513,8 +513,8 @@ export default function WritePaper() {
         </div>
 
         {/* Tab bar */}
-        <div className="shrink-0 px-5 py-2 border-b border-border bg-card flex items-center justify-between">
-          <div className="flex gap-1">
+        <div className="shrink-0 px-3 sm:px-5 py-2 border-b border-border bg-card flex items-center justify-between overflow-x-auto">
+          <div className="flex gap-1 flex-nowrap shrink-0">
             {([
               { id: "paper", label: "Paper", icon: FileText },
               { id: "citations", label: `Citations (${result.citations.length})`, icon: BookMarked },
@@ -556,7 +556,7 @@ export default function WritePaper() {
         <div className="flex-1 overflow-y-auto">
           {/* ── Paper tab ── */}
           {resultTab === "paper" && viewMode === "view" && (
-            <div className="max-w-4xl mx-auto px-8 py-6">
+            <div className="max-w-4xl mx-auto px-4 sm:px-8 py-4 sm:py-6">
               <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 text-xs text-green-700 dark:text-green-400">
                 <CheckCircle size={12} />
                 All citations verified from Semantic Scholar & arXiv — no hallucinated references
@@ -614,8 +614,8 @@ export default function WritePaper() {
 
           {/* ── Stats tab ── */}
           {resultTab === "stats" && (
-            <div className="max-w-2xl mx-auto px-6 py-6 space-y-5">
-              <div className="grid grid-cols-3 gap-3">
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className={cn("rounded-xl border p-4 text-center", gradeColor)}>
                   <div className="text-3xl font-bold">{stats.grade}%</div>
                   <div className="text-xs mt-1 opacity-70">Estimated Grade</div>
@@ -668,14 +668,14 @@ export default function WritePaper() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-2xl mx-auto px-6 py-8 pb-16 space-y-6">
+      <div className="max-w-2xl mx-auto px-4 py-6 pb-16 sm:px-6 sm:py-8 space-y-6">
         {/* Page header — centered */}
         <div className="text-center space-y-1.5">
           <div className="flex items-center justify-center gap-2 mb-1">
             <Zap size={20} className="text-primary" />
             <span className="text-xs font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Write a Paper</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Write a Paper</h1>
           <p className="text-muted-foreground text-sm">
             Real verified citations · Live generation · Grade &amp; plagiarism estimates
           </p>

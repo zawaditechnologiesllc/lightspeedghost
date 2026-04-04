@@ -60,9 +60,9 @@ export default function Dashboard() {
   const { data: stats, isLoading } = useGetDocumentStats();
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-7">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5 sm:space-y-7">
       {/* Hero header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-6">
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-4 sm:p-6">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/4 pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-accent/5 rounded-full translate-y-1/2 pointer-events-none" />
         <div className="relative">
@@ -70,7 +70,7 @@ export default function Dashboard() {
             <Sparkles size={16} className="text-primary" />
             <span className="text-xs font-semibold text-primary uppercase tracking-widest">LightSpeed Ghost</span>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Your Academic AI Workspace</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Your Academic AI Workspace</h1>
           <p className="text-muted-foreground text-sm mt-2 max-w-lg">
             Real AI writing, verified citations, ReAct-powered STEM solving, and a tutor that remembers your progress.
           </p>

@@ -47,9 +47,9 @@ export default function Documents() {
   ) ?? [];
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">History</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">History</h1>
         <p className="text-muted-foreground text-sm mt-1">All your saved papers, revisions, STEM solutions, and study sessions</p>
       </div>
 
