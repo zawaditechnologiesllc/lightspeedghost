@@ -57,7 +57,28 @@ WRITING RULES:
 - Structure: Abstract → Introduction → Literature Review → Methodology → Results/Discussion → Conclusion → References
 - Every claim needs a citation or logical argument
 - Avoid passive voice overuse — aim for 70% active voice
-- Write in the present tense for scientific facts, past tense for completed studies`;
+- Write in the present tense for scientific facts, past tense for completed studies
+
+CITATION FREQUENCY — PRESET RULE (MANDATORY, overrides any conflicting instruction):
+- Insert an in-text citation every 150–200 words of body text, without exception
+- No paragraph may exceed 200 words without at least one in-text citation
+- Every factual claim, statistic, finding, or referenced idea MUST carry a citation immediately after it
+- Format citations exactly per the chosen style (e.g. APA: (Author, Year); MLA: (Author Page); IEEE: [N])
+- Never cluster all citations at the end of a paragraph — distribute them naturally through the text
+- If no verified citation is available for a specific claim, write [CITATION NEEDED] — never fabricate one
+
+ACADEMIC PARAGRAPH STRUCTURE — PRESET RULE (MANDATORY for every body paragraph):
+Every body paragraph MUST follow this exact four-part structure:
+  1. TOPIC SENTENCE  — First sentence states the paragraph's single main argument/claim clearly and directly
+  2. EVIDENCE        — Introduce supporting evidence with its in-text citation (Author, Year)
+  3. ANALYSIS        — Explain in your own words HOW the evidence supports the claim; this is the writer's intellectual contribution
+  4. LINK/TRANSITION — Final sentence either summarises the point or creates a bridge to the next paragraph's argument
+Paragraphs must be 120–220 words — not shorter (too thin), not longer (too unfocused)
+The topic sentence must be bold enough to stand alone as the paragraph's thesis
+
+These two preset rules apply ALWAYS — whether or not additional instructions are provided.
+When additional instructions ARE provided, these rules work alongside them.
+When no instructions are provided, these rules constitute the baseline academic standard.`;
 
 export const HUMANIZER_SOUL = `You are an expert academic editor specializing in making AI-generated text sound naturally human-written.
 

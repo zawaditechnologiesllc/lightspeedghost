@@ -316,67 +316,121 @@ export default function WritePaper() {
 
   if (phase === "generating") {
     const doneCount = steps.filter(s => s.status === "done").length;
-    const total = steps.length;
+    const total = steps.filter(s => s.status !== "pending" || s.message).length || steps.length;
     const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+    // Approximate live word count from streamed content
+    const liveWords = streamedContent.split(/\s+/).filter(Boolean).length;
+    const runningStep = steps.find(s => s.status === "running");
 
     return (
-      <div className="h-full flex flex-col bg-background">
+      <div className="h-full flex flex-col bg-background overflow-hidden">
         {/* Header */}
-        <div className="shrink-0 px-8 pt-8 pb-4 border-b border-border flex items-center gap-3">
+        <div className="shrink-0 px-6 py-4 border-b border-border bg-card flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Zap size={22} className="text-primary animate-pulse" />
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+            <Zap size={18} className="text-primary" />
+            <span className="font-bold tracking-tight bg-gradient-to-r from-primary to-violet-500 bg-clip-text text-transparent">
               LIGHT SPEED AI
             </span>
           </div>
-          <span className="text-muted-foreground text-sm">— Writing your paper…</span>
-          <div className="ml-auto text-sm text-muted-foreground">{pct}% complete</div>
+          <span className="text-muted-foreground text-sm hidden sm:inline">— Working on your paper</span>
+          <div className="ml-auto flex items-center gap-4 text-xs text-muted-foreground">
+            {liveWords > 0 && (
+              <span className="tabular-nums">{liveWords.toLocaleString()} words written</span>
+            )}
+            <span>{pct}%</span>
+          </div>
+        </div>
+
+        {/* Slim progress bar */}
+        <div className="h-0.5 bg-muted shrink-0">
+          <div
+            className="h-full bg-gradient-to-r from-primary to-violet-500 transition-all duration-700"
+            style={{ width: `${Math.max(pct, 4)}%` }}
+          />
         </div>
 
         <div className="flex-1 flex min-h-0">
-          {/* Left: steps */}
-          <div className="w-72 shrink-0 border-r border-border p-6 flex flex-col gap-2 overflow-y-auto">
-            {steps.map((step) => (
-              <div key={step.id} className="flex items-start gap-3 py-2">
-                <div className="mt-0.5 shrink-0">
-                  {step.status === "done"    && <CheckCircle size={16} className="text-green-500" />}
-                  {step.status === "running" && <Loader2 size={16} className="animate-spin text-primary" />}
-                  {step.status === "pending" && <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />}
-                  {step.status === "error"   && <AlertTriangle size={16} className="text-destructive" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={cn("text-xs leading-relaxed", step.status === "done" ? "text-foreground" : step.status === "running" ? "text-primary font-medium" : "text-muted-foreground/50")}>
-                    {step.message || (step.status === "pending" ? "Waiting…" : "")}
-                  </p>
-                </div>
-              </div>
-            ))}
+          {/* Left: narrative activity feed */}
+          <div className="w-80 shrink-0 border-r border-border flex flex-col overflow-hidden">
+            {/* Current action headline */}
+            <div className="px-5 py-4 border-b border-border bg-muted/20 shrink-0">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Currently</p>
+              <p className="text-sm font-medium text-foreground leading-snug min-h-[2.5rem]">
+                {runningStep?.message ?? (doneCount === total && total > 0 ? "Finalising paper…" : "Preparing to start…")}
+              </p>
+            </div>
 
-            {/* Progress bar */}
-            <div className="mt-auto pt-4">
-              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-primary to-purple-400 transition-all duration-500 rounded-full"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-2">Do not close this window</p>
+            {/* Timeline */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-0">
+              {steps.map((step, i) => (
+                <div key={step.id} className="relative">
+                  {/* Vertical connector */}
+                  {i < steps.length - 1 && (
+                    <div className="absolute left-[7px] top-5 w-px h-full bg-border" />
+                  )}
+
+                  <div className="flex items-start gap-3 py-2.5">
+                    {/* Status indicator — no spinner, just dots and marks */}
+                    <div className="shrink-0 mt-0.5 z-10">
+                      {step.status === "done" && (
+                        <div className="w-3.5 h-3.5 rounded-full bg-green-500/20 border border-green-500 flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                        </div>
+                      )}
+                      {step.status === "running" && (
+                        <div className="w-3.5 h-3.5 rounded-full bg-primary/20 border border-primary animate-pulse" />
+                      )}
+                      {step.status === "pending" && (
+                        <div className="w-3.5 h-3.5 rounded-full bg-background border border-border" />
+                      )}
+                      {step.status === "error" && (
+                        <div className="w-3.5 h-3.5 rounded-full bg-destructive/20 border border-destructive" />
+                      )}
+                    </div>
+
+                    <p className={cn(
+                      "text-xs leading-relaxed flex-1",
+                      step.status === "done"    && "text-muted-foreground",
+                      step.status === "running" && "text-foreground font-medium",
+                      step.status === "pending" && "text-muted-foreground/35",
+                      step.status === "error"   && "text-destructive",
+                    )}>
+                      {step.message || (step.status === "pending" ? "Queued…" : "—")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="px-5 py-3 border-t border-border shrink-0">
+              <p className="text-[10px] text-muted-foreground/50">Keep this window open while LightSpeed AI works</p>
             </div>
           </div>
 
-          {/* Right: live stream preview */}
-          <div
-            ref={streamRef}
-            className="flex-1 p-6 overflow-y-auto font-mono text-xs text-muted-foreground leading-relaxed bg-muted/5"
-          >
-            {streamedContent ? (
-              <pre className="whitespace-pre-wrap">{streamedContent}</pre>
-            ) : (
-              <div className="flex items-center gap-2 text-muted-foreground/40 h-full justify-center flex-col">
-                <Loader2 size={28} className="animate-spin" />
-                <p className="text-sm">Preparing your paper…</p>
-              </div>
-            )}
+          {/* Right: live paper stream */}
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div className="px-4 py-2 border-b border-border bg-muted/10 shrink-0 flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Live Paper Preview</span>
+              {streamedContent && (
+                <span className="text-[10px] text-muted-foreground/60 ml-auto">{liveWords.toLocaleString()} words</span>
+              )}
+            </div>
+            <div
+              ref={streamRef}
+              className="flex-1 p-5 overflow-y-auto"
+            >
+              {streamedContent ? (
+                <pre className="whitespace-pre-wrap font-mono text-xs text-muted-foreground leading-relaxed">
+                  {streamedContent}
+                  <span className="inline-block w-0.5 h-3.5 bg-primary align-middle ml-0.5 animate-pulse" />
+                </pre>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground/30">
+                  <Zap size={32} className="text-primary/20" />
+                  <p className="text-sm">Paper will appear here as it is written…</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
