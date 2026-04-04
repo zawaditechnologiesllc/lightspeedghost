@@ -277,146 +277,169 @@ export default function StemSolver() {
     );
   }
 
+  // ── Shared subject pills ──────────────────────────────────────────────────
+  const SubjectPills = (
+    <div className="flex flex-wrap gap-2 justify-center">
+      {subjects
+        ? subjects.subjects.map((sub) => {
+            const meta = SUBJECT_META[sub.id];
+            const isActive = selectedSubject === sub.id;
+            return (
+              <button
+                key={sub.id}
+                onClick={() => { form.setValue("subject", sub.id as FormData["subject"]); setExpandedGroups({}); }}
+                className={cn(
+                  "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-all",
+                  isActive
+                    ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/25 scale-105"
+                    : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground hover:scale-[1.02]"
+                )}
+              >
+                {meta?.icon}
+                {meta?.label ?? sub.name}
+              </button>
+            );
+          })
+        : ["Math","Physics","Chemistry","Biology","Engineering","CS","Stats"].map(s => (
+            <div key={s} className="h-8 w-20 rounded-full bg-muted animate-pulse" />
+          ))}
+    </div>
+  );
+
+  // ── Shared input form ─────────────────────────────────────────────────────
+  const InputForm = (
+    <form onSubmit={form.handleSubmit(onSubmit)}>
+      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm ring-1 ring-transparent focus-within:ring-primary/30 transition-all">
+        {/* Upload tools row */}
+        <div className="flex items-center gap-2 px-4 pt-3 pb-0 flex-wrap">
+          <StemImageOcr onExtracted={handleStemImageOcr} compact />
+          <input ref={fileInputRef} type="file" accept=".txt,.pdf,.docx,.doc" className="sr-only" onChange={handleStemFileExtracted} />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 bg-card transition-all"
+          >
+            <FileText size={12} /> Upload file
+          </button>
+        </div>
+        {/* Textarea */}
+        <textarea
+          {...form.register("problem")}
+          rows={5}
+          placeholder={`Type your ${SUBJECT_META[selectedSubject]?.label ?? "STEM"} problem here…\n\ne.g.  Find the definite integral of x·sin(x) from 0 to π\ne.g.  A 5kg mass on a 30° incline with μ = 0.3. Find acceleration.`}
+          className="w-full px-4 pt-3 pb-2 bg-transparent text-sm focus:outline-none resize-none font-mono leading-relaxed placeholder:text-muted-foreground/40 placeholder:font-sans"
+        />
+        {form.formState.errors.problem && (
+          <p className="text-destructive text-xs px-4 pb-1">{form.formState.errors.problem.message}</p>
+        )}
+        {/* Bottom action row */}
+        <div className="flex items-center gap-4 px-4 py-3 border-t border-border bg-muted/20">
+          <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+            <input type="checkbox" {...form.register("showSteps")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
+            <span className="text-xs text-muted-foreground">Show steps</span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+            <input type="checkbox" {...form.register("generateGraph")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
+            <span className="text-xs text-muted-foreground">Generate graph</span>
+          </label>
+          <button
+            type="submit"
+            className="ml-auto flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/25"
+          >
+            <Zap size={14} /> Solve
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
 
-      {/* ── Fixed top bar ─────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm shadow-primary/30">
-              <Zap size={15} className="text-primary-foreground" />
+      {/* ── Top bar — only shown when results exist ────────────────────────── */}
+      {result && (
+        <div className="shrink-0 border-b border-border bg-card/80 backdrop-blur-sm">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Zap size={14} className="text-primary" />
+              <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+              <span className="text-muted-foreground/40 text-xs">·</span>
+              <span className="text-xs text-muted-foreground">STEM Solver</span>
             </div>
-            <div>
-              <h1 className="text-sm font-bold leading-tight tracking-tight">STEM Solver</h1>
-              <p className="text-[10px] text-muted-foreground leading-tight">ReAct Loop · Chain-of-Verification · Multi-agent</p>
-            </div>
-          </div>
-          {result && (
             <button
               onClick={handleReset}
               className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-1.5 transition-all"
             >
               <RotateCcw size={11} /> New problem
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Scrollable body ───────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 py-5 space-y-4">
-
-          {/* ── Subject pills ──────────────────────────────────────────────── */}
-          <div className="flex flex-wrap gap-2 justify-center pt-1">
-            {subjects
-              ? subjects.subjects.map((sub) => {
-                  const meta = SUBJECT_META[sub.id];
-                  const isActive = selectedSubject === sub.id;
-                  return (
-                    <button
-                      key={sub.id}
-                      onClick={() => { form.setValue("subject", sub.id as FormData["subject"]); setExpandedGroups({}); }}
-                      className={cn(
-                        "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-all",
-                        isActive
-                          ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/25 scale-105"
-                          : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground hover:scale-[1.02]"
-                      )}
-                    >
-                      {meta?.icon}
-                      {meta?.label ?? sub.name}
-                    </button>
-                  );
-                })
-              : (
-                <div className="flex gap-2">
-                  {["Math", "Physics", "Chemistry", "Biology", "Engineering", "CS", "Stats"].map(s => (
-                    <div key={s} className="h-8 w-20 rounded-full bg-muted animate-pulse" />
-                  ))}
-                </div>
-              )}
           </div>
+        </div>
+      )}
 
-          {/* ── Input card ─────────────────────────────────────────────────── */}
-          {(!result || showInput) && (
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm ring-1 ring-transparent focus-within:ring-primary/30 transition-all">
+      {/* ── CENTERED input state (no result) ─────────────────────────────── */}
+      {!result && (
+        <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto px-4 py-8">
+          <div className="w-full max-w-2xl space-y-5">
 
-                {/* Upload tools row */}
-                <div className="flex items-center gap-2 px-4 pt-3 pb-0 flex-wrap">
-                  <StemImageOcr onExtracted={handleStemImageOcr} compact />
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".txt,.pdf,.docx,.doc"
-                    className="sr-only"
-                    onChange={handleStemFileExtracted}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 bg-card transition-all"
-                  >
-                    <FileText size={12} /> Upload file
-                  </button>
-                  <span className="text-[10px] text-muted-foreground/50 ml-auto hidden sm:block">
-                    Math · Physics · Chemistry · Biology · Engineering · CS · Statistics
-                  </span>
-                </div>
-
-                {/* Textarea */}
-                <textarea
-                  {...form.register("problem")}
-                  rows={5}
-                  placeholder={`Type your ${SUBJECT_META[selectedSubject]?.label ?? "STEM"} problem here…\n\ne.g.  Find the definite integral of x·sin(x) from 0 to π\ne.g.  A 5kg mass on a 30° incline with μ = 0.3. Find acceleration.`}
-                  className="w-full px-4 pt-3 pb-2 bg-transparent text-sm focus:outline-none resize-none font-mono leading-relaxed placeholder:text-muted-foreground/40 placeholder:font-sans"
-                />
-                {form.formState.errors.problem && (
-                  <p className="text-destructive text-xs px-4 pb-1">{form.formState.errors.problem.message}</p>
-                )}
-
-                {/* Bottom action row */}
-                <div className="flex items-center gap-4 px-4 py-3 border-t border-border bg-muted/20">
-                  <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
-                    <input type="checkbox" {...form.register("showSteps")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
-                    <span className="text-xs text-muted-foreground">Show steps</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
-                    <input type="checkbox" {...form.register("generateGraph")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
-                    <span className="text-xs text-muted-foreground">Generate graph</span>
-                  </label>
-                  <button
-                    type="submit"
-                    className="ml-auto flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/25"
-                  >
-                    <Zap size={14} /> Solve
-                  </button>
-                </div>
+            {/* LightSpeed AI brand */}
+            <div className="text-center space-y-2">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Zap size={18} className="text-primary" />
+                <span className="text-xs font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
               </div>
-            </form>
-          )}
-
-          {/* ── Collapsed edit bar ─────────────────────────────────────────── */}
-          {result && !showInput && (
-            <button
-              onClick={() => setShowInput(true)}
-              className="w-full flex items-center gap-3 bg-card border border-border hover:border-primary/40 rounded-2xl px-4 py-3 text-left transition-all group"
-            >
-              <div className={cn(
-                "w-6 h-6 rounded-lg flex items-center justify-center shrink-0",
-                "bg-primary/10 text-primary"
-              )}>
-                {SUBJECT_META[selectedSubject]?.icon}
+              <h1 className="text-2xl font-bold tracking-tight">STEM Solver</h1>
+              <p className="text-sm text-muted-foreground">
+                Solve any problem instantly — Math · Physics · Chemistry · Biology · Engineering · CS · Statistics
+              </p>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary">
+                  <Zap size={9} /> ReAct Loop
+                </span>
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400">
+                  <ShieldCheck size={9} /> Chain-of-Verification
+                </span>
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-border bg-muted text-muted-foreground">
+                  <Database size={9} /> Research-backed
+                </span>
               </div>
-              <span className="text-sm text-muted-foreground line-clamp-1 flex-1 font-mono">{solvedProblem}</span>
-              <span className="text-[10px] text-muted-foreground/60 group-hover:text-primary transition-colors shrink-0 font-medium">Edit →</span>
-            </button>
-          )}
+            </div>
 
-          {/* ── Results ────────────────────────────────────────────────────── */}
-          {result && (
-            <div className="space-y-3">
+            {/* Subject pills */}
+            {SubjectPills}
+
+            {/* Input form */}
+            {InputForm}
+
+          </div>
+        </div>
+      )}
+
+      {/* ── RESULTS state (scrollable from top) ──────────────────────────── */}
+      {result && (
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+
+            {/* Collapsed edit bar or expanded form */}
+            {showInput ? (
+              <div className="space-y-4">
+                {SubjectPills}
+                {InputForm}
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowInput(true)}
+                className="w-full flex items-center gap-3 bg-card border border-border hover:border-primary/40 rounded-2xl px-4 py-3 text-left transition-all group"
+              >
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-primary/10 text-primary">
+                  {SUBJECT_META[selectedSubject]?.icon}
+                </div>
+                <span className="text-sm text-muted-foreground line-clamp-1 flex-1 font-mono">{solvedProblem}</span>
+                <span className="text-[10px] text-muted-foreground/60 group-hover:text-primary transition-colors shrink-0 font-medium">Edit →</span>
+              </button>
+            )}
+
+          {/* ── Results ─────────────────────────────────────────────────────── */}
+          <div className="space-y-3">
 
               {/* Method badges row */}
               <div className="flex items-center gap-2 flex-wrap">
@@ -639,24 +662,12 @@ export default function StemSolver() {
                 </p>
               </div>
             </div>
-          )}
 
-          {/* ── Empty state ─────────────────────────────────────────────────── */}
-          {!result && (
-            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground/30">
-              <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center">
-                <Zap size={28} />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-medium text-muted-foreground/50">Solve any STEM problem instantly</p>
-                <p className="text-xs text-muted-foreground/30 mt-1">Math · Physics · Chemistry · Biology · Engineering · CS · Statistics</p>
-              </div>
-            </div>
-          )}
-
-          <div className="h-4" />
+          <div className="h-6" />
         </div>
       </div>
+    )}
+
     </div>
   );
 }
