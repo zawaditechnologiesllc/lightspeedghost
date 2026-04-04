@@ -412,7 +412,6 @@ export default function StemSolver() {
 
           </div>
         </div>
-        </div>
       )}
 
       {/* ── RESULTS state (scrollable from top) ──────────────────────────── */}
