@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
   Loader2, Wand2, Download, Save, CheckCircle, ExternalLink,
@@ -161,6 +161,7 @@ export default function WritePaper() {
   const [subject, setSubject] = useState("");
   const [additionalInstructions, setAdditionalInstructions] = useState("");
   const [rubricText, setRubricText] = useState("");
+  const [fromPlagiarism, setFromPlagiarism] = useState(false);
   const [referenceText, setReferenceText] = useState("");
 
   // ── citation confirmation
@@ -188,6 +189,19 @@ export default function WritePaper() {
       if (n >= 100 && n <= 10000) { setWordCount(n); setCustomWordCount(String(n)); }
     }
   }, [topic, subject]);
+
+  // ── pre-fill from AI & Plagiarism checker redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("topic");
+    const s = params.get("subject");
+    const pt = params.get("type");
+    const from = params.get("from");
+    if (t) setTopic(decodeURIComponent(t));
+    if (s) setSubject(decodeURIComponent(s));
+    if (pt) setPaperType(pt);
+    if (from === "plagiarism") setFromPlagiarism(true);
+  }, []);
 
   // ── autofill from rubric
   const handleRubricExtracted = useCallback((file: ExtractedFile) => {
@@ -666,6 +680,16 @@ export default function WritePaper() {
             Real verified citations · Live generation · Grade &amp; plagiarism estimates
           </p>
         </div>
+
+        {fromPlagiarism && (
+          <div className="flex items-center justify-between gap-3 px-4 py-3 bg-primary/10 border border-primary/30 rounded-xl text-sm text-primary">
+            <div className="flex items-center gap-2">
+              <Zap size={14} className="shrink-0" />
+              <span>Topic and subject pre-filled from your AI & Plagiarism check — review and add any missing details below</span>
+            </div>
+            <button onClick={() => setFromPlagiarism(false)} className="shrink-0 hover:opacity-60 transition-opacity text-base leading-none">&times;</button>
+          </div>
+        )}
 
         {genError && (
           <div className="flex items-center gap-2 px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-xl text-sm text-destructive">

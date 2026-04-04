@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   FileEdit, CheckCircle, AlertTriangle, Zap, ArrowRight, Copy, CheckCheck,
   TrendingUp, BookOpen, Download, BarChart3, RefreshCcw, FileText,
@@ -107,6 +107,9 @@ export default function Revision() {
   const [steps, setSteps] = useState<Step[]>([]);
   const [error, setError] = useState("");
 
+  // ── prefill from plagiarism checker
+  const [fromPlagiarism, setFromPlagiarism] = useState(false);
+
   // ── form inputs
   const [paperText, setPaperText] = useState("");
   const [rubricText, setRubricText] = useState("");
@@ -139,6 +142,17 @@ export default function Revision() {
 
   const handleReferenceUploaded = useCallback((file: ExtractedFile) => {
     setReferenceText(prev => (prev ? prev + "\n\n" : "") + file.text.slice(0, 5000));
+  }, []);
+
+  // ── Pre-fill from AI & Plagiarism Checker ─────────────────────────────────
+  useEffect(() => {
+    const stored = localStorage.getItem("plag-prefill-revision-text");
+    if (stored && stored.trim()) {
+      setPaperText(stored);
+      setPaperWordCount(stored.split(/\s+/).filter(Boolean).length);
+      setFromPlagiarism(true);
+      localStorage.removeItem("plag-prefill-revision-text");
+    }
   }, []);
 
   // ── Step updater ─────────────────────────────────────────────────────────
@@ -282,6 +296,21 @@ export default function Revision() {
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-6 py-8 pb-16 space-y-6">
+
+            {fromPlagiarism && (
+              <div className="flex items-center justify-between gap-3 px-4 py-3 bg-primary/10 border border-primary/30 rounded-xl text-sm text-primary">
+                <div className="flex items-center gap-2">
+                  <Zap size={14} className="shrink-0" />
+                  <div>
+                    <div className="font-semibold">Paper loaded from your AI & Plagiarism check</div>
+                    <div className="text-xs font-normal opacity-80 mt-0.5">
+                      Complete the prerequisites below: add your rubric, target grade, and any class materials — then click "Scan Paper"
+                    </div>
+                  </div>
+                </div>
+                <button onClick={() => setFromPlagiarism(false)} className="shrink-0 hover:opacity-60 transition-opacity text-lg leading-none">&times;</button>
+              </div>
+            )}
 
             {error && (
               <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/30 text-sm text-destructive">
