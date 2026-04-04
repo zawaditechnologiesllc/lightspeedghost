@@ -11,7 +11,9 @@ export default function Auth() {
   const [tab, setTab] = useState<Tab>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [error, setError] = useState("");
   const [emailSent, setEmailSent] = useState(false);
@@ -22,12 +24,14 @@ export default function Auth() {
     setError("");
     setStatus("idle");
     setEmailSent(false);
+    setConfirmPassword("");
   };
 
   const switchTab = (t: Tab) => {
     setTab(t);
     reset();
     setForgotMode(false);
+    setPassword("");
   };
 
   async function handleLogin(e: React.FormEvent) {
@@ -48,6 +52,16 @@ export default function Auth() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setStatus("loading");
 
     const { error } = await supabase.auth.signUp({
@@ -93,9 +107,12 @@ export default function Auth() {
       </div>
 
       <div className="relative w-full max-w-md">
-        <Link href="/">
-          <Logo size={30} textSize="text-base" className="mb-10 w-fit cursor-pointer" />
-        </Link>
+        {/* Centered logo */}
+        <div className="flex justify-center mb-10">
+          <Link href="/">
+            <Logo size={30} textSize="text-base" className="cursor-pointer" />
+          </Link>
+        </div>
 
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/30">
           {/* Forgot password flow */}
@@ -155,7 +172,7 @@ export default function Auth() {
               </div>
 
               <div className="p-8">
-                {/* Email confirmed / signup done */}
+                {/* Signup success — email sent */}
                 {emailSent && tab === "signup" ? (
                   <div className="text-center py-4">
                     <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
@@ -167,7 +184,7 @@ export default function Auth() {
                       <span className="text-white/70">{email}</span>. Click it to activate your account.
                     </p>
                     <button
-                      onClick={() => { switchTab("login"); }}
+                      onClick={() => switchTab("login")}
                       className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
                     >
                       Back to sign in
@@ -190,6 +207,7 @@ export default function Auth() {
                     >
                       <EmailInput email={email} setEmail={setEmail} />
 
+                      {/* Password */}
                       <div>
                         <label className="block text-sm text-white/60 mb-1.5">Password</label>
                         <div className="relative">
@@ -213,6 +231,46 @@ export default function Auth() {
                         </div>
                       </div>
 
+                      {/* Confirm password — signup only */}
+                      {tab === "signup" && (
+                        <div>
+                          <label className="block text-sm text-white/60 mb-1.5">Confirm Password</label>
+                          <div className="relative">
+                            <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
+                            <input
+                              type={showConfirmPw ? "text" : "password"}
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              placeholder="••••••••"
+                              required
+                              className={`w-full pl-10 pr-10 py-2.5 bg-white/5 border rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:bg-white/8 transition-colors ${
+                                confirmPassword && confirmPassword !== password
+                                  ? "border-red-500/40 focus:border-red-500/60"
+                                  : confirmPassword && confirmPassword === password
+                                  ? "border-green-500/40 focus:border-green-500/60"
+                                  : "border-white/10 focus:border-blue-500/50"
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPw(!showConfirmPw)}
+                              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                            >
+                              {showConfirmPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                            </button>
+                          </div>
+                          {confirmPassword && confirmPassword !== password && (
+                            <p className="text-xs text-red-400/80 mt-1.5">Passwords do not match</p>
+                          )}
+                          {confirmPassword && confirmPassword === password && (
+                            <p className="text-xs text-green-400/80 mt-1.5 flex items-center gap-1">
+                              <CheckCircle size={11} /> Passwords match
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Forgot password link — login only */}
                       {tab === "login" && (
                         <div className="flex justify-end">
                           <button
@@ -235,9 +293,17 @@ export default function Auth() {
 
                     <p className="text-center text-xs text-white/30 mt-6">
                       {tab === "login" ? (
-                        <>No account? <button onClick={() => switchTab("signup")} className="text-blue-400 hover:text-blue-300 transition-colors">Create one free</button></>
+                        <>No account?{" "}
+                          <button onClick={() => switchTab("signup")} className="text-blue-400 hover:text-blue-300 transition-colors">
+                            Create one free
+                          </button>
+                        </>
                       ) : (
-                        <>Already have an account? <button onClick={() => switchTab("login")} className="text-blue-400 hover:text-blue-300 transition-colors">Sign in</button></>
+                        <>Already have an account?{" "}
+                          <button onClick={() => switchTab("login")} className="text-blue-400 hover:text-blue-300 transition-colors">
+                            Sign in
+                          </button>
+                        </>
                       )}
                     </p>
                   </>
