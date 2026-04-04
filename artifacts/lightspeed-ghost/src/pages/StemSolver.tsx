@@ -5,6 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSolveStem, useGetStemSubjects } from "@workspace/api-client-react";
 import { Loader2, FlaskConical, CheckCircle, BookOpen, Wrench, ExternalLink, Search, ChevronDown, ChevronUp, Dna, Sparkles } from "lucide-react";
 import type { StemSolution } from "@workspace/api-client-react";
+import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
+import StemImageOcr from "@/components/StemImageOcr";
 import {
   LineChart,
   Line,
@@ -154,6 +156,18 @@ export default function StemSolver() {
   const selectedSubject = form.watch("subject");
   const resources = stemResourcesBySubject[selectedSubject] ?? [];
 
+  const handleStemFileExtracted = (file: ExtractedFile) => {
+    const cleaned = file.text
+      .replace(/^(name|student|date|course|class|professor|instructor|due\s*date)[\s:].*/gim, "")
+      .replace(/^\s*page\s+\d+\s*$/gim, "")
+      .trim();
+    form.setValue("problem", cleaned.slice(0, 1000));
+  };
+
+  const handleStemImageOcr = (text: string) => {
+    form.setValue("problem", text.slice(0, 1000));
+  };
+
   const onSubmit = async (data: FormData) => {
     setPapers([]);
     setBioModels([]);
@@ -239,6 +253,16 @@ export default function StemSolver() {
         <div className="space-y-4">
           <div className="bg-card border border-border rounded-xl p-5">
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <StemImageOcr onExtracted={handleStemImageOcr} />
+                <FileUploadZone
+                  onExtracted={handleStemFileExtracted}
+                  accept=".pdf,.docx,.doc,.txt"
+                  label="Or upload a text problem"
+                  hint="PDF or Word homework sheet → auto-fills problem"
+                  compact
+                />
+              </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Problem *</label>
                 <textarea

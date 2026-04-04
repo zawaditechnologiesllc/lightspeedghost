@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSubmitRevision } from "@workspace/api-client-react";
 import { Loader2, FileEdit, CheckCircle, ArrowRight } from "lucide-react";
 import type { RevisionResult } from "@workspace/api-client-react";
+import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 
 const schema = z.object({
   originalText: z.string().min(50, "Please provide at least 50 characters of text"),
@@ -30,6 +31,18 @@ export default function Revision() {
     setResult(res);
   };
 
+  const handlePaperUploaded = (file: ExtractedFile) => {
+    if (file.wordCount > 300) {
+      form.setValue("originalText", file.text);
+    } else {
+      form.setValue("gradingCriteria", file.text);
+    }
+  };
+
+  const handleRubricUploaded = (file: ExtractedFile) => {
+    form.setValue("gradingCriteria", file.text);
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div>
@@ -40,6 +53,12 @@ export default function Revision() {
       <div className={`grid gap-6 ${result ? "xl:grid-cols-2" : ""}`}>
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Paper Details</h2>
+          <FileUploadZone
+            onExtracted={handlePaperUploaded}
+            accept=".pdf,.docx,.doc,.txt"
+            label="Upload your paper"
+            hint="PDF or Word — fills paper text automatically (or rubric if short)"
+          />
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-1.5 block">Original Paper Text *</label>
@@ -88,6 +107,14 @@ export default function Revision() {
 
             <div>
               <label className="text-sm font-medium mb-1.5 block">A-Grade Marking Criteria</label>
+              <FileUploadZone
+                onExtracted={handleRubricUploaded}
+                accept=".pdf,.docx,.doc,.txt"
+                label="Upload marking rubric"
+                hint="Auto-fills criteria below"
+                compact
+                className="mb-2"
+              />
               <textarea
                 {...form.register("gradingCriteria")}
                 rows={3}

@@ -5,6 +5,8 @@ import { z } from "zod";
 import { useGeneratePaper } from "@workspace/api-client-react";
 import { Loader2, Wand2, Copy, Download, BookMarked } from "lucide-react";
 import type { GeneratedPaper } from "@workspace/api-client-react";
+import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
+import { detectPaperType, detectCitationStyle, detectLength, extractTopic, extractSubject } from "@/lib/autofill";
 
 const schema = z.object({
   topic: z.string().min(5, "Topic must be at least 5 characters"),
@@ -38,6 +40,18 @@ export default function WritePaper() {
     setResult(res);
   };
 
+  const handleFileExtracted = (file: ExtractedFile) => {
+    const { text } = file;
+    const topic = extractTopic(text);
+    if (topic) form.setValue("topic", topic);
+    const subject = extractSubject(text);
+    if (subject) form.setValue("subject", subject);
+    form.setValue("paperType", detectPaperType(text));
+    form.setValue("citationStyle", detectCitationStyle(text));
+    form.setValue("length", detectLength(text));
+    form.setValue("additionalInstructions", text.slice(0, 1500));
+  };
+
   const copyToClipboard = () => {
     if (result) navigator.clipboard.writeText(result.content);
   };
@@ -52,6 +66,12 @@ export default function WritePaper() {
       <div className={`grid gap-6 ${result ? "lg:grid-cols-2" : ""}`}>
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Configuration</h2>
+          <FileUploadZone
+            onExtracted={handleFileExtracted}
+            accept=".pdf,.docx,.doc,.txt,.md"
+            label="Upload assignment brief"
+            hint="PDF or Word — auto-fills topic, type &amp; length"
+          />
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-1.5 block">Topic *</label>

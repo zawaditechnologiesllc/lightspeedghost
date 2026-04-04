@@ -6,6 +6,7 @@ import revisionRouter from "./revision";
 import plagiarismRouter from "./plagiarism";
 import stemRouter from "./stem";
 import studyRouter from "./study";
+import filesRouter from "./files";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(revisionRouter);
 router.use(plagiarismRouter);
 router.use(stemRouter);
 router.use(studyRouter);
+router.use(filesRouter);
 
 export default router;

@@ -95,6 +95,33 @@ All routes prefixed with `/api`:
 - `lib/academicCorpus.ts`: 12 academic reference sources (AI/ML, research methods, climate science, biology, economics, psychology, mathematics, etc.)
 - UI enhancements: Writing Metrics card (lexical diversity + avg sentence length), AI flags, corpus matched words
 
+## File Upload Feature (Phases 1-2-3)
+
+All services now support file upload with smart autofill:
+
+**Server-side extraction** (`artifacts/api-server/src/routes/files.ts`):
+- `POST /api/files/extract` — multer + pdf2json (PDF) + mammoth (DOCX) + text/plain
+- Images returned with base64 for client-side OCR; pdf2json + mammoth externalized in build
+- Build externals: pdf-parse, pdf2json, mammoth added to `build.mjs`
+
+**Frontend components** (`artifacts/lightspeed-ghost/src/components/`):
+- `FileUploadZone.tsx` — reusable drag-and-drop + click zone; compact mode for inline use
+- `StemImageOcr.tsx` — image OCR via tesseract.js (client-side WASM, dynamic import)
+
+**Smart autofill utils** (`artifacts/lightspeed-ghost/src/lib/autofill.ts`):
+- `detectPaperType()` — thesis/literature_review/report/essay/research from keywords
+- `detectCitationStyle()` — APA/MLA/Chicago/Harvard/IEEE from keywords
+- `detectLength()` — short/medium/long from word count patterns ("1500 words")
+- `extractTopic()` — first meaningful line (10-150 chars)
+- `extractSubject()` — keyword match against 20+ academic disciplines
+
+**Per-service integration**:
+- WritePaper: upload assignment brief → auto-fills topic, subject, paperType, citationStyle, length, additionalInstructions
+- Revision: upload paper (>300 words → originalText) or rubric (<300 words → gradingCriteria); separate rubric upload button
+- Plagiarism: compact upload zone above text area → fills text
+- StudyAssistant: paperclip button in chat bar → opens upload zone → injects as context message
+- StemSolver: image upload (browser OCR) + text file upload → fills problem field
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages

@@ -7,8 +7,9 @@ import {
   getGetSessionMessagesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Send, GraduationCap, Plus, MessageSquare, Loader2 } from "lucide-react";
+import { Send, GraduationCap, Plus, MessageSquare, Loader2, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
+import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 
 export default function StudyAssistant() {
   const [currentSessionId, setCurrentSessionId] = useState<number | undefined>();
@@ -29,9 +30,18 @@ export default function StudyAssistant() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [localMessages]);
 
+  const [showUpload, setShowUpload] = useState(false);
+
   const startNewSession = () => {
     setCurrentSessionId(undefined);
     setLocalMessages([]);
+  };
+
+  const handleStudyFileUploaded = (file: ExtractedFile) => {
+    const preview = file.text.slice(0, 3000);
+    const context = `[Study material uploaded: "${file.filename}" — ${file.wordCount} words]\n\n${preview}${file.text.length > 3000 ? "\n\n[...content truncated — ask me about any part of it]" : ""}`;
+    setInput(context);
+    setShowUpload(false);
   };
 
   const handleSend = async () => {
@@ -187,8 +197,26 @@ export default function StudyAssistant() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="px-4 pb-4 shrink-0">
+        <div className="px-4 pb-4 space-y-2 shrink-0">
+          {showUpload && (
+            <FileUploadZone
+              onExtracted={handleStudyFileUploaded}
+              accept=".pdf,.docx,.doc,.txt,.md"
+              label="Upload study material"
+              hint="Lecture notes, textbooks, articles — loads into chat context"
+            />
+          )}
           <div className="flex gap-2 items-end bg-card border border-border rounded-xl p-2 focus-within:ring-2 focus-within:ring-ring">
+            <button
+              onClick={() => setShowUpload((v) => !v)}
+              title="Upload study material"
+              className={cn(
+                "flex items-center justify-center w-8 h-8 rounded-lg transition-colors shrink-0",
+                showUpload ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              )}
+            >
+              <Paperclip size={14} />
+            </button>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}

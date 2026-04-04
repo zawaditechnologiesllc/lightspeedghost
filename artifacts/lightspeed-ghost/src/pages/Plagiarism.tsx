@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useCheckPlagiarism, useHumanizeText, compareCode } from "@workspace/api-client-react";
 import type { PlagiarismResult, CodeCompareResult } from "@workspace/api-client-react";
 import { Loader2, ShieldCheck, ShieldAlert, Zap, AlertTriangle, Code2, FileText, ExternalLink, Info } from "lucide-react";
+import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 
 type PageTab = "text" | "code";
 
@@ -98,6 +99,13 @@ export default function Plagiarism() {
           <div className="space-y-4">
             <div className="bg-card border border-border rounded-xl p-5 space-y-4">
               <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Input Text</h2>
+              <FileUploadZone
+                onExtracted={(f: ExtractedFile) => setText(f.text)}
+                accept=".pdf,.docx,.doc,.txt"
+                label="Upload document"
+                hint="PDF or Word — auto-fills the text area below"
+                compact
+              />
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
