@@ -196,10 +196,14 @@ TOPIC_TAG: [single topic label for this conversation, e.g. "Integration by parts
 });
 
 const GenerateBody = z.object({
-  content: z.string().min(10).max(60000),
+  content: z.string().max(60000),
   type: z.enum(["flashcards", "quiz", "summary", "studyguide", "slides", "weakpoints"]),
   subject: z.string().optional(),
   weakTopics: z.array(z.string()).optional(),
+  images: z.array(z.object({
+    base64: z.string().max(10_000_000),
+    mimeType: z.string(),
+  })).optional(),
 });
 
 const GENERATE_PROMPTS: Record<string, (content: string, subject: string, weakTopics?: string[]) => string> = {
@@ -278,10 +282,24 @@ router.post("/study/generate", async (req, res) => {
 
     const prompt = promptFn(body.content, subject, body.weakTopics);
 
+    // Build message content — include images as vision blocks if provided
+    type ImageBlock = { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+    type TextBlock  = { type: "text"; text: string };
+    type ContentBlock = ImageBlock | TextBlock;
+
+    const userContent: ContentBlock[] = [];
+    for (const img of body.images ?? []) {
+      userContent.push({
+        type: "image",
+        source: { type: "base64", media_type: img.mimeType, data: img.base64 },
+      });
+    }
+    userContent.push({ type: "text", text: prompt });
+
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: 4000,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: userContent }],
     });
 
     recordUsage("claude-sonnet-4-5", response.usage.input_tokens, response.usage.output_tokens, `study-${body.type}`);
