@@ -235,10 +235,29 @@ export default function StudyAssistant() {
   const hasContent = sources.length > 0;
 
   return (
-    <div className="h-full flex overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden">
+
+      {/* ── TOP HEADER ──────────────────────────────────────────────────── */}
+      <div className="shrink-0 flex items-center gap-2 px-5 py-3 border-b border-border">
+        <Zap size={14} className="text-primary" />
+        <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+        <span className="text-muted-foreground/30 mx-1">·</span>
+        <span className="text-sm font-semibold text-foreground">Study Studio</span>
+        <div className="flex-1" />
+        <button
+          onClick={() => generate(activeTab)}
+          disabled={isGenerating || !hasContent}
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-40">
+          {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+          {isGenerating ? "Generating…" : "Generate"}
+        </button>
+      </div>
+
+      {/* ── BODY (3 columns) ─────────────────────────────────────────────── */}
+      <div className="flex-1 flex overflow-hidden">
 
       {/* ── LEFT: Sources ───────────────────────────────────────────────── */}
-      <div className="w-52 shrink-0 border-r border-border flex flex-col overflow-hidden">
+      <div className="w-52 shrink-0 bg-muted/30 flex flex-col overflow-hidden">
 
         <div className="px-4 pt-4 pb-2 flex items-center justify-between">
           <span className="text-xs font-semibold text-foreground">Sources</span>
@@ -311,7 +330,7 @@ export default function StudyAssistant() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden"
         onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
 
-        {/* Tab bar + generate button on same row */}
+        {/* Tab bar */}
         <div className="shrink-0 flex items-center border-b border-border px-4 gap-1">
           {TABS.map(({ key, label, icon }) => (
             <button key={key} onClick={() => setActiveTab(key)}
@@ -322,14 +341,6 @@ export default function StudyAssistant() {
               {icon} {label}
             </button>
           ))}
-          <div className="flex-1" />
-          <button
-            onClick={() => generate(activeTab)}
-            disabled={isGenerating || !hasContent}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 shrink-0">
-            {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
-            {isGenerating ? "Generating…" : "Generate"}
-          </button>
         </div>
 
         {/* Error banner */}
@@ -394,7 +405,7 @@ export default function StudyAssistant() {
       </div>
 
       {/* ── RIGHT: Chat ─────────────────────────────────────────────────── */}
-      <div className="w-72 shrink-0 border-l border-border flex flex-col overflow-hidden">
+      <div className="w-72 shrink-0 bg-muted/30 flex flex-col overflow-hidden">
 
         {/* Chat header */}
         <div className="px-4 pt-4 pb-2 flex items-center justify-between">
@@ -502,6 +513,8 @@ export default function StudyAssistant() {
           </div>
         </div>
       </div>
+
+      </div>{/* end body row */}
     </div>
   );
 }
