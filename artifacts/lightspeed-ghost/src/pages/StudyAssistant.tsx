@@ -693,10 +693,13 @@ export default function StudyAssistant() {
 
       {/* ── FLOATING CHAT BUBBLE (Gauth-style) ────────────────────────── */}
 
+      {/* Wrapper — vertically centered on right edge, clear of Tidio at bottom-right */}
+      <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col items-end gap-3">
+
       {/* Floating panel */}
       {chatOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-80 bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-          style={{ maxHeight: "min(520px, calc(100vh - 120px))" }}>
+        <div className="w-80 bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          style={{ maxHeight: "min(500px, 60vh)" }}>
 
           {/* Panel header */}
           <div className="shrink-0 px-4 pt-3.5 pb-3 border-b border-border">
@@ -832,7 +835,7 @@ export default function StudyAssistant() {
       <button
         onClick={() => setChatOpen((o) => !o)}
         className={cn(
-          "fixed bottom-6 right-6 z-50 w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center transition-all duration-200",
+          "w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center transition-all duration-200 relative",
           chatOpen
             ? "bg-foreground text-background scale-95"
             : "bg-primary text-primary-foreground hover:scale-105 hover:shadow-xl"
@@ -848,6 +851,8 @@ export default function StudyAssistant() {
           </span>
         )}
       </button>
+
+      </div>{/* end floating wrapper */}
 
     </div>
   );
