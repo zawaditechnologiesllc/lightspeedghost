@@ -39,7 +39,6 @@ const mobileBottomNav = [
   { path: "/plagiarism", label: "Check",   icon: ShieldCheck },
   { path: "/stem",       label: "STEM",    icon: FlaskConical },
   { path: "/study",      label: "Study",   icon: GraduationCap },
-  { path: "/documents",  label: "History", icon: History },
 ];
 
 function NavItem({
