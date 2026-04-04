@@ -3,10 +3,14 @@ import { db } from "@workspace/db";
 import { studySessionsTable, studyMessagesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { AskStudyAssistantBody, GetSessionMessagesParams } from "@workspace/api-zod";
-import { anthropic } from "../lib/ai";
+import { anthropic, openai } from "../lib/ai";
 import { TUTOR_SOUL } from "../lib/soul";
 import { getStudentMemory, updateStudentMemory, buildMemoryContext, memoryFlush } from "../lib/memory";
 import { recordUsage } from "../lib/apiCost";
+import multer from "multer";
+import { z } from "zod";
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -188,6 +192,139 @@ TOPIC_TAG: [single topic label for this conversation, e.g. "Integration by parts
   } catch (err) {
     req.log.error({ err }, "Error in study assistant");
     res.status(500).json({ error: "Failed to get tutor response. Please try again." });
+  }
+});
+
+const GenerateBody = z.object({
+  content: z.string().min(10).max(60000),
+  type: z.enum(["flashcards", "quiz", "summary", "studyguide", "slides", "weakpoints"]),
+  subject: z.string().optional(),
+  weakTopics: z.array(z.string()).optional(),
+});
+
+const GENERATE_PROMPTS: Record<string, (content: string, subject: string, weakTopics?: string[]) => string> = {
+  flashcards: (content, subject) => `
+You are an expert educator. Create 15 high-quality flashcards from this study material on ${subject}.
+
+Study material:
+${content.slice(0, 40000)}
+
+Return ONLY valid JSON (no markdown, no code blocks), exactly this format:
+{"flashcards":[{"front":"Question or concept","back":"Answer or explanation","tag":"subtopic"}]}
+
+Generate 15 flashcards covering the most important concepts, definitions, formulas, and facts.`,
+
+  quiz: (content, subject) => `
+You are an expert educator. Create 10 multiple-choice quiz questions from this study material on ${subject}.
+
+Study material:
+${content.slice(0, 40000)}
+
+Return ONLY valid JSON, exactly this format:
+{"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"explanation":"Why this is correct and others are wrong"}]}
+
+"correct" is the 0-based index of the right answer. Mix easy (30%), medium (50%), and hard (20%) questions.`,
+
+  summary: (content, subject) => `
+You are an expert educator. Create a comprehensive structured summary of this study material on ${subject}.
+
+Study material:
+${content.slice(0, 40000)}
+
+Return ONLY valid JSON, exactly this format:
+{"title":"Topic Title","overview":"2-3 sentence overview","sections":[{"heading":"Section name","points":["Key point 1","Key point 2"],"keyTerms":[{"term":"Term","definition":"Definition"}]}],"takeaways":["Most important thing to remember 1","..."],"relatedConcepts":["Related topic 1","Related topic 2"]}
+
+Create 4-6 sections covering all major concepts.`,
+
+  studyguide: (content, subject) => `
+You are an expert educator. Create a comprehensive study guide for ${subject} from this material.
+
+Study material:
+${content.slice(0, 40000)}
+
+Return ONLY valid JSON, exactly this format:
+{"title":"Study Guide: Topic","sections":[{"type":"overview","heading":"What This Is About","content":"..."},{"type":"concepts","heading":"Core Concepts","items":[{"name":"Concept","explanation":"...","example":"..."}]},{"type":"process","heading":"Step-by-Step Process","steps":["Step 1: ...","Step 2: ..."]},{"type":"tips","heading":"Exam Tips","tips":["Remember that...","Common mistake: ..."]}],"quickRef":[{"label":"Formula/Key","value":"..."}]}`,
+
+  slides: (content, subject) => `
+You are an expert presentation designer. Create a 10-slide presentation from this study material on ${subject}.
+
+Study material:
+${content.slice(0, 40000)}
+
+Return ONLY valid JSON, exactly this format:
+{"title":"Presentation Title","slides":[{"slideNum":1,"type":"title","title":"Main Title","subtitle":"Subtitle or author"},{"slideNum":2,"type":"agenda","title":"Agenda","bullets":["Topic 1","Topic 2","Topic 3"]},{"slideNum":3,"type":"content","title":"Slide Title","bullets":["Key point 1","Key point 2","Key point 3"],"notes":"Speaker notes for this slide"}]}
+
+Include: 1 title slide, 1 agenda, 6-7 content slides, 1 conclusion. Each content slide has 3-5 bullets and speaker notes.`,
+
+  weakpoints: (content, subject, weakTopics = []) => `
+You are an adaptive learning expert. The student has struggled with these topics: ${weakTopics.join(", ") || "general concepts"}.
+
+Study material:
+${content.slice(0, 30000)}
+
+Create 8 targeted practice questions focusing on their weak areas.
+
+Return ONLY valid JSON, exactly this format:
+{"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"explanation":"...","targetsTopic":"which weak topic this addresses"}]}`,
+};
+
+router.post("/study/generate", async (req, res) => {
+  try {
+    const body = GenerateBody.parse(req.body);
+    const subject = body.subject ?? "General";
+
+    const promptFn = GENERATE_PROMPTS[body.type];
+    if (!promptFn) return res.status(400).json({ error: "Invalid type" });
+
+    const prompt = promptFn(body.content, subject, body.weakTopics);
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-5",
+      max_tokens: 4000,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    recordUsage("claude-sonnet-4-5", response.usage.input_tokens, response.usage.output_tokens, `study-${body.type}`);
+
+    const raw = response.content[0].type === "text" ? response.content[0].text : "";
+
+    let parsed: unknown;
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+    } catch {
+      req.log.error({ raw }, "Failed to parse study generate JSON");
+      return res.status(500).json({ error: "Failed to parse AI response" });
+    }
+
+    res.json({ type: body.type, data: parsed });
+  } catch (err) {
+    req.log.error({ err }, "Error generating study material");
+    res.status(500).json({ error: "Failed to generate study material" });
+  }
+});
+
+router.post("/study/transcribe", upload.single("audio"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No audio file provided" });
+
+    const { Readable } = await import("stream");
+    const buffer = req.file.buffer;
+    const filename = req.file.originalname || "audio.webm";
+
+    const stream = Readable.from(buffer);
+    (stream as NodeJS.ReadableStream & { name?: string }).name = filename;
+
+    const transcription = await openai.audio.transcriptions.create({
+      file: new File([buffer], filename, { type: req.file.mimetype }),
+      model: "whisper-1",
+      response_format: "text",
+    });
+
+    res.json({ transcript: transcription, words: typeof transcription === "string" ? transcription.split(/\s+/).length : 0 });
+  } catch (err) {
+    req.log.error({ err }, "Error transcribing audio");
+    res.status(500).json({ error: "Failed to transcribe audio. Please try uploading a text file instead." });
   }
 });
 

@@ -27,7 +27,7 @@ const navItems = [
   { path: "/revision",  label: "Revision",        icon: Files },
   { path: "/plagiarism",label: "AI & Plagiarism", icon: ShieldCheck },
   { path: "/stem",      label: "STEM Solver",     icon: FlaskConical },
-  { path: "/study",     label: "Study Assistant", icon: GraduationCap },
+  { path: "/study",     label: "Study Studio",    icon: GraduationCap },
   { path: "/documents", label: "Documents",       icon: Files },
 ];
 

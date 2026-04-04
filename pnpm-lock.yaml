@@ -67,7 +67,7 @@ catalogs:
       specifier: ^7.3.0
       version: 7.3.1
     zod:
-      specifier: ^3.25.76
+      specifier: 3.25.76
       version: 3.25.76
 
 overrides:
@@ -168,7 +168,7 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.82.0
-        version: 0.82.0(zod@4.3.6)
+        version: 0.82.0(zod@3.25.76)
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -195,7 +195,7 @@ importers:
         version: 2.1.1
       openai:
         specifier: ^6.33.0
-        version: 6.33.0(ws@8.20.0)(zod@4.3.6)
+        version: 6.33.0(ws@8.20.0)(zod@3.25.76)
       pdf2json:
         specifier: ^4.0.2
         version: 4.0.2
@@ -205,6 +205,9 @@ importers:
       pino-http:
         specifier: ^10
         version: 10.5.0
+      zod:
+        specifier: 'catalog:'
+        version: 3.25.76
     devDependencies:
       '@types/cookie-parser':
         specifier: ^1.4.10
@@ -3468,11 +3471,11 @@ packages:
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.82.0(zod@4.3.6)':
+  '@anthropic-ai/sdk@0.82.0(zod@3.25.76)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
-      zod: 4.3.6
+      zod: 3.25.76
 
   '@babel/code-frame@7.29.0':
     dependencies:
@@ -5540,10 +5543,10 @@ snapshots:
     dependencies:
       wrappy: 1.0.2
 
-  openai@6.33.0(ws@8.20.0)(zod@4.3.6):
+  openai@6.33.0(ws@8.20.0)(zod@3.25.76):
     optionalDependencies:
       ws: 8.20.0
-      zod: 4.3.6
+      zod: 3.25.76
 
   opencollective-postinstall@2.0.3: {}
 

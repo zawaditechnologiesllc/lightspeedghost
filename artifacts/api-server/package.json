@@ -22,7 +22,8 @@
     "openai": "^6.33.0",
     "pdf2json": "^4.0.2",
     "pino": "^9",
-    "pino-http": "^10"
+    "pino-http": "^10",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
