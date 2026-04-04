@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSolveStem, useGetStemSubjects } from "@workspace/api-client-react";
-import { Loader2, FlaskConical, CheckCircle, BookOpen, Wrench, ExternalLink, Search, ChevronDown, ChevronUp, Dna, Sparkles } from "lucide-react";
+import { Loader2, FlaskConical, CheckCircle, BookOpen, Wrench, ExternalLink, Search, ChevronDown, ChevronUp, Dna, Sparkles, ShieldCheck, AlertTriangle, XCircle, Lightbulb } from "lucide-react";
 import type { StemSolution } from "@workspace/api-client-react";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import StemImageOcr from "@/components/StemImageOcr";
@@ -434,13 +434,52 @@ export default function StemSolver() {
 
           {result && activeTab === "solution" && (
             <>
-              <div className="bg-card border border-primary/30 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle size={16} className="text-green-500" />
+              {/* Answer card with confidence + CoVe badges */}
+              <div className="bg-card border border-primary/30 rounded-xl p-5 space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CheckCircle size={15} className="text-green-500 shrink-0" />
                   <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Answer</span>
-                  <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full capitalize">{result.subject}</span>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full capitalize">{result.subject}</span>
+
+                  {/* Confidence badge */}
+                  {result.confidence !== undefined && (
+                    <ConfidenceBadge confidence={result.confidence} />
+                  )}
+
+                  {/* CoVe verification badge */}
+                  {result.passedVerification !== undefined && (
+                    result.passedVerification
+                      ? (
+                        <span className="flex items-center gap-1 text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-2 py-0.5 rounded-full">
+                          <ShieldCheck size={10} /> Chain-of-Verification Passed
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
+                          <AlertTriangle size={10} /> Corrected by Critic Agent
+                        </span>
+                      )
+                  )}
                 </div>
+
                 <MathRenderer text={result.answer} className="text-sm text-foreground" />
+
+                {/* CoVe corrections */}
+                {result.corrections && result.corrections.length > 0 && (
+                  <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800/50">
+                    <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                      <Lightbulb size={11} />
+                      Critic Agent found and corrected {result.corrections.length} issue{result.corrections.length > 1 ? "s" : ""}:
+                    </div>
+                    <ul className="space-y-1">
+                      {result.corrections.map((c, i) => (
+                        <li key={i} className="text-xs text-amber-800 dark:text-amber-300 flex gap-1.5">
+                          <span className="shrink-0 text-amber-500">•</span>
+                          {c}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               {result.graphData && (
@@ -462,20 +501,25 @@ export default function StemSolver() {
 
               {result.steps.length > 0 && (
                 <div className="bg-card border border-border rounded-xl overflow-hidden">
-                  <div className="px-5 py-3 border-b border-border">
+                  <div className="px-5 py-3 border-b border-border flex items-center gap-2">
                     <h3 className="font-semibold text-sm">Step-by-Step Solution</h3>
+                    <span className="text-xs text-muted-foreground">({result.steps.length} steps)</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">ReAct Loop</span>
                   </div>
                   <div className="divide-y divide-border">
                     {result.steps.map((step) => (
                       <div key={step.stepNumber} className="px-5 py-4">
                         <div className="flex items-start gap-3">
                           <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5">
-                            <span className="text-xs font-bold text-primary-foreground">{step.stepNumber}</span>
+                            <span className="text-[10px] font-bold text-primary-foreground">{step.stepNumber}</span>
                           </div>
                           <div className="flex-1">
-                            <div className="text-sm font-semibold">{step.description}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-semibold">{step.description}</div>
+                              <StepTypeBadge desc={step.description} />
+                            </div>
                             {step.expression && (
-                              <div className="mt-1 px-3 py-1.5 bg-muted rounded text-xs border border-border overflow-x-auto">
+                              <div className="mt-2 px-3 py-2 bg-muted rounded-lg text-xs border border-border overflow-x-auto">
                                 <MathRenderer text={step.expression} className="text-xs" />
                               </div>
                             )}
@@ -839,4 +883,44 @@ export default function StemSolver() {
       </div>
     </div>
   );
+}
+
+function ConfidenceBadge({ confidence }: { confidence: number }) {
+  const pct = Math.round(confidence * 100);
+  if (pct >= 85) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-2 py-0.5 rounded-full">
+        <CheckCircle size={9} /> {pct}% Confidence
+      </span>
+    );
+  }
+  if (pct >= 65) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
+        <AlertTriangle size={9} /> {pct}% Confidence
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-semibold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-2 py-0.5 rounded-full">
+      <XCircle size={9} /> {pct}% Confidence
+    </span>
+  );
+}
+
+function StepTypeBadge({ desc }: { desc: string }) {
+  const lower = desc.toLowerCase();
+  if (lower.includes("observe") || lower.includes("observation")) {
+    return <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400">Observe</span>;
+  }
+  if (lower.includes("think") || lower.includes("thought") || lower.includes("reason") || lower.includes("consider")) {
+    return <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">Thought</span>;
+  }
+  if (lower.includes("act") || lower.includes("action") || lower.includes("apply") || lower.includes("compute") || lower.includes("calculat")) {
+    return <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">Action</span>;
+  }
+  if (lower.includes("final") || lower.includes("answer") || lower.includes("result") || lower.includes("conclusion")) {
+    return <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-950/40 text-green-600 dark:text-green-400">Final</span>;
+  }
+  return null;
 }
