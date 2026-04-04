@@ -71,6 +71,7 @@ router.post("/writing/generate-stream", async (req, res) => {
       isStem: boolean;
       additionalInstructions?: string;
       rubricText?: string;
+      referenceText?: string;
     };
 
     const targetWords = body.wordCount ?? 1500;
@@ -144,7 +145,8 @@ ${includeToC ? "- INCLUDE a Table of Contents after the Abstract" : "- Do NOT in
 - Write 0% AI-detectable prose — vary sentence length, use discipline-specific vocabulary, active/passive voice mix, avoid AI clichés like "delve", "crucial", "pivotal", "underscore"
 - Grade target: the paper must meet or exceed 92% quality against academic standards
 ${body.rubricText ? `\nMARKING RUBRIC (optimise for every criterion below):\n${body.rubricText}` : ""}
-${body.additionalInstructions ? `\nADDITIONAL INSTRUCTIONS: ${body.additionalInstructions}` : ""}`;
+${body.additionalInstructions ? `\nADDITIONAL INSTRUCTIONS: ${body.additionalInstructions}` : ""}
+${body.referenceText ? `\nSTUDENT REFERENCE MATERIALS (class notes, readings, recommended studies — draw on these when developing arguments, examples and analysis):\n${body.referenceText.slice(0, 8000)}` : ""}`;
 
     const stream = anthropic.messages.stream({
       model: "claude-sonnet-4-5",
@@ -288,14 +290,27 @@ router.put("/writing/save/:id", async (req, res) => {
 router.post("/writing/outline", async (req, res) => {
   try {
     const body = GenerateOutlineBody.parse(req.body);
+    const instructionsText = (req.body.instructionsText as string | undefined) ?? "";
+    const referenceText = (req.body.referenceText as string | undefined) ?? "";
+
+    const qualityRules = `QUALITY REQUIREMENTS FOR THIS OUTLINE:
+- Structure must be 100% original — zero plagiarism risk.
+- All section headings and subsection names must be uniquely framed for this topic (not generic boilerplate).
+- The outline must support a paper with 0% AI-detectable prose when written — include specific, concrete subsections that force real analysis, not vague generalisations.
+- Subsections should hint at critical arguments, empirical evidence points, and analytical angles, not just topic labels.`;
+
+    const extraContext = [
+      instructionsText ? `ASSIGNMENT INSTRUCTIONS:\n${instructionsText.slice(0, 3000)}` : "",
+      referenceText ? `REFERENCE MATERIALS (use to inform section depth and emphasis):\n${referenceText.slice(0, 5000)}` : "",
+    ].filter(Boolean).join("\n\n");
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: 2000,
-      system: `${WRITER_SOUL}\n\nGenerate a detailed academic paper outline. Return ONLY valid JSON: {"title": string, "sections": [{"heading": string, "subsections": string[]}]}`,
+      max_tokens: 2500,
+      system: `${WRITER_SOUL}\n\n${qualityRules}\n\nGenerate a detailed academic paper outline. Return ONLY valid JSON: {"title": string, "sections": [{"heading": string, "subsections": string[]}]}`,
       messages: [{
         role: "user",
-        content: `Create a detailed outline for a ${body.paperType} on "${body.topic}" in ${body.subject}. Include 6-8 sections with 3-5 subsections each.`,
+        content: `Create a detailed outline for a ${body.paperType} on "${body.topic}" in ${body.subject}. Include 6-8 sections with 3-5 subsections each. Each subsection should name a specific argument, finding, or analytical point — not just a topic label.${extraContext ? `\n\n${extraContext}` : ""}`,
       }],
     });
 

@@ -161,6 +161,7 @@ export default function WritePaper() {
   const [subject, setSubject] = useState("");
   const [additionalInstructions, setAdditionalInstructions] = useState("");
   const [rubricText, setRubricText] = useState("");
+  const [referenceText, setReferenceText] = useState("");
 
   // ── citation confirmation
   const [detectedStyle, setDetectedStyle] = useState<string | null>(null);
@@ -191,6 +192,11 @@ export default function WritePaper() {
   // ── autofill from rubric
   const handleRubricExtracted = useCallback((file: ExtractedFile) => {
     setRubricText(file.text.slice(0, 3000));
+  }, []);
+
+  // ── accumulate reference / reading materials
+  const handleReferenceExtracted = useCallback((file: ExtractedFile) => {
+    setReferenceText(prev => (prev ? prev + "\n\n" : "") + file.text.slice(0, 5000));
   }, []);
 
   // ── generate
@@ -225,6 +231,7 @@ export default function WritePaper() {
           isStem,
           additionalInstructions: additionalInstructions.trim() || undefined,
           rubricText: rubricText.trim() || undefined,
+          referenceText: referenceText.trim() || undefined,
         }),
       });
 
@@ -694,6 +701,25 @@ export default function WritePaper() {
               </p>
             )}
           </div>
+        </div>
+
+        {/* ── Reference / Reading Materials ── */}
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">
+            Class Materials &amp; Reading References
+            <span className="text-[10px] font-normal ml-1 text-muted-foreground/60">(optional — AI will draw on these when writing)</span>
+          </label>
+          <FileUploadZone
+            onExtracted={handleReferenceExtracted}
+            accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg"
+            label="Upload class notes, textbook excerpts, recommended studies…"
+            hint="Lecture slides, required readings, journal articles — the AI uses these as source material"
+          />
+          {referenceText && (
+            <p className="text-[10px] text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+              <CheckCircle size={10} /> Reference materials loaded ({referenceText.split(/\s+/).length.toLocaleString()} words) — AI will draw on these while writing
+            </p>
+          )}
         </div>
 
         {/* ── Topic & Subject ── */}
