@@ -43,26 +43,28 @@ function NavItem({
   label,
   icon: Icon,
   collapsed,
+  forceExpanded,
   onClick,
-}: (typeof navItems)[0] & { collapsed: boolean; onClick?: () => void }) {
+}: (typeof navItems)[0] & { collapsed: boolean; forceExpanded?: boolean; onClick?: () => void }) {
   const [isActive] = useRoute(path === "/app" ? "/app" : path + "*");
+  const showLabel = forceExpanded || !collapsed;
 
   return (
     <Link href={path}>
       <div
         onClick={onClick}
-        title={collapsed ? label : undefined}
+        title={!showLabel ? label : undefined}
         className={cn(
           "relative flex items-center rounded-lg text-sm font-medium transition-all cursor-pointer group",
-          collapsed ? "justify-center px-0 py-2.5 mx-1" : "gap-3 px-3 py-2",
+          showLabel ? "gap-3 px-3 py-2" : "justify-center px-0 py-2.5 mx-1",
           isActive
             ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
             : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
         )}
       >
         <Icon size={17} className="shrink-0" />
-        {!collapsed && <span className="truncate">{label}</span>}
-        {collapsed && (
+        {showLabel && <span className="truncate">{label}</span>}
+        {!showLabel && (
           <div className="absolute left-full ml-2.5 px-2.5 py-1.5 bg-popover border border-border text-popover-foreground text-xs font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
             {label}
           </div>
@@ -165,7 +167,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <nav
           className={cn(
             "flex-1 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden",
-            collapsed ? "px-0" : "px-2"
+            collapsed && !mobileOpen ? "px-0" : "px-2"
           )}
         >
           {navItems.map((item) => (
@@ -173,6 +175,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               key={item.path}
               {...item}
               collapsed={collapsed}
+              forceExpanded={mobileOpen}
               onClick={() => setMobileOpen(false)}
             />
           ))}
