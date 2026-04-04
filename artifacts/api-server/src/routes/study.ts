@@ -123,7 +123,7 @@ TOPIC_TAG: [single topic label for this conversation, e.g. "Integration by parts
 
     // 4. Call Claude 3.5 Sonnet — Tutoring model (ClawRouter)
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-sonnet-4-5",
       max_tokens: 2000,
       system: systemPrompt,
       messages: [
@@ -132,7 +132,7 @@ TOPIC_TAG: [single topic label for this conversation, e.g. "Integration by parts
       ],
     });
 
-    recordUsage("claude-3-5-sonnet-20241022", response.usage.input_tokens, response.usage.output_tokens, "study-tutor");
+    recordUsage("claude-sonnet-4-5", response.usage.input_tokens, response.usage.output_tokens, "study-tutor");
 
     const fullText = response.content[0].type === "text" ? response.content[0].text : "";
 

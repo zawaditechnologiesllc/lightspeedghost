@@ -115,7 +115,7 @@ router.post("/plagiarism/humanize", async (req, res) => {
 
       // Claude 3.5 Sonnet for humanizing (Writing model — ClawRouter)
       const humanizeResp = await anthropic.messages.create({
-        model: "claude-3-5-sonnet-20241022",
+        model: "claude-sonnet-4-5",
         max_tokens: Math.min(textToProcess.length * 2 + 500, 6000),
         system: `${HUMANIZER_SOUL}
 
@@ -132,7 +132,7 @@ CRITICAL: Return ONLY the humanized text. No explanations, no preamble, no "Here
         ],
       });
 
-      recordUsage("claude-3-5-sonnet-20241022", humanizeResp.usage.input_tokens, humanizeResp.usage.output_tokens, `humanize-pass-${pass + 1}`);
+      recordUsage("claude-sonnet-4-5", humanizeResp.usage.input_tokens, humanizeResp.usage.output_tokens, `humanize-pass-${pass + 1}`);
 
       const humanizedCandidate = humanizeResp.content[0].type === "text" ? humanizeResp.content[0].text.trim() : textToProcess;
 

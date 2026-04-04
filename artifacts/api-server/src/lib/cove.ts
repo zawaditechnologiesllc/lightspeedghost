@@ -49,14 +49,14 @@ ${draft.rawText.slice(0, 2000)}
 Critically verify this ${subject} solution for any errors.`;
 
   const response = await anthropic.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-5",
     max_tokens: 3000,
     system: CRITIC_SYSTEM,
     messages: [{ role: "user", content: critiquePrompt }],
   });
 
   const usage = response.usage;
-  recordUsage("claude-3-5-sonnet-20241022", usage.input_tokens, usage.output_tokens, `cove-critique-${subject}`);
+  recordUsage("claude-sonnet-4-5", usage.input_tokens, usage.output_tokens, `cove-critique-${subject}`);
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
 

@@ -593,15 +593,16 @@ export default function WritePaper() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-3xl mx-auto px-6 py-6 pb-12 space-y-5">
-        {/* Page header */}
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Wand2 size={22} className="text-primary" />
-            Write a Paper
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Real verified citations · Live streaming · Plagiarism &amp; grade estimates · Editable results
+      <div className="max-w-2xl mx-auto px-6 py-8 pb-16 space-y-6">
+        {/* Page header — centered */}
+        <div className="text-center space-y-1.5">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <Zap size={20} className="text-primary" />
+            <span className="text-xs font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">Write a Paper</h1>
+          <p className="text-muted-foreground text-sm">
+            Real verified citations · Live generation · Grade &amp; plagiarism estimates
           </p>
         </div>
 
@@ -808,18 +809,19 @@ export default function WritePaper() {
         </div>
 
         {/* ── Generate button ── */}
-        <button
-          onClick={handleGenerate}
-          disabled={!topic.trim() || !subject.trim()}
-          className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Zap size={16} />
-          Generate Paper with LightSpeed AI
-        </button>
-
-        {!topic.trim() || !subject.trim() ? (
-          <p className="text-center text-xs text-muted-foreground">Fill in topic and subject to continue</p>
-        ) : null}
+        <div className="pt-2">
+          <button
+            onClick={handleGenerate}
+            disabled={!topic.trim() || !subject.trim()}
+            className="w-full flex items-center justify-center gap-2.5 bg-primary text-primary-foreground px-4 py-4 rounded-xl font-bold text-base hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+          >
+            <Zap size={18} className="shrink-0" />
+            Generate Paper with LightSpeed AI
+          </button>
+          {(!topic.trim() || !subject.trim()) && (
+            <p className="text-center text-xs text-muted-foreground mt-2">Enter a topic and subject to continue</p>
+          )}
+        </div>
       </div>
     </div>
   );

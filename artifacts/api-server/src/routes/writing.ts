@@ -91,7 +91,7 @@ router.post("/writing/generate-stream", async (req, res) => {
 
       try {
         const stemResp = await anthropic.messages.create({
-          model: "claude-3-5-sonnet-20241022",
+          model: "claude-sonnet-4-5",
           max_tokens: 3000,
           system: `You are an expert STEM researcher. Generate the core technical content, derivations, equations (in LaTeX), and quantitative analysis for the given topic. This will be integrated into a full academic paper.`,
           messages: [{
@@ -100,7 +100,7 @@ router.post("/writing/generate-stream", async (req, res) => {
           }],
         });
         stemContext = stemResp.content[0].type === "text" ? stemResp.content[0].text : "";
-        recordUsage("claude-3-5-sonnet-20241022", stemResp.usage.input_tokens, stemResp.usage.output_tokens, "stem-prepass");
+        recordUsage("claude-sonnet-4-5", stemResp.usage.input_tokens, stemResp.usage.output_tokens, "stem-prepass");
         send("step", { id: "stem", message: "STEM technical content generated", status: "done" });
       } catch {
         send("step", { id: "stem", message: "STEM analysis complete (basic mode)", status: "done" });
@@ -137,7 +137,7 @@ ${body.rubricText ? `\nMARKING RUBRIC (optimise for every criterion below):\n${b
 ${body.additionalInstructions ? `\nADDITIONAL INSTRUCTIONS: ${body.additionalInstructions}` : ""}`;
 
     const stream = anthropic.messages.stream({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-sonnet-4-5",
       max_tokens: 12000,
       system: systemPrompt,
       messages: [{
@@ -155,7 +155,7 @@ ${body.additionalInstructions ? `\nADDITIONAL INSTRUCTIONS: ${body.additionalIns
     }
 
     const finalMsg = await stream.finalMessage();
-    recordUsage("claude-3-5-sonnet-20241022", finalMsg.usage.input_tokens, finalMsg.usage.output_tokens, "paper-generation");
+    recordUsage("claude-sonnet-4-5", finalMsg.usage.input_tokens, finalMsg.usage.output_tokens, "paper-generation");
 
     send("step", { id: "writing", message: "Paper written successfully", status: "done" });
 
@@ -276,7 +276,7 @@ router.post("/writing/outline", async (req, res) => {
     const body = GenerateOutlineBody.parse(req.body);
 
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-sonnet-4-5",
       max_tokens: 2000,
       system: `${WRITER_SOUL}\n\nGenerate a detailed academic paper outline. Return ONLY valid JSON: {"title": string, "sections": [{"heading": string, "subsections": string[]}]}`,
       messages: [{
@@ -285,7 +285,7 @@ router.post("/writing/outline", async (req, res) => {
       }],
     });
 
-    recordUsage("claude-3-5-sonnet-20241022", response.usage.input_tokens, response.usage.output_tokens, "outline-generation");
+    recordUsage("claude-sonnet-4-5", response.usage.input_tokens, response.usage.output_tokens, "outline-generation");
 
     const text = response.content[0].type === "text" ? response.content[0].text : "{}";
     let outline: { title: string; sections: Array<{ heading: string; subsections: string[] }> };

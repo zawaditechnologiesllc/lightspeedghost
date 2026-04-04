@@ -31,12 +31,12 @@ export function routeTask(task: TaskType): ModelConfig {
     case "stem":
     case "tutoring":
     case "critique":
-      return { provider: "anthropic", model: "claude-3-5-sonnet-20241022", maxTokens: 4000 };
+      return { provider: "anthropic", model: "claude-sonnet-4-5", maxTokens: 4000 };
 
     case "writing":
     case "revision":
     case "humanize":
-      return { provider: "anthropic", model: "claude-3-5-sonnet-20241022", maxTokens: 8000 };
+      return { provider: "anthropic", model: "claude-sonnet-4-5", maxTokens: 8000 };
 
     case "ocr":
       return { provider: "openai", model: "gpt-4o", maxTokens: 4000 };
@@ -47,6 +47,6 @@ export function routeTask(task: TaskType): ModelConfig {
       return { provider: "openai", model: "gpt-4o-mini", maxTokens: 2000 };
 
     default:
-      return { provider: "anthropic", model: "claude-3-5-sonnet-20241022", maxTokens: 4000 };
+      return { provider: "anthropic", model: "claude-sonnet-4-5", maxTokens: 4000 };
   }
 }

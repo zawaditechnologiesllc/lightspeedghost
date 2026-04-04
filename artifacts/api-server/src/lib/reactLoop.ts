@@ -44,7 +44,7 @@ export async function reactSolve(
   subject: string
 ): Promise<ReActResult> {
   const response = await anthropic.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-5",
     max_tokens: 4000,
     system: REACT_SYSTEM,
     messages: [
@@ -56,7 +56,7 @@ export async function reactSolve(
   });
 
   const usage = response.usage;
-  recordUsage("claude-3-5-sonnet-20241022", usage.input_tokens, usage.output_tokens, `react-stem-${subject}`);
+  recordUsage("claude-sonnet-4-5", usage.input_tokens, usage.output_tokens, `react-stem-${subject}`);
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
 

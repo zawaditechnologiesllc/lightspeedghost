@@ -43,7 +43,7 @@ Return your response as valid JSON with this EXACT structure:
 
     // Claude 3.5 Sonnet for high-quality revision (Reasoning model — ClawRouter)
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-sonnet-4-5",
       max_tokens: 8000,
       system: systemPrompt,
       messages: [
@@ -54,7 +54,7 @@ Return your response as valid JSON with this EXACT structure:
       ],
     });
 
-    recordUsage("claude-3-5-sonnet-20241022", response.usage.input_tokens, response.usage.output_tokens, "paper-revision");
+    recordUsage("claude-sonnet-4-5", response.usage.input_tokens, response.usage.output_tokens, "paper-revision");
 
     const text = response.content[0].type === "text" ? response.content[0].text : "{}";
 
