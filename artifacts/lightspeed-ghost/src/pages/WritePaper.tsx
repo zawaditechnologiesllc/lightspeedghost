@@ -1,383 +1,825 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useGeneratePaper } from "@workspace/api-client-react";
 import {
-  Loader2, Wand2, Copy, BookMarked, CheckCircle, ExternalLink,
-  FileText, ListOrdered, AlignLeft, CheckCheck, Sparkles,
+  Loader2, Wand2, Download, Save, CheckCircle, ExternalLink,
+  FileText, ListOrdered, BookMarked, Zap, BarChart3, Edit3,
+  Eye, RotateCcw, ChevronDown, Upload, X, Check, AlertTriangle,
+  GraduationCap, FlaskConical,
 } from "lucide-react";
-import type { GeneratedPaper } from "@workspace/api-client-react";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
-import { detectPaperType, detectCitationStyle, detectLength, extractTopic, extractSubject } from "@/lib/autofill";
+import { detectPaperType, detectCitationStyle, extractTopic, extractSubject } from "@/lib/autofill";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
-const schema = z.object({
-  topic: z.string().min(5, "Topic must be at least 5 characters"),
-  subject: z.string().min(2, "Subject is required"),
-  paperType: z.enum(["research", "essay", "thesis", "literature_review", "report"]),
-  length: z.enum(["short", "medium", "long"]),
-  citationStyle: z.enum(["apa", "mla", "chicago", "harvard", "ieee"]),
-  additionalInstructions: z.string().optional(),
-  isStem: z.boolean().optional(),
-});
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-type FormData = z.infer<typeof schema>;
+interface Step {
+  id: string;
+  message: string;
+  status: "pending" | "running" | "done" | "error";
+}
 
-const PAPER_TYPE_LABELS: Record<string, string> = {
-  research: "Research Paper",
-  essay: "Essay",
-  thesis: "Thesis",
-  literature_review: "Literature Review",
-  report: "Report",
-};
+interface Citation {
+  id: string; authors: string; title: string; year: number;
+  source: string; url?: string; formatted: string; index: number;
+}
 
-const LENGTH_LABELS: Record<string, { label: string; words: string }> = {
-  short: { label: "Short", words: "~800 words" },
-  medium: { label: "Medium", words: "~1,500 words" },
-  long: { label: "Long", words: "~3,000 words" },
-};
+interface PaperStats {
+  grade: number; aiScore: number; plagiarismScore: number;
+  wordCount: number; bodyWordCount: number; feedback: string[];
+}
 
-/**
- * Minimal markdown renderer — converts ## headings and **bold** to styled JSX.
- */
+interface PaperResult {
+  documentId: number; title: string; content: string;
+  citations: Citation[]; bibliography: string; stats: PaperStats;
+}
+
+type Phase = "config" | "generating" | "results";
+type ResultTab = "paper" | "citations" | "bibliography" | "stats";
+type PaperViewMode = "view" | "edit";
+
+// ── Config ────────────────────────────────────────────────────────────────────
+
+const WORD_PRESETS = [500, 800, 1000, 1200, 1500, 2000, 2500, 3000, 4000, 5000];
+
+const ACADEMIC_LEVELS = [
+  { value: "high_school",   label: "High School" },
+  { value: "undergrad_1_2", label: "UG Year 1–2" },
+  { value: "undergrad_3_4", label: "UG Year 3–4" },
+  { value: "honours",       label: "Honours" },
+  { value: "masters",       label: "Masters" },
+  { value: "phd",           label: "PhD" },
+];
+
+const PAPER_TYPES = [
+  { value: "research",          label: "Research Paper" },
+  { value: "essay",             label: "Essay" },
+  { value: "thesis",            label: "Thesis" },
+  { value: "literature_review", label: "Lit. Review" },
+  { value: "report",            label: "Report" },
+];
+
+const CITATION_STYLES = ["apa", "mla", "chicago", "harvard", "ieee"] as const;
+
+const STEP_ORDER = ["citations", "stem", "writing", "bibliography", "stats"];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function renderMarkdown(text: string): React.ReactNode[] {
   return text.split("\n").map((line, i) => {
-    if (line.startsWith("## ")) {
-      return <h2 key={i} className="text-base font-bold mt-5 mb-2 text-foreground">{line.slice(3)}</h2>;
-    }
-    if (line.startsWith("### ")) {
-      return <h3 key={i} className="text-sm font-semibold mt-3 mb-1 text-foreground">{line.slice(4)}</h3>;
-    }
-    if (line.startsWith("# ")) {
-      return <h1 key={i} className="text-lg font-bold mt-5 mb-2 text-foreground">{line.slice(2)}</h1>;
-    }
-    if (line.startsWith("**") && line.endsWith("**")) {
-      return <p key={i} className="font-semibold text-sm text-foreground mb-1">{line.slice(2, -2)}</p>;
-    }
-    if (line.trim() === "") {
-      return <div key={i} className="h-2" />;
-    }
-    // Inline bold
+    if (/^# /.test(line))   return <h1 key={i} className="text-xl font-bold mt-6 mb-2 text-foreground">{line.slice(2)}</h1>;
+    if (/^## /.test(line))  return <h2 key={i} className="text-base font-bold mt-5 mb-2 text-foreground border-b border-border pb-1">{line.slice(3)}</h2>;
+    if (/^### /.test(line)) return <h3 key={i} className="text-sm font-semibold mt-4 mb-1.5 text-foreground">{line.slice(4)}</h3>;
+    if (line.trim() === "")  return <div key={i} className="h-2" />;
     const parts = line.split(/(\*\*.*?\*\*)/g);
     return (
       <p key={i} className="text-sm text-foreground leading-relaxed mb-1">
-        {parts.map((part, j) =>
-          part.startsWith("**") && part.endsWith("**")
-            ? <strong key={j}>{part.slice(2, -2)}</strong>
-            : part
+        {parts.map((p, j) =>
+          p.startsWith("**") && p.endsWith("**")
+            ? <strong key={j}>{p.slice(2, -2)}</strong>
+            : p
         )}
       </p>
     );
   });
 }
 
-export default function WritePaper() {
-  const [result, setResult] = useState<GeneratedPaper | null>(null);
-  const [activeTab, setActiveTab] = useState<"paper" | "citations" | "bibliography">("paper");
-  const [copied, setCopied] = useState(false);
-  const generatePaper = useGeneratePaper();
-
-  const form = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      paperType: "research",
-      length: "medium",
-      citationStyle: "apa",
-      isStem: false,
-    },
-  });
-
-  const onSubmit = async (data: FormData) => {
-    const res = await generatePaper.mutateAsync(data);
-    setResult(res);
-    setActiveTab("paper");
-  };
-
-  const handleFileExtracted = (file: ExtractedFile) => {
-    const { text } = file;
-    const topic = extractTopic(text);
-    if (topic) form.setValue("topic", topic);
-    const subject = extractSubject(text);
-    if (subject) form.setValue("subject", subject);
-    form.setValue("paperType", detectPaperType(text));
-    form.setValue("citationStyle", detectCitationStyle(text));
-    form.setValue("length", detectLength(text));
-    form.setValue("additionalInstructions", text.slice(0, 1500));
-  };
-
-  const copyToClipboard = () => {
-    if (!result) return;
-    navigator.clipboard.writeText(result.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const tabs = [
-    { id: "paper" as const, label: "Paper", icon: FileText },
-    { id: "citations" as const, label: `Citations (${result?.citations.length ?? 0})`, icon: BookMarked },
-    { id: "bibliography" as const, label: "Bibliography", icon: ListOrdered },
-  ];
-
+function StatCard({ label, value, color, sublabel }: { label: string; value: string; color: string; sublabel?: string }) {
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Write a Paper</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Real citations from Semantic Scholar & arXiv — no hallucinated references
-        </p>
-      </div>
+    <div className={`rounded-xl border p-3 flex flex-col gap-0.5 ${color}`}>
+      <span className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</span>
+      <span className="text-2xl font-bold">{value}</span>
+      {sublabel && <span className="text-[10px] opacity-60">{sublabel}</span>}
+    </div>
+  );
+}
 
-      <div className={`grid gap-6 ${result ? "xl:grid-cols-[400px_1fr]" : "max-w-xl"}`}>
-        {/* Configuration panel */}
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4 h-fit">
-          <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-            <AlignLeft size={13} />
-            Configuration
-          </h2>
+function downloadPaper(content: string, title: string, bibliography: string) {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${title}</title>
+<style>
+  body { font-family: "Times New Roman", serif; font-size: 12pt; line-height: 1.8;
+         max-width: 750px; margin: 60px auto; color: #111; padding: 0 40px; }
+  h1 { font-size: 16pt; text-align: center; margin-bottom: 6px; }
+  h2 { font-size: 13pt; margin-top: 24px; }
+  h3 { font-size: 12pt; margin-top: 16px; }
+  p  { margin-bottom: 12px; text-align: justify; }
+  .bibliography { margin-top: 32px; border-top: 1px solid #ccc; padding-top: 16px; font-size: 11pt; }
+</style>
+</head>
+<body>
+${content
+  .replace(/^# (.*)/gm, "<h1>$1</h1>")
+  .replace(/^## (.*)/gm, "<h2>$1</h2>")
+  .replace(/^### (.*)/gm, "<h3>$1</h3>")
+  .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+  .replace(/\*(.*?)\*/g, "<em>$1</em>")
+  .split("\n\n").map(p => p.startsWith("<h") ? p : `<p>${p}</p>`).join("\n")}
+<div class="bibliography"><h2>References</h2><p>${bibliography.replace(/\n/g, "<br>")}</p></div>
+</body></html>`;
 
-          <FileUploadZone
-            onExtracted={handleFileExtracted}
-            accept=".pdf,.docx,.doc,.txt,.md"
-            label="Upload assignment brief"
-            hint="PDF or Word — auto-fills topic, type & length"
-          />
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${title.replace(/[^a-z0-9]/gi, "_")}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Topic *</label>
-              <input
-                {...form.register("topic")}
-                placeholder="e.g., The impact of social media on mental health"
-                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              {form.formState.errors.topic && (
-                <p className="text-destructive text-xs mt-1">{form.formState.errors.topic.message}</p>
-              )}
-            </div>
+// ── Main Component ────────────────────────────────────────────────────────────
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Subject *</label>
-              <input
-                {...form.register("subject")}
-                placeholder="e.g., Psychology, Computer Science, Biology"
-                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
+export default function WritePaper() {
+  const { session } = useAuth();
+  const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
-            {/* Paper type — pill buttons */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Paper Type</label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {(["research", "essay", "thesis", "literature_review", "report"] as const).map((type) => {
-                  const watched = form.watch("paperType");
-                  return (
-                    <label
-                      key={type}
-                      className={`flex items-center justify-center text-center px-3 py-2 rounded-lg border cursor-pointer text-xs font-medium transition-all ${
-                        watched === type
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                      }`}
-                    >
-                      <input type="radio" value={type} {...form.register("paperType")} className="hidden" />
-                      {PAPER_TYPE_LABELS[type]}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
+  // ── phase
+  const [phase, setPhase] = useState<Phase>("config");
+  const [steps, setSteps] = useState<Step[]>([]);
+  const [streamedContent, setStreamedContent] = useState("");
+  const [result, setResult] = useState<PaperResult | null>(null);
+  const [genError, setGenError] = useState("");
 
-            {/* Length */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Length</label>
-              <div className="flex gap-2">
-                {(["short", "medium", "long"] as const).map((len) => {
-                  const watched = form.watch("length");
-                  return (
-                    <label
-                      key={len}
-                      className={`flex-1 text-center px-3 py-2 rounded-lg border cursor-pointer transition-all ${
-                        watched === len
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                      }`}
-                    >
-                      <input type="radio" value={len} {...form.register("length")} className="hidden" />
-                      <div className="text-xs font-semibold">{LENGTH_LABELS[len].label}</div>
-                      <div className="text-[10px] mt-0.5 opacity-70">{LENGTH_LABELS[len].words}</div>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
+  // ── results UI
+  const [resultTab, setResultTab] = useState<ResultTab>("paper");
+  const [viewMode, setViewMode] = useState<PaperViewMode>("view");
+  const [editedContent, setEditedContent] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
 
-            {/* Citation style */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Citation Style</label>
-              <div className="flex gap-2 flex-wrap">
-                {(["apa", "mla", "chicago", "harvard", "ieee"] as const).map((style) => {
-                  const watched = form.watch("citationStyle");
-                  return (
-                    <label
-                      key={style}
-                      className={`px-3 py-1.5 rounded-lg border cursor-pointer text-xs font-semibold uppercase transition-all ${
-                        watched === style
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                      }`}
-                    >
-                      <input type="radio" value={style} {...form.register("citationStyle")} className="hidden" />
-                      {style}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
+  // ── form
+  const [paperType, setPaperType] = useState("research");
+  const [citationStyle, setCitationStyle] = useState<string>("apa");
+  const [wordCount, setWordCount] = useState(1500);
+  const [customWordCount, setCustomWordCount] = useState("");
+  const [academicLevel, setAcademicLevel] = useState("undergrad_3_4");
+  const [isStem, setIsStem] = useState(false);
+  const [topic, setTopic] = useState("");
+  const [subject, setSubject] = useState("");
+  const [additionalInstructions, setAdditionalInstructions] = useState("");
+  const [rubricText, setRubricText] = useState("");
 
-            {/* STEM toggle */}
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <div className={`relative w-8 h-4.5 rounded-full transition-colors ${form.watch("isStem") ? "bg-primary" : "bg-muted"}`}>
-                <input type="checkbox" {...form.register("isStem")} className="sr-only" />
-                <div className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-transform ${form.watch("isStem") ? "translate-x-3.5" : ""}`} />
-              </div>
-              <span className="text-sm font-medium">STEM paper (scientific tools)</span>
-            </label>
+  // ── citation confirmation
+  const [detectedStyle, setDetectedStyle] = useState<string | null>(null);
+  const [styleConfirmed, setStyleConfirmed] = useState(false);
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Additional Instructions</label>
-              <textarea
-                {...form.register("additionalInstructions")}
-                rows={3}
-                placeholder="Specific requirements, formatting preferences, key points to cover..."
-                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-              />
-            </div>
+  // ── ref for streaming scroll
+  const streamRef = useRef<HTMLDivElement>(null);
 
-            <button
-              type="submit"
-              disabled={generatePaper.isPending}
-              className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {generatePaper.isPending ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  <span>Fetching citations & writing...</span>
-                </>
-              ) : (
-                <>
-                  <Wand2 size={16} />
-                  <span>Generate Paper</span>
-                </>
-              )}
-            </button>
+  // ── autofill from assignment brief
+  const handleBriefExtracted = useCallback((file: ExtractedFile) => {
+    const text = file.text;
+    if (!topic) setTopic(extractTopic(text) ?? "");
+    if (!subject) setSubject(extractSubject(text) ?? "");
+    setPaperType(detectPaperType(text));
+    const detected = detectCitationStyle(text);
+    setDetectedStyle(detected);
+    setStyleConfirmed(false);
+    setCitationStyle(detected);
+    setAdditionalInstructions(text.slice(0, 2000));
+    // detect word count
+    const wMatch = text.match(/(\d[\d,]*)\s*(?:to\s*(\d[\d,]*))?\s*words?\b/i);
+    if (wMatch) {
+      const n = parseInt(wMatch[1].replace(/,/g, ""), 10);
+      if (n >= 100 && n <= 10000) { setWordCount(n); setCustomWordCount(String(n)); }
+    }
+  }, [topic, subject]);
 
-            {generatePaper.isPending && (
-              <div className="space-y-1.5">
-                {[
-                  { step: "Fetching real citations from Semantic Scholar & arXiv", done: true },
-                  { step: "Generating paper with Claude 3.5 Sonnet", done: false },
-                  { step: "Formatting bibliography", done: false },
-                ].map((s, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {s.done
-                      ? <CheckCircle size={11} className="text-green-500 shrink-0" />
-                      : <Loader2 size={11} className="animate-spin text-primary shrink-0" />}
-                    {s.step}
-                  </div>
-                ))}
-              </div>
-            )}
-          </form>
+  // ── autofill from rubric
+  const handleRubricExtracted = useCallback((file: ExtractedFile) => {
+    setRubricText(file.text.slice(0, 3000));
+  }, []);
+
+  // ── generate
+  const handleGenerate = async () => {
+    if (!topic.trim() || !subject.trim()) return;
+
+    const effectiveWordCount = customWordCount ? parseInt(customWordCount, 10) || wordCount : wordCount;
+
+    setPhase("generating");
+    setStreamedContent("");
+    setGenError("");
+    const initialSteps: Step[] = STEP_ORDER
+      .filter(id => id !== "stem" || isStem)
+      .map(id => ({ id, message: "", status: "pending" }));
+    setSteps(initialSteps);
+
+    try {
+      const token = session?.access_token;
+      const resp = await fetch(`${API_BASE}/writing/generate-stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          topic: topic.trim(),
+          subject: subject.trim(),
+          paperType,
+          wordCount: effectiveWordCount,
+          citationStyle,
+          academicLevel,
+          isStem,
+          additionalInstructions: additionalInstructions.trim() || undefined,
+          rubricText: rubricText.trim() || undefined,
+        }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        throw new Error("Server error — please try again");
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+
+      const updateStep = (id: string, message: string, status: Step["status"]) => {
+        setSteps(prev => {
+          const exists = prev.some(s => s.id === id);
+          if (exists) return prev.map(s => s.id === id ? { ...s, message, status } : s);
+          return [...prev, { id, message, status }];
+        });
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+
+        let event = "";
+        for (const line of lines) {
+          if (line.startsWith("event: ")) { event = line.slice(7).trim(); }
+          else if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (event === "step") {
+                updateStep(data.id, data.message, data.status);
+              } else if (event === "token") {
+                setStreamedContent(prev => {
+                  const next = prev + data.text;
+                  setTimeout(() => streamRef.current?.scrollTo(0, streamRef.current.scrollHeight), 0);
+                  return next;
+                });
+              } else if (event === "done") {
+                setResult(data as PaperResult);
+                setEditedContent(data.content);
+                setPhase("results");
+                setResultTab("paper");
+                setViewMode("view");
+              } else if (event === "error") {
+                setGenError(data.message ?? "Unknown error");
+                setPhase("config");
+              }
+            } catch { /* ignore parse errors */ }
+            event = "";
+          }
+        }
+      }
+    } catch (err) {
+      setGenError(err instanceof Error ? err.message : "Network error — please try again");
+      setPhase("config");
+    }
+  };
+
+  // ── save edits
+  const handleSave = async () => {
+    if (!result) return;
+    setIsSaving(true);
+    try {
+      const token = session?.access_token;
+      const resp = await fetch(`${API_BASE}/writing/save/${result.documentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ content: editedContent }),
+      });
+      if (resp.ok) {
+        const data = await resp.json() as { wordCount: number };
+        setResult(prev => prev ? { ...prev, content: editedContent, stats: { ...prev.stats, bodyWordCount: data.wordCount } } : prev);
+        setSaveMsg("Changes saved!");
+        setViewMode("view");
+        setTimeout(() => setSaveMsg(""), 3000);
+      }
+    } catch { setSaveMsg("Save failed — try again"); }
+    setIsSaving(false);
+  };
+
+  // ── GENERATING PHASE ──────────────────────────────────────────────────────
+
+  if (phase === "generating") {
+    const doneCount = steps.filter(s => s.status === "done").length;
+    const total = steps.length;
+    const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+
+    return (
+      <div className="h-full flex flex-col bg-background">
+        {/* Header */}
+        <div className="shrink-0 px-8 pt-8 pb-4 border-b border-border flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Zap size={22} className="text-primary animate-pulse" />
+            <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+              LIGHT SPEED AI
+            </span>
+          </div>
+          <span className="text-muted-foreground text-sm">— Writing your paper…</span>
+          <div className="ml-auto text-sm text-muted-foreground">{pct}% complete</div>
         </div>
 
-        {/* Result panel */}
-        {result && (
-          <div className="bg-card border border-border rounded-xl overflow-hidden flex flex-col min-h-[600px]">
-            {/* Tabs header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/20 shrink-0">
-              <div className="flex gap-1">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      activeTab === tab.id
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <tab.icon size={13} />
-                    {tab.label}
-                  </button>
-                ))}
+        <div className="flex-1 flex min-h-0">
+          {/* Left: steps */}
+          <div className="w-72 shrink-0 border-r border-border p-6 flex flex-col gap-2 overflow-y-auto">
+            {steps.map((step) => (
+              <div key={step.id} className="flex items-start gap-3 py-2">
+                <div className="mt-0.5 shrink-0">
+                  {step.status === "done"    && <CheckCircle size={16} className="text-green-500" />}
+                  {step.status === "running" && <Loader2 size={16} className="animate-spin text-primary" />}
+                  {step.status === "pending" && <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />}
+                  {step.status === "error"   && <AlertTriangle size={16} className="text-destructive" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={cn("text-xs leading-relaxed", step.status === "done" ? "text-foreground" : step.status === "running" ? "text-primary font-medium" : "text-muted-foreground/50")}>
+                    {step.message || (step.status === "pending" ? "Waiting…" : "")}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <BookMarked size={11} />
-                  {result.wordCount.toLocaleString()} words
-                  <span>·</span>
-                  {result.citations.length} verified citations
-                </div>
-                <button
-                  onClick={copyToClipboard}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {copied ? <CheckCheck size={12} className="text-green-500" /> : <Copy size={12} />}
-                  {copied ? "Copied!" : "Copy"}
-                </button>
+            ))}
+
+            {/* Progress bar */}
+            <div className="mt-auto pt-4">
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary to-purple-400 transition-all duration-500 rounded-full"
+                  style={{ width: `${pct}%` }}
+                />
               </div>
-            </div>
-
-            {/* Tab content */}
-            <div className="flex-1 p-5 overflow-y-auto">
-              {activeTab === "paper" && (
-                <div className="prose-sm">
-                  {/* Verified citation notice */}
-                  <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 text-xs text-green-700 dark:text-green-400">
-                    <Sparkles size={12} />
-                    <span>All citations verified from Semantic Scholar & arXiv — no hallucinated references</span>
-                  </div>
-                  {renderMarkdown(result.content)}
-                </div>
-              )}
-
-              {activeTab === "citations" && (
-                <div className="space-y-3">
-                  {result.citations.map((citation, i) => (
-                    <div key={citation.id} className="p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/30 transition-colors">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">[{i + 1}]</span>
-                          <CheckCircle size={12} className="text-green-500" />
-                          <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">Verified • {citation.source}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground shrink-0">{citation.year}</span>
-                      </div>
-                      <div className="text-sm font-semibold text-foreground leading-snug">{citation.title}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{citation.authors}</div>
-                      {citation.url && (
-                        <a
-                          href={citation.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2"
-                        >
-                          View paper <ExternalLink size={10} />
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === "bibliography" && (
-                <div className="text-sm text-foreground leading-relaxed font-mono whitespace-pre-wrap bg-muted/20 rounded-lg p-4 border border-border">
-                  {result.bibliography}
-                </div>
-              )}
+              <p className="text-[10px] text-muted-foreground mt-2">Do not close this window</p>
             </div>
           </div>
+
+          {/* Right: live stream preview */}
+          <div
+            ref={streamRef}
+            className="flex-1 p-6 overflow-y-auto font-mono text-xs text-muted-foreground leading-relaxed bg-muted/5"
+          >
+            {streamedContent ? (
+              <pre className="whitespace-pre-wrap">{streamedContent}</pre>
+            ) : (
+              <div className="flex items-center gap-2 text-muted-foreground/40 h-full justify-center flex-col">
+                <Loader2 size={28} className="animate-spin" />
+                <p className="text-sm">Preparing your paper…</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── RESULTS PHASE ─────────────────────────────────────────────────────────
+
+  if (phase === "results" && result) {
+    const { stats } = result;
+    const gradeColor = stats.grade >= 90 ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400"
+                     : stats.grade >= 75 ? "border-yellow-500/30 bg-yellow-500/5 text-yellow-600 dark:text-yellow-400"
+                     : "border-red-500/30 bg-red-500/5 text-red-600 dark:text-red-400";
+    const aiColor  = stats.aiScore <= 10 ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400" : "border-yellow-500/30 bg-yellow-500/5 text-yellow-600 dark:text-yellow-400";
+    const plagColor= stats.plagiarismScore <= 8 ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400" : "border-yellow-500/30 bg-yellow-500/5 text-yellow-600 dark:text-yellow-400";
+
+    return (
+      <div className="h-full flex flex-col bg-background overflow-hidden">
+        {/* Stats header */}
+        <div className="shrink-0 px-5 py-3 border-b border-border bg-card flex items-center gap-3 flex-wrap">
+          <div className="flex gap-2 flex-wrap">
+            <StatCard label="Est. Grade" value={`${stats.grade}%`} color={gradeColor} sublabel="Academic quality" />
+            <StatCard label="AI Score" value={`${stats.aiScore}%`} color={aiColor} sublabel="AI detection est." />
+            <StatCard label="Plagiarism" value={`${stats.plagiarismScore}%`} color={plagColor} sublabel="Originality est." />
+            <StatCard label="Body Words" value={stats.bodyWordCount.toLocaleString()} color="border-border bg-muted/30 text-foreground" sublabel="Excl. refs & citations" />
+            <StatCard label="Citations" value={String(result.citations.length)} color="border-border bg-muted/30 text-foreground" sublabel="Verified sources" />
+          </div>
+          <div className="ml-auto flex items-center gap-2 flex-wrap">
+            {saveMsg && (
+              <span className={cn("text-xs px-2 py-1 rounded", saveMsg.includes("fail") ? "text-destructive" : "text-green-600 dark:text-green-400")}>
+                {saveMsg}
+              </span>
+            )}
+            {resultTab === "paper" && viewMode === "edit" && (
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                {isSaving ? "Saving…" : "Save Changes"}
+              </button>
+            )}
+            <button
+              onClick={() => downloadPaper(result.content, result.title, result.bibliography)}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors"
+            >
+              <Download size={12} />
+              Download
+            </button>
+            <button
+              onClick={() => { setPhase("config"); setResult(null); setStreamedContent(""); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors"
+            >
+              <RotateCcw size={12} />
+              New Paper
+            </button>
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <div className="shrink-0 px-5 py-2 border-b border-border bg-card flex items-center justify-between">
+          <div className="flex gap-1">
+            {([
+              { id: "paper", label: "Paper", icon: FileText },
+              { id: "citations", label: `Citations (${result.citations.length})`, icon: BookMarked },
+              { id: "bibliography", label: "Bibliography", icon: ListOrdered },
+              { id: "stats", label: "Quality Report", icon: BarChart3 },
+            ] as const).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setResultTab(tab.id)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                  resultTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <tab.icon size={12} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          {resultTab === "paper" && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setViewMode("view")}
+                className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md text-xs", viewMode === "view" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}
+              >
+                <Eye size={11} /> View
+              </button>
+              <button
+                onClick={() => setViewMode("edit")}
+                className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md text-xs", viewMode === "edit" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}
+              >
+                <Edit3 size={11} /> Edit
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
+          {/* ── Paper tab ── */}
+          {resultTab === "paper" && viewMode === "view" && (
+            <div className="max-w-4xl mx-auto px-8 py-6">
+              <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 text-xs text-green-700 dark:text-green-400">
+                <CheckCircle size={12} />
+                All citations verified from Semantic Scholar & arXiv — no hallucinated references
+              </div>
+              {renderMarkdown(result.content)}
+            </div>
+          )}
+
+          {resultTab === "paper" && viewMode === "edit" && (
+            <div className="h-full p-4">
+              <p className="text-xs text-muted-foreground mb-2 px-1">Edit the paper below. Click Save Changes when done to persist your edits.</p>
+              <textarea
+                value={editedContent}
+                onChange={e => setEditedContent(e.target.value)}
+                className="w-full h-[calc(100%-2rem)] p-4 font-mono text-sm bg-muted/20 border border-border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                spellCheck
+              />
+            </div>
+          )}
+
+          {/* ── Citations tab ── */}
+          {resultTab === "citations" && (
+            <div className="max-w-3xl mx-auto px-6 py-6 space-y-3">
+              {result.citations.map((citation) => (
+                <div key={citation.id} className="p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/30 transition-colors">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">[{citation.index}]</span>
+                      <CheckCircle size={12} className="text-green-500" />
+                      <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">Verified · {citation.source}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">{citation.year}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-foreground leading-snug">{citation.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{citation.authors}</p>
+                  {citation.url && (
+                    <a href={citation.url} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2">
+                      View paper <ExternalLink size={10} />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Bibliography tab ── */}
+          {resultTab === "bibliography" && (
+            <div className="max-w-3xl mx-auto px-6 py-6">
+              <div className="text-sm text-foreground leading-relaxed font-mono whitespace-pre-wrap bg-muted/20 rounded-xl p-5 border border-border">
+                {result.bibliography}
+              </div>
+            </div>
+          )}
+
+          {/* ── Stats tab ── */}
+          {resultTab === "stats" && (
+            <div className="max-w-2xl mx-auto px-6 py-6 space-y-5">
+              <div className="grid grid-cols-3 gap-3">
+                <div className={cn("rounded-xl border p-4 text-center", gradeColor)}>
+                  <div className="text-3xl font-bold">{stats.grade}%</div>
+                  <div className="text-xs mt-1 opacity-70">Estimated Grade</div>
+                  <div className={cn("text-[10px] mt-1 font-semibold", stats.grade >= 90 ? "text-green-600" : "text-yellow-600")}>
+                    {stats.grade >= 95 ? "Distinction" : stats.grade >= 90 ? "High Merit" : stats.grade >= 80 ? "Merit" : "Pass"}
+                  </div>
+                </div>
+                <div className={cn("rounded-xl border p-4 text-center", aiColor)}>
+                  <div className="text-3xl font-bold">{stats.aiScore}%</div>
+                  <div className="text-xs mt-1 opacity-70">AI Detection</div>
+                  <div className={cn("text-[10px] mt-1 font-semibold", stats.aiScore <= 10 ? "text-green-600" : "text-yellow-600")}>
+                    {stats.aiScore <= 5 ? "Excellent" : stats.aiScore <= 15 ? "Good" : "Review"}
+                  </div>
+                </div>
+                <div className={cn("rounded-xl border p-4 text-center", plagColor)}>
+                  <div className="text-3xl font-bold">{stats.plagiarismScore}%</div>
+                  <div className="text-xs mt-1 opacity-70">Plagiarism Risk</div>
+                  <div className={cn("text-[10px] mt-1 font-semibold", stats.plagiarismScore <= 8 ? "text-green-600" : "text-yellow-600")}>
+                    {stats.plagiarismScore <= 5 ? "Original" : stats.plagiarismScore <= 15 ? "Acceptable" : "High Risk"}
+                  </div>
+                </div>
+              </div>
+
+              {stats.feedback.length > 0 && (
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <h3 className="text-sm font-semibold mb-3">AI Quality Feedback</h3>
+                  <ul className="space-y-2">
+                    {stats.feedback.map((fb, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <CheckCircle size={14} className="text-primary shrink-0 mt-0.5" />
+                        {fb}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="bg-muted/20 border border-border rounded-xl p-4 text-xs text-muted-foreground">
+                <p className="font-semibold text-foreground mb-1">Important note on estimates</p>
+                These scores are AI-estimated quality indicators, not results from a live plagiarism scanner or certified AI detector. For final submission, run your paper through Turnitin or Copyleaks for authoritative results.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── CONFIG PHASE ──────────────────────────────────────────────────────────
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="max-w-3xl mx-auto px-6 py-6 pb-12 space-y-5">
+        {/* Page header */}
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Wand2 size={22} className="text-primary" />
+            Write a Paper
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Real verified citations · Live streaming · Plagiarism &amp; grade estimates · Editable results
+          </p>
+        </div>
+
+        {genError && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-xl text-sm text-destructive">
+            <AlertTriangle size={14} />
+            {genError}
+          </div>
         )}
+
+        {/* ── File uploads ── */}
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Assignment Instructions</label>
+            <FileUploadZone
+              onExtracted={handleBriefExtracted}
+              accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg"
+              label="Upload brief / instructions"
+              hint="PDF, Word, image — auto-fills form fields"
+              compact
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Marking Rubric (optional)</label>
+            <FileUploadZone
+              onExtracted={handleRubricExtracted}
+              accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg"
+              label="Upload grading criteria"
+              hint="Used to optimise grade estimation"
+              compact
+            />
+            {rubricText && (
+              <p className="text-[10px] text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                <CheckCircle size={10} /> Rubric loaded ({rubricText.split(/\s+/).length} words)
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* ── Topic & Subject ── */}
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Topic *</label>
+            <input
+              value={topic}
+              onChange={e => setTopic(e.target.value)}
+              placeholder="e.g., Impact of social media on mental health"
+              className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Subject *</label>
+            <input
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              placeholder="e.g., Psychology, Computer Science"
+              className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        </div>
+
+        {/* ── Paper type ── */}
+        <div>
+          <label className="text-sm font-medium mb-2 block">Paper Type</label>
+          <div className="flex gap-2 flex-wrap">
+            {PAPER_TYPES.map(pt => (
+              <button
+                key={pt.value}
+                type="button"
+                onClick={() => setPaperType(pt.value)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                  paperType === pt.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                )}
+              >
+                {pt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Word count ── */}
+        <div>
+          <label className="text-sm font-medium mb-2 block">Word Count</label>
+          <div className="flex gap-2 flex-wrap items-center mb-2">
+            {WORD_PRESETS.map(n => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => { setWordCount(n); setCustomWordCount(""); }}
+                className={cn(
+                  "px-3 py-1 rounded-lg border text-xs font-medium transition-all",
+                  wordCount === n && !customWordCount ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                )}
+              >
+                {n.toLocaleString()}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={100}
+              max={15000}
+              value={customWordCount}
+              onChange={e => setCustomWordCount(e.target.value)}
+              placeholder="Or type exact count…"
+              className="w-44 px-3 py-1.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {customWordCount && (
+              <span className="text-xs text-muted-foreground">Using {parseInt(customWordCount).toLocaleString()} words</span>
+            )}
+          </div>
+        </div>
+
+        {/* ── Citation style ── */}
+        <div>
+          <label className="text-sm font-medium mb-2 block">Citation Style</label>
+          {/* Citation confirmation banner */}
+          {detectedStyle && !styleConfirmed && (
+            <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 text-xs">
+              <BookMarked size={11} className="text-primary" />
+              <span>Detected <strong>{detectedStyle.toUpperCase()}</strong> from your instructions.</span>
+              <button
+                onClick={() => { setCitationStyle(detectedStyle); setStyleConfirmed(true); }}
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary text-primary-foreground font-medium ml-1"
+              >
+                <Check size={10} /> Confirm
+              </button>
+              <button onClick={() => setDetectedStyle(null)} className="text-muted-foreground hover:text-foreground ml-1">
+                <X size={12} />
+              </button>
+            </div>
+          )}
+          <div className="flex gap-2 flex-wrap">
+            {CITATION_STYLES.map(style => (
+              <button
+                key={style}
+                type="button"
+                onClick={() => { setCitationStyle(style); setStyleConfirmed(true); }}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg border text-xs font-bold uppercase transition-all",
+                  citationStyle === style ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                )}
+              >
+                {style}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Academic level ── */}
+        <div>
+          <label className="text-sm font-medium mb-2 flex items-center gap-1.5 block">
+            <GraduationCap size={14} />
+            Academic Level
+          </label>
+          <div className="flex gap-2 flex-wrap">
+            {ACADEMIC_LEVELS.map(lvl => (
+              <button
+                key={lvl.value}
+                type="button"
+                onClick={() => setAcademicLevel(lvl.value)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                  academicLevel === lvl.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                )}
+              >
+                {lvl.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── STEM toggle ── */}
+        <button
+          type="button"
+          onClick={() => setIsStem(!isStem)}
+          className={cn(
+            "flex items-center gap-3 w-full px-4 py-3 rounded-xl border transition-all text-left",
+            isStem ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
+          )}
+        >
+          <div className={cn("relative w-9 h-5 rounded-full transition-colors", isStem ? "bg-primary" : "bg-muted")}>
+            <div className={cn("absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform", isStem ? "translate-x-4" : "")} />
+          </div>
+          <FlaskConical size={15} className={isStem ? "text-primary" : "text-muted-foreground"} />
+          <div>
+            <p className="text-sm font-medium">STEM Paper</p>
+            <p className="text-[11px] text-muted-foreground">Activates equations, derivations & technical analysis module</p>
+          </div>
+        </button>
+
+        {/* ── Additional instructions ── */}
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">Additional Instructions</label>
+          <textarea
+            value={additionalInstructions}
+            onChange={e => setAdditionalInstructions(e.target.value)}
+            rows={3}
+            placeholder="Specific requirements, key arguments to cover, formatting preferences…"
+            className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+          />
+        </div>
+
+        {/* ── Generate button ── */}
+        <button
+          onClick={handleGenerate}
+          disabled={!topic.trim() || !subject.trim()}
+          className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Zap size={16} />
+          Generate Paper with LightSpeed AI
+        </button>
+
+        {!topic.trim() || !subject.trim() ? (
+          <p className="text-center text-xs text-muted-foreground">Fill in topic and subject to continue</p>
+        ) : null}
       </div>
     </div>
   );
