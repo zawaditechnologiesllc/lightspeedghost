@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import {
-  Zap, Ghost, ArrowRight, CheckCircle, Star, Menu, X,
+  Zap, ArrowRight, CheckCircle, Star, Menu, X,
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, ChevronUp, Sparkles, Upload, BarChart3,
   Users, Award, Clock, Quote
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 function useScrolled(threshold = 20) {
   const [scrolled, setScrolled] = useState(false);
@@ -184,12 +185,7 @@ export default function Landing() {
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#04080f]/90 backdrop-blur-md border-b border-white/5 shadow-lg" : ""}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/">
-            <div className="flex items-center gap-2.5 cursor-pointer select-none">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-600/30">
-                <Ghost size={18} className="text-white" />
-              </div>
-              <span className="font-bold text-white text-lg tracking-tight">Light Speed <span className="text-blue-400">Ghost</span></span>
-            </div>
+            <Logo size={32} textSize="text-lg" className="cursor-pointer select-none" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
@@ -305,10 +301,7 @@ export default function Landing() {
               {/* sidebar */}
               <div className="w-52 bg-[#060d1a] border-r border-white/5 p-3 shrink-0 hidden sm:block">
                 <div className="mb-4 px-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-blue-600 rounded-md flex items-center justify-center"><Ghost size={12} /></div>
-                    <span className="text-xs font-bold text-white">Light Speed Ghost</span>
-                  </div>
+                  <Logo size={22} textSize="text-[10px]" />
                 </div>
                 {[
                   { label: "Dashboard", active: false },
@@ -625,8 +618,8 @@ export default function Landing() {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-blue-600/10 rounded-full blur-[100px]" />
         </div>
         <div className="relative max-w-2xl mx-auto text-center">
-          <div className="w-14 h-14 bg-blue-600/20 border border-blue-500/30 rounded-2xl flex items-center justify-center mx-auto mb-8">
-            <Ghost size={28} className="text-blue-400" />
+          <div className="flex justify-center mb-8">
+            <Logo size={56} showText={false} />
           </div>
           <h2 className="text-4xl md:text-5xl font-bold mb-5 leading-tight">
             Stop starting at midnight.<br />Start with a draft.
@@ -651,12 +644,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-12">
             <div className="col-span-2">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Ghost size={16} className="text-white" />
-                </div>
-                <span className="font-bold text-white">Light Speed Ghost</span>
-              </div>
+              <Logo size={32} className="mb-4" />
               <p className="text-white/35 text-sm leading-relaxed max-w-xs">
                 Academic writing tools for students who have deadlines and standards.
               </p>

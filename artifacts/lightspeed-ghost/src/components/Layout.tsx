@@ -10,10 +10,10 @@ import {
   Files,
   Menu,
   X,
-  Feather,
   Moon,
   Sun,
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
@@ -66,14 +66,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="flex items-center gap-2.5 px-4 py-4 border-b border-sidebar-border">
-          <div className="w-7 h-7 rounded-lg bg-sidebar-primary flex items-center justify-center shadow-sm">
-            <Feather size={14} className="text-white" />
-          </div>
-          <div>
-            <div className="text-sidebar-foreground font-bold text-sm leading-tight">Light Speed</div>
-            <div className="text-sidebar-foreground/50 text-xs leading-tight">Ghost</div>
-          </div>
+        <div className="px-4 py-4 border-b border-sidebar-border">
+          <Logo size={28} textSize="text-sm" />
         </div>
 
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
