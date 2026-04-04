@@ -18,7 +18,7 @@ import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { path: "/", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/app", label: "Dashboard", icon: LayoutDashboard },
   { path: "/write", label: "Write Paper", icon: PenLine },
   { path: "/outline", label: "Outline", icon: BookOpen },
   { path: "/revision", label: "Revision", icon: Files },
@@ -29,7 +29,7 @@ const navItems = [
 ];
 
 function NavItem({ path, label, icon: Icon }: (typeof navItems)[0]) {
-  const [isActive] = useRoute(path === "/" ? "/" : path + "*");
+  const [isActive] = useRoute(path === "/app" ? "/app" : path + "*");
   return (
     <Link href={path}>
       <div

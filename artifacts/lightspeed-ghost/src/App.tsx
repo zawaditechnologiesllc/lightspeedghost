@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/Layout";
+import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import WritePaper from "@/pages/WritePaper";
 import Outline from "@/pages/Outline";
@@ -16,11 +17,11 @@ import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
-function Router() {
+function AppRoutes() {
   return (
     <Layout>
       <Switch>
-        <Route path="/" component={Dashboard} />
+        <Route path="/app" component={Dashboard} />
         <Route path="/write" component={WritePaper} />
         <Route path="/outline" component={Outline} />
         <Route path="/revision" component={Revision} />
@@ -31,6 +32,15 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
     </Layout>
+  );
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/" component={Landing} />
+      <Route component={AppRoutes} />
+    </Switch>
   );
 }
 
