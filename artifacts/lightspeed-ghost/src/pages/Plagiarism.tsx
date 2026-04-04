@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useCheckPlagiarism, useHumanizeText, compareCode } from "@workspace/api-client-react";
 import type { PlagiarismResult, CodeCompareResult } from "@workspace/api-client-react";
 import { Loader2, ShieldCheck, ShieldAlert, Zap, AlertTriangle, Code2, FileText, ExternalLink, Info } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 
 type PageTab = "text" | "code";
@@ -25,7 +26,9 @@ export default function Plagiarism() {
   const [pageTab, setPageTab] = useState<PageTab>("text");
 
   const [text, setText] = useState("");
-  const [humanizeIntensity, setHumanizeIntensity] = useState<"light" | "medium" | "heavy">("medium");
+  const [intensityValue, setIntensityValue] = useState(50);
+  const humanizeIntensity: "light" | "medium" | "heavy" =
+    intensityValue <= 33 ? "light" : intensityValue <= 66 ? "medium" : "heavy";
   const [result, setResult] = useState<PlagiarismResult | null>(null);
   const [humanizedText, setHumanizedText] = useState<string | null>(null);
 
@@ -131,10 +134,23 @@ export default function Plagiarism() {
 
             {humanizedText && (
               <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-                <h3 className="font-semibold text-sm">Humanized Text</h3>
-                <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 rounded-lg p-3 border border-border">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">Ghost Writer Output</h3>
+                  {humanizeText.data && (
+                    <span className="text-xs text-green-600 dark:text-green-400 font-medium bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 px-2 py-0.5 rounded-full">
+                      AI score: {humanizeText.data.beforeScore ?? "–"}% → {humanizeText.data.afterScore ?? "–"}%
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 rounded-lg p-3 border border-border max-h-80 overflow-y-auto">
                   {humanizedText}
                 </div>
+                <button
+                  onClick={() => navigator.clipboard.writeText(humanizedText)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Copy to clipboard
+                </button>
               </div>
             )}
           </div>
@@ -252,21 +268,30 @@ export default function Plagiarism() {
                   <div className="bg-card border border-border rounded-xl p-5 space-y-3">
                     <h3 className="font-semibold text-sm">Humanize AI Content</h3>
                     <div>
-                      <label className="text-xs text-muted-foreground block mb-2">Intensity</label>
-                      <div className="flex gap-2">
-                        {(["light", "medium", "heavy"] as const).map((intensity) => (
-                          <button
-                            key={intensity}
-                            onClick={() => setHumanizeIntensity(intensity)}
-                            className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors ${
-                              humanizeIntensity === intensity
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            {intensity}
-                          </button>
-                        ))}
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs text-muted-foreground">Ghost Writer Intensity</label>
+                        <span className={`text-xs font-semibold capitalize px-2 py-0.5 rounded-full ${
+                          humanizeIntensity === "light"
+                            ? "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400"
+                            : humanizeIntensity === "medium"
+                            ? "bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-400"
+                            : "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400"
+                        }`}>
+                          {humanizeIntensity}
+                        </span>
+                      </div>
+                      <Slider
+                        value={[intensityValue]}
+                        onValueChange={([v]) => setIntensityValue(v)}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="mt-2 mb-1"
+                      />
+                      <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                        <span>Light — Minor edits</span>
+                        <span>Medium — Rephrase</span>
+                        <span>Heavy — Full rewrite</span>
                       </div>
                     </div>
                     <button

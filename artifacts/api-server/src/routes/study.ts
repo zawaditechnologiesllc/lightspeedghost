@@ -3,16 +3,12 @@ import { db } from "@workspace/db";
 import { studySessionsTable, studyMessagesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { AskStudyAssistantBody, GetSessionMessagesParams } from "@workspace/api-zod";
+import { anthropic } from "../lib/ai";
+import { TUTOR_SOUL } from "../lib/soul";
+import { getStudentMemory, updateStudentMemory, buildMemoryContext, memoryFlush } from "../lib/memory";
+import { recordUsage } from "../lib/apiCost";
 
 const router = Router();
-
-const TUTOR_RESPONSES = [
-  "Great question! Let me break this down step by step for you. The key concept here is understanding the underlying principles before applying them.",
-  "That's an important topic to master. Think of it this way — the foundational idea is that every complex problem can be decomposed into smaller, more manageable parts.",
-  "Excellent! Let's explore this together. The most effective way to understand this is through a concrete example first, then we can generalize.",
-  "I can see why this might be confusing. The trick is to approach it systematically — first establish what you know, then figure out what you need to find.",
-  "Good thinking! This connects to several key concepts. Let me explain the relationship and why it matters for your overall understanding.",
-];
 
 router.get("/study/sessions", async (req, res) => {
   try {
@@ -75,50 +71,123 @@ router.post("/study/ask", async (req, res) => {
       sessionId = session.id;
     }
 
-    const [userMsg] = await db
-      .insert(studyMessagesTable)
-      .values({
-        sessionId,
-        role: "user",
-        content: body.question,
-      })
-      .returning();
+    // Save user message
+    await db.insert(studyMessagesTable).values({
+      sessionId,
+      role: "user",
+      content: body.question,
+    });
 
-    const aiResponse =
-      TUTOR_RESPONSES[Math.floor(Math.random() * TUTOR_RESPONSES.length)] +
-      ` Regarding "${body.question.slice(0, 50)}${body.question.length > 50 ? "..." : ""}" — the key points to understand are: (1) the conceptual foundation, (2) the practical application, and (3) how this connects to broader themes in the subject.`;
+    // 1. Load student persistent memory (Jarvis Effect)
+    const memory = await getStudentMemory();
+    const memoryContext = buildMemoryContext(memory);
 
+    // 2. Load conversation history for context
+    const history = await db
+      .select()
+      .from(studyMessagesTable)
+      .where(eq(studyMessagesTable.sessionId, sessionId))
+      .orderBy(studyMessagesTable.createdAt)
+      .limit(20);
+
+    const conversationMessages = history
+      .slice(0, -1) // exclude the message we just inserted
+      .map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+    // 3. Build tutor mode instructions
+    const modeInstructions: Record<string, string> = {
+      tutor: "Guide the student step by step from first principles. Ask clarifying questions. Adapt to their level.",
+      explain: "Give a clear, concise explanation. Use analogies and concrete examples. Keep it focused.",
+      quiz: "Ask the student a series of questions to test their understanding. Give hints if they struggle. Reveal the answer after 2 wrong attempts.",
+      summarize: "Create a structured summary with key points, definitions, and the most important takeaways.",
+    };
+
+    const modeInstruction = modeInstructions[body.mode ?? "tutor"] ?? modeInstructions.tutor;
+
+    const systemPrompt = `${TUTOR_SOUL}
+
+${memoryContext}
+
+CURRENT MODE: ${(body.mode ?? "tutor").toUpperCase()}
+Mode instructions: ${modeInstruction}
+
+End every response with:
+FOLLOW_UP_1: [relevant follow-up question]
+FOLLOW_UP_2: [another follow-up question]
+FOLLOW_UP_3: [third follow-up question]
+RELATED_CONCEPTS: [3-5 comma-separated related concepts]
+TOPIC_TAG: [single topic label for this conversation, e.g. "Integration by parts"]`;
+
+    // 4. Call Claude 3.5 Sonnet — Tutoring model (ClawRouter)
+    const response = await anthropic.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 2000,
+      system: systemPrompt,
+      messages: [
+        ...conversationMessages,
+        { role: "user", content: body.question },
+      ],
+    });
+
+    recordUsage("claude-3-5-sonnet-20241022", response.usage.input_tokens, response.usage.output_tokens, "study-tutor");
+
+    const fullText = response.content[0].type === "text" ? response.content[0].text : "";
+
+    // 5. Parse follow-ups and topic tag from response
+    const followUp1 = fullText.match(/FOLLOW_UP_1:\s*(.+)/)?.[1]?.trim() ?? "Can you explain this further?";
+    const followUp2 = fullText.match(/FOLLOW_UP_2:\s*(.+)/)?.[1]?.trim() ?? "What are common mistakes here?";
+    const followUp3 = fullText.match(/FOLLOW_UP_3:\s*(.+)/)?.[1]?.trim() ?? "How does this apply in practice?";
+    const relatedConceptsRaw = fullText.match(/RELATED_CONCEPTS:\s*(.+)/)?.[1]?.trim() ?? "";
+    const topicTag = fullText.match(/TOPIC_TAG:\s*(.+)/)?.[1]?.trim() ?? body.question.slice(0, 30);
+
+    // 6. Strip metadata from the visible answer
+    const answer = fullText
+      .replace(/FOLLOW_UP_\d+:.*$/gm, "")
+      .replace(/RELATED_CONCEPTS:.*$/gm, "")
+      .replace(/TOPIC_TAG:.*$/gm, "")
+      .trim();
+
+    const relatedConcepts = relatedConceptsRaw
+      ? relatedConceptsRaw.split(",").map((c) => c.trim()).filter(Boolean).slice(0, 5)
+      : ["Foundational Principles", "Advanced Applications", "Common Use Cases"];
+
+    // 7. Save assistant message
     const [assistantMsg] = await db
       .insert(studyMessagesTable)
-      .values({
-        sessionId,
-        role: "assistant",
-        content: aiResponse,
-      })
+      .values({ sessionId, role: "assistant", content: answer })
       .returning();
 
+    // 8. Update session
     await db
       .update(studySessionsTable)
-      .set({
-        lastActivity: new Date(),
-        messageCount: db.$count(studyMessagesTable, eq(studyMessagesTable.sessionId, sessionId)) as unknown as number,
-      })
+      .set({ lastActivity: new Date(), messageCount: history.length + 2 })
       .where(eq(studySessionsTable.id, sessionId));
 
+    // 9. Update student memory — Jarvis Effect (fire-and-forget)
+    updateStudentMemory({
+      newTopic: topicTag,
+      subject: body.subject ?? "General",
+    }).catch(() => {});
+
+    // 10. Detect struggle signals and log to memory
+    const struggleSignals = /confused|don't understand|struggling|lost|wrong|error|mistake|help/i.test(body.question);
+    if (struggleSignals) {
+      memoryFlush(`Student struggled with: ${topicTag}`).catch(() => {});
+    }
+
     res.json({
-      answer: aiResponse,
-      followUpQuestions: [
-        "Can you explain this in simpler terms?",
-        "What are the common mistakes people make with this concept?",
-        "How does this apply to real-world problems?",
-      ],
+      answer,
+      followUpQuestions: [followUp1, followUp2, followUp3],
       sessionId,
       messageId: assistantMsg.id,
-      relatedConcepts: ["Foundational Principles", "Advanced Applications", "Common Use Cases"],
+      relatedConcepts,
     });
   } catch (err) {
     req.log.error({ err }, "Error in study assistant");
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Failed to get tutor response. Please try again." });
   }
 });
 

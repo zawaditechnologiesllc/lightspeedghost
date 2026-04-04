@@ -7,6 +7,7 @@ import { Loader2, FlaskConical, CheckCircle, BookOpen, Wrench, ExternalLink, Sea
 import type { StemSolution } from "@workspace/api-client-react";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import StemImageOcr from "@/components/StemImageOcr";
+import MathRenderer from "@/components/MathRenderer";
 import {
   LineChart,
   Line,
@@ -439,7 +440,7 @@ export default function StemSolver() {
                   <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Answer</span>
                   <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full capitalize">{result.subject}</span>
                 </div>
-                <p className="text-sm text-foreground leading-relaxed">{result.answer}</p>
+                <MathRenderer text={result.answer} className="text-sm text-foreground" />
               </div>
 
               {result.graphData && (
@@ -474,11 +475,11 @@ export default function StemSolver() {
                           <div className="flex-1">
                             <div className="text-sm font-semibold">{step.description}</div>
                             {step.expression && (
-                              <div className="mt-1 px-3 py-1.5 bg-muted rounded font-mono text-xs border border-border">
-                                {step.expression}
+                              <div className="mt-1 px-3 py-1.5 bg-muted rounded text-xs border border-border overflow-x-auto">
+                                <MathRenderer text={step.expression} className="text-xs" />
                               </div>
                             )}
-                            <div className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{step.explanation}</div>
+                            <MathRenderer text={step.explanation} className="mt-1.5 text-sm text-muted-foreground" />
                           </div>
                         </div>
                       </div>

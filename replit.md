@@ -37,11 +37,46 @@ Full-stack AI academic writing platform at lightspeedghost.com. Features paper w
 6. **AI Study Assistant** `/study` — Chat-based tutor with session history
 7. **Documents** `/documents` — All saved documents with search and filter
 
+## AI Architecture (OpenClaw-Inspired)
+
+### Models & Routing (ClawRouter)
+- `claude-3-5-sonnet-20241022` — Reasoning tasks: STEM solving, paper writing, tutoring, revision
+- `gpt-4o` — Vision/OCR tasks
+- `gpt-4o-mini` — Cheap tasks: bibliography formatting, AI detection checks, data extraction
+
+### Core Libs (`artifacts/api-server/src/lib/`)
+- `ai.ts` — Anthropic + OpenAI client initialization
+- `modelRouter.ts` — Multi-model routing (ClawRouter pattern)
+- `soul.ts` — ACADEMIC/STEM/TUTOR/WRITER/HUMANIZER personas (SOUL.md pattern)
+- `reactLoop.ts` — ReAct THOUGHT→ACTION→OBSERVATION loop for STEM solving
+- `cove.ts` — Chain-of-Verification critic agent (error elimination)
+- `contextManager.ts` — Sliding window context for long documents
+- `memory.ts` — Student persistent memory CRUD (Jarvis Effect)
+- `citationVerifier.ts` — Real citations from Semantic Scholar + arXiv APIs
+- `apiCost.ts` — Usage tracking + daily budget guardrails ($5/day default)
+
+### STEM Pipeline
+1. ReAct loop: Think → Act → Observe (Claude 3.5 Sonnet)
+2. Chain-of-Verification: Critic Agent checks for math/logic errors
+3. KaTeX rendering of all LaTeX output in frontend
+
+### Humanizer Pipeline
+1. Claude 3.5 Sonnet with HUMANIZER_SOUL persona
+2. GPT-4o-mini internal detection pass
+3. Recursive rewrite up to 3 passes until AI score < 25%
+4. Ghost Writer Intensity slider (0-100): Light/Medium/Heavy modes
+
+### Memory System
+- Short-term: Full conversation context per request
+- Long-term: `student_profiles` PostgreSQL table (strengths, struggles, topics)
+- Memory flush: key facts saved after each session (memU pattern)
+
 ## Database Schema
 
 - `documents` — All saved papers, revisions, STEM solutions, study sessions
 - `study_sessions` — Study chat sessions
 - `study_messages` — Individual messages in study sessions
+- `student_profiles` — Persistent student memory (strengths, struggles, topics, session count)
 
 ## API Routes
 
