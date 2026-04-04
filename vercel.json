@@ -1,0 +1,7 @@
+{
+  "buildCommand": "pnpm --filter @workspace/lightspeed-ghost run build",
+  "outputDirectory": "artifacts/lightspeed-ghost/dist/public",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": null,
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
