@@ -19,6 +19,14 @@ import Documents from "@/pages/Documents";
 import ResetPassword from "@/pages/ResetPassword";
 import ConfirmEmail from "@/pages/ConfirmEmail";
 import Invite from "@/pages/Invite";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
+import CookiePolicy from "@/pages/CookiePolicy";
+import AcademicUsePolicy from "@/pages/AcademicUsePolicy";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
+import Careers from "@/pages/Careers";
+import Blog from "@/pages/Blog";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
@@ -77,6 +85,14 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/confirm-email" component={ConfirmEmail} />
       <Route path="/invite" component={Invite} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/terms" component={TermsOfService} />
+      <Route path="/cookies" component={CookiePolicy} />
+      <Route path="/academic-use" component={AcademicUsePolicy} />
+      <Route path="/about" component={About} />
+      <Route path="/contact" component={Contact} />
+      <Route path="/careers" component={Careers} />
+      <Route path="/blog" component={Blog} />
       <Route component={AppRoutes} />
     </Switch>
   );

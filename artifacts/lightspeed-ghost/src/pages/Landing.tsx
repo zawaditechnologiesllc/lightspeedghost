@@ -4,7 +4,7 @@ import {
   Zap, ArrowRight, CheckCircle, Star, Menu, X,
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, ChevronUp, Sparkles, Upload, BarChart3,
-  Users, Award, Clock, Quote
+  Users, Award, Clock, Quote, MapPin, Mail, Twitter, Linkedin,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
@@ -21,44 +21,50 @@ function useScrolled(threshold = 20) {
 const tools = [
   {
     icon: PenLine,
-    name: "Paper Writer",
-    desc: "Full academic papers with properly formatted citations, bibliography, and subject-specific depth. APA, MLA, Chicago, IEEE — pick your style.",
+    name: "AI Paper Writer",
+    desc: "Full academic papers with verified citations from Semantic Scholar. APA, MLA, Chicago, Harvard, IEEE — streamed to you in real time, never a blank page again.",
     badge: "Most used",
+    href: "/auth",
     color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   },
   {
     icon: BookOpen,
     name: "Outline Builder",
-    desc: "Structure your argument before you write a single sentence. Upload an assignment brief and get a complete hierarchical outline in seconds.",
+    desc: "Structure your argument before writing a single sentence. Upload your assignment brief and get a complete hierarchical outline built for your topic in seconds.",
     badge: null,
+    href: "/auth",
     color: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
   },
   {
     icon: FileText,
     name: "Paper Revision",
-    desc: "Paste your draft, tell us your target grade, upload the rubric. We rewrite what needs rewriting and explain every change.",
+    desc: "Paste your draft, upload the rubric, set your target grade. We rewrite what needs rewriting and explain every change so you actually learn from it.",
     badge: "Grade booster",
+    href: "/auth",
     color: "bg-violet-500/10 text-violet-400 border-violet-500/20",
   },
   {
     icon: ShieldCheck,
     name: "AI & Plagiarism Check",
-    desc: "Detect AI patterns and similarity before your professor does. Then humanize flagged sections with one click.",
+    desc: "Detect AI patterns and similarity before your professor does. One click humanizes flagged sections while keeping your argument intact.",
     badge: null,
+    href: "/auth",
     color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   },
   {
     icon: FlaskConical,
     name: "STEM Solver",
-    desc: "Upload a photo of your problem set. Get step-by-step solutions with graphs, molecule data, and linked research papers.",
+    desc: "Photograph your problem set. Get full step-by-step solutions with equations, graphs, and linked research papers — Math, Physics, Chemistry, CS, and more.",
     badge: "Photo upload",
+    href: "/auth",
     color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
   },
   {
     icon: GraduationCap,
     name: "AI Study Assistant",
-    desc: "Ask anything, upload your lecture notes, and quiz yourself. It remembers your sessions so you can pick up where you left off.",
+    desc: "Ask anything, upload lecture notes, quiz yourself with flashcards. It remembers your sessions so you pick up exactly where you left off.",
     badge: null,
+    href: "/auth",
     color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   },
 ];
@@ -79,31 +85,35 @@ const testimonials = [
   {
     name: "Aisha K.",
     role: "Postgrad · International Relations · Edinburgh",
-    text: "The plagiarism checker caught things TurnItIn missed. The humanization actually sounds like me writing on a good day, not like a robot trying to sound human. Big difference from what I've tried before.",
+    text: "The plagiarism checker caught things TurnItIn missed. The humanization actually sounds like me on a good day — not a robot trying to sound human. Big difference from everything else I've tried.",
     stars: 5,
   },
 ];
 
 const faqs = [
   {
+    q: "What is Light Speed Ghost?",
+    a: "Light Speed Ghost is an AI-powered academic writing platform built for students. It includes six tools: an AI paper writer with real citations, an outline builder, a paper revision tool, an AI and plagiarism checker with humanization, a STEM step-by-step solver, and an AI study assistant with session memory.",
+  },
+  {
     q: "Is this actually safe to use? Will my university know?",
-    a: "Light Speed Ghost is a writing aid — the same category as Grammarly, tutoring, or study groups. We don't store or share your work. That said, always review what's generated and make it genuinely yours before submitting.",
+    a: "Light Speed Ghost is a writing aid — the same category as Grammarly, tutoring, or study groups. We don't store or share your work with third parties. That said, always review what's generated and make it genuinely yours before submitting. Read our Academic Use Policy for guidance.",
   },
   {
     q: "How is the paper quality? I've tried AI writers before and they're terrible.",
-    a: "Fair skepticism. The difference is we pull from Semantic Scholar's academic database for real citations, and the output goes through subject-specific prompting — not a generic 'write me an essay' call. It's not perfect, but it's a solid draft you can actually work from.",
+    a: "Fair skepticism. The difference is we pull from Semantic Scholar's academic database for real, verified citations — not fake references with broken URLs. Output goes through subject-specific AI prompting, not a generic 'write me an essay' call. It's a solid draft you can actually work from.",
   },
   {
     q: "Does file upload work with PDFs from my university portal?",
-    a: "Yes — PDFs, Word documents, plain text. You can also photograph a physical problem sheet and our OCR will extract the text. Most PDFs extract cleanly; scanned image-only PDFs may vary.",
+    a: "Yes — PDFs, Word documents, plain text, and images. You can also photograph a physical problem sheet and OCR extracts the text. Most PDFs work cleanly; scanned image-only PDFs may vary.",
   },
   {
-    q: "What happens to my data?",
-    a: "Your documents and sessions are stored only for your account. We don't train on your content, don't share it with third parties, and you can delete everything from your account at any time.",
+    q: "How does Light Speed Ghost compare to ChatGPT for essays?",
+    a: "ChatGPT is a general-purpose chatbot. Light Speed Ghost is purpose-built for academic work: real, verifiable citations, specific citation formats, plagiarism checking, grade-targeted revision, and a STEM solver with step-by-step verification — all in one platform with a student-focused interface.",
   },
   {
     q: "Is there a free plan?",
-    a: "Yes. Free includes 3 paper generations per month, unlimited plagiarism checks, full STEM solver access, and the study assistant with no session limit. Pro removes all caps.",
+    a: "Yes. Free includes 3 paper generations per month, unlimited plagiarism checks, full STEM solver access, and the study assistant with no session limit. No credit card required to sign up.",
   },
 ];
 
@@ -121,6 +131,7 @@ const pricingPlans = [
       "File upload & OCR",
     ],
     cta: "Start Free",
+    ctaLink: "/auth",
     highlight: false,
   },
   {
@@ -137,6 +148,7 @@ const pricingPlans = [
       "Citation export (BibTeX, RIS)",
     ],
     cta: "Get Pro",
+    ctaLink: "/auth",
     highlight: true,
   },
   {
@@ -152,6 +164,7 @@ const pricingPlans = [
       "Priority support",
     ],
     cta: "Contact Us",
+    ctaLink: "/contact",
     highlight: false,
   },
 ];
@@ -165,11 +178,11 @@ function FAQItem({ q, a }: { q: string; a: string }) {
         className="w-full flex items-center justify-between py-5 text-left gap-4 group"
       >
         <span className="text-white font-medium group-hover:text-blue-300 transition-colors">{q}</span>
-        {open ? <ChevronUp size={18} className="text-blue-400 shrink-0" /> : <ChevronDown size={18} className="text-white/40 group-hover:text-blue-400 shrink-0 transition-colors" />}
+        {open
+          ? <ChevronUp size={18} className="text-blue-400 shrink-0" />
+          : <ChevronDown size={18} className="text-white/40 group-hover:text-blue-400 shrink-0 transition-colors" />}
       </button>
-      {open && (
-        <p className="pb-5 text-white/60 leading-relaxed text-sm">{a}</p>
-      )}
+      {open && <p className="pb-5 text-white/60 leading-relaxed text-sm">{a}</p>}
     </div>
   );
 }
@@ -178,34 +191,45 @@ export default function Landing() {
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const navLinks = [
+    { label: "Tools", href: "#tools" },
+    { label: "How it Works", href: "#howitworks" },
+    { label: "Pricing", href: "#pricing" },
+    { label: "FAQ", href: "#faq" },
+  ];
+
   return (
     <div className="min-h-screen bg-[#04080f] text-white antialiased overflow-x-hidden">
 
       {/* ─── NAV ─── */}
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#04080f]/90 backdrop-blur-md border-b border-white/5 shadow-lg" : ""}`}>
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#04080f]/95 backdrop-blur-md border-b border-white/5 shadow-lg" : ""}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+
           <Link href="/">
-            <Logo size={32} textSize="text-lg" className="cursor-pointer select-none" />
+            <Logo size={30} textSize="text-base" className="cursor-pointer select-none shrink-0" />
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
-            {["Features", "Tools", "Pricing", "FAQ"].map((item) => (
+          <nav className="hidden md:flex items-center gap-0.5">
+            {navLinks.map((item) => (
               <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                className="px-4 py-2 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                key={item.label}
+                href={item.href}
+                className="px-3.5 py-2 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-colors whitespace-nowrap"
               >
-                {item}
+                {item.label}
               </a>
             ))}
+            <Link href="/about">
+              <span className="px-3.5 py-2 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-colors cursor-pointer whitespace-nowrap">About</span>
+            </Link>
           </nav>
 
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2.5">
             <Link href="/auth">
-              <span className="px-4 py-2 text-sm text-white/70 hover:text-white transition-colors cursor-pointer">Sign In</span>
+              <span className="px-4 py-2 text-sm text-white/60 hover:text-white transition-colors cursor-pointer">Sign In</span>
             </Link>
             <Link href="/auth">
-              <span className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors cursor-pointer shadow-md shadow-blue-600/20">
+              <span className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors cursor-pointer shadow-md shadow-blue-600/20 whitespace-nowrap">
                 Get Started Free
               </span>
             </Link>
@@ -213,30 +237,37 @@ export default function Landing() {
 
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 text-white/60 hover:text-white"
+            className="md:hidden p-2 text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+            aria-label="Toggle menu"
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
+        {/* Mobile menu */}
         {mobileOpen && (
-          <div className="md:hidden bg-[#04080f] border-t border-white/10 px-6 py-4 space-y-1">
-            {["Features", "Tools", "Pricing", "FAQ"].map((item) => (
+          <div className="md:hidden bg-[#04080f]/98 border-t border-white/8 px-4 py-4 space-y-1">
+            {navLinks.map((item) => (
               <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
+                key={item.label}
+                href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className="block px-3 py-2.5 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/5"
+                className="flex items-center px-3 py-3 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
               >
-                {item}
+                {item.label}
               </a>
             ))}
-            <div className="pt-3 flex flex-col gap-2">
+            <Link href="/about">
+              <span onClick={() => setMobileOpen(false)} className="flex items-center px-3 py-3 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
+                About
+              </span>
+            </Link>
+            <div className="pt-3 flex flex-col gap-2.5 border-t border-white/5 mt-2">
               <Link href="/auth">
-                <span className="block text-center px-4 py-2.5 text-sm border border-white/20 text-white rounded-lg cursor-pointer">Sign In</span>
+                <span className="block text-center px-4 py-2.5 text-sm border border-white/15 text-white rounded-lg cursor-pointer hover:bg-white/5 transition-colors">Sign In</span>
               </Link>
               <Link href="/auth">
-                <span className="block text-center px-4 py-2.5 text-sm bg-blue-600 text-white font-medium rounded-lg cursor-pointer">Get Started Free</span>
+                <span className="block text-center px-4 py-2.5 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg cursor-pointer transition-colors">Get Started Free</span>
               </Link>
             </div>
           </div>
@@ -244,69 +275,64 @@ export default function Landing() {
       </header>
 
       {/* ─── HERO ─── */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-20 text-center overflow-hidden">
-        {/* background glow */}
+      <section className="relative min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 pt-20 pb-12 sm:pt-24 sm:pb-16 text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-blue-600/15 rounded-full blur-[120px]" />
-          <div className="absolute top-1/3 left-1/3 w-[300px] h-[300px] bg-violet-600/10 rounded-full blur-[100px]" />
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] sm:w-[700px] h-[400px] sm:h-[500px] bg-blue-600/12 rounded-full blur-[120px]" />
+          <div className="absolute top-1/3 left-1/3 w-[200px] sm:w-[300px] h-[200px] sm:h-[300px] bg-violet-600/8 rounded-full blur-[100px]" />
         </div>
 
         <div className="relative max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium mb-8">
-            <Zap size={12} className="text-blue-400" />
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium mb-6 sm:mb-8">
+            <Zap size={11} className="text-blue-400" />
             6 AI tools. One platform. Actually works.
           </div>
 
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold leading-[1.1] tracking-tight mb-6">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-5 sm:mb-6">
             Your deadline is{" "}
-            <span className="relative inline-block">
-              <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-300 bg-clip-text text-transparent">
-                tonight.
-              </span>
+            <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-300 bg-clip-text text-transparent">
+              tonight.
             </span>
             <br />
             Your notes are chaos.
           </h1>
 
-          <p className="text-lg sm:text-xl text-white/55 max-w-2xl mx-auto leading-relaxed mb-10">
-            Light Speed Ghost handles the writing, revision, plagiarism checking, and STEM problems — so you can stop staring at a blank page and start actually sleeping.
+          <p className="text-base sm:text-lg md:text-xl text-white/55 max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10">
+            Light Speed Ghost handles the writing, revision, plagiarism checking, and STEM problems — so you can stop staring at a blank page and actually sleep.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Link href="/auth">
-              <span className="inline-flex items-center gap-2 px-7 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-100">
+              <span className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-100 text-sm sm:text-base">
                 Start Free — No Card Needed
                 <ArrowRight size={16} />
               </span>
             </Link>
-            <a href="#tools" className="inline-flex items-center gap-2 px-7 py-3.5 border border-white/15 hover:border-white/30 text-white/70 hover:text-white rounded-xl transition-all hover:bg-white/5">
+            <a href="#tools" className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 border border-white/15 hover:border-white/30 text-white/70 hover:text-white rounded-xl transition-all hover:bg-white/5 text-sm sm:text-base">
               See What It Does
             </a>
           </div>
 
-          <p className="mt-5 text-xs text-white/30">Free forever plan · No credit card · Works in any browser</p>
+          <p className="mt-4 text-xs text-white/30">Free forever plan · No credit card · Works in any browser</p>
         </div>
 
         {/* product preview */}
-        <div className="relative mt-20 w-full max-w-5xl mx-auto">
+        <div className="relative mt-12 sm:mt-20 w-full max-w-5xl mx-auto">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#04080f] z-10 pointer-events-none" style={{ top: "60%" }} />
           <div className="rounded-2xl border border-white/10 overflow-hidden shadow-2xl shadow-blue-900/20 bg-[#0b1120]">
             <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/5 bg-[#060d1a]">
               <span className="w-3 h-3 rounded-full bg-red-500/70" />
               <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
               <span className="w-3 h-3 rounded-full bg-green-500/70" />
-              <span className="ml-3 text-xs text-white/20 font-mono">lightspeedghost.com/write</span>
+              <span className="ml-3 text-xs text-white/20 font-mono hidden sm:block">lightspeedghost.com/write</span>
             </div>
-            <div className="flex" style={{ minHeight: "340px" }}>
-              {/* sidebar */}
-              <div className="w-52 bg-[#060d1a] border-r border-white/5 p-3 shrink-0 hidden sm:block">
+            <div className="flex" style={{ minHeight: "280px" }}>
+              <div className="w-44 bg-[#060d1a] border-r border-white/5 p-3 shrink-0 hidden sm:block">
                 <div className="mb-4 px-2">
-                  <Logo size={22} textSize="text-[10px]" />
+                  <Logo size={20} textSize="text-[10px]" />
                 </div>
                 {[
                   { label: "Dashboard", active: false },
                   { label: "Write Paper", active: true },
-                  { label: "Outline", active: false },
                   { label: "Revision", active: false },
                   { label: "AI & Plagiarism", active: false },
                   { label: "STEM Solver", active: false },
@@ -317,20 +343,23 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
-              {/* main content */}
-              <div className="flex-1 p-6 space-y-4">
-                <div className="h-6 w-48 bg-white/10 rounded-md" />
-                <div className="h-3 w-72 bg-white/5 rounded" />
-                <div className="mt-6 space-y-3">
-                  <div className="h-10 bg-white/5 rounded-lg border border-white/10" />
-                  <div className="h-10 bg-white/5 rounded-lg border border-white/10" />
+              <div className="flex-1 p-4 sm:p-6 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-5 w-36 bg-white/10 rounded-md" />
+                  <div className="h-5 w-16 bg-blue-500/20 rounded-full" />
+                </div>
+                <div className="h-2.5 w-72 bg-white/5 rounded" />
+                <div className="space-y-2.5 mt-4">
+                  <div className="h-9 bg-white/5 rounded-lg border border-white/8" />
+                  <div className="h-9 bg-white/5 rounded-lg border border-white/8" />
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="h-10 bg-white/5 rounded-lg border border-white/10" />
-                    <div className="h-10 bg-white/5 rounded-lg border border-white/10" />
+                    <div className="h-9 bg-white/5 rounded-lg border border-white/8" />
+                    <div className="h-9 bg-white/5 rounded-lg border border-white/8" />
                   </div>
-                  <div className="h-20 bg-white/5 rounded-lg border border-white/10" />
-                  <div className="h-10 bg-blue-600/40 rounded-lg border border-blue-500/30 flex items-center justify-center">
-                    <div className="h-3 w-24 bg-blue-400/60 rounded" />
+                  <div className="h-16 bg-white/5 rounded-lg border border-white/8" />
+                  <div className="h-9 bg-blue-600/35 rounded-lg border border-blue-500/25 flex items-center justify-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                    <div className="h-2.5 w-28 bg-blue-400/50 rounded" />
                   </div>
                 </div>
               </div>
@@ -340,8 +369,8 @@ export default function Landing() {
       </section>
 
       {/* ─── STATS ─── */}
-      <section className="border-y border-white/5 bg-white/[0.02] py-14">
-        <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      <section className="border-y border-white/5 bg-white/[0.02] py-8 sm:py-14">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
           {[
             { value: "52,000+", label: "Papers generated" },
             { value: "3.5 hrs", label: "Average time saved per essay" },
@@ -349,83 +378,82 @@ export default function Landing() {
             { value: "200+", label: "Universities represented" },
           ].map(({ value, label }) => (
             <div key={label}>
-              <div className="text-3xl font-bold text-white mb-1">{value}</div>
-              <div className="text-sm text-white/40">{label}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-white mb-1">{value}</div>
+              <div className="text-xs sm:text-sm text-white/40">{label}</div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ─── FEATURES / TOOLS ─── */}
-      <section id="tools" className="py-28 px-6">
+      {/* ─── TOOLS ─── */}
+      <section id="tools" className="py-14 sm:py-20 md:py-28 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="max-w-2xl mb-16">
-            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-4">What it does</p>
-            <h2 className="text-4xl md:text-5xl font-bold leading-tight mb-5">
+          <div className="max-w-2xl mb-10 sm:mb-16">
+            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">What it does</p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-4 sm:mb-5">
               Six tools.<br />One subscription.
             </h2>
-            <p className="text-white/50 text-lg">
-              Each tool is built for a specific academic pain point. They work independently or together — run your paper through the writer, then straight into the plagiarism checker.
+            <p className="text-white/50 text-base sm:text-lg">
+              Each tool is built for a specific academic pain point. They work independently or in sequence — run your paper through the writer, then straight into the plagiarism checker.
             </p>
           </div>
 
-          <div id="features" className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {tools.map(({ icon: Icon, name, desc, badge, color }) => (
-              <div
-                key={name}
-                className="group relative p-6 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/15 hover:bg-white/[0.05] transition-all"
-              >
-                {badge && (
-                  <span className={`absolute top-5 right-5 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${color}`}>
-                    {badge}
-                  </span>
-                )}
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 border ${color}`}>
-                  <Icon size={20} />
+          <div id="features" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {tools.map(({ icon: Icon, name, desc, badge, color, href }) => (
+              <Link href={href} key={name}>
+                <div className="group relative p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/15 hover:bg-white/[0.05] transition-all cursor-pointer h-full">
+                  {badge && (
+                    <span className={`absolute top-4 right-4 sm:top-5 sm:right-5 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${color}`}>
+                      {badge}
+                    </span>
+                  )}
+                  <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center mb-4 border ${color}`}>
+                    <Icon size={18} />
+                  </div>
+                  <h3 className="font-semibold text-white mb-2">{name}</h3>
+                  <p className="text-sm text-white/50 leading-relaxed">{desc}</p>
                 </div>
-                <h3 className="font-semibold text-white mb-2">{name}</h3>
-                <p className="text-sm text-white/50 leading-relaxed">{desc}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
       {/* ─── HOW IT WORKS ─── */}
-      <section className="py-24 px-6 bg-white/[0.02] border-y border-white/5">
+      <section id="howitworks" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-white/[0.02] border-y border-white/5">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-4">How it works</p>
-            <h2 className="text-4xl font-bold">From brief to submission in three steps</h2>
+          <div className="text-center mb-10 sm:mb-16">
+            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">How it works</p>
+            <h2 className="text-3xl sm:text-4xl font-bold">From brief to submission in three steps</h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-10">
+          <div className="grid md:grid-cols-3 gap-8 sm:gap-10">
             {[
               {
                 num: "01",
                 title: "Upload or describe your task",
-                body: "Drag in your assignment PDF, paste the brief, or just describe what you need. The platform reads the rubric and figures out the rest.",
+                body: "Drag in your assignment PDF, paste the brief, or describe what you need. The platform reads the rubric and figures out the rest — citation style, length, subject.",
                 icon: Upload,
               },
               {
                 num: "02",
                 title: "Generate, revise, or check",
-                body: "Pick your tool. Full paper, outline, revision, plagiarism scan, STEM solution — or all four in sequence. Each one feeds into the next.",
+                body: "Pick your tool. Full paper, outline, revision, plagiarism scan, STEM solution — or all in sequence. Each output feeds cleanly into the next.",
                 icon: Sparkles,
               },
               {
                 num: "03",
                 title: "Review, edit, and submit",
-                body: "Everything generated is a starting point, not a finish line. Read it, adjust your voice, and submit something you can actually stand behind.",
+                body: "Everything generated is a starting point, not a finish line. Read it, adjust your voice, and submit something you can genuinely stand behind.",
                 icon: CheckCircle,
               },
             ].map(({ num, title, body, icon: Icon }) => (
               <div key={num} className="relative">
-                <div className="text-6xl font-bold text-white/5 leading-none mb-4 select-none">{num}</div>
+                <div className="text-5xl sm:text-6xl font-bold text-white/5 leading-none mb-4 select-none">{num}</div>
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
                   <Icon size={18} className="text-blue-400" />
                 </div>
-                <h3 className="font-semibold text-white mb-3 text-lg">{title}</h3>
+                <h3 className="font-semibold text-white mb-3 text-base sm:text-lg">{title}</h3>
                 <p className="text-white/50 text-sm leading-relaxed">{body}</p>
               </div>
             ))}
@@ -434,41 +462,42 @@ export default function Landing() {
       </section>
 
       {/* ─── FEATURE DEEP DIVE ─── */}
-      <section className="py-28 px-6">
-        <div className="max-w-6xl mx-auto space-y-32">
+      <section className="py-14 sm:py-20 md:py-28 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto space-y-16 sm:space-y-24 md:space-y-32">
 
           {/* Feature 1: Paper Writer */}
-          <div className="grid md:grid-cols-2 gap-16 items-center">
+          <div className="grid md:grid-cols-2 gap-10 sm:gap-16 items-center">
             <div>
-              <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-5">Paper Writer</p>
-              <h2 className="text-4xl font-bold mb-5 leading-tight">A draft you can actually submit. Not cringe at.</h2>
-              <p className="text-white/55 leading-relaxed mb-8">
+              <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-4 sm:mb-5">Paper Writer</p>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4 sm:mb-5 leading-tight">A draft you can actually submit. Not cringe at.</h2>
+              <p className="text-white/55 leading-relaxed mb-6 sm:mb-8 text-sm sm:text-base">
                 Type your topic, pick your citation style, choose your length. We pull real academic sources from Semantic Scholar and weave them into the argument — not fake references with broken URLs.
               </p>
               <ul className="space-y-3">
-                {["Real citations with working URLs", "APA, MLA, Chicago, Harvard, IEEE", "STEM mode for equations and technical content", "500 to 2,500+ words on demand"].map(item => (
+                {["Real citations with working DOI links", "APA, MLA, Chicago, Harvard, IEEE", "STEM mode for equations and technical content", "500 to 2,500+ words on demand"].map(item => (
                   <li key={item} className="flex items-center gap-3 text-sm text-white/70">
-                    <CheckCircle size={15} className="text-blue-400 shrink-0" />
+                    <CheckCircle size={14} className="text-blue-400 shrink-0" />
                     {item}
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-[#0b1120] p-6 shadow-xl">
+            <div className="rounded-2xl border border-white/10 bg-[#0b1120] p-5 sm:p-6 shadow-xl">
               <div className="text-xs text-white/30 uppercase tracking-widest mb-4 font-medium">Generated output</div>
               <div className="space-y-3">
                 <div className="h-5 w-3/4 bg-white/10 rounded" />
-                <div className="h-3 w-full bg-white/5 rounded" />
-                <div className="h-3 w-5/6 bg-white/5 rounded" />
-                <div className="h-3 w-4/5 bg-white/5 rounded" />
-                <div className="h-3 w-full bg-white/5 rounded" />
-                <div className="mt-4 h-3 w-2/3 bg-white/5 rounded" />
-                <div className="h-3 w-full bg-white/5 rounded" />
-                <div className="h-3 w-3/4 bg-white/5 rounded" />
+                <div className="h-2.5 w-full bg-white/5 rounded" />
+                <div className="h-2.5 w-5/6 bg-white/5 rounded" />
+                <div className="h-2.5 w-4/5 bg-white/5 rounded" />
+                <div className="h-2.5 w-full bg-white/5 rounded" />
+                <div className="mt-4 h-2.5 w-2/3 bg-white/5 rounded" />
+                <div className="h-2.5 w-full bg-white/5 rounded" />
+                <div className="h-2.5 w-3/4 bg-white/5 rounded" />
               </div>
-              <div className="mt-6 flex items-center gap-3">
-                <div className="flex-1 h-8 bg-blue-600/20 border border-blue-500/20 rounded-lg flex items-center px-3">
-                  <div className="h-2 w-20 bg-blue-400/40 rounded" />
+              <div className="mt-5 flex items-center gap-3">
+                <div className="flex-1 h-8 bg-blue-600/20 border border-blue-500/20 rounded-lg flex items-center px-3 gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                  <div className="h-2 w-16 bg-blue-400/40 rounded" />
                 </div>
                 <div className="flex-1 h-8 bg-white/5 border border-white/10 rounded-lg" />
               </div>
@@ -480,8 +509,8 @@ export default function Landing() {
           </div>
 
           {/* Feature 2: STEM Solver */}
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="order-2 md:order-1 rounded-2xl border border-white/10 bg-[#0b1120] p-6 shadow-xl">
+          <div className="grid md:grid-cols-2 gap-10 sm:gap-16 items-center">
+            <div className="order-2 md:order-1 rounded-2xl border border-white/10 bg-[#0b1120] p-5 sm:p-6 shadow-xl">
               <div className="text-xs text-white/30 uppercase tracking-widest mb-4 font-medium">Step-by-step solution</div>
               <div className="space-y-3">
                 {["Step 1 — Identify the knowns", "Step 2 — Apply Newton's second law", "Step 3 — Solve for acceleration", "Step 4 — Calculate displacement"].map((step, i) => (
@@ -501,15 +530,15 @@ export default function Landing() {
               </div>
             </div>
             <div className="order-1 md:order-2">
-              <p className="text-cyan-400 text-xs font-semibold uppercase tracking-widest mb-5">STEM Solver</p>
-              <h2 className="text-4xl font-bold mb-5 leading-tight">Photograph the problem. Get the method.</h2>
-              <p className="text-white/55 leading-relaxed mb-8">
-                Point your phone at a problem set and upload the image. OCR extracts the text, we identify the subject, and you get a full worked solution — not just the answer.
+              <p className="text-cyan-400 text-xs font-semibold uppercase tracking-widest mb-4 sm:mb-5">STEM Solver</p>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4 sm:mb-5 leading-tight">Photograph the problem. Get the full method.</h2>
+              <p className="text-white/55 leading-relaxed mb-6 sm:mb-8 text-sm sm:text-base">
+                Point your phone at a problem set and upload the image. OCR extracts the text, we identify the subject, and you get a full worked solution with step-by-step reasoning — not just the answer.
               </p>
               <ul className="space-y-3">
-                {["Photo upload with browser OCR", "Math, Physics, Chemistry, Biology, CS", "Graph visualization for functions", "Linked research papers per topic"].map(item => (
+                {["Photo upload with browser OCR", "Math, Physics, Chemistry, Biology, CS, Engineering", "KaTeX equation rendering", "Linked research papers per topic"].map(item => (
                   <li key={item} className="flex items-center gap-3 text-sm text-white/70">
-                    <CheckCircle size={15} className="text-cyan-400 shrink-0" />
+                    <CheckCircle size={14} className="text-cyan-400 shrink-0" />
                     {item}
                   </li>
                 ))}
@@ -521,20 +550,20 @@ export default function Landing() {
       </section>
 
       {/* ─── TESTIMONIALS ─── */}
-      <section className="py-24 px-6 bg-white/[0.02] border-y border-white/5">
+      <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-white/[0.02] border-y border-white/5">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-4">Real students</p>
-            <h2 className="text-4xl font-bold">It's not perfect. But it gets the job done.</h2>
+          <div className="text-center mb-10 sm:mb-14">
+            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">Real students</p>
+            <h2 className="text-3xl sm:text-4xl font-bold">It's not perfect. But it gets the job done.</h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
             {testimonials.map(({ name, role, text, stars }) => (
-              <div key={name} className="p-6 rounded-2xl bg-white/[0.03] border border-white/8">
-                <Quote size={20} className="text-blue-500/40 mb-4" />
-                <p className="text-white/70 text-sm leading-relaxed mb-6">{text}</p>
+              <div key={name} className="p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8">
+                <Quote size={18} className="text-blue-500/40 mb-4" />
+                <p className="text-white/70 text-sm leading-relaxed mb-5">{text}</p>
                 <div className="flex items-center gap-0.5 mb-3">
                   {Array.from({ length: stars }).map((_, i) => (
-                    <Star key={i} size={13} className="fill-amber-400 text-amber-400" />
+                    <Star key={i} size={12} className="fill-amber-400 text-amber-400" />
                   ))}
                 </div>
                 <div className="font-semibold text-white text-sm">{name}</div>
@@ -546,18 +575,18 @@ export default function Landing() {
       </section>
 
       {/* ─── PRICING ─── */}
-      <section id="pricing" className="py-28 px-6">
+      <section id="pricing" className="py-14 sm:py-20 md:py-28 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-4">Pricing</p>
-            <h2 className="text-4xl font-bold mb-4">Honest pricing. No dark patterns.</h2>
-            <p className="text-white/45">The free plan is actually useful. Pro removes every cap.</p>
+          <div className="text-center mb-10 sm:mb-16">
+            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">Pricing</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Honest pricing. No dark patterns.</h2>
+            <p className="text-white/45 text-sm sm:text-base">The free plan is actually useful. Pro removes every cap.</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {pricingPlans.map(({ name, price, per, desc, features, cta, highlight }) => (
+          <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
+            {pricingPlans.map(({ name, price, per, desc, features, cta, ctaLink, highlight }) => (
               <div
                 key={name}
-                className={`relative p-7 rounded-2xl border ${
+                className={`relative p-6 sm:p-7 rounded-2xl border ${
                   highlight
                     ? "bg-blue-600/10 border-blue-500/40 shadow-xl shadow-blue-900/20"
                     : "bg-white/[0.02] border-white/8"
@@ -571,7 +600,7 @@ export default function Landing() {
                 <div className="mb-5">
                   <h3 className="font-semibold text-white mb-1">{name}</h3>
                   <div className="flex items-end gap-1.5">
-                    <span className="text-4xl font-bold text-white">{price}</span>
+                    <span className="text-3xl sm:text-4xl font-bold text-white">{price}</span>
                     <span className="text-white/40 text-sm mb-1">{per}</span>
                   </div>
                   <p className="text-white/45 text-xs mt-2 leading-relaxed">{desc}</p>
@@ -579,12 +608,12 @@ export default function Landing() {
                 <ul className="space-y-2.5 mb-7">
                   {features.map(feat => (
                     <li key={feat} className="flex items-center gap-2.5 text-sm text-white/65">
-                      <CheckCircle size={14} className={highlight ? "text-blue-400" : "text-white/30"} />
+                      <CheckCircle size={13} className={highlight ? "text-blue-400 shrink-0" : "text-white/30 shrink-0"} />
                       {feat}
                     </li>
                   ))}
                 </ul>
-                <Link href="/auth">
+                <Link href={ctaLink}>
                   <span className={`block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
                     highlight
                       ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20"
@@ -600,35 +629,38 @@ export default function Landing() {
       </section>
 
       {/* ─── FAQ ─── */}
-      <section id="faq" className="py-24 px-6 border-t border-white/5">
+      <section id="faq" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-t border-white/5">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-14">
-            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-4">FAQ</p>
-            <h2 className="text-4xl font-bold">Questions we actually get asked</h2>
+          <div className="text-center mb-8 sm:mb-14">
+            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">FAQ</p>
+            <h2 className="text-3xl sm:text-4xl font-bold">Questions we actually get asked</h2>
           </div>
           <div>
             {faqs.map(faq => <FAQItem key={faq.q} {...faq} />)}
+          </div>
+          <div className="mt-10 text-center">
+            <p className="text-white/40 text-sm">Still have questions? <a href="mailto:info@lightspeedghost.com" className="text-blue-400 hover:text-blue-300">Email us</a> or <Link href="/contact"><span className="text-blue-400 hover:text-blue-300 cursor-pointer">visit our contact page</span></Link>.</p>
           </div>
         </div>
       </section>
 
       {/* ─── FINAL CTA ─── */}
-      <section className="py-28 px-6 relative overflow-hidden">
+      <section className="py-16 sm:py-24 md:py-28 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-blue-600/10 rounded-full blur-[100px]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[600px] h-[300px] sm:h-[400px] bg-blue-600/10 rounded-full blur-[100px]" />
         </div>
         <div className="relative max-w-2xl mx-auto text-center">
-          <div className="flex justify-center mb-8">
-            <Logo size={56} showText={false} />
+          <div className="flex justify-center mb-6 sm:mb-8">
+            <Logo size={48} showText={false} />
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold mb-5 leading-tight">
-            Stop starting at midnight.<br />Start with a draft.
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-5 leading-tight">
+            Stop staring at midnight.<br />Start with a draft.
           </h2>
-          <p className="text-white/50 mb-10 text-lg">
+          <p className="text-white/50 mb-8 sm:mb-10 text-base sm:text-lg">
             Free forever. Six tools. No card required to start.
           </p>
           <Link href="/auth">
-            <span className="inline-flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:scale-[1.02] active:scale-100 text-lg">
+            <span className="inline-flex items-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:scale-[1.02] active:scale-100 text-base sm:text-lg">
               Open the Platform
               <ArrowRight size={18} />
             </span>
@@ -640,51 +672,105 @@ export default function Landing() {
       </section>
 
       {/* ─── FOOTER ─── */}
-      <footer className="border-t border-white/5 py-14 px-6">
+      <footer className="border-t border-white/5 py-12 sm:py-14 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 sm:gap-10 mb-10 sm:mb-12">
+
             <div className="col-span-2">
-              <Logo size={32} className="mb-4" />
-              <p className="text-white/35 text-sm leading-relaxed max-w-xs">
+              <Logo size={30} className="mb-4" />
+              <p className="text-white/35 text-sm leading-relaxed max-w-xs mb-4">
                 Academic writing tools for students who have deadlines and standards.
               </p>
-              <div className="flex items-center gap-3 mt-5">
-                {["Twitter", "Discord", "LinkedIn"].map(soc => (
-                  <a key={soc} href="#" className="text-white/25 hover:text-white/60 text-xs transition-colors">{soc}</a>
-                ))}
+              <div className="space-y-2 text-xs text-white/30">
+                <div className="flex items-start gap-2">
+                  <MapPin size={12} className="shrink-0 mt-0.5 text-white/20" />
+                  <span>500 Oracle Pkwy, Redwood City, CA 94065</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Mail size={12} className="shrink-0 text-white/20" />
+                  <a href="mailto:info@lightspeedghost.com" className="hover:text-white/60 transition-colors">info@lightspeedghost.com</a>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 mt-4">
+                <a href="https://twitter.com/lightspeedghost" target="_blank" rel="noreferrer"
+                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/30 hover:text-white/70 transition-all">
+                  <Twitter size={13} />
+                </a>
+                <a href="https://linkedin.com/company/lightspeedghost" target="_blank" rel="noreferrer"
+                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/30 hover:text-white/70 transition-all">
+                  <Linkedin size={13} />
+                </a>
               </div>
             </div>
 
-            {[
-              {
-                title: "Product",
-                links: ["Paper Writer", "Outline Builder", "Revision", "AI & Plagiarism", "STEM Solver", "Study Assistant"],
-              },
-              {
-                title: "Company",
-                links: ["About", "Blog", "Changelog", "Careers", "Press"],
-              },
-              {
-                title: "Legal",
-                links: ["Privacy Policy", "Terms of Service", "Cookie Policy", "Academic Use Policy"],
-              },
-            ].map(({ title, links }) => (
-              <div key={title}>
-                <h4 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-4">{title}</h4>
-                <ul className="space-y-2.5">
-                  {links.map(link => (
-                    <li key={link}>
-                      <a href="#" className="text-white/35 hover:text-white/65 text-sm transition-colors">{link}</a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {/* Product links */}
+            <div>
+              <h4 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-4">Product</h4>
+              <ul className="space-y-2.5">
+                {[
+                  { label: "Paper Writer", href: "/auth" },
+                  { label: "Outline Builder", href: "/auth" },
+                  { label: "Revision", href: "/auth" },
+                  { label: "AI & Plagiarism", href: "/auth" },
+                  { label: "STEM Solver", href: "/auth" },
+                  { label: "Study Assistant", href: "/auth" },
+                ].map(({ label, href }) => (
+                  <li key={label}>
+                    <Link href={href}>
+                      <span className="text-white/35 hover:text-white/65 text-sm transition-colors cursor-pointer">{label}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Company links */}
+            <div>
+              <h4 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-4">Company</h4>
+              <ul className="space-y-2.5">
+                {[
+                  { label: "About", href: "/about" },
+                  { label: "Blog", href: "/blog" },
+                  { label: "Careers", href: "/careers" },
+                  { label: "Contact", href: "/contact" },
+                  { label: "Pricing", href: "#pricing" },
+                ].map(({ label, href }) => (
+                  <li key={label}>
+                    {href.startsWith("#") ? (
+                      <a href={href} className="text-white/35 hover:text-white/65 text-sm transition-colors">{label}</a>
+                    ) : (
+                      <Link href={href}>
+                        <span className="text-white/35 hover:text-white/65 text-sm transition-colors cursor-pointer">{label}</span>
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Legal links */}
+            <div>
+              <h4 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-4">Legal</h4>
+              <ul className="space-y-2.5">
+                {[
+                  { label: "Privacy Policy", href: "/privacy" },
+                  { label: "Terms of Service", href: "/terms" },
+                  { label: "Cookie Policy", href: "/cookies" },
+                  { label: "Academic Use", href: "/academic-use" },
+                ].map(({ label, href }) => (
+                  <li key={label}>
+                    <Link href={href}>
+                      <span className="text-white/35 hover:text-white/65 text-sm transition-colors cursor-pointer">{label}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
-          <div className="border-t border-white/5 pt-7 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="border-t border-white/5 pt-6 sm:pt-7 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-white/25 text-xs">© {new Date().getFullYear()} Light Speed Ghost. All rights reserved.</p>
-            <p className="text-white/20 text-xs">Built for students. By students who missed too many deadlines.</p>
+            <p className="text-white/20 text-xs text-center sm:text-right">Built for students who have too much to do and too little time.</p>
           </div>
         </div>
       </footer>
