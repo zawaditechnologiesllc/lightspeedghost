@@ -7,6 +7,7 @@ import {
   ExternalLink, Info, Download, Copy, CheckCheck, FileEdit,
   PenLine, ChevronRight, RefreshCcw, BarChart3, X,
 } from "lucide-react";
+import FullscreenLoader from "@/components/FullscreenLoader";
 import { Slider } from "@/components/ui/slider";
 import { Link, useLocation } from "wouter";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
@@ -470,13 +471,28 @@ export default function PlagiarismChecker() {
       </div>
 
       {/* ── Body ─────────────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
 
         {/* ════════════════════ TEXT CHECK TAB ════════════════════ */}
         {pageTab === "text" && (
-          <div className={cn("h-full", textPhase === "results" ? "flex min-h-0" : "")}>
+          textPhase === "checking" ? (
+            <FullscreenLoader
+              icon={<ShieldCheck size={32} />}
+              title="Running full check…"
+              subtitle={`Analysing ${wordCount.toLocaleString()} words across multiple detection layers`}
+              steps={[
+                "Tokenising document and building word frequency map",
+                "Detecting AI-generated patterns — lexical diversity & sentence flow",
+                "Analysing sentence structure and variation",
+                "Scanning against academic corpus for plagiarism sources",
+                "Computing writing quality metrics and readability scores",
+                "Generating your full diagnostic report",
+              ]}
+            />
+          ) : (
+          <div className={cn("flex-1 min-h-0", textPhase === "results" ? "flex overflow-hidden" : "overflow-y-auto")}>
 
-            {/* Input panel — always visible */}
+            {/* Input panel */}
             <div className={cn(
               "flex flex-col",
               textPhase === "results" ? "w-[420px] shrink-0 border-r border-border overflow-y-auto" : "max-w-2xl mx-auto px-6 py-8 w-full"
@@ -518,29 +534,13 @@ export default function PlagiarismChecker() {
                     )}
                     <button
                       onClick={handleCheck}
-                      disabled={!text.trim() || textPhase === "checking"}
+                      disabled={!text.trim()}
                       className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-all disabled:opacity-50"
                     >
-                      {textPhase === "checking" ? (
-                        <><div className="w-3.5 h-3.5 rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin" /> Checking…</>
-                      ) : (
-                        <><ShieldCheck size={15} /> {textPhase === "results" ? "Re-run Check" : "Run Full Check"}</>
-                      )}
+                      <ShieldCheck size={15} /> {textPhase === "results" ? "Re-run Check" : "Run Full Check"}
                     </button>
                   </div>
                 </div>
-
-                {/* Checking animation */}
-                {textPhase === "checking" && (
-                  <div className="space-y-2 py-2">
-                    {["Detecting AI-generated patterns…", "Scanning for plagiarism matches…", "Computing writing metrics…"].map((msg, i) => (
-                      <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-card border border-border">
-                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" style={{ animationDelay: `${i * 250}ms` }} />
-                        <span className="text-xs text-muted-foreground">{msg}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -766,10 +766,28 @@ export default function PlagiarismChecker() {
               </div>
             )}
           </div>
+          )
         )}
 
         {/* ════════════════════ CODE TAB ════════════════════ */}
         {pageTab === "code" && (
+          codePhase === "comparing" ? (
+            <FullscreenLoader
+              icon={<Code2 size={32} />}
+              title="Comparing code submissions…"
+              subtitle="Running the Winnowing algorithm (Stanford MOSS)"
+              steps={[
+                "Tokenising Submission A — normalising code structure",
+                "Tokenising Submission B — normalising code structure",
+                "Computing k-gram fingerprints (k=8)",
+                "Running Winnowing algorithm — selecting minimum fingerprints",
+                "Identifying shared fingerprint windows between documents",
+                "Rendering highlighted similarity map",
+              ]}
+              stepInterval={900}
+            />
+          ) : (
+          <div className="flex-1 overflow-y-auto">
           <div className="max-w-6xl mx-auto px-6 py-6 space-y-5">
             <div className="bg-card border border-border rounded-xl p-5 space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
@@ -819,27 +837,12 @@ export default function PlagiarismChecker() {
               <div className="flex justify-end">
                 <button
                   onClick={handleCodeCompare}
-                  disabled={!doc1.trim() || !doc2.trim() || codePhase === "comparing"}
+                  disabled={!doc1.trim() || !doc2.trim()}
                   className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-all disabled:opacity-50"
                 >
-                  {codePhase === "comparing" ? (
-                    <><div className="w-3.5 h-3.5 rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin" /> Analysing…</>
-                  ) : (
-                    <><Code2 size={15} /> Compare Code</>
-                  )}
+                  <Code2 size={15} /> Compare Code
                 </button>
               </div>
-
-              {codePhase === "comparing" && (
-                <div className="space-y-2">
-                  {["Fingerprinting Submission A with k-grams…", "Fingerprinting Submission B with k-grams…", "Running Winnowing algorithm to find shared regions…"].map((msg, i) => (
-                    <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-muted/50 border border-border">
-                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" style={{ animationDelay: `${i * 200}ms` }} />
-                      <span className="text-xs text-muted-foreground">{msg}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {codePhase === "results" && codeResult && (
@@ -917,6 +920,8 @@ export default function PlagiarismChecker() {
               </div>
             )}
           </div>
+          </div>
+          )
         )}
       </div>
     </div>

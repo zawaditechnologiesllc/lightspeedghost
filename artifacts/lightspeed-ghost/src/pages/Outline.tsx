@@ -3,6 +3,7 @@ import {
   ListTree, ChevronRight, Copy, CheckCheck, PenLine, ChevronDown,
   BookOpen, FileText, Zap, CheckCircle, AlertTriangle,
 } from "lucide-react";
+import FullscreenLoader from "@/components/FullscreenLoader";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -59,7 +60,7 @@ export default function Outline() {
   const [referenceWordCount, setReferenceWordCount] = useState(0);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMsg, setLoadingMsg] = useState("");
+  const [_loadingMsg, setLoadingMsg] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState<OutlineResult | null>(null);
   const [copied, setCopied] = useState(false);
@@ -159,6 +160,21 @@ export default function Outline() {
       </div>
 
       {/* ── Body ───────────────────────────────────────────────────────────── */}
+      {isLoading ? (
+        <FullscreenLoader
+          icon={<ListTree size={32} />}
+          title="Generating your outline…"
+          subtitle={`Building a structured plan for "${topic}" in ${subject}`}
+          steps={[
+            "Analysing topic scope and academic depth requirements",
+            "Designing section hierarchy and argument flow",
+            "Generating section titles and sub-headings",
+            "Mapping thesis statement and conclusion arc",
+            "Adding research angle and evidence prompts per section",
+            "Finalising outline — ready to write",
+          ]}
+        />
+      ) : (
       <div className="flex-1 flex min-h-0 overflow-hidden">
 
         {/* ── Form panel ─────────────────────────────────────────────────── */}
@@ -278,20 +294,11 @@ export default function Outline() {
             {/* Generate button */}
             <button
               onClick={handleGenerate}
-              disabled={isLoading || !topic.trim() || !subject.trim()}
+              disabled={!topic.trim() || !subject.trim()}
               className="w-full flex items-center justify-center gap-2.5 bg-primary text-primary-foreground px-4 py-3.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin" />
-                  {loadingMsg || "Generating…"}
-                </>
-              ) : (
-                <>
-                  <ListTree size={16} />
-                  Generate Outline
-                </>
-              )}
+              <ListTree size={16} />
+              Generate Outline
             </button>
 
             {(!topic.trim() || !subject.trim()) && !isLoading && (
@@ -393,6 +400,7 @@ export default function Outline() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
