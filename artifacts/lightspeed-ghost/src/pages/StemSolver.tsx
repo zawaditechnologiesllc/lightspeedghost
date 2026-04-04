@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSolveStem, useGetStemSubjects } from "@workspace/api-client-react";
 import {
-  FlaskConical, CheckCircle, BookOpen, ExternalLink,
-  Search, ChevronDown, ChevronUp, Dna, Sparkles, ShieldCheck,
-  AlertTriangle, XCircle, Lightbulb, Copy, CheckCheck, Download,
-  Loader2, RotateCcw,
+  FlaskConical, CheckCircle, ExternalLink, Search,
+  ChevronDown, ChevronUp, Dna, Sparkles, ShieldCheck,
+  AlertTriangle, XCircle, Lightbulb, Copy, CheckCheck,
+  Download, Loader2, RotateCcw, Camera, FileText, Zap,
+  BookOpen, Atom, Calculator, Cpu, BarChart2, Layers,
+  Database,
 } from "lucide-react";
 import type { StemSolution } from "@workspace/api-client-react";
-import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import StemImageOcr from "@/components/StemImageOcr";
 import MathRenderer from "@/components/MathRenderer";
 import FullscreenLoader from "@/components/FullscreenLoader";
@@ -26,45 +27,25 @@ const schema = z.object({
   showSteps: z.boolean().optional(),
   generateGraph: z.boolean().optional(),
 });
-
 type FormData = z.infer<typeof schema>;
 
 interface Paper {
-  paperId: string;
-  title: string;
-  authors: string;
-  year: number | null;
-  abstract: string | null;
-  url: string | null;
-  citationCount: number;
+  paperId: string; title: string; authors: string;
+  year: number | null; abstract: string | null;
+  url: string | null; citationCount: number;
 }
-
 interface BioModel {
-  id: string;
-  name: string;
-  description: string | null;
-  lastModified: string | null;
-  publicationCount: number;
-  format: string;
-  url: string;
+  id: string; name: string; description: string | null;
+  lastModified: string | null; publicationCount: number;
+  format: string; url: string;
 }
-
 interface MoleculeData {
-  cid: number;
-  iupacName: string | null;
-  commonName: string | null;
-  casNumber: string | null;
-  smiles: string | null;
-  formula: string | null;
-  molecularWeight: number | null;
-  xLogP: number | null;
-  hBondDonors: number | null;
-  hBondAcceptors: number | null;
-  rotatableBonds: number | null;
-  tpsa: number | null;
-  ghsHazards: string[];
-  pubchemUrl: string;
-  synonyms: string[];
+  cid: number; iupacName: string | null; commonName: string | null;
+  casNumber: string | null; smiles: string | null; formula: string | null;
+  molecularWeight: number | null; xLogP: number | null;
+  hBondDonors: number | null; hBondAcceptors: number | null;
+  rotatableBonds: number | null; tpsa: number | null;
+  ghsHazards: string[]; pubchemUrl: string; synonyms: string[];
 }
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
@@ -104,6 +85,23 @@ async function lookupMolecule(query: string): Promise<MoleculeData | { error: st
   } catch { return { error: "Request failed. Check your connection." }; }
 }
 
+function buildSolutionText(result: StemSolution, problem: string): string {
+  return [
+    `STEM SOLUTION — ${result.subject.toUpperCase()}`,
+    "─".repeat(52), "",
+    "Problem:", problem, "",
+    "Answer:", result.answer, "",
+    ...(result.corrections?.length ? ["Corrections:", ...result.corrections.map(c => `  • ${c}`), ""] : []),
+    ...(result.steps.length > 0
+      ? ["Step-by-Step:", ...result.steps.flatMap(s => [
+          `  Step ${s.stepNumber}: ${s.description}`,
+          ...(s.expression ? [`    ${s.expression}`] : []),
+          `    ${s.explanation}`, "",
+        ])]
+      : []),
+  ].join("\n");
+}
+
 const GHS_HAZARD_COLORS: Record<string, string> = {
   "Flammable": "text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-950/40",
   "Toxic": "text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/40",
@@ -119,43 +117,18 @@ function ghsColor(h: string) {
   return "text-muted-foreground border-border bg-muted";
 }
 
-function buildSolutionText(result: StemSolution, problem: string): string {
-  return [
-    `STEM PROBLEM — ${result.subject.toUpperCase()}`,
-    "─".repeat(52),
-    "",
-    "Problem:",
-    problem,
-    "",
-    "Answer:",
-    result.answer,
-    "",
-    ...(result.corrections && result.corrections.length > 0
-      ? ["Corrections applied by Critic Agent:", ...result.corrections.map(c => `  • ${c}`), ""]
-      : []),
-    ...(result.steps.length > 0
-      ? ["Step-by-Step Solution:",
-        ...result.steps.flatMap(s => [
-          `  Step ${s.stepNumber}: ${s.description}`,
-          ...(s.expression ? [`    ${s.expression}`] : []),
-          `    ${s.explanation}`,
-          "",
-        ])]
-      : []),
-  ].join("\n");
-}
-
-const SUBJECT_LABELS: Record<string, string> = {
-  mathematics: "Mathematics",
-  physics: "Physics",
-  chemistry: "Chemistry",
-  biology: "Biology",
-  engineering: "Engineering",
-  computer_science: "Computer Sci",
-  statistics: "Statistics",
+const SUBJECT_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  mathematics: { label: "Math", icon: <Calculator size={13} />, color: "blue" },
+  physics: { label: "Physics", icon: <Atom size={13} />, color: "violet" },
+  chemistry: { label: "Chemistry", icon: <FlaskConical size={13} />, color: "green" },
+  biology: { label: "Biology", icon: <Dna size={13} />, color: "emerald" },
+  engineering: { label: "Engineering", icon: <Layers size={13} />, color: "orange" },
+  computer_science: { label: "CS", icon: <Cpu size={13} />, color: "cyan" },
+  statistics: { label: "Stats", icon: <BarChart2 size={13} />, color: "rose" },
 };
 
 export default function StemSolver() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<StemSolution | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [papersLoading, setPapersLoading] = useState(false);
@@ -185,18 +158,22 @@ export default function StemSolver() {
 
   const selectedSubject = form.watch("subject");
   const resources = stemResourcesBySubject[selectedSubject] ?? [];
+  const showBioModels = selectedSubject === "biology" || selectedSubject === "chemistry";
+  const showMolecule = selectedSubject === "chemistry";
 
-  const handleStemFileExtracted = (file: ExtractedFile) => {
-    const cleaned = file.text
-      .replace(/^(name|student|date|course|class|professor|instructor|due\s*date)[\s:].*/gim, "")
-      .replace(/^\s*page\s+\d+\s*$/gim, "")
-      .trim();
-    form.setValue("problem", cleaned.slice(0, 1000));
+  const handleStemFileExtracted = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = (ev.target?.result as string) ?? "";
+      form.setValue("problem", text.slice(0, 1000));
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   };
 
-  const handleStemImageOcr = (text: string) => {
-    form.setValue("problem", text.slice(0, 1000));
-  };
+  const handleStemImageOcr = (text: string) => form.setValue("problem", text.slice(0, 1000));
 
   const onSubmit = async (data: FormData) => {
     setPapers([]);
@@ -215,7 +192,7 @@ export default function StemSolver() {
     setPapers(foundPapers);
     setPapersLoading(false);
 
-    if (data.subject === "biology" || data.subject === "chemistry") {
+    if (showBioModels) {
       setBioModelsLoading(true);
       const bioResult = await searchBioModels(data.problem.slice(0, 80));
       setBioModels(bioResult.models);
@@ -268,30 +245,30 @@ export default function StemSolver() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `stem-solution-${result.subject}-${Date.now()}.txt`;
+    a.download = `stem-${result.subject}-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const toggleStep = (n: number) => setExpandedSteps(p => ({ ...p, [n]: !p[n] }));
+  const toggleStep = (n: number) => setExpandedSteps(p => ({ ...p, [n]: !(p[n] ?? true) }));
   const toggleGroup = (label: string) => setExpandedGroups(p => ({ ...p, [label]: !p[label] }));
 
-  // ── Full-screen solving animation ──────────────────────────────────────────
+  // ── Solving animation ──────────────────────────────────────────────────────
   if (solveStem.isPending) {
     return (
       <div className="h-full flex flex-col overflow-hidden bg-background">
         <FullscreenLoader
           icon={<FlaskConical size={32} />}
           title="Solving your problem…"
-          subtitle="ReAct reasoning loop with Chain-of-Verification"
+          subtitle="Multi-agent reasoning with step-by-step verification"
           steps={[
             "Parsing problem — identifying knowns and unknowns",
-            "THOUGHT 1 — understanding problem scope and domain",
-            "ACTION 1 — selecting formula / theorem / strategy",
-            "OBSERVATION 1 — setting up equations",
-            "THOUGHT 2 — executing calculation with full LaTeX",
-            "Critic Agent verifying solution for errors (CoVe)",
-            "Applying corrections if needed",
+            "THOUGHT — understanding domain scope and constraints",
+            "ACTION — selecting strategy, theorem, or formula",
+            "OBSERVATION — setting up equations and expressions",
+            "THOUGHT 2 — executing calculation with full working",
+            "Chain-of-Verification — checking solution for errors",
+            "Applying critic corrections if needed",
             "Building step-by-step explanation",
           ]}
           stepInterval={1100}
@@ -300,28 +277,27 @@ export default function StemSolver() {
     );
   }
 
-  // ── Main layout ────────────────────────────────────────────────────────────
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
 
-      {/* ── Top bar ──────────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-b border-border bg-card">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-              <FlaskConical size={16} className="text-primary-foreground" />
+      {/* ── Fixed top bar ─────────────────────────────────────────────────── */}
+      <div className="shrink-0 border-b border-border bg-card/80 backdrop-blur-sm">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm shadow-primary/30">
+              <Zap size={15} className="text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-base font-bold leading-tight">STEM Solver</h1>
-              <p className="text-[10px] text-muted-foreground leading-tight">ReAct · Chain-of-Verification · Claude Sonnet</p>
+              <h1 className="text-sm font-bold leading-tight tracking-tight">STEM Solver</h1>
+              <p className="text-[10px] text-muted-foreground leading-tight">ReAct Loop · Chain-of-Verification · Multi-agent</p>
             </div>
           </div>
           {result && (
             <button
               onClick={handleReset}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors"
+              className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-1.5 transition-all"
             >
-              <RotateCcw size={12} /> New problem
+              <RotateCcw size={11} /> New problem
             </button>
           )}
         </div>
@@ -329,152 +305,174 @@ export default function StemSolver() {
 
       {/* ── Scrollable body ───────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+        <div className="max-w-2xl mx-auto px-4 py-5 space-y-4">
 
-          {/* ── Subject pills ──────────────────────────────────────────── */}
-          {subjects && (
-            <div className="flex flex-wrap gap-2 justify-center">
-              {subjects.subjects.map((sub) => (
-                <button
-                  key={sub.id}
-                  onClick={() => {
-                    form.setValue("subject", sub.id as FormData["subject"]);
-                    setExpandedGroups({});
-                  }}
-                  className={cn(
-                    "px-4 py-1.5 rounded-full border text-xs font-semibold transition-all",
-                    selectedSubject === sub.id
-                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/25"
-                      : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
-                  )}
-                >
-                  {SUBJECT_LABELS[sub.id] ?? sub.name}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* ── Subject pills ──────────────────────────────────────────────── */}
+          <div className="flex flex-wrap gap-2 justify-center pt-1">
+            {subjects
+              ? subjects.subjects.map((sub) => {
+                  const meta = SUBJECT_META[sub.id];
+                  const isActive = selectedSubject === sub.id;
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => { form.setValue("subject", sub.id as FormData["subject"]); setExpandedGroups({}); }}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-all",
+                        isActive
+                          ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/25 scale-105"
+                          : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground hover:scale-[1.02]"
+                      )}
+                    >
+                      {meta?.icon}
+                      {meta?.label ?? sub.name}
+                    </button>
+                  );
+                })
+              : (
+                <div className="flex gap-2">
+                  {["Math", "Physics", "Chemistry", "Biology", "Engineering", "CS", "Stats"].map(s => (
+                    <div key={s} className="h-8 w-20 rounded-full bg-muted animate-pulse" />
+                  ))}
+                </div>
+              )}
+          </div>
 
-          {/* ── Input card ─────────────────────────────────────────────── */}
+          {/* ── Input card ─────────────────────────────────────────────────── */}
           {(!result || showInput) && (
-            <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-              {/* Upload row */}
-              <div className="flex items-center gap-2 px-4 pt-4 pb-2">
-                <div className="flex-1">
-                  <StemImageOcr onExtracted={handleStemImageOcr} />
-                </div>
-                <div className="flex-1">
-                  <FileUploadZone
-                    onExtracted={handleStemFileExtracted}
-                    accept=".pdf,.docx,.doc,.txt"
-                    label="Upload problem"
-                    hint="PDF or Word"
-                    compact
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm ring-1 ring-transparent focus-within:ring-primary/30 transition-all">
+
+                {/* Upload tools row */}
+                <div className="flex items-center gap-2 px-4 pt-3 pb-0 flex-wrap">
+                  <StemImageOcr onExtracted={handleStemImageOcr} compact />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".txt,.pdf,.docx,.doc"
+                    className="sr-only"
+                    onChange={handleStemFileExtracted}
                   />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 bg-card transition-all"
+                  >
+                    <FileText size={12} /> Upload file
+                  </button>
+                  <span className="text-[10px] text-muted-foreground/50 ml-auto hidden sm:block">
+                    Math · Physics · Chemistry · Biology · Engineering · CS · Statistics
+                  </span>
                 </div>
-              </div>
 
-              {/* Divider */}
-              <div className="mx-4 border-t border-border" />
-
-              {/* Textarea */}
-              <form onSubmit={form.handleSubmit(onSubmit)}>
+                {/* Textarea */}
                 <textarea
                   {...form.register("problem")}
-                  rows={4}
-                  placeholder={`Type your ${SUBJECT_LABELS[selectedSubject] ?? "STEM"} problem here…\ne.g. Find the integral of x·sin(x) dx`}
-                  className="w-full px-4 py-3 bg-transparent text-sm focus:outline-none resize-none font-mono leading-relaxed placeholder:text-muted-foreground/50"
+                  rows={5}
+                  placeholder={`Type your ${SUBJECT_META[selectedSubject]?.label ?? "STEM"} problem here…\n\ne.g.  Find the definite integral of x·sin(x) from 0 to π\ne.g.  A 5kg mass on a 30° incline with μ = 0.3. Find acceleration.`}
+                  className="w-full px-4 pt-3 pb-2 bg-transparent text-sm focus:outline-none resize-none font-mono leading-relaxed placeholder:text-muted-foreground/40 placeholder:font-sans"
                 />
                 {form.formState.errors.problem && (
                   <p className="text-destructive text-xs px-4 pb-1">{form.formState.errors.problem.message}</p>
                 )}
 
-                {/* Options + button row */}
-                <div className="flex items-center gap-3 px-4 pb-4 pt-1 border-t border-border">
+                {/* Bottom action row */}
+                <div className="flex items-center gap-4 px-4 py-3 border-t border-border bg-muted/20">
                   <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
-                    <input type="checkbox" {...form.register("showSteps")} className="accent-primary w-3.5 h-3.5" />
-                    <span className="text-xs text-muted-foreground">Steps</span>
+                    <input type="checkbox" {...form.register("showSteps")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
+                    <span className="text-xs text-muted-foreground">Show steps</span>
                   </label>
                   <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
-                    <input type="checkbox" {...form.register("generateGraph")} className="accent-primary w-3.5 h-3.5" />
-                    <span className="text-xs text-muted-foreground">Graph</span>
+                    <input type="checkbox" {...form.register("generateGraph")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
+                    <span className="text-xs text-muted-foreground">Generate graph</span>
                   </label>
                   <button
                     type="submit"
-                    className="ml-auto flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-xl font-semibold text-sm hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+                    className="ml-auto flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/25"
                   >
-                    <FlaskConical size={15} />
-                    Solve
+                    <Zap size={14} /> Solve
                   </button>
                 </div>
-              </form>
-            </div>
+              </div>
+            </form>
           )}
 
-          {/* Collapsed input bar (when results exist and input is hidden) */}
+          {/* ── Collapsed edit bar ─────────────────────────────────────────── */}
           {result && !showInput && (
             <button
               onClick={() => setShowInput(true)}
-              className="w-full flex items-center gap-3 bg-card border border-border rounded-2xl px-4 py-3 text-left hover:border-primary/40 transition-colors group"
+              className="w-full flex items-center gap-3 bg-card border border-border hover:border-primary/40 rounded-2xl px-4 py-3 text-left transition-all group"
             >
-              <FlaskConical size={14} className="text-primary shrink-0" />
-              <span className="text-sm text-muted-foreground line-clamp-1 flex-1">{solvedProblem}</span>
-              <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors shrink-0">Edit</span>
+              <div className={cn(
+                "w-6 h-6 rounded-lg flex items-center justify-center shrink-0",
+                "bg-primary/10 text-primary"
+              )}>
+                {SUBJECT_META[selectedSubject]?.icon}
+              </div>
+              <span className="text-sm text-muted-foreground line-clamp-1 flex-1 font-mono">{solvedProblem}</span>
+              <span className="text-[10px] text-muted-foreground/60 group-hover:text-primary transition-colors shrink-0 font-medium">Edit →</span>
             </button>
           )}
 
-          {/* ── Results ────────────────────────────────────────────────── */}
+          {/* ── Results ────────────────────────────────────────────────────── */}
           {result && (
             <div className="space-y-3">
 
+              {/* Method badges row */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-primary/30 bg-primary/8 text-primary">
+                  <Zap size={9} /> ReAct Loop
+                </span>
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400">
+                  <ShieldCheck size={9} /> Chain-of-Verification
+                </span>
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-border bg-muted text-muted-foreground capitalize">
+                  {SUBJECT_META[result.subject]?.icon} {result.subject.replace(/_/g, " ")}
+                </span>
+                {result.confidence !== undefined && <ConfidenceBadge confidence={result.confidence} />}
+                {result.passedVerification !== undefined && (
+                  result.passedVerification ? (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-300 dark:border-green-700 px-2.5 py-1 rounded-full">
+                      <ShieldCheck size={9} /> Verified
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 px-2.5 py-1 rounded-full">
+                      <AlertTriangle size={9} /> Auto-corrected
+                    </span>
+                  )
+                )}
+              </div>
+
               {/* ── Answer card ── */}
-              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                {/* Header strip */}
-                <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-green-500/5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <CheckCircle size={15} className="text-green-500 shrink-0" />
-                    <span className="text-sm font-bold text-foreground">Answer</span>
-                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium capitalize">{result.subject}</span>
-                    {result.confidence !== undefined && <ConfidenceBadge confidence={result.confidence} />}
-                    {result.passedVerification !== undefined && (
-                      result.passedVerification ? (
-                        <span className="flex items-center gap-1 text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-2 py-0.5 rounded-full">
-                          <ShieldCheck size={9} /> Verified
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
-                          <AlertTriangle size={9} /> Corrected
-                        </span>
-                      )
-                    )}
+              <div className="bg-card border border-green-200 dark:border-green-800/50 rounded-2xl overflow-hidden shadow-sm">
+                <div className="flex items-center justify-between px-5 py-3 bg-green-50 dark:bg-green-950/20 border-b border-green-200 dark:border-green-800/50">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle size={16} className="text-green-500 shrink-0" />
+                    <span className="text-sm font-bold text-green-800 dark:text-green-200">Answer</span>
                   </div>
-                  {/* Copy + Download */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button onClick={handleCopy} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground border border-border rounded-lg px-2 py-1 transition-colors">
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={handleCopy} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground border border-border bg-card rounded-lg px-2 py-1 transition-colors">
                       {copied ? <CheckCheck size={11} className="text-green-500" /> : <Copy size={11} />}
                       {copied ? "Copied" : "Copy"}
                     </button>
-                    <button onClick={handleDownload} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground border border-border rounded-lg px-2 py-1 transition-colors">
+                    <button onClick={handleDownload} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground border border-border bg-card rounded-lg px-2 py-1 transition-colors">
                       <Download size={11} /> Save
                     </button>
                   </div>
                 </div>
-
-                {/* Answer body */}
-                <div className="px-5 py-4">
+                <div className="px-5 py-5">
                   <MathRenderer text={result.answer} className="text-base text-foreground leading-relaxed" />
                 </div>
-
-                {/* CoVe corrections */}
                 {result.corrections && result.corrections.length > 0 && (
-                  <div className="mx-5 mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-800/50">
-                    <div className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                  <div className="mx-5 mb-5 p-3.5 bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-800/50">
+                    <div className="flex items-center gap-1.5 mb-2 text-xs font-bold text-amber-700 dark:text-amber-400">
                       <Lightbulb size={11} />
-                      Critic Agent corrected {result.corrections.length} issue{result.corrections.length > 1 ? "s" : ""}:
+                      Critic Agent fixed {result.corrections.length} issue{result.corrections.length > 1 ? "s" : ""}
                     </div>
                     <ul className="space-y-1">
                       {result.corrections.map((c, i) => (
                         <li key={i} className="text-xs text-amber-800 dark:text-amber-300 flex gap-1.5">
-                          <span className="shrink-0 text-amber-500">•</span>{c}
+                          <span className="shrink-0 text-amber-400 mt-0.5">•</span>{c}
                         </li>
                       ))}
                     </ul>
@@ -485,32 +483,34 @@ export default function StemSolver() {
               {/* ── Graph ── */}
               {result.graphData && (
                 <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-                  <h3 className="font-semibold text-sm mb-3">{result.graphData.labels?.title ?? "Visualization"}</h3>
-                  <div className="h-52">
+                  <h3 className="font-bold text-sm mb-4 text-foreground">{result.graphData.labels?.title ?? "Graph"}</h3>
+                  <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={result.graphData.data}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                         <XAxis dataKey="x" tick={{ fontSize: 11 }} label={{ value: result.graphData.labels?.x ?? "x", position: "insideBottom", offset: -2, fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} label={{ value: result.graphData.labels?.y ?? "y", angle: -90, position: "insideLeft", fontSize: 11 }} />
-                        <Tooltip contentStyle={{ fontSize: "12px" }} />
-                        <Line type="monotone" dataKey="y" stroke="hsl(211 100% 50%)" strokeWidth={2} dot={false} />
+                        <Tooltip contentStyle={{ fontSize: "12px", borderRadius: "8px" }} />
+                        <Line type="monotone" dataKey="y" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
               )}
 
-              {/* ── Steps ── */}
+              {/* ── Steps accordion ── */}
               {result.steps.length > 0 && (
                 <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-                    <h3 className="font-bold text-sm">Step-by-Step Solution</h3>
+                  <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20">
                     <div className="flex items-center gap-2">
+                      <BookOpen size={14} className="text-primary" />
+                      <h3 className="font-bold text-sm">Step-by-Step Solution</h3>
+                    </div>
+                    <div className="flex items-center gap-1.5">
                       <span className="text-xs text-muted-foreground">{result.steps.length} steps</span>
-                      <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">ReAct Loop</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary/10 text-primary">ReAct</span>
                     </div>
                   </div>
-
                   <div className="divide-y divide-border">
                     {result.steps.map((step) => {
                       const isOpen = expandedSteps[step.stepNumber] ?? true;
@@ -518,21 +518,23 @@ export default function StemSolver() {
                         <div key={step.stepNumber}>
                           <button
                             onClick={() => toggleStep(step.stepNumber)}
-                            className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/30 transition-colors"
+                            className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/20 transition-colors"
                           >
-                            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-primary/90 flex items-center justify-center shrink-0 shadow-sm">
                               <span className="text-[10px] font-bold text-primary-foreground">{step.stepNumber}</span>
                             </div>
                             <div className="flex-1 flex items-center gap-2 min-w-0">
                               <span className="text-xs font-semibold text-foreground truncate">{step.description}</span>
                               <StepTypeBadge desc={step.description} />
                             </div>
-                            {isOpen ? <ChevronUp size={13} className="text-muted-foreground shrink-0" /> : <ChevronDown size={13} className="text-muted-foreground shrink-0" />}
+                            {isOpen
+                              ? <ChevronUp size={13} className="text-muted-foreground shrink-0" />
+                              : <ChevronDown size={13} className="text-muted-foreground shrink-0" />}
                           </button>
                           {isOpen && (
                             <div className="px-5 pb-4 pl-14 space-y-2">
                               {step.expression && (
-                                <div className="px-3 py-2.5 bg-muted/60 rounded-xl border border-border">
+                                <div className="px-3.5 py-2.5 bg-muted/60 rounded-xl border border-border">
                                   <MathRenderer text={step.expression} className="text-sm font-mono" />
                                 </div>
                               )}
@@ -546,357 +548,475 @@ export default function StemSolver() {
                 </div>
               )}
 
-              {/* ── Extra tabs: Papers / BioModels / Molecule / AI Tools ── */}
+              {/* ── Research Stack ── */}
               <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                {/* Tab row */}
-                <div className="flex border-b border-border overflow-x-auto">
-                  {(
-                    [
-                      { key: "papers", label: "Papers", icon: <Search size={12} />, badge: papersLoading ? "…" : papers.length > 0 ? String(papers.length) : null },
-                      ...(selectedSubject === "biology" || selectedSubject === "chemistry"
-                        ? [{ key: "biomodels", label: "BioModels", icon: <Dna size={12} />, badge: bioModelsLoading ? "…" : bioModels.length > 0 ? String(bioModels.length) : null }]
-                        : []),
-                      ...(selectedSubject === "chemistry"
-                        ? [{ key: "molecule", label: "Molecule", icon: <FlaskConical size={12} />, badge: null }]
-                        : []),
-                      { key: "tools", label: "AI Tools", icon: <Sparkles size={12} />, badge: null },
-                    ] as Array<{ key: string; label: string; icon: React.ReactNode; badge: string | null }>
-                  ).map(tab => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                      className={cn(
-                        "flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-all shrink-0",
-                        activeTab === tab.key
-                          ? "border-primary text-primary bg-primary/5"
-                          : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                      )}
-                    >
-                      {tab.icon}
-                      {tab.label}
-                      {tab.badge && (
-                        <span className="bg-primary/15 text-primary text-[9px] px-1.5 py-0.5 rounded-full font-bold">{tab.badge}</span>
-                      )}
-                    </button>
-                  ))}
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <Database size={14} className="text-primary" />
+                    <h3 className="font-bold text-sm">Research Stack</h3>
+                  </div>
+                  {/* Live data source badges */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <LiveBadge label="Semantic Scholar" href="https://www.semanticscholar.org/" />
+                    {showBioModels && <LiveBadge label="EBI BioModels" href="https://www.ebi.ac.uk/biomodels/" />}
+                    {showMolecule && <LiveBadge label="PubChem" href="https://pubchem.ncbi.nlm.nih.gov/" />}
+                  </div>
                 </div>
 
-                {/* Papers */}
+                {/* Tab row */}
+                <div className="flex border-b border-border overflow-x-auto scrollbar-none">
+                  {([
+                    { key: "papers", label: "Papers", icon: <Search size={12} />, badge: papersLoading ? "…" : papers.length > 0 ? String(papers.length) : null, always: true },
+                    { key: "biomodels", label: "BioModels", icon: <Dna size={12} />, badge: bioModelsLoading ? "…" : bioModels.length > 0 ? String(bioModels.length) : null, always: showBioModels },
+                    { key: "molecule", label: "Molecule", icon: <Atom size={12} />, badge: null, always: showMolecule },
+                    { key: "tools", label: "AI Toolkit", icon: <Sparkles size={12} />, badge: null, always: true },
+                  ] as Array<{ key: string; label: string; icon: React.ReactNode; badge: string | null; always: boolean }>)
+                    .filter(t => t.always)
+                    .map(tab => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key as typeof activeTab)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-all shrink-0",
+                          activeTab === tab.key
+                            ? "border-primary text-primary bg-primary/5"
+                            : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                        )}
+                      >
+                        {tab.icon}
+                        {tab.label}
+                        {tab.badge && (
+                          <span className="bg-primary/15 text-primary text-[9px] px-1.5 py-0.5 rounded-full font-bold">{tab.badge}</span>
+                        )}
+                      </button>
+                    ))}
+                </div>
+
+                {/* Papers tab */}
                 {activeTab === "papers" && (
-                  <div>
-                    {papersLoading && (
-                      <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
-                        <Loader2 size={15} className="animate-spin" />
-                        <span className="text-sm">Searching Semantic Scholar…</span>
-                      </div>
-                    )}
-                    {!papersLoading && papers.length === 0 && (
-                      <div className="flex flex-col items-center py-10 text-muted-foreground/40">
-                        <Search size={32} className="mb-2" />
-                        <p className="text-sm">No papers found</p>
-                      </div>
-                    )}
-                    {!papersLoading && papers.length > 0 && (
-                      <div className="divide-y divide-border">
-                        {papers.map((paper) => (
-                          <div key={paper.paperId} className="px-5 py-4 space-y-2">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <a href={paper.url ?? `https://www.semanticscholar.org/paper/${paper.paperId}`}
-                                  target="_blank" rel="noopener noreferrer"
-                                  className="text-sm font-semibold text-foreground hover:text-primary transition-colors leading-snug block">
-                                  {paper.title}
-                                </a>
-                                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                  {paper.authors && (
-                                    <span className="text-xs text-muted-foreground">{paper.authors.split(",").slice(0, 2).join(", ")}{paper.authors.split(",").length > 2 ? " et al." : ""}</span>
-                                  )}
-                                  {paper.year && <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-medium">{paper.year}</span>}
-                                  {paper.citationCount > 0 && (
-                                    <span className="text-[10px] bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">
-                                      {paper.citationCount.toLocaleString()} cites
-                                    </span>
-                                  )}
-                                </div>
-                                {paper.abstract && (
-                                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{paper.abstract}</p>
-                                )}
-                              </div>
-                              {paper.url && (
-                                <a href={paper.url} target="_blank" rel="noopener noreferrer"
-                                  className="shrink-0 p-1.5 rounded-lg border border-border hover:border-primary hover:text-primary transition-all text-muted-foreground">
-                                  <ExternalLink size={12} />
-                                </a>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => handleGetRecommendations(paper.paperId)}
-                              disabled={!!recommendations[paper.paperId] || recommendingFor === paper.paperId}
-                              className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary border border-border hover:border-primary/40 px-2.5 py-1 rounded-lg transition-all disabled:opacity-40"
-                            >
-                              {recommendingFor === paper.paperId ? (
-                                <><Loader2 size={10} className="animate-spin" /> Finding similar…</>
-                              ) : recommendations[paper.paperId] ? (
-                                <><Sparkles size={10} className="text-primary" /> {recommendations[paper.paperId].length} similar shown</>
-                              ) : (
-                                <><Sparkles size={10} /> Find similar papers</>
-                              )}
-                            </button>
-                            {recommendations[paper.paperId] && recommendations[paper.paperId].length > 0 && (
-                              <div className="ml-4 border-l-2 border-primary/20 pl-3 space-y-2">
-                                {recommendations[paper.paperId].map((rec) => (
-                                  <div key={rec.paperId}>
-                                    <a href={rec.url ?? `https://www.semanticscholar.org/paper/${rec.paperId}`}
-                                      target="_blank" rel="noopener noreferrer"
-                                      className="text-xs font-medium text-foreground hover:text-primary transition-colors block">
-                                      {rec.title}
-                                    </a>
-                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                      {rec.year && <span className="text-[10px] text-muted-foreground">{rec.year}</span>}
-                                      {rec.citationCount > 0 && <span className="text-[10px] text-muted-foreground">· {rec.citationCount.toLocaleString()} cites</span>}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="px-5 py-2.5 border-t border-border bg-muted/20">
-                      <p className="text-[10px] text-muted-foreground">
-                        <a href="https://www.semanticscholar.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Semantic Scholar</a> (Allen AI) · Talk2Scholars pattern
-                      </p>
-                    </div>
-                  </div>
+                  <PapersPanel
+                    papers={papers}
+                    loading={papersLoading}
+                    recommendingFor={recommendingFor}
+                    recommendations={recommendations}
+                    onRecommend={handleGetRecommendations}
+                  />
                 )}
 
-                {/* BioModels */}
-                {activeTab === "biomodels" && (
-                  <div>
-                    {bioModelsLoading && (
-                      <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
-                        <Loader2 size={15} className="animate-spin" />
-                        <span className="text-sm">Searching EBI BioModels…</span>
-                      </div>
-                    )}
-                    {!bioModelsLoading && bioModels.length === 0 && (
-                      <div className="flex flex-col items-center py-10 text-muted-foreground/40">
-                        <Dna size={32} className="mb-2" />
-                        <p className="text-sm">No curated models found</p>
-                      </div>
-                    )}
-                    {!bioModelsLoading && bioModels.length > 0 && (
-                      <>
-                        {bioModelsTotal > 0 && (
-                          <div className="px-5 py-2 border-b border-border bg-muted/20">
-                            <span className="text-xs text-muted-foreground">{bioModelsTotal.toLocaleString()} total matches — showing top {bioModels.length}</span>
-                          </div>
-                        )}
-                        <div className="divide-y divide-border">
-                          {bioModels.map((model) => (
-                            <div key={model.id} className="px-5 py-4 flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <a href={model.url} target="_blank" rel="noopener noreferrer"
-                                  className="text-sm font-semibold text-foreground hover:text-primary transition-colors block">{model.name}</a>
-                                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                  <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono font-medium">{model.id}</span>
-                                  <span className="text-[10px] bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded font-medium">{model.format}</span>
-                                  {model.publicationCount > 0 && (
-                                    <span className="text-[10px] bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">{model.publicationCount} pub{model.publicationCount > 1 ? "s" : ""}</span>
-                                  )}
-                                </div>
-                                {model.description && <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{model.description}</p>}
-                              </div>
-                              <a href={model.url} target="_blank" rel="noopener noreferrer"
-                                className="shrink-0 p-1.5 rounded-lg border border-border hover:border-primary hover:text-primary transition-all text-muted-foreground">
-                                <ExternalLink size={12} />
-                              </a>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    <div className="px-5 py-2.5 border-t border-border bg-muted/20">
-                      <p className="text-[10px] text-muted-foreground">
-                        <a href="https://www.ebi.ac.uk/biomodels/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">EBI BioModels</a> (EMBL-EBI) · Talk2BioModels pattern
-                      </p>
-                    </div>
-                  </div>
+                {/* BioModels tab */}
+                {activeTab === "biomodels" && showBioModels && (
+                  <BioModelsPanel models={bioModels} total={bioModelsTotal} loading={bioModelsLoading} />
                 )}
 
-                {/* Molecule */}
-                {activeTab === "molecule" && selectedSubject === "chemistry" && (
-                  <div>
-                    <div className="px-5 py-4">
-                      <form onSubmit={handleMoleculeLookup} className="flex gap-2">
-                        <input
-                          value={moleculeQuery}
-                          onChange={(e) => setMoleculeQuery(e.target.value)}
-                          placeholder="Molecule name or SMILES (e.g. aspirin, caffeine)"
-                          className="flex-1 px-3 py-2 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono"
-                        />
-                        <button type="submit" disabled={moleculeLoading || !moleculeQuery.trim()}
-                          className="flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2 rounded-xl font-medium text-sm hover:opacity-90 disabled:opacity-50">
-                          {moleculeLoading ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
-                          Lookup
-                        </button>
-                      </form>
-                    </div>
-                    {moleculeError && (
-                      <div className="px-5 pb-4">
-                        <p className="text-sm text-destructive">{moleculeError}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Try a common name or a valid SMILES string</p>
-                      </div>
-                    )}
-                    {moleculeData && !moleculeLoading && (
-                      <div className="border-t border-border px-5 py-4 space-y-4">
-                        <div>
-                          <h3 className="text-base font-bold">{moleculeData.commonName ?? moleculeData.iupacName ?? `CID ${moleculeData.cid}`}</h3>
-                          {moleculeData.iupacName && moleculeData.commonName && <p className="text-xs text-muted-foreground mt-0.5">{moleculeData.iupacName}</p>}
-                          <div className="flex flex-wrap gap-2 mt-1.5">
-                            {moleculeData.casNumber && <span className="text-[10px] bg-muted px-2 py-0.5 rounded font-mono font-medium">CAS {moleculeData.casNumber}</span>}
-                            {moleculeData.formula && <span className="text-[10px] bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded font-mono font-medium">{moleculeData.formula}</span>}
-                            <a href={moleculeData.pubchemUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-0.5">
-                              PubChem CID {moleculeData.cid} <ExternalLink size={9} />
-                            </a>
-                          </div>
-                        </div>
-                        {moleculeData.smiles && (
-                          <div>
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1">SMILES</label>
-                            <div className="px-3 py-2 bg-muted rounded-xl font-mono text-xs border border-border break-all select-all">{moleculeData.smiles}</div>
-                          </div>
-                        )}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                          {[
-                            { label: "Mol. Weight", val: moleculeData.molecularWeight != null ? `${moleculeData.molecularWeight} g/mol` : null },
-                            { label: "XLogP", val: moleculeData.xLogP != null ? String(moleculeData.xLogP) : null },
-                            { label: "H-Bond Donors", val: moleculeData.hBondDonors != null ? String(moleculeData.hBondDonors) : null },
-                            { label: "H-Bond Acceptors", val: moleculeData.hBondAcceptors != null ? String(moleculeData.hBondAcceptors) : null },
-                            { label: "Rotatable Bonds", val: moleculeData.rotatableBonds != null ? String(moleculeData.rotatableBonds) : null },
-                            { label: "TPSA (Å²)", val: moleculeData.tpsa != null ? String(moleculeData.tpsa) : null },
-                          ].filter(d => d.val != null).map(d => (
-                            <div key={d.label} className="bg-muted/40 rounded-xl p-3 border border-border">
-                              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">{d.label}</div>
-                              <div className="text-sm font-bold mt-0.5">{d.val}</div>
-                            </div>
-                          ))}
-                        </div>
-                        {moleculeData.ghsHazards.length > 0 && (
-                          <div>
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">GHS Safety</label>
-                            <div className="flex flex-wrap gap-1.5">
-                              {moleculeData.ghsHazards.map(h => (
-                                <span key={h} className={`text-[11px] px-2 py-0.5 rounded border font-medium ${ghsColor(h)}`}>{h}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {moleculeData.synonyms.length > 0 && (
-                          <div>
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Known Names</label>
-                            <div className="flex flex-wrap gap-1.5">
-                              {moleculeData.synonyms.map(s => (
-                                <span key={s} className="text-[11px] px-2 py-0.5 bg-muted text-muted-foreground rounded border border-border">{s}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        <p className="text-[10px] text-muted-foreground border-t border-border pt-2">
-                          Data from <a href="https://pubchem.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">PubChem</a> · <a href="https://github.com/zawaditechnologiesllc/chemcrow-public" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ChemCrow</a> pattern
-                        </p>
-                      </div>
-                    )}
-                    {!moleculeData && !moleculeLoading && !moleculeError && (
-                      <div className="flex flex-col items-center py-8 text-muted-foreground/40 border-t border-border">
-                        <FlaskConical size={28} className="mb-2" />
-                        <p className="text-sm">Try: aspirin, caffeine, glucose, ethanol</p>
-                      </div>
-                    )}
-                  </div>
+                {/* Molecule tab */}
+                {activeTab === "molecule" && showMolecule && (
+                  <MoleculePanel
+                    query={moleculeQuery}
+                    onQueryChange={setMoleculeQuery}
+                    onSubmit={handleMoleculeLookup}
+                    loading={moleculeLoading}
+                    data={moleculeData}
+                    error={moleculeError}
+                  />
                 )}
 
-                {/* AI Tools */}
+                {/* AI Toolkit tab */}
                 {activeTab === "tools" && (
-                  <div className="divide-y divide-border">
-                    {resources.length === 0 ? (
-                      <div className="px-5 py-8 text-center text-muted-foreground/40 text-sm">No tools for this subject</div>
-                    ) : resources.map((group) => {
-                      const isOpen = expandedGroups[group.label] ?? false;
-                      return (
-                        <div key={group.label}>
-                          <button onClick={() => toggleGroup(group.label)}
-                            className="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-muted/30 transition-colors">
-                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{group.label}</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-muted-foreground">{group.tools.length}</span>
-                              {isOpen ? <ChevronUp size={12} className="text-muted-foreground" /> : <ChevronDown size={12} className="text-muted-foreground" />}
-                            </div>
-                          </button>
-                          {isOpen && (
-                            <div className="px-4 pb-3 space-y-2">
-                              {group.tools.map((tool) => (
-                                <a key={tool.name} href={tool.url} target="_blank" rel="noopener noreferrer"
-                                  className="flex items-start gap-2.5 p-2.5 rounded-xl border border-border hover:border-primary/40 hover:bg-muted/40 transition-all group">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{tool.name}</span>
-                                      <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${toolTypeColors[tool.type]}`}>{tool.type}</span>
-                                    </div>
-                                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{tool.description}</p>
-                                  </div>
-                                  <ExternalLink size={11} className="text-muted-foreground mt-0.5 shrink-0 group-hover:text-primary" />
-                                </a>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                    <div className="px-5 py-2.5 bg-muted/20">
-                      <p className="text-[10px] text-muted-foreground">
-                        Source: <a href="https://github.com/zawaditechnologiesllc/awesome-ai-for-science" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">awesome-ai-for-science</a>
-                      </p>
-                    </div>
-                  </div>
+                  <ToolkitPanel resources={resources} expandedGroups={expandedGroups} onToggle={toggleGroup} />
                 )}
               </div>
 
+              {/* Repo attribution */}
+              <div className="px-1 pb-1">
+                <p className="text-[10px] text-muted-foreground/50 text-center leading-relaxed">
+                  Tool index from{" "}
+                  <a href="https://github.com/zawaditechnologiesllc/awesome-ai-for-science" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">awesome-ai-for-science</a>
+                  {" · "}
+                  <a href="https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">AIAgents4Pharmabio</a>
+                  {" · "}
+                  <a href="https://github.com/wu-yc/LabClaw" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">LabClaw (Stanford)</a>
+                </p>
+              </div>
             </div>
           )}
 
-          {/* ── Empty state ─────────────────────────────────────────────── */}
+          {/* ── Empty state ─────────────────────────────────────────────────── */}
           {!result && (
-            <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground/30">
-              <FlaskConical size={36} />
-              <p className="text-sm font-medium">Enter a problem above to get started</p>
+            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground/30">
+              <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center">
+                <Zap size={28} />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground/50">Solve any STEM problem instantly</p>
+                <p className="text-xs text-muted-foreground/30 mt-1">Math · Physics · Chemistry · Biology · Engineering · CS · Statistics</p>
+              </div>
             </div>
           )}
 
-          {/* Bottom padding */}
-          <div className="h-6" />
+          <div className="h-4" />
         </div>
       </div>
     </div>
   );
 }
 
+// ── Sub-panels ─────────────────────────────────────────────────────────────
+
+function LiveBadge({ label, href }: { label: string; href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-1 text-[9px] font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-1.5 py-0.5 rounded-full hover:opacity-80 transition-opacity"
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+      {label}
+    </a>
+  );
+}
+
+function PapersPanel({
+  papers, loading, recommendingFor, recommendations, onRecommend,
+}: {
+  papers: Paper[]; loading: boolean;
+  recommendingFor: string | null;
+  recommendations: Record<string, Paper[]>;
+  onRecommend: (id: string) => void;
+}) {
+  return (
+    <div>
+      {loading && (
+        <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+          <Loader2 size={15} className="animate-spin" />
+          <span className="text-sm">Searching Semantic Scholar…</span>
+        </div>
+      )}
+      {!loading && papers.length === 0 && (
+        <div className="flex flex-col items-center py-10 text-muted-foreground/40">
+          <Search size={28} className="mb-2" />
+          <p className="text-sm">No papers found</p>
+        </div>
+      )}
+      {!loading && papers.length > 0 && (
+        <div className="divide-y divide-border">
+          {papers.map((paper) => (
+            <div key={paper.paperId} className="px-5 py-4 space-y-2">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <a
+                    href={paper.url ?? `https://www.semanticscholar.org/paper/${paper.paperId}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-foreground hover:text-primary transition-colors leading-snug block"
+                  >
+                    {paper.title}
+                  </a>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {paper.authors && (
+                      <span className="text-xs text-muted-foreground">
+                        {paper.authors.split(",").slice(0, 2).join(", ")}{paper.authors.split(",").length > 2 ? " et al." : ""}
+                      </span>
+                    )}
+                    {paper.year && <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-medium">{paper.year}</span>}
+                    {paper.citationCount > 0 && (
+                      <span className="text-[10px] bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">
+                        {paper.citationCount.toLocaleString()} cites
+                      </span>
+                    )}
+                  </div>
+                  {paper.abstract && (
+                    <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{paper.abstract}</p>
+                  )}
+                </div>
+                {paper.url && (
+                  <a href={paper.url} target="_blank" rel="noopener noreferrer"
+                    className="shrink-0 p-1.5 rounded-lg border border-border hover:border-primary hover:text-primary transition-all text-muted-foreground">
+                    <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+              <button
+                onClick={() => onRecommend(paper.paperId)}
+                disabled={!!recommendations[paper.paperId] || recommendingFor === paper.paperId}
+                className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary border border-border hover:border-primary/40 px-2.5 py-1 rounded-lg transition-all disabled:opacity-40"
+              >
+                {recommendingFor === paper.paperId
+                  ? <><Loader2 size={10} className="animate-spin" /> Finding similar…</>
+                  : recommendations[paper.paperId]
+                  ? <><Sparkles size={10} className="text-primary" /> {recommendations[paper.paperId].length} similar shown</>
+                  : <><Sparkles size={10} /> Find similar papers</>}
+              </button>
+              {recommendations[paper.paperId] && recommendations[paper.paperId].length > 0 && (
+                <div className="ml-4 border-l-2 border-primary/20 pl-3 space-y-2">
+                  {recommendations[paper.paperId].map((rec) => (
+                    <div key={rec.paperId}>
+                      <a href={rec.url ?? `https://www.semanticscholar.org/paper/${rec.paperId}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-xs font-medium text-foreground hover:text-primary transition-colors block">
+                        {rec.title}
+                      </a>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {rec.year && <span className="text-[10px] text-muted-foreground">{rec.year}</span>}
+                        {rec.citationCount > 0 && <span className="text-[10px] text-muted-foreground">· {rec.citationCount.toLocaleString()} cites</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="px-5 py-2.5 border-t border-border bg-muted/20">
+        <p className="text-[10px] text-muted-foreground">
+          <a href="https://www.semanticscholar.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Semantic Scholar</a>
+          {" "}&amp; <a href="https://github.com/Future-House/paper-qa" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Talk2Scholars</a> pattern — 200M+ papers (Allen AI)
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BioModelsPanel({ models, total, loading }: { models: BioModel[]; total: number; loading: boolean }) {
+  return (
+    <div>
+      {loading && (
+        <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+          <Loader2 size={15} className="animate-spin" />
+          <span className="text-sm">Searching EBI BioModels…</span>
+        </div>
+      )}
+      {!loading && models.length === 0 && (
+        <div className="flex flex-col items-center py-10 text-muted-foreground/40">
+          <Dna size={28} className="mb-2" />
+          <p className="text-sm">No curated models found</p>
+        </div>
+      )}
+      {!loading && models.length > 0 && (
+        <>
+          {total > 0 && (
+            <div className="px-5 py-2 border-b border-border bg-muted/20">
+              <span className="text-xs text-muted-foreground">{total.toLocaleString()} total matches — top {models.length}</span>
+            </div>
+          )}
+          <div className="divide-y divide-border">
+            {models.map((model) => (
+              <div key={model.id} className="px-5 py-4 flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <a href={model.url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-foreground hover:text-primary transition-colors block">{model.name}</a>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono font-medium">{model.id}</span>
+                    <span className="text-[10px] bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded font-medium">{model.format}</span>
+                    {model.publicationCount > 0 && (
+                      <span className="text-[10px] bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">
+                        {model.publicationCount} pub{model.publicationCount > 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                  {model.description && <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{model.description}</p>}
+                </div>
+                <a href={model.url} target="_blank" rel="noopener noreferrer"
+                  className="shrink-0 p-1.5 rounded-lg border border-border hover:border-primary hover:text-primary transition-all text-muted-foreground">
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      <div className="px-5 py-2.5 border-t border-border bg-muted/20">
+        <p className="text-[10px] text-muted-foreground">
+          <a href="https://www.ebi.ac.uk/biomodels/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">EBI BioModels</a>
+          {" "}&amp; <a href="https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Talk2BioModels</a> pattern — curated SBML models
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MoleculePanel({
+  query, onQueryChange, onSubmit, loading, data, error,
+}: {
+  query: string; onQueryChange: (v: string) => void; onSubmit: (e: React.FormEvent) => void;
+  loading: boolean; data: MoleculeData | null; error: string | null;
+}) {
+  return (
+    <div>
+      <div className="px-5 py-4 border-b border-border">
+        <form onSubmit={onSubmit} className="flex gap-2">
+          <input
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="Name or SMILES — e.g. aspirin, caffeine, C8H10N4O2"
+            className="flex-1 px-3 py-2 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono placeholder:font-sans placeholder:text-muted-foreground/50"
+          />
+          <button type="submit" disabled={loading || !query.trim()}
+            className="flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2 rounded-xl font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-all">
+            {loading ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+            Lookup
+          </button>
+        </form>
+        <p className="text-[10px] text-muted-foreground mt-1.5">
+          Powered by <a href="https://pubchem.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">PubChem</a>
+          {" "}&amp; <a href="https://github.com/zawaditechnologiesllc/chemcrow-public" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ChemCrow</a> pattern
+        </p>
+      </div>
+      {error && (
+        <div className="px-5 py-4">
+          <p className="text-sm text-destructive font-medium">{error}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Try: aspirin, glucose, ethanol, C6H12O6</p>
+        </div>
+      )}
+      {data && !loading && (
+        <div className="px-5 py-5 space-y-4">
+          <div>
+            <h3 className="text-base font-bold">{data.commonName ?? data.iupacName ?? `CID ${data.cid}`}</h3>
+            {data.iupacName && data.commonName && <p className="text-xs text-muted-foreground mt-0.5 font-mono">{data.iupacName}</p>}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {data.casNumber && <span className="text-[10px] bg-muted px-2 py-0.5 rounded font-mono">CAS {data.casNumber}</span>}
+              {data.formula && <span className="text-[10px] bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded font-mono font-bold">{data.formula}</span>}
+              <a href={data.pubchemUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-0.5">
+                PubChem CID {data.cid} <ExternalLink size={9} />
+              </a>
+            </div>
+          </div>
+          {data.smiles && (
+            <div>
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block mb-1">SMILES</label>
+              <div className="px-3 py-2.5 bg-muted rounded-xl font-mono text-xs border border-border break-all select-all leading-relaxed">{data.smiles}</div>
+            </div>
+          )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {[
+              { label: "Mol. Weight", val: data.molecularWeight != null ? `${data.molecularWeight} g/mol` : null },
+              { label: "XLogP", val: data.xLogP != null ? String(data.xLogP) : null },
+              { label: "H-Bond Donors", val: data.hBondDonors != null ? String(data.hBondDonors) : null },
+              { label: "H-Bond Acceptors", val: data.hBondAcceptors != null ? String(data.hBondAcceptors) : null },
+              { label: "Rotatable Bonds", val: data.rotatableBonds != null ? String(data.rotatableBonds) : null },
+              { label: "TPSA (Å²)", val: data.tpsa != null ? String(data.tpsa) : null },
+            ].filter(d => d.val != null).map(d => (
+              <div key={d.label} className="bg-muted/50 rounded-xl p-3 border border-border">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wide">{d.label}</div>
+                <div className="text-sm font-bold mt-0.5">{d.val}</div>
+              </div>
+            ))}
+          </div>
+          {data.ghsHazards.length > 0 && (
+            <div>
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block mb-1.5">GHS Safety Hazards</label>
+              <div className="flex flex-wrap gap-1.5">
+                {data.ghsHazards.map(h => (
+                  <span key={h} className={`text-[11px] px-2 py-0.5 rounded border font-medium ${ghsColor(h)}`}>{h}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {data.synonyms.length > 0 && (
+            <div>
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block mb-1.5">Known Names</label>
+              <div className="flex flex-wrap gap-1.5">
+                {data.synonyms.map(s => (
+                  <span key={s} className="text-[11px] px-2 py-0.5 bg-muted text-muted-foreground rounded border border-border">{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {!data && !loading && !error && (
+        <div className="flex flex-col items-center py-8 text-muted-foreground/40">
+          <Atom size={28} className="mb-2" />
+          <p className="text-sm">Look up any molecule by name or SMILES</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ToolkitPanel({
+  resources, expandedGroups, onToggle,
+}: {
+  resources: ReturnType<typeof stemResourcesBySubject[string]>;
+  expandedGroups: Record<string, boolean>;
+  onToggle: (label: string) => void;
+}) {
+  if (resources.length === 0) {
+    return <div className="px-5 py-8 text-center text-sm text-muted-foreground/40">No tools for this subject</div>;
+  }
+  return (
+    <div>
+      <div className="px-5 py-3 border-b border-border bg-muted/10">
+        <p className="text-[10px] text-muted-foreground">
+          Curated from{" "}
+          <a href="https://github.com/zawaditechnologiesllc/awesome-ai-for-science" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">awesome-ai-for-science</a>
+          {" "}&amp;{" "}
+          <a href="https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">AIAgents4Pharmabio</a>
+        </p>
+      </div>
+      <div className="divide-y divide-border">
+        {resources.map((group) => {
+          const isOpen = expandedGroups[group.label] ?? true;
+          return (
+            <div key={group.label}>
+              <button
+                onClick={() => onToggle(group.label)}
+                className="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-muted/20 transition-colors"
+              >
+                <span className="text-xs font-bold text-foreground">{group.label}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-medium">{group.tools.length}</span>
+                  {isOpen ? <ChevronUp size={12} className="text-muted-foreground" /> : <ChevronDown size={12} className="text-muted-foreground" />}
+                </div>
+              </button>
+              {isOpen && (
+                <div className="px-4 pb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {group.tools.map((tool) => (
+                    <a
+                      key={tool.name}
+                      href={tool.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col gap-1 p-3 rounded-xl border border-border hover:border-primary/50 hover:bg-muted/40 transition-all group"
+                    >
+                      <div className="flex items-center gap-1.5 justify-between">
+                        <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-tight">{tool.name}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded border font-bold uppercase tracking-wide ${toolTypeColors[tool.type]}`}>{tool.type}</span>
+                          <ExternalLink size={10} className="text-muted-foreground/50 group-hover:text-primary transition-colors" />
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{tool.description}</p>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Small helpers ──────────────────────────────────────────────────────────
+
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   const pct = Math.round(confidence * 100);
   if (pct >= 85) return (
-    <span className="flex items-center gap-1 text-[10px] font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-2 py-0.5 rounded-full">
-      <CheckCircle size={9} /> {pct}%
+    <span className="flex items-center gap-1 text-[10px] font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-300 dark:border-green-700 px-2.5 py-1 rounded-full">
+      <CheckCircle size={9} /> {pct}% confidence
     </span>
   );
   if (pct >= 65) return (
-    <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
-      <AlertTriangle size={9} /> {pct}%
+    <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 px-2.5 py-1 rounded-full">
+      <AlertTriangle size={9} /> {pct}% confidence
     </span>
   );
   return (
-    <span className="flex items-center gap-1 text-[10px] font-semibold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-2 py-0.5 rounded-full">
-      <XCircle size={9} /> {pct}%
+    <span className="flex items-center gap-1 text-[10px] font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-700 px-2.5 py-1 rounded-full">
+      <XCircle size={9} /> {pct}% confidence
     </span>
   );
 }

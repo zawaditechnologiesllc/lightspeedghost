@@ -3,11 +3,12 @@ import { Camera, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 interface StemImageOcrProps {
   onExtracted: (text: string) => void;
+  compact?: boolean;
 }
 
 type OcrStatus = "idle" | "dragging" | "loading_ocr" | "processing" | "done" | "error";
 
-export default function StemImageOcr({ onExtracted }: StemImageOcrProps) {
+export default function StemImageOcr({ onExtracted, compact = false }: StemImageOcrProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<OcrStatus>("idle");
   const [filename, setFilename] = useState<string | null>(null);
@@ -76,6 +77,58 @@ export default function StemImageOcr({ onExtracted }: StemImageOcrProps) {
 
   const isProcessing = status === "loading_ocr" || status === "processing";
   const isDragging = status === "dragging";
+
+  if (compact) {
+    return (
+      <>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/jpg"
+          className="sr-only"
+          onChange={(e) => handleFiles(e.target.files)}
+        />
+        <button
+          type="button"
+          onClick={() => !isProcessing && inputRef.current?.click()}
+          disabled={isProcessing}
+          title="Take or upload a photo of your problem (OCR)"
+          className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all ${
+            status === "done"
+              ? "border-green-500/50 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30"
+              : status === "error"
+              ? "border-destructive/50 text-destructive bg-destructive/5"
+              : "border-border text-muted-foreground hover:text-foreground hover:border-primary/50 bg-card"
+          } disabled:opacity-60`}
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 size={12} className="animate-spin text-blue-500" />
+              <span className="text-blue-600 dark:text-blue-400">{progress > 0 ? `${progress}%` : "Reading…"}</span>
+            </>
+          ) : status === "done" ? (
+            <>
+              <CheckCircle size={12} />
+              <span>Re-scan</span>
+              <button type="button" onClick={(e) => { e.stopPropagation(); clear(); }} className="hover:text-foreground ml-0.5">
+                <X size={11} />
+              </button>
+            </>
+          ) : status === "error" ? (
+            <>
+              <AlertCircle size={12} />
+              <span>Retry</span>
+            </>
+          ) : (
+            <>
+              <Camera size={12} />
+              <span>Scan photo</span>
+            </>
+          )}
+        </button>
+      </>
+    );
+  }
 
   return (
     <div
