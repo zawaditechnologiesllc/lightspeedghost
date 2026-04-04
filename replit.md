@@ -141,9 +141,19 @@ Blue-forward brand palette:
 
 ## Deployment Notes
 
-- Frontend: Can be deployed to Vercel (static build)
-- Backend: Can be deployed to Render (Node.js Express server)
-- Database: Can be migrated to Supabase (PostgreSQL compatible)
-- GitHub: Multi-repo structure planned (frontend + backend separate repos)
+- Frontend: Served via Vite dev server on port 18522 (artifact: `artifacts/lightspeed-ghost`)
+- Backend: Express API server on port 8080 (artifact: `artifacts/api-server`)
+- Database: Replit-hosted PostgreSQL via `DATABASE_URL` env var (auto-provisioned)
+
+## Replit Workflows
+
+- `Start application` — Frontend Vite dev server (`pnpm --filter @workspace/lightspeed-ghost run dev`)
+- `API Server` — Express API server (`pnpm --filter @workspace/api-server run dev`)
+
+## Dev Scripts
+
+Both package.json dev scripts use `${PORT:-<default>}` to ensure PORT is always set even when not provided by the workflow environment:
+- Frontend: `PORT=${PORT:-18522} vite ...`
+- API Server: `export NODE_ENV=development PORT=${PORT:-8080} && pnpm run build && pnpm run start`
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
