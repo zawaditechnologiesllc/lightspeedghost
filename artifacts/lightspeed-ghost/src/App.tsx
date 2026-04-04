@@ -13,6 +13,9 @@ import Plagiarism from "@/pages/Plagiarism";
 import StemSolver from "@/pages/StemSolver";
 import StudyAssistant from "@/pages/StudyAssistant";
 import Documents from "@/pages/Documents";
+import ResetPassword from "@/pages/ResetPassword";
+import ConfirmEmail from "@/pages/ConfirmEmail";
+import Invite from "@/pages/Invite";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -39,6 +42,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/confirm-email" component={ConfirmEmail} />
+      <Route path="/invite" component={Invite} />
       <Route component={AppRoutes} />
     </Switch>
   );
