@@ -450,7 +450,7 @@ export default function PlagiarismChecker() {
       </div>
 
       {/* ── Tab switcher ─────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-b border-border bg-muted/10 px-6 py-2 flex gap-1">
+      <div className="shrink-0 border-b border-border bg-muted/10 px-6 py-2 flex gap-1 justify-center">
         {([
           { id: "text" as PageTab, label: "Text & Paper Check", icon: FileText },
           { id: "code" as PageTab, label: "Code Similarity", icon: Code2 },
