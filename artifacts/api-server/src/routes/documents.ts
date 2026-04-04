@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
-import { eq, desc, count } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 import {
   CreateDocumentBody,
   UpdateDocumentBody,
@@ -15,7 +15,14 @@ const router = Router();
 
 router.get("/documents/stats", async (req, res) => {
   try {
-    const allDocs = await db.select().from(documentsTable).orderBy(desc(documentsTable.updatedAt));
+    const userId = req.userId;
+    const condition = userId ? eq(documentsTable.userId, userId) : isNull(documentsTable.userId);
+
+    const allDocs = await db
+      .select()
+      .from(documentsTable)
+      .where(condition)
+      .orderBy(desc(documentsTable.updatedAt));
 
     const stats = {
       totalDocuments: allDocs.length,
@@ -42,10 +49,15 @@ router.get("/documents", async (req, res) => {
     const params = ListDocumentsQueryParams.parse(req.query);
     const limit = params.limit ?? 20;
     const offset = params.offset ?? 0;
+    const userId = req.userId;
+    const condition = userId ? eq(documentsTable.userId, userId) : isNull(documentsTable.userId);
 
-    let query = db.select().from(documentsTable).orderBy(desc(documentsTable.updatedAt));
+    const allDocs = await db
+      .select()
+      .from(documentsTable)
+      .where(condition)
+      .orderBy(desc(documentsTable.updatedAt));
 
-    const allDocs = await query;
     const filtered = params.type ? allDocs.filter((d) => d.type === params.type) : allDocs;
     const paginated = filtered.slice(offset, offset + limit);
 
@@ -67,10 +79,11 @@ router.post("/documents", async (req, res) => {
   try {
     const body = CreateDocumentBody.parse(req.body);
     const wordCount = body.content.split(/\s+/).filter(Boolean).length;
+    const userId = req.userId ?? null;
 
     const [doc] = await db
       .insert(documentsTable)
-      .values({ ...body, wordCount })
+      .values({ ...body, wordCount, userId })
       .returning();
 
     res.status(201).json({
@@ -114,7 +127,11 @@ router.put("/documents/:id", async (req, res) => {
       updates.wordCount = body.content.split(/\s+/).filter(Boolean).length;
     }
 
-    const [doc] = await db.update(documentsTable).set(updates).where(eq(documentsTable.id, id)).returning();
+    const [doc] = await db
+      .update(documentsTable)
+      .set(updates)
+      .where(eq(documentsTable.id, id))
+      .returning();
 
     if (!doc) {
       return res.status(404).json({ error: "Document not found" });

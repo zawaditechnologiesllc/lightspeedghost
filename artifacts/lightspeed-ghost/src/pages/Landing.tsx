@@ -201,10 +201,10 @@ export default function Landing() {
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/app">
+            <Link href="/auth">
               <span className="px-4 py-2 text-sm text-white/70 hover:text-white transition-colors cursor-pointer">Sign In</span>
             </Link>
-            <Link href="/app">
+            <Link href="/auth">
               <span className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors cursor-pointer shadow-md shadow-blue-600/20">
                 Get Started Free
               </span>
@@ -232,10 +232,10 @@ export default function Landing() {
               </a>
             ))}
             <div className="pt-3 flex flex-col gap-2">
-              <Link href="/app">
+              <Link href="/auth">
                 <span className="block text-center px-4 py-2.5 text-sm border border-white/20 text-white rounded-lg cursor-pointer">Sign In</span>
               </Link>
-              <Link href="/app">
+              <Link href="/auth">
                 <span className="block text-center px-4 py-2.5 text-sm bg-blue-600 text-white font-medium rounded-lg cursor-pointer">Get Started Free</span>
               </Link>
             </div>
@@ -273,7 +273,7 @@ export default function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/app">
+            <Link href="/auth">
               <span className="inline-flex items-center gap-2 px-7 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-100">
                 Start Free — No Card Needed
                 <ArrowRight size={16} />
@@ -584,7 +584,7 @@ export default function Landing() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/app">
+                <Link href="/auth">
                   <span className={`block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
                     highlight
                       ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20"
@@ -627,7 +627,7 @@ export default function Landing() {
           <p className="text-white/50 mb-10 text-lg">
             Free forever. Six tools. No card required to start.
           </p>
-          <Link href="/app">
+          <Link href="/auth">
             <span className="inline-flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:scale-[1.02] active:scale-100 text-lg">
               Open the Platform
               <ArrowRight size={18} />

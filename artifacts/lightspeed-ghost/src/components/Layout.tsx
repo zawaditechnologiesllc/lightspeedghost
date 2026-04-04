@@ -1,4 +1,4 @@
-import { Link, useRoute } from "wouter";
+import { Link, useRoute, useLocation } from "wouter";
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -12,9 +12,12 @@ import {
   X,
   Moon,
   Sun,
+  LogOut,
+  User,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -50,6 +53,16 @@ function NavItem({ path, label, icon: Icon }: (typeof navItems)[0]) {
 export function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { user, signOut } = useAuth();
+  const [, navigate] = useLocation();
+
+  async function handleSignOut() {
+    await signOut();
+    navigate("/auth");
+  }
+
+  const userEmail = user?.email ?? "";
+  const userInitial = userEmail[0]?.toUpperCase() ?? "?";
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -76,8 +89,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        <div className="px-4 py-3 border-t border-sidebar-border">
-          <div className="text-sidebar-foreground/40 text-xs">
+        <div className="px-3 py-3 border-t border-sidebar-border">
+          {user && (
+            <div className="flex items-center gap-2.5 mb-2 px-1">
+              <div className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0">
+                <span className="text-sidebar-primary-foreground text-xs font-bold">{userInitial}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sidebar-foreground text-xs font-medium truncate">{userEmail}</p>
+                <p className="text-sidebar-foreground/40 text-[10px]">Student</p>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="p-1 rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors shrink-0"
+                title="Sign out"
+              >
+                <LogOut size={13} />
+              </button>
+            </div>
+          )}
+          <div className="text-sidebar-foreground/30 text-[10px] px-1">
             AI Academic Writing Platform
           </div>
         </div>
@@ -92,12 +123,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
           <div className="hidden lg:block" />
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground"
-          >
-            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground"
+            >
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto">
