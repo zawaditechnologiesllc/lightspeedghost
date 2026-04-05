@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
+import { usePaywallGuard } from "@/hooks/usePaywallGuard";
+import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 
 const API = import.meta.env.VITE_API_URL ?? "";
 
@@ -157,6 +159,7 @@ async function callGenerate(
 export default function StudyAssistant() {
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const imageInputRef   = useRef<HTMLInputElement>(null);
+  const { guard, paywallState, closePaywall, isAtLimit } = usePaywallGuard();
   const chatEndRef      = useRef<HTMLDivElement>(null);
   const chatInputRef    = useRef<HTMLTextAreaElement>(null);
   const subjectInputRef = useRef<HTMLInputElement>(null);
@@ -322,6 +325,7 @@ export default function StudyAssistant() {
   const sendChat = useCallback(async (override?: string) => {
     const msg = (override ?? chatInput).trim();
     if (!msg || askAssistant.isPending) return;
+    if (isAtLimit("study")) { guard("study", () => {}); return; }
     setChatInput("");
     const ctx = mergedContent(topic, sources);
     const withCtx = ctx.trim()
@@ -361,6 +365,7 @@ export default function StudyAssistant() {
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
+    <>
     <div className="relative h-full flex flex-col overflow-hidden bg-background">
 
       {/* ── SCROLLABLE MAIN AREA ──────────────────────────────────────── */}
@@ -855,6 +860,18 @@ export default function StudyAssistant() {
       </div>{/* end floating wrapper */}
 
     </div>
+
+    {paywallState.open && (
+      <CheckoutModal
+        open={paywallState.open}
+        onClose={closePaywall}
+        mode={paywallState.mode}
+        plan={paywallState.mode === "subscription" ? "pro_monthly" : undefined}
+        tool={paywallState.mode === "payg" ? paywallState.tool : undefined}
+        tier={paywallState.mode === "payg" ? paywallState.tier : undefined}
+      />
+    )}
+    </>
   );
 }
 

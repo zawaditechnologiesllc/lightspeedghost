@@ -13,6 +13,8 @@ import { Link, useLocation } from "wouter";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { cn } from "@/lib/utils";
 import { extractTopic, extractSubject } from "@/lib/autofill";
+import { usePaywallGuard } from "@/hooks/usePaywallGuard";
+import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -354,6 +356,7 @@ function ActionButtons({
 
 export default function PlagiarismChecker() {
   const [, navigate] = useLocation();
+  const { guard, paywallState, closePaywall, isAtLimit } = usePaywallGuard();
   const [pageTab, setPageTab] = useState<PageTab>("text");
 
   // ── Text check state
@@ -382,6 +385,7 @@ export default function PlagiarismChecker() {
 
   const handleCheck = async () => {
     if (!text.trim()) return;
+    if (isAtLimit("plagiarism")) { guard("plagiarism", () => {}); return; }
     setTextPhase("checking");
     setResult(null);
     setHumanizedText(null);
@@ -924,6 +928,16 @@ export default function PlagiarismChecker() {
           )
         )}
       </div>
+      {paywallState.open && (
+        <CheckoutModal
+          open={paywallState.open}
+          onClose={closePaywall}
+          mode={paywallState.mode}
+          plan={paywallState.mode === "subscription" ? "pro_monthly" : undefined}
+          tool={paywallState.mode === "payg" ? paywallState.tool : undefined}
+          tier={paywallState.mode === "payg" ? paywallState.tier : undefined}
+        />
+      )}
     </div>
   );
 }

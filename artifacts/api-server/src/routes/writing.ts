@@ -7,6 +7,7 @@ import { WRITER_SOUL } from "../lib/soul";
 import { getVerifiedCitations } from "../lib/citationVerifier";
 import { recordUsage } from "../lib/apiCost";
 import { eq } from "drizzle-orm";
+import { trackUsage } from "../lib/usageTracker";
 
 const router = Router();
 
@@ -61,6 +62,8 @@ router.post("/writing/generate-stream", async (req, res) => {
   }
 
   try {
+    if (req.userId) trackUsage(req.userId, "paper").catch(() => {});
+
     const body = req.body as {
       topic: string;
       subject: string;
@@ -289,6 +292,7 @@ router.put("/writing/save/:id", async (req, res) => {
 
 router.post("/writing/outline", async (req, res) => {
   try {
+    if (req.userId) trackUsage(req.userId, "outline").catch(() => {});
     const body = GenerateOutlineBody.parse(req.body);
     const instructionsText = (req.body.instructionsText as string | undefined) ?? "";
     const referenceText = (req.body.referenceText as string | undefined) ?? "";

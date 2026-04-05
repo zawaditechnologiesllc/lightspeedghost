@@ -8,6 +8,7 @@ import { searchSemanticScholar } from "../lib/citationVerifier";
 import { recordUsage } from "../lib/apiCost";
 import { anthropic } from "../lib/ai";
 import { ACADEMIC_SOUL } from "../lib/soul";
+import { trackUsage } from "../lib/usageTracker";
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.get("/stem/subjects", async (req, res) => {
 
 router.post("/stem/solve", async (req, res) => {
   try {
+    if (req.userId) trackUsage(req.userId, "stem").catch(() => {});
     const body = SolveStemBody.parse(req.body);
 
     // 1. ReAct Loop — Pi Engine pattern: Think → Act → Observe → Reflect

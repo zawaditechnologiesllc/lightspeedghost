@@ -8,6 +8,7 @@ import {
   getClientIp,
   type GatewayName,
 } from "../lib/geoGateway";
+import { ensureUsageTable, getUsage, getUserPlan } from "../lib/usageTracker";
 import {
   getPaygPrice,
   getPaygLabel,
@@ -70,7 +71,11 @@ async function initTables() {
   `);
 }
 
-initTables().catch((e) => logger.error({ err: e }, "Failed to init payment tables"));
+async function init() {
+  await initTables();
+  await ensureUsageTable();
+}
+init().catch((e) => logger.error({ err: e }, "Failed to init payment tables"));
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -410,12 +415,31 @@ router.get("/payments/gateway", async (req: Request, res: Response) => {
       gateway: route.primary,
       reason: route.reason,
       countryCode,
+      isMobileMoney: route.isMobileMoney,
+      momoProvider: route.momoProvider,
+      cardFallbackGateway: route.cardFallback,
       stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? null,
       paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY ?? null,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Gateway detection failed";
     res.status(503).json({ error: message });
+  }
+});
+
+// ── Route: usage stats for current user ───────────────────────────────────────
+
+router.get("/payments/usage", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) {
+    res.json({ usage: {}, plan: "starter" });
+    return;
+  }
+  try {
+    const [usage, plan] = await Promise.all([getUsage(userId), getUserPlan(userId)]);
+    res.json({ usage, plan });
+  } catch {
+    res.json({ usage: {}, plan: "starter" });
   }
 });
 
@@ -430,12 +454,13 @@ router.post("/payments/create", async (req: Request, res: Response) => {
     return;
   }
 
-  const { type, plan, tool, tier, seats } = req.body as {
+  const { type, plan, tool, tier, seats, preferredGateway } = req.body as {
     type: "subscription" | "payg";
     plan?: PlanId;
     tool?: PaygTool;
     tier?: DocumentTier;
     seats?: number;
+    preferredGateway?: GatewayName;
   };
 
   try {
@@ -463,13 +488,14 @@ router.post("/payments/create", async (req: Request, res: Response) => {
       label = getPaygLabel(tool, tier);
     }
 
-    // Detect gateway
+    // Detect gateway — allow explicit override (e.g. card fallback from MoMo)
     const ip = getClientIp(req.headers as Record<string, string | string[] | undefined>, req.socket.remoteAddress);
     const countryCode = await detectCountry(ip);
     const paused = await getPausedGateways();
     const risk = await getUserRisk(userId);
     const route = resolveGateway(countryCode, risk === "high", paused);
-    const gateway = route.primary;
+    const gateway: GatewayName =
+      preferredGateway && !paused[preferredGateway] ? preferredGateway : route.primary;
 
     const origin = process.env.FRONTEND_URL ?? "https://lightspeedghost.com";
     const successUrl = `${origin}/payment/success?gateway=${gateway}`;

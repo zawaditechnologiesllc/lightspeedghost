@@ -10,6 +10,8 @@ import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone"
 import { detectPaperType, detectCitationStyle, extractTopic, extractSubject } from "@/lib/autofill";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { usePaywallGuard } from "@/hooks/usePaywallGuard";
+import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -135,6 +137,7 @@ ${content
 export default function WritePaper() {
   const { session } = useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
+  const { guard, paywallState, closePaywall, isAtLimit } = usePaywallGuard();
 
   // ── phase
   const [phase, setPhase] = useState<Phase>("config");
@@ -216,6 +219,7 @@ export default function WritePaper() {
   // ── generate
   const handleGenerate = async () => {
     if (!topic.trim() || !subject.trim()) return;
+    if (isAtLimit("paper")) { guard("paper", () => {}); return; }
 
     const effectiveWordCount = customWordCount ? parseInt(customWordCount, 10) || wordCount : wordCount;
 
@@ -927,6 +931,16 @@ export default function WritePaper() {
           )}
         </div>
       </div>
+      {paywallState.open && (
+        <CheckoutModal
+          open={paywallState.open}
+          onClose={closePaywall}
+          mode={paywallState.mode}
+          plan={paywallState.mode === "subscription" ? "pro_monthly" : undefined}
+          tool={paywallState.mode === "payg" ? paywallState.tool : undefined}
+          tier={paywallState.mode === "payg" ? paywallState.tier : undefined}
+        />
+      )}
     </div>
   );
 }

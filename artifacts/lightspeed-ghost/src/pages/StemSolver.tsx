@@ -20,6 +20,8 @@ import {
 } from "recharts";
 import { stemResourcesBySubject, toolTypeColors } from "@/data/stemResources";
 import { cn } from "@/lib/utils";
+import { usePaywallGuard } from "@/hooks/usePaywallGuard";
+import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 
 const schema = z.object({
   problem: z.string().min(5, "Please describe your problem"),
@@ -150,6 +152,7 @@ export default function StemSolver() {
 
   const solveStem = useSolveStem();
   const { data: subjects } = useGetStemSubjects();
+  const { guard, paywallState, closePaywall, isAtLimit } = usePaywallGuard();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -176,6 +179,7 @@ export default function StemSolver() {
   const handleStemImageOcr = (text: string) => form.setValue("problem", text.slice(0, 1000));
 
   const onSubmit = async (data: FormData) => {
+    if (isAtLimit("stem")) { guard("stem", () => {}); return; }
     setPapers([]);
     setBioModels([]);
     setRecommendations({});
@@ -354,6 +358,7 @@ export default function StemSolver() {
   );
 
   return (
+    <>
     <div className="h-full flex flex-col overflow-hidden bg-background">
 
       {/* ── Top bar — only shown when results exist ────────────────────────── */}
@@ -669,6 +674,18 @@ export default function StemSolver() {
     )}
 
     </div>
+
+    {paywallState.open && (
+      <CheckoutModal
+        open={paywallState.open}
+        onClose={closePaywall}
+        mode={paywallState.mode}
+        plan={paywallState.mode === "subscription" ? "pro_monthly" : undefined}
+        tool={paywallState.mode === "payg" ? paywallState.tool : undefined}
+        tier={paywallState.mode === "payg" ? paywallState.tier : undefined}
+      />
+    )}
+    </>
   );
 }
 

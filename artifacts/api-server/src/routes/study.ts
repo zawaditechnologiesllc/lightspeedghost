@@ -7,6 +7,7 @@ import { anthropic, openai } from "../lib/ai";
 import { TUTOR_SOUL } from "../lib/soul";
 import { getStudentMemory, updateStudentMemory, buildMemoryContext, memoryFlush } from "../lib/memory";
 import { recordUsage } from "../lib/apiCost";
+import { trackUsage } from "../lib/usageTracker";
 import multer from "multer";
 import { z } from "zod";
 
@@ -58,6 +59,7 @@ router.get("/study/sessions/:id/messages", async (req, res) => {
 
 router.post("/study/ask", async (req, res) => {
   try {
+    if (req.userId) trackUsage(req.userId, "study").catch(() => {});
     const body = AskStudyAssistantBody.parse(req.body);
 
     let sessionId = body.sessionId;

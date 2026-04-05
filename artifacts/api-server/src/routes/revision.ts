@@ -4,6 +4,7 @@ import { documentsTable } from "@workspace/db";
 import { anthropic, openai } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
+import { trackUsage } from "../lib/usageTracker";
 
 const router = Router();
 
@@ -88,6 +89,7 @@ router.post("/revision/submit-stream", async (req, res) => {
   }
 
   try {
+    if (req.userId) trackUsage(req.userId, "revision").catch(() => {});
     const body = req.body as {
       originalText: string;
       targetGrade?: string;

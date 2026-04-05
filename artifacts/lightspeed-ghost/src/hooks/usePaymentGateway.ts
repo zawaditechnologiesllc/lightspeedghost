@@ -7,6 +7,9 @@ export interface GatewayInfo {
   gateway: string;
   reason: string;
   countryCode: string | null;
+  isMobileMoney: boolean;
+  momoProvider: "mpesa" | "airtel" | "mtn" | null;
+  cardFallbackGateway: string | null;
   stripePublishableKey: string | null;
   paystackPublicKey: string | null;
 }
@@ -38,7 +41,11 @@ export function usePaymentGateway() {
     }
   }, []);
 
-  const createSubscriptionSession = useCallback(async (plan: PlanId, seats?: number): Promise<PaymentSession | null> => {
+  const createSubscriptionSession = useCallback(async (
+    plan: PlanId,
+    seats?: number,
+    preferredGateway?: string,
+  ): Promise<PaymentSession | null> => {
     setLoading(true);
     setError(null);
     try {
@@ -46,7 +53,7 @@ export function usePaymentGateway() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "subscription", plan, seats }),
+        body: JSON.stringify({ type: "subscription", plan, seats, preferredGateway }),
       });
       const data = await res.json() as PaymentSession & { error?: string };
       if (data.error) throw new Error(data.error);
@@ -61,7 +68,11 @@ export function usePaymentGateway() {
     }
   }, []);
 
-  const createPaygSession = useCallback(async (tool: PaygTool, tier?: DocumentTier): Promise<PaymentSession | null> => {
+  const createPaygSession = useCallback(async (
+    tool: PaygTool,
+    tier?: DocumentTier,
+    preferredGateway?: string,
+  ): Promise<PaymentSession | null> => {
     setLoading(true);
     setError(null);
     try {
@@ -69,7 +80,7 @@ export function usePaymentGateway() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "payg", tool, tier }),
+        body: JSON.stringify({ type: "payg", tool, tier, preferredGateway }),
       });
       const data = await res.json() as PaymentSession & { error?: string };
       if (data.error) throw new Error(data.error);
@@ -95,7 +106,7 @@ export function usePaymentGateway() {
       });
       return await res.json() as { confirmed: boolean; plan: string };
     } catch {
-      return { confirmed: false, plan: "free" };
+      return { confirmed: false, plan: "starter" };
     }
   }, []);
 

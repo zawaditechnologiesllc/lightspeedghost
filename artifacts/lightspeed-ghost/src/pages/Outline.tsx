@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { detectPaperType, extractTopic, extractSubject } from "@/lib/autofill";
+import { usePaywallGuard } from "@/hooks/usePaywallGuard";
+import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -50,6 +52,7 @@ const SECTION_COLORS = [
 export default function Outline() {
   const { session } = useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
+  const { guard, paywallState, closePaywall, isAtLimit } = usePaywallGuard();
 
   const [topic, setTopic] = useState("");
   const [subject, setSubject] = useState("");
@@ -110,6 +113,7 @@ export default function Outline() {
 
   const handleGenerate = async () => {
     if (!topic.trim() || !subject.trim()) return;
+    if (isAtLimit("outline")) { guard("outline", () => {}); return; }
     setIsLoading(true);
     setError("");
     setLoadingMsg("Analysing your topic and crafting a structured outline…");
@@ -145,6 +149,7 @@ export default function Outline() {
   // ── LAYOUT ─────────────────────────────────────────────────────────────────
 
   return (
+    <>
     <div className="h-full flex flex-col overflow-hidden bg-background">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -402,5 +407,17 @@ export default function Outline() {
       </div>
       )}
     </div>
+
+    {paywallState.open && (
+      <CheckoutModal
+        open={paywallState.open}
+        onClose={closePaywall}
+        mode={paywallState.mode}
+        plan={paywallState.mode === "subscription" ? "pro_monthly" : undefined}
+        tool={paywallState.mode === "payg" ? paywallState.tool : undefined}
+        tier={paywallState.mode === "payg" ? paywallState.tier : undefined}
+      />
+    )}
+    </>
   );
 }

@@ -5,12 +5,14 @@ import { analyseTextPlagiarism, analyseAIContent } from "../lib/textAnalysis";
 import { anthropic, openai } from "../lib/ai";
 import { HUMANIZER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
+import { trackUsage } from "../lib/usageTracker";
 
 const router = Router();
 
 // Plagiarism + AI detection (local algorithms — already solid)
 router.post("/plagiarism/check", async (req, res) => {
   try {
+    if (req.userId) trackUsage(req.userId, "plagiarism").catch(() => {});
     const body = CheckPlagiarismBody.parse(req.body);
     const text = body.text;
 
@@ -70,6 +72,7 @@ router.post("/plagiarism/check", async (req, res) => {
  */
 router.post("/plagiarism/humanize", async (req, res) => {
   try {
+    if (req.userId) trackUsage(req.userId, "humanizer").catch(() => {});
     const body = HumanizeTextBody.parse(req.body);
     const text = body.text;
     const intensity = body.intensity ?? "medium";

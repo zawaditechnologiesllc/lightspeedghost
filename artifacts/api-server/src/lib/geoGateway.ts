@@ -1,8 +1,12 @@
 export type GatewayName = "stripe" | "paddle" | "lemon_squeezy" | "paystack" | "intasend";
+export type MomoProvider = "mpesa" | "airtel" | "mtn";
 
 export interface GatewayRoute {
   primary: GatewayName;
   reason: string;
+  isMobileMoney: boolean;
+  momoProvider: MomoProvider | null;
+  cardFallback: GatewayName | null;
 }
 
 const EAST_AFRICA = new Set(["KE", "UG", "TZ"]);
@@ -24,6 +28,29 @@ const STRIPE_ZONE = new Set([
   "IN", "PH", "ID", "MY", "TH", "VN",
 ]);
 
+// Dominant mobile money provider per country
+const MOMO_PROVIDER: Partial<Record<string, MomoProvider>> = {
+  KE: "mpesa",   // Safaricom M-Pesa — dominant
+  TZ: "mpesa",   // Vodacom M-Pesa — dominant
+  UG: "airtel",  // Airtel Money + MTN, Airtel slightly dominant
+  RW: "mtn",     // MTN MoMo Rwanda
+  GH: "mtn",     // MTN MoMo Ghana
+  ZM: "airtel",  // Airtel Money Zambia
+};
+
+function cardFallbackFor(
+  cc: string,
+  paused: Partial<Record<GatewayName, boolean>>,
+): GatewayName | null {
+  // For Africa: Paystack handles card payments well
+  if (EAST_AFRICA.has(cc) || AFRICA.has(cc)) {
+    if (!paused.paystack) return "paystack";
+  }
+  if (!paused.stripe) return "stripe";
+  if (!paused.paddle) return "paddle";
+  return null;
+}
+
 export function resolveGateway(
   countryCode: string | null,
   isHighRisk: boolean,
@@ -32,25 +59,53 @@ export function resolveGateway(
   const cc = (countryCode ?? "").toUpperCase();
 
   if (isHighRisk && !paused.paystack) {
-    return { primary: "paystack", reason: "risk" };
+    return {
+      primary: "paystack",
+      reason: "risk",
+      isMobileMoney: false,
+      momoProvider: null,
+      cardFallback: null,
+    };
   }
 
+  // East Africa → IntaSend (mobile money)
   if (EAST_AFRICA.has(cc) && !paused.intasend) {
-    return { primary: "intasend", reason: "region" };
+    return {
+      primary: "intasend",
+      reason: "region",
+      isMobileMoney: true,
+      momoProvider: MOMO_PROVIDER[cc] ?? "mpesa",
+      cardFallback: cardFallbackFor(cc, paused),
+    };
   }
 
+  // Rest of Africa → Paystack
   if ((EAST_AFRICA.has(cc) || AFRICA.has(cc)) && !paused.paystack) {
-    return { primary: "paystack", reason: "region" };
+    return {
+      primary: "paystack",
+      reason: "region",
+      isMobileMoney: false,
+      momoProvider: null,
+      cardFallback: null,
+    };
   }
 
+  // Developed markets → Stripe
   if (STRIPE_ZONE.has(cc) && !paused.stripe) {
-    return { primary: "stripe", reason: "region" };
+    return {
+      primary: "stripe",
+      reason: "region",
+      isMobileMoney: false,
+      momoProvider: null,
+      cardFallback: null,
+    };
   }
 
-  if (!paused.paddle) return { primary: "paddle", reason: "fallback" };
-  if (!paused.lemon_squeezy) return { primary: "lemon_squeezy", reason: "fallback" };
-  if (!paused.paystack) return { primary: "paystack", reason: "fallback" };
-  if (!paused.stripe) return { primary: "stripe", reason: "fallback" };
+  // Rest of world → Paddle, then fallbacks
+  if (!paused.paddle) return { primary: "paddle", reason: "fallback", isMobileMoney: false, momoProvider: null, cardFallback: null };
+  if (!paused.lemon_squeezy) return { primary: "lemon_squeezy", reason: "fallback", isMobileMoney: false, momoProvider: null, cardFallback: null };
+  if (!paused.paystack) return { primary: "paystack", reason: "fallback", isMobileMoney: false, momoProvider: null, cardFallback: null };
+  if (!paused.stripe) return { primary: "stripe", reason: "fallback", isMobileMoney: false, momoProvider: null, cardFallback: null };
 
   throw new Error("All payment gateways are currently paused");
 }
