@@ -60,7 +60,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-white text-xl font-semibold mb-4">6. Third-Party Services</h2>
             <p className="mb-3">We use the following third-party services:</p>
             <ul className="list-disc pl-5 space-y-2">
-              <li><strong className="text-white">Anthropic / OpenAI:</strong> AI generation services. Your content is processed by their APIs under their data processing agreements.</li>
+              <li><strong className="text-white">LightSpeed AI:</strong> Our proprietary AI infrastructure that powers text generation and humanization. Your content is processed securely and not used for third-party training.</li>
               <li><strong className="text-white">Semantic Scholar:</strong> Academic citation database. Queries are made on your behalf.</li>
               <li><strong className="text-white">Stripe:</strong> Payment processing. Subject to Stripe's privacy policy.</li>
               <li><strong className="text-white">Tidio:</strong> Live chat support widget.</li>

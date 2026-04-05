@@ -766,7 +766,7 @@ export default function Landing() {
               </div>
               <div className="space-y-6">
                 {[
-                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with a student email. Starter plan at $1.50/month or Pro at $14.99/month. Cancel any time." },
+                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter plan at $1.50/month or Pro at $14.99/month. Cancel any time." },
                   { num: "02", title: "Upload your brief or describe your task", body: "Drag in your assignment PDF, paste the rubric, or just type what you need. The platform detects citation style, length, and subject automatically." },
                   { num: "03", title: "Generate, revise, humanize, and submit", body: "Run any tool in sequence — paper → plagiarism check → LightSpeed Humanizer → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
                 ].map(({ num, title, body }) => (

@@ -16,11 +16,15 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
+  Wallet,
+  ShoppingCart,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { ManageFundsModal } from "@/components/ManageFundsModal";
+import { PAYGMarketModal } from "@/components/PAYGMarketModal";
 
 const navItems = [
   { path: "/app",        label: "Dashboard",           icon: LayoutDashboard },
@@ -105,6 +109,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
   const [, navigate] = useLocation();
+  const [fundsOpen, setFundsOpen] = useState(false);
+  const [paygOpen, setPaygOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -248,13 +254,31 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </button>
           <div className="hidden lg:block" />
 
-          {/* Theme toggle */}
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground"
-          >
-            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          {/* Action buttons */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPaygOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 transition-colors text-xs font-semibold"
+              title="Pay-As-You-Go Market"
+            >
+              <ShoppingCart size={13} />
+              <span className="hidden sm:inline">PAYG</span>
+            </button>
+            <button
+              onClick={() => setFundsOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors text-xs font-semibold"
+              title="Manage Funds"
+            >
+              <Wallet size={13} />
+              <span className="hidden sm:inline">Funds</span>
+            </button>
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground ml-1"
+            >
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
         </header>
 
         {/* Page content — padded on mobile to avoid bottom nav overlap */}
@@ -269,6 +293,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <MobileBottomNavItem key={item.path} {...item} />
         ))}
       </nav>
+
+      <ManageFundsModal open={fundsOpen} onClose={() => setFundsOpen(false)} />
+      <PAYGMarketModal open={paygOpen} onClose={() => setPaygOpen(false)} />
     </div>
   );
 }

@@ -229,10 +229,10 @@ export default function Humanizer() {
 
   if (phase === "input") {
     return (
-      <div className="flex flex-col lg:flex-row h-full overflow-hidden">
+      <div className="flex flex-col h-full overflow-hidden">
 
-        {/* Left panel — input */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto lg:overflow-hidden lg:flex lg:flex-col border-b lg:border-b-0 lg:border-r border-border">
+        {/* Main input panel */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden max-w-3xl mx-auto w-full">
           <div className="shrink-0 px-4 sm:px-6 pt-5 pb-4 border-b border-border bg-card/50">
             <div className="flex items-center gap-2.5 mb-0.5">
               <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -333,47 +333,6 @@ export default function Humanizer() {
               </button>
             </p>
           </div>
-        </div>
-
-        {/* Right panel — info */}
-        <div className="w-full lg:w-80 xl:w-96 shrink-0 flex flex-col gap-4 p-4 sm:p-6 overflow-y-auto">
-          <div className="rounded-xl border border-border bg-card/50 p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles size={13} className="text-primary" />
-              <span className="text-xs font-semibold text-foreground uppercase tracking-wider">How it works</span>
-            </div>
-            {[
-              { icon: ShieldAlert, title: "AI detection scan", desc: "We pinpoint every flagged sentence, cliché, and structural pattern" },
-              { icon: Wand2, title: "Claude Sonnet 4.5 rewrites", desc: "Every flagged section rewritten with varied rhythm, natural voice, and authentic tone" },
-              { icon: ShieldCheck, title: "Score drops to < 15%", desc: "Final text passes Turnitin, GPTZero, and Originality.ai at most institutions" },
-            ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="flex gap-3">
-                <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                  <Icon size={11} className="text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-foreground">{title}</p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="rounded-xl border border-border bg-card/50 p-4">
-            <p className="text-xs font-semibold text-foreground mb-3">Tone guide</p>
-            <div className="space-y-2.5 text-[11px] text-muted-foreground">
-              <div><span className="text-foreground font-medium">Academic —</span> Formal register, analytical hedging, discipline vocabulary. Best for essays and research papers.</div>
-              <div><span className="text-foreground font-medium">Conversational —</span> Natural flow, contractions, approachable. Best for blog posts or informal assignments.</div>
-              <div><span className="text-foreground font-medium">Professional —</span> Authoritative and precise, no jargon. Best for reports and business writing.</div>
-            </div>
-          </div>
-
-          {plan === "starter" && (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <p className="text-xs font-semibold text-primary mb-1">Starter — 1 job / month</p>
-              <p className="text-[11px] text-muted-foreground">Upgrade to Pro for 50 humanize jobs per month, priority AI, and unlimited study sessions.</p>
-            </div>
-          )}
         </div>
 
         <PaywallFlow pickerState={pickerState} checkoutState={checkoutState} closePicker={closePicker} closeCheckout={closeCheckout} chooseSubscription={chooseSubscription} choosePayg={choosePayg} />

@@ -62,7 +62,7 @@ export default function Contact() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm text-white/60 mb-1.5">Your email</label>
-              <input type="email" placeholder="you@university.edu"
+              <input type="email" placeholder="you@email.com"
                 className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/8 transition-colors" />
             </div>
             <div>
