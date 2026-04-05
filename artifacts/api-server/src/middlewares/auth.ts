@@ -19,6 +19,14 @@ declare module "express-session" {
 
 const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 
+if (!SUPABASE_JWT_SECRET) {
+  console.error(
+    "[auth] FATAL: SUPABASE_JWT_SECRET env var is not set. " +
+    "Bearer JWT authentication will be disabled until this is configured. " +
+    "Set it in your Render environment variables (Supabase → Project Settings → API → JWT Secret).",
+  );
+}
+
 interface SupabaseJwtPayload {
   sub?: string;
   email?: string;
@@ -28,39 +36,23 @@ interface SupabaseJwtPayload {
 }
 
 /**
- * Verifies a Supabase JWT using the project's JWT secret.
- * Falls back to bare base64-decode if SUPABASE_JWT_SECRET is not set
- * (dev-only — production must always have the secret configured).
+ * Verifies a Supabase JWT using the project's JWT secret (HS256).
+ * Returns null if the secret is not configured or the token is invalid/expired.
+ * Never falls back to unverified decoding — forged tokens are always rejected.
  */
 function verifyJwt(token: string): SupabaseJwtPayload | null {
-  if (SUPABASE_JWT_SECRET) {
-    try {
-      return jwt.verify(token, SUPABASE_JWT_SECRET) as SupabaseJwtPayload;
-    } catch {
-      return null;
-    }
-  }
-
-  // Dev fallback: decode without verification (logs a warning once)
-  if (process.env.NODE_ENV !== "test") {
-    console.warn(
-      "[auth] SUPABASE_JWT_SECRET not set — JWT signature is NOT verified. Set this env var in production.",
-    );
+  if (!SUPABASE_JWT_SECRET) {
+    return null;
   }
   try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = Buffer.from(parts[1], "base64url").toString("utf-8");
-    const decoded = JSON.parse(payload) as SupabaseJwtPayload;
-    if (decoded.exp && decoded.exp * 1000 <= Date.now()) return null;
-    return decoded;
+    return jwt.verify(token, SUPABASE_JWT_SECRET) as SupabaseJwtPayload;
   } catch {
     return null;
   }
 }
 
 export function authMiddleware(req: Request, _res: Response, next: NextFunction) {
-  // 1. Prefer session-based auth (legacy — kept for backward-compat)
+  // 1. Session-based auth (legacy — kept for backward-compat with any existing sessions)
   if (req.session?.userId) {
     req.userId = req.session.userId;
     req.userEmail = req.session.userEmail;
