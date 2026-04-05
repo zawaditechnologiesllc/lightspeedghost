@@ -47,3 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Local reference docs (never commit)
+PAYMENT_ENV_VARS.md
