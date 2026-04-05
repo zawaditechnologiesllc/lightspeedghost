@@ -8,7 +8,7 @@ import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
-import { CheckoutModal } from "@/components/checkout/CheckoutModal";
+import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ function ScoreBadge({ score, label, inverse = false }: { score: number; label: s
 export default function Revision() {
   const { session } = useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
-  const { guard, paywallState, closePaywall, isAtLimit } = usePaywallGuard();
+  const { guard, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   // ── phase
   const [phase, setPhase] = useState<Phase>("upload");
@@ -623,16 +623,15 @@ export default function Revision() {
             </div>
           </div>
         </div>
-        {paywallState.open && (
-          <CheckoutModal
-            open={paywallState.open}
-            onClose={closePaywall}
-            mode={paywallState.mode}
-            plan={paywallState.mode === "subscription" ? "pro_monthly" : undefined}
-            tool={paywallState.mode === "payg" ? paywallState.tool : undefined}
-            tier={paywallState.mode === "payg" ? paywallState.tier : undefined}
-          />
-        )}
+        <PaywallFlow
+          pickerState={pickerState}
+          checkoutState={checkoutState}
+          plan={plan}
+          closePicker={closePicker}
+          closeCheckout={closeCheckout}
+          chooseSubscription={chooseSubscription}
+          choosePayg={choosePayg}
+        />
       </div>
     );
   }

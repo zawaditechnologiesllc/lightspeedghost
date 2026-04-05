@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { detectPaperType, extractTopic, extractSubject } from "@/lib/autofill";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
-import { CheckoutModal } from "@/components/checkout/CheckoutModal";
+import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ const SECTION_COLORS = [
 export default function Outline() {
   const { session } = useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
-  const { guard, paywallState, closePaywall, isAtLimit } = usePaywallGuard();
+  const { guard, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   const [topic, setTopic] = useState("");
   const [subject, setSubject] = useState("");
@@ -408,16 +408,15 @@ export default function Outline() {
       )}
     </div>
 
-    {paywallState.open && (
-      <CheckoutModal
-        open={paywallState.open}
-        onClose={closePaywall}
-        mode={paywallState.mode}
-        plan={paywallState.mode === "subscription" ? "pro_monthly" : undefined}
-        tool={paywallState.mode === "payg" ? paywallState.tool : undefined}
-        tier={paywallState.mode === "payg" ? paywallState.tier : undefined}
-      />
-    )}
+    <PaywallFlow
+      pickerState={pickerState}
+      checkoutState={checkoutState}
+      plan={plan}
+      closePicker={closePicker}
+      closeCheckout={closeCheckout}
+      chooseSubscription={chooseSubscription}
+      choosePayg={choosePayg}
+    />
     </>
   );
 }

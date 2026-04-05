@@ -21,7 +21,7 @@ import {
 import { stemResourcesBySubject, toolTypeColors } from "@/data/stemResources";
 import { cn } from "@/lib/utils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
-import { CheckoutModal } from "@/components/checkout/CheckoutModal";
+import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 
 const schema = z.object({
   problem: z.string().min(5, "Please describe your problem"),
@@ -152,7 +152,7 @@ export default function StemSolver() {
 
   const solveStem = useSolveStem();
   const { data: subjects } = useGetStemSubjects();
-  const { guard, paywallState, closePaywall, isAtLimit } = usePaywallGuard();
+  const { guard, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -675,16 +675,15 @@ export default function StemSolver() {
 
     </div>
 
-    {paywallState.open && (
-      <CheckoutModal
-        open={paywallState.open}
-        onClose={closePaywall}
-        mode={paywallState.mode}
-        plan={paywallState.mode === "subscription" ? "pro_monthly" : undefined}
-        tool={paywallState.mode === "payg" ? paywallState.tool : undefined}
-        tier={paywallState.mode === "payg" ? paywallState.tier : undefined}
-      />
-    )}
+    <PaywallFlow
+      pickerState={pickerState}
+      checkoutState={checkoutState}
+      plan={plan}
+      closePicker={closePicker}
+      closeCheckout={closeCheckout}
+      chooseSubscription={chooseSubscription}
+      choosePayg={choosePayg}
+    />
     </>
   );
 }

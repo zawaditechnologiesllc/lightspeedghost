@@ -16,7 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
-import { CheckoutModal } from "@/components/checkout/CheckoutModal";
+import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 
 const API = import.meta.env.VITE_API_URL ?? "";
 
@@ -159,7 +159,7 @@ async function callGenerate(
 export default function StudyAssistant() {
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const imageInputRef   = useRef<HTMLInputElement>(null);
-  const { guard, paywallState, closePaywall, isAtLimit } = usePaywallGuard();
+  const { guard, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
   const chatEndRef      = useRef<HTMLDivElement>(null);
   const chatInputRef    = useRef<HTMLTextAreaElement>(null);
   const subjectInputRef = useRef<HTMLInputElement>(null);
@@ -861,16 +861,15 @@ export default function StudyAssistant() {
 
     </div>
 
-    {paywallState.open && (
-      <CheckoutModal
-        open={paywallState.open}
-        onClose={closePaywall}
-        mode={paywallState.mode}
-        plan={paywallState.mode === "subscription" ? "pro_monthly" : undefined}
-        tool={paywallState.mode === "payg" ? paywallState.tool : undefined}
-        tier={paywallState.mode === "payg" ? paywallState.tier : undefined}
-      />
-    )}
+    <PaywallFlow
+      pickerState={pickerState}
+      checkoutState={checkoutState}
+      plan={plan}
+      closePicker={closePicker}
+      closeCheckout={closeCheckout}
+      chooseSubscription={chooseSubscription}
+      choosePayg={choosePayg}
+    />
     </>
   );
 }

@@ -14,7 +14,7 @@ import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone"
 import { cn } from "@/lib/utils";
 import { extractTopic, extractSubject } from "@/lib/autofill";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
-import { CheckoutModal } from "@/components/checkout/CheckoutModal";
+import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -356,7 +356,7 @@ function ActionButtons({
 
 export default function PlagiarismChecker() {
   const [, navigate] = useLocation();
-  const { guard, paywallState, closePaywall, isAtLimit } = usePaywallGuard();
+  const { guard, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
   const [pageTab, setPageTab] = useState<PageTab>("text");
 
   // ── Text check state
@@ -928,16 +928,15 @@ export default function PlagiarismChecker() {
           )
         )}
       </div>
-      {paywallState.open && (
-        <CheckoutModal
-          open={paywallState.open}
-          onClose={closePaywall}
-          mode={paywallState.mode}
-          plan={paywallState.mode === "subscription" ? "pro_monthly" : undefined}
-          tool={paywallState.mode === "payg" ? paywallState.tool : undefined}
-          tier={paywallState.mode === "payg" ? paywallState.tier : undefined}
-        />
-      )}
+      <PaywallFlow
+        pickerState={pickerState}
+        checkoutState={checkoutState}
+        plan={plan}
+        closePicker={closePicker}
+        closeCheckout={closeCheckout}
+        chooseSubscription={chooseSubscription}
+        choosePayg={choosePayg}
+      />
     </div>
   );
 }

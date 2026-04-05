@@ -2,32 +2,55 @@ import { useState, useCallback } from "react";
 import { useSubscription } from "./useSubscription";
 import type { PaygTool, DocumentTier } from "@/lib/pricing";
 
-export type PaywallState =
+export type PickerState =
   | { open: false }
-  | { open: true; tool: PaygTool; tier?: DocumentTier; mode: "subscription" | "payg" };
+  | { open: true; tool: PaygTool; tier?: DocumentTier };
+
+export type CheckoutState =
+  | { open: false }
+  | { open: true; mode: "subscription" | "payg"; tool?: PaygTool; tier?: DocumentTier };
 
 export function usePaywallGuard() {
-  const { isAtLimit, loading } = useSubscription();
-  const [paywallState, setPaywallState] = useState<PaywallState>({ open: false });
+  const { plan, isAtLimit, loading } = useSubscription();
+  const [pickerState,  setPickerState]  = useState<PickerState>({ open: false });
+  const [checkoutState, setCheckoutState] = useState<CheckoutState>({ open: false });
 
   const guard = useCallback(
     (tool: PaygTool, fn: () => void, tier?: DocumentTier): void => {
       if (loading) { fn(); return; }
       if (!isAtLimit(tool)) { fn(); return; }
-      setPaywallState({ open: true, tool, tier, mode: "subscription" });
+      setPickerState({ open: true, tool, tier });
     },
     [isAtLimit, loading],
   );
 
-  function closePaywall() {
-    setPaywallState({ open: false });
+  function closePicker() {
+    setPickerState({ open: false });
   }
 
-  function switchToPayg() {
-    setPaywallState((prev) =>
-      prev.open ? { ...prev, mode: "payg" } : prev,
-    );
+  function closeCheckout() {
+    setCheckoutState({ open: false });
   }
 
-  return { guard, paywallState, closePaywall, switchToPayg, isAtLimit };
+  function chooseSubscription() {
+    setPickerState({ open: false });
+    setCheckoutState({ open: true, mode: "subscription" });
+  }
+
+  function choosePayg(tool: PaygTool, tier?: DocumentTier) {
+    setPickerState({ open: false });
+    setCheckoutState({ open: true, mode: "payg", tool, tier });
+  }
+
+  return {
+    guard,
+    plan,
+    isAtLimit,
+    pickerState,
+    checkoutState,
+    closePicker,
+    closeCheckout,
+    chooseSubscription,
+    choosePayg,
+  };
 }
