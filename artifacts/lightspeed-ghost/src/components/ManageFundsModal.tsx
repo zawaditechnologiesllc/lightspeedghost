@@ -1,7 +1,9 @@
-import { X, Zap, Crown, Users, ArrowRight, TrendingUp, ChevronRight, Star, Wallet } from "lucide-react";
+import { X, Zap, Crown, Users, ArrowRight, TrendingUp, ChevronRight, Star, Wallet, Coins, Plus } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useCredits } from "@/hooks/useCredits";
 import { SUBSCRIPTION_PLANS, formatAmount } from "@/lib/pricing";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
+import { BuyCreditsModal } from "@/components/BuyCreditsModal";
 import { useState } from "react";
 import type { PlanId } from "@/lib/pricing";
 
@@ -34,7 +36,9 @@ const PLAN_COLOR: Record<string, string> = {
 
 export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
   const { plan, usage, getLimit, remaining } = useSubscription();
+  const { balanceCents, refresh: refreshCredits } = useCredits();
   const [checkoutPlan, setCheckoutPlan] = useState<PlanId | null>(null);
+  const [buyCreditsOpen, setBuyCreditsOpen] = useState(false);
 
   if (!open) return null;
 
@@ -42,7 +46,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
   const planColor = PLAN_COLOR[plan ?? "starter"] ?? "text-blue-400";
   const planName = plan === "pro" ? "Pro" : plan === "campus" ? "Campus" : "Starter";
 
-  const upgradePlan: PlanId = plan === "starter" ? "pro_monthly" : "pro_annual";
+  const creditDollars = (balanceCents / 100).toFixed(2);
 
   return (
     <>
@@ -59,7 +63,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
               </div>
               <div>
                 <p className="text-sm font-bold text-foreground">Manage Funds</p>
-                <p className="text-[11px] text-muted-foreground">Plan, usage &amp; billing</p>
+                <p className="text-[11px] text-muted-foreground">Plan, credits &amp; usage</p>
               </div>
             </div>
             <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground">
@@ -68,6 +72,28 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            {/* Credits balance */}
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                  <Coins size={16} className="text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">
+                    {balanceCents.toLocaleString()} <span className="text-amber-400">credits</span>
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">≈ ${creditDollars} · never expire</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setBuyCreditsOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-semibold hover:bg-amber-500/30 transition-colors shrink-0"
+              >
+                <Plus size={12} />
+                Add Credits
+              </button>
+            </div>
+
             {/* Current Plan */}
             <div className="rounded-xl border border-border bg-muted/30 p-4">
               <div className="flex items-center justify-between mb-1">
@@ -124,10 +150,10 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
 
             {/* Upgrade CTA */}
             {plan === "starter" && (
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Crown size={14} className="text-amber-400" />
-                  <p className="text-sm font-semibold text-amber-400">Upgrade to Pro</p>
+                  <Crown size={14} className="text-primary" />
+                  <p className="text-sm font-semibold text-primary">Upgrade to Pro</p>
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-3">
                   Unlock 50 of every tool per month, priority LightSpeed AI, and unlimited Study &amp; Plagiarism checks.
@@ -135,7 +161,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setCheckoutPlan("pro_monthly")}
-                    className="flex-1 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-semibold hover:bg-amber-500/30 transition-colors flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 rounded-lg bg-muted border border-border text-foreground text-xs font-semibold hover:bg-muted/80 transition-colors flex items-center justify-center gap-1.5"
                   >
                     $14.99/mo <ChevronRight size={12} />
                   </button>
@@ -182,6 +208,12 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
           onSuccess={() => { setCheckoutPlan(null); onClose(); }}
         />
       )}
+
+      <BuyCreditsModal
+        open={buyCreditsOpen}
+        onClose={() => setBuyCreditsOpen(false)}
+        onSuccess={() => { refreshCredits(); }}
+      />
     </>
   );
 }

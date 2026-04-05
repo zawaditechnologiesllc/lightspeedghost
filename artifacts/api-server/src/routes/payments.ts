@@ -41,6 +41,22 @@ async function initTables() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       completed_at TIMESTAMPTZ
     );
+    CREATE TABLE IF NOT EXISTS user_credits (
+      user_id TEXT PRIMARY KEY,
+      balance_cents INTEGER NOT NULL DEFAULT 0,
+      lifetime_earned_cents INTEGER NOT NULL DEFAULT 0,
+      lifetime_spent_cents INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS credit_transactions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id TEXT NOT NULL,
+      amount_cents INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      description TEXT,
+      reference_id TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
     CREATE TABLE IF NOT EXISTS user_subscriptions (
       user_id TEXT PRIMARY KEY,
       plan TEXT NOT NULL DEFAULT 'free',
@@ -441,6 +457,143 @@ router.get("/payments/usage", async (req: Request, res: Response) => {
   } catch {
     res.json({ usage: {}, plan: "starter" });
   }
+});
+
+// ── Credits helpers ───────────────────────────────────────────────────────────
+
+async function getCreditBalance(userId: string): Promise<number> {
+  try {
+    const row = await pool.query<{ balance_cents: number }>(
+      "SELECT balance_cents FROM user_credits WHERE user_id = $1",
+      [userId]
+    );
+    return row.rows[0]?.balance_cents ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function adjustCredits(
+  userId: string,
+  amountCents: number,
+  type: "purchase" | "spend" | "bonus" | "refund",
+  description: string,
+  referenceId?: string
+): Promise<{ newBalance: number; ok: boolean }> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(`
+      INSERT INTO user_credits (user_id, balance_cents, lifetime_earned_cents, lifetime_spent_cents)
+      VALUES ($1, 0, 0, 0)
+      ON CONFLICT (user_id) DO NOTHING
+    `, [userId]);
+
+    const earns = amountCents > 0 ? amountCents : 0;
+    const spends = amountCents < 0 ? Math.abs(amountCents) : 0;
+
+    const updated = await client.query<{ balance_cents: number }>(`
+      UPDATE user_credits SET
+        balance_cents = balance_cents + $2,
+        lifetime_earned_cents = lifetime_earned_cents + $3,
+        lifetime_spent_cents = lifetime_spent_cents + $4,
+        updated_at = NOW()
+      WHERE user_id = $1
+      RETURNING balance_cents
+    `, [userId, amountCents, earns, spends]);
+
+    const newBalance = updated.rows[0]?.balance_cents ?? 0;
+    if (newBalance < 0) {
+      await client.query("ROLLBACK");
+      return { newBalance: 0, ok: false };
+    }
+
+    await client.query(`
+      INSERT INTO credit_transactions (user_id, amount_cents, type, description, reference_id)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [userId, amountCents, type, description, referenceId ?? null]);
+
+    await client.query("COMMIT");
+    return { newBalance, ok: true };
+  } catch {
+    await client.query("ROLLBACK");
+    return { newBalance: 0, ok: false };
+  } finally {
+    client.release();
+  }
+}
+
+// ── Route: get credit balance ─────────────────────────────────────────────────
+
+router.get("/payments/credits", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) {
+    res.json({ balanceCents: 0 });
+    return;
+  }
+  const balanceCents = await getCreditBalance(userId);
+  res.json({ balanceCents });
+});
+
+// ── Route: spend credits for a PAYG purchase ──────────────────────────────────
+
+router.post("/payments/credits/spend", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  const { tool, tier, amountCents, description } = req.body as {
+    tool: PaygTool;
+    tier?: DocumentTier;
+    amountCents: number;
+    description?: string;
+  };
+  if (!tool || !amountCents || amountCents <= 0) {
+    res.status(400).json({ error: "Invalid request" });
+    return;
+  }
+  const expectedAmount = getPaygPrice(tool, tier);
+  if (amountCents !== expectedAmount) {
+    res.status(400).json({ error: "Amount mismatch" });
+    return;
+  }
+  const balance = await getCreditBalance(userId);
+  if (balance < amountCents) {
+    res.status(402).json({ error: "Insufficient credits", balanceCents: balance, required: amountCents });
+    return;
+  }
+  const desc = description ?? `${getPaygLabel(tool, tier)} (credits)`;
+  const result = await adjustCredits(userId, -amountCents, "spend", desc);
+  if (!result.ok) {
+    res.status(402).json({ error: "Insufficient credits" });
+    return;
+  }
+  res.json({ success: true, newBalanceCents: result.newBalance });
+});
+
+// ── Route: purchase credits package ──────────────────────────────────────────
+
+router.post("/payments/credits/purchase-callback", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  const { packageId, amountCents } = req.body as { packageId: string; amountCents: number };
+  const CREDIT_PACKAGES: Record<string, number> = {
+    "credits_500":  500,
+    "credits_1100": 1100,
+    "credits_2850": 2850,
+    "credits_6000": 6000,
+  };
+  const creditAmount = CREDIT_PACKAGES[packageId];
+  if (!creditAmount) {
+    res.status(400).json({ error: "Invalid credit package" });
+    return;
+  }
+  const result = await adjustCredits(userId, creditAmount, "purchase", `Credit purchase: ${packageId}`);
+  res.json({ success: result.ok, newBalanceCents: result.newBalance });
 });
 
 // ── Route: create payment session ─────────────────────────────────────────────
