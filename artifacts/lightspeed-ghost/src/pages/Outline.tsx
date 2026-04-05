@@ -180,14 +180,19 @@ export default function Outline() {
           ]}
         />
       ) : (
-      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-auto md:overflow-hidden">
+      <div className={cn(
+        "flex-1 min-h-0",
+        result ? "flex flex-col md:flex-row overflow-hidden" : "overflow-y-auto"
+      )}>
 
         {/* ── Form panel ─────────────────────────────────────────────────── */}
         <div className={cn(
-          "flex flex-col overflow-y-auto shrink-0 bg-card/50",
-          result ? "border-b md:border-b-0 md:border-r border-border md:w-80 max-h-[40vh] md:max-h-none" : "w-full max-w-xl mx-auto"
+          "flex flex-col bg-card/50",
+          result
+            ? "shrink-0 overflow-hidden border-b md:border-b-0 md:border-r border-border md:w-80 max-h-[40vh] md:max-h-none"
+            : "max-w-xl mx-auto w-full"
         )}>
-          <div className="flex-1 px-5 py-5 space-y-5">
+          <div className={cn("px-5 py-5 space-y-5", result && "flex-1 overflow-y-auto")}>
 
             {error && (
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">

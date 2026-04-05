@@ -231,21 +231,22 @@ export default function Humanizer() {
     return (
       <div className="flex flex-col h-full overflow-hidden">
 
-        {/* Main input panel */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden max-w-3xl mx-auto w-full">
-          <div className="shrink-0 px-4 sm:px-6 pt-5 pb-4 border-b border-border bg-card/50">
-            <div className="flex items-center gap-2.5 mb-0.5">
-              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Wand2 size={15} className="text-primary" />
+        {/* Scrollable area — full width so the scrollbar sits at the far right edge */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto w-full">
+            <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-border bg-card/50">
+              <div className="flex items-center gap-2.5 mb-0.5">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Wand2 size={15} className="text-primary" />
+                </div>
+                <h1 className="font-bold text-base text-foreground">LightSpeed Humanizer</h1>
               </div>
-              <h1 className="font-bold text-base text-foreground">LightSpeed Humanizer</h1>
+              <p className="text-xs text-muted-foreground mt-1 ml-9.5">
+                Paste AI-written text — we detect flagged patterns and rewrite it to sound genuinely human.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1 ml-9.5">
-              Paste AI-written text — we detect flagged patterns and rewrite it to sound genuinely human.
-            </p>
-          </div>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5">
+          <div className="px-4 sm:px-6 py-5 space-y-5">
             {/* Text input */}
             <div>
               <label className="block text-xs font-semibold text-foreground mb-2">
@@ -312,9 +313,12 @@ export default function Humanizer() {
               />
             </div>
           </div>
+        </div>
+        </div>
 
-          {/* CTA */}
-          <div className="shrink-0 px-4 sm:px-6 py-4 border-t border-border bg-card/50">
+        {/* CTA — sticky at bottom, full-width border, content centered */}
+        <div className="shrink-0 border-t border-border bg-card/50">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
             <button
               onClick={handleDetect}
               disabled={!inputText.trim()}
