@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Wand2, CheckCircle, AlertTriangle, Zap, Copy, CheckCheck,
   Download, RefreshCcw, FileText, ChevronRight, Sparkles,
@@ -106,6 +106,19 @@ export default function Humanizer() {
   const [tone, setTone] = useState<Tone>("academic");
   const [instructions, setInstructions] = useState("");
 
+  // ── auto-populate from sessionStorage (redirect from Plagiarism checker)
+  useEffect(() => {
+    const saved = sessionStorage.getItem("lsg_humanize_text");
+    const autorun = sessionStorage.getItem("lsg_humanize_autorun") === "true";
+    if (saved) {
+      sessionStorage.removeItem("lsg_humanize_text");
+      sessionStorage.removeItem("lsg_humanize_autorun");
+      setInputText(saved);
+      if (autorun) setTimeout(() => handleDetect(saved), 80);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── results
   const [detectionResult, setDetectionResult] = useState<DetectionResult | null>(null);
   const [humanizeResult, setHumanizeResult] = useState<HumanizeResult | null>(null);
@@ -126,8 +139,8 @@ export default function Humanizer() {
 
   // ── Detection ────────────────────────────────────────────────────────────────
 
-  async function handleDetect() {
-    const text = inputText.trim();
+  async function handleDetect(overrideText?: string) {
+    const text = (overrideText ?? inputText).trim();
     if (!text) return;
     guard("humanizer", async () => {
       setPhase("detecting");
@@ -313,14 +326,11 @@ export default function Humanizer() {
               />
             </div>
           </div>
-        </div>
-        </div>
 
-        {/* CTA — sticky at bottom, full-width border, content centered */}
-        <div className="shrink-0 border-t border-border bg-card/50">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
+          {/* CTA — inside scroll area so it flows naturally with the form */}
+          <div className="px-4 sm:px-6 pt-2 pb-8 max-w-3xl mx-auto w-full">
             <button
-              onClick={handleDetect}
+              onClick={() => handleDetect()}
               disabled={!inputText.trim()}
               className="w-full flex items-center justify-center gap-2.5 bg-primary text-primary-foreground px-4 py-4 rounded-xl font-bold text-base hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
@@ -338,11 +348,12 @@ export default function Humanizer() {
             </p>
           </div>
         </div>
-
-        <PaywallFlow pickerState={pickerState} checkoutState={checkoutState} closePicker={closePicker} closeCheckout={closeCheckout} chooseSubscription={chooseSubscription} choosePayg={choosePayg} />
       </div>
-    );
-  }
+
+      <PaywallFlow pickerState={pickerState} checkoutState={checkoutState} closePicker={closePicker} closeCheckout={closeCheckout} chooseSubscription={chooseSubscription} choosePayg={choosePayg} />
+    </div>
+  );
+}
 
   // ── PHASE: DETECTING ─────────────────────────────────────────────────────────
 

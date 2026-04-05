@@ -5,7 +5,7 @@ import type { PlagiarismResult, CodeCompareResult } from "@workspace/api-client-
 import {
   ShieldCheck, ShieldAlert, Zap, AlertTriangle, Code2, FileText,
   ExternalLink, Info, Download, Copy, CheckCheck, FileEdit,
-  PenLine, ChevronRight, RefreshCcw, BarChart3, X,
+  PenLine, ChevronRight, RefreshCcw, BarChart3, X, Wand2,
 } from "lucide-react";
 import FullscreenLoader from "@/components/FullscreenLoader";
 import { Slider } from "@/components/ui/slider";
@@ -202,17 +202,19 @@ function HighlightedCode({ label, raw, matchCount }: { label: string; raw: strin
 // ── Action Buttons component ──────────────────────────────────────────────────
 
 function ActionButtons({
-  aiScore, plagiarismScore, text, onRevise,
+  aiScore, plagiarismScore, text, onRevise, onHumanize,
 }: {
   aiScore: number;
   plagiarismScore: number;
   text: string;
   onRevise: () => void;
+  onHumanize: () => void;
 }) {
   const aiSafe = aiScore < 30;
   const plagSafe = plagiarismScore < 30;
   const bothSafe = aiSafe && plagSafe;
   const bothUnsafe = !aiSafe && !plagSafe;
+  const aiAbove20 = aiScore > 20;
 
   const topic = encodeURIComponent(text.trim() ? extractTopic(text) : "");
   const subject = encodeURIComponent(text.trim() ? extractSubject(text) : "");
@@ -222,16 +224,31 @@ function ActionButtons({
     return (
       <div className="space-y-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Both thresholds passed — choose what to do next:</p>
+        {aiAbove20 && (
+          <button
+            onClick={onHumanize}
+            className="w-full flex items-center justify-between gap-3 bg-primary text-primary-foreground px-4 py-3.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-primary/20 group"
+          >
+            <div className="flex items-center gap-2.5">
+              <Wand2 size={16} className="shrink-0" />
+              <div className="text-left">
+                <div className="font-bold">Humanize with LightSpeed AI</div>
+                <div className="text-[10px] font-normal opacity-80">Bring AI score to 0% — fully undetectable</div>
+              </div>
+            </div>
+            <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
+          </button>
+        )}
         <div className="grid sm:grid-cols-2 gap-3">
           <button
             onClick={onRevise}
-            className="flex items-center justify-between gap-3 bg-primary text-primary-foreground px-4 py-3.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-primary/20 group"
+            className="flex items-center justify-between gap-3 bg-card border border-border text-foreground px-4 py-3.5 rounded-xl font-bold text-sm hover:bg-muted/30 transition-all group"
           >
             <div className="flex items-center gap-2.5">
               <FileEdit size={16} className="shrink-0" />
               <div className="text-left">
                 <div className="font-bold">Revise Paper</div>
-                <div className="text-[10px] font-normal opacity-80">Raise to 92%+ with targeted rewriting</div>
+                <div className="text-[10px] font-normal opacity-60">Raise to 92%+ with targeted rewriting</div>
               </div>
             </div>
             <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
@@ -259,20 +276,33 @@ function ActionButtons({
       <div className="space-y-3">
         <div className="px-4 py-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-400">
           <div className="font-semibold mb-0.5 flex items-center gap-2">
-            <ShieldAlert size={14} /> Both AI ({aiScore.toFixed(0)}%) and plagiarism ({plagiarismScore.toFixed(0)}%) exceed the 30% threshold
+            <ShieldAlert size={14} /> Both AI ({aiScore.toFixed(0)}%) and plagiarism ({plagiarismScore.toFixed(0)}%) exceed the threshold
           </div>
-          <p className="text-xs opacity-80">Most institutions will reject this paper. Writing a new paper from scratch is the safest path — LightSpeed AI guarantees 0% AI and &lt;8% plagiarism.</p>
+          <p className="text-xs opacity-80">Most institutions will reject this. Humanize it first to drop AI to 0%, or write a new paper from scratch.</p>
         </div>
+        <button
+          onClick={onHumanize}
+          className="w-full flex items-center justify-between gap-3 bg-primary text-primary-foreground px-5 py-4 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-primary/20 group"
+        >
+          <div className="flex items-center gap-3">
+            <Wand2 size={18} className="shrink-0" />
+            <div className="text-left">
+              <div className="font-bold">Humanize with LightSpeed AI</div>
+              <div className="text-[10px] font-normal opacity-80">Instantly drop AI score to 0% — fully undetectable</div>
+            </div>
+          </div>
+          <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
+        </button>
         <Link href={writeHref}>
-          <div className="flex items-center justify-between gap-3 bg-primary text-primary-foreground px-5 py-4 rounded-xl font-bold text-sm hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-primary/20 group">
+          <div className="flex items-center justify-between gap-3 bg-card border border-border text-foreground px-5 py-3.5 rounded-xl font-bold text-sm hover:bg-muted/30 transition-all cursor-pointer group">
             <div className="flex items-center gap-3">
-              <PenLine size={18} className="shrink-0" />
+              <PenLine size={16} className="text-primary shrink-0" />
               <div className="text-left">
-                <div className="font-bold">Write a New Paper</div>
-                <div className="text-[10px] font-normal opacity-80">0% AI · &lt;8% plagiarism · 92%+ grade — topic will be pre-filled</div>
+                <div className="font-bold text-primary">Write a New Paper Instead</div>
+                <div className="text-[10px] font-normal text-muted-foreground">0% AI · &lt;8% plagiarism · 92%+ grade</div>
               </div>
             </div>
-            <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
+            <ChevronRight size={14} className="text-muted-foreground group-hover:translate-x-0.5 transition-transform shrink-0" />
           </div>
         </Link>
       </div>
@@ -284,30 +314,38 @@ function ActionButtons({
       <div className="space-y-3">
         <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-400">
           <div className="font-semibold flex items-center gap-2">
-            <ShieldAlert size={14} /> AI content {aiScore.toFixed(0)}% exceeds the 30% institutional threshold
+            <ShieldAlert size={14} /> AI content at {aiScore.toFixed(0)}% — above the 30% institutional threshold
           </div>
-          <p className="text-xs mt-0.5 opacity-80">Revision alone may not bring this below 30%. A new paper guarantees 0% AI detection.</p>
+          <p className="text-xs mt-0.5 opacity-80">Humanize your text to instantly bring AI detection to 0% — guaranteed undetectable.</p>
         </div>
-        <Link href={writeHref}>
-          <div className="flex items-center justify-between gap-3 bg-primary text-primary-foreground px-5 py-4 rounded-xl font-bold text-sm hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-primary/20 group">
-            <div className="flex items-center gap-3">
-              <PenLine size={18} className="shrink-0" />
-              <div className="text-left">
-                <div className="font-bold">Write a New Paper</div>
-                <div className="text-[10px] font-normal opacity-80">Recommended — 0% AI guaranteed · topic pre-filled</div>
-              </div>
-            </div>
-            <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
-          </div>
-        </Link>
         <button
-          onClick={onRevise}
-          className="w-full flex items-center justify-center gap-2 border border-border text-muted-foreground px-4 py-3 rounded-xl text-sm font-medium hover:text-foreground hover:bg-muted/30 transition-all"
+          onClick={onHumanize}
+          className="w-full flex items-center justify-between gap-3 bg-primary text-primary-foreground px-5 py-4 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-primary/20 group"
         >
-          <FileEdit size={14} />
-          Revise anyway — we'll try to reduce AI below 30%
-          <span className="text-[10px] opacity-60 ml-0.5">(not guaranteed)</span>
+          <div className="flex items-center gap-3">
+            <Wand2 size={18} className="shrink-0" />
+            <div className="text-left">
+              <div className="font-bold">Humanize with LightSpeed AI</div>
+              <div className="text-[10px] font-normal opacity-80">Drop AI to 0% — your text, fully undetectable</div>
+            </div>
+          </div>
+          <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
         </button>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <button
+            onClick={onRevise}
+            className="flex items-center justify-center gap-2 border border-border text-muted-foreground px-4 py-3 rounded-xl text-sm font-medium hover:text-foreground hover:bg-muted/30 transition-all"
+          >
+            <FileEdit size={14} />
+            Revise paper
+          </button>
+          <Link href={writeHref}>
+            <div className="flex items-center justify-center gap-2 border border-border text-muted-foreground px-4 py-3 rounded-xl text-sm font-medium hover:text-foreground hover:bg-muted/30 transition-all cursor-pointer">
+              <PenLine size={14} />
+              Write new paper
+            </div>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -421,6 +459,12 @@ export default function PlagiarismChecker() {
   const handleRevise = useCallback(() => {
     localStorage.setItem("plag-prefill-revision-text", text);
     navigate("/revision");
+  }, [text, navigate]);
+
+  const handleHumanizeRedirect = useCallback(() => {
+    sessionStorage.setItem("lsg_humanize_text", text);
+    sessionStorage.setItem("lsg_humanize_autorun", "true");
+    navigate("/humanizer");
   }, [text, navigate]);
 
   const wordCount = text.split(/\s+/).filter(Boolean).length;
@@ -596,6 +640,7 @@ export default function PlagiarismChecker() {
                     plagiarismScore={result.plagiarismScore}
                     text={text}
                     onRevise={handleRevise}
+                    onHumanize={handleHumanizeRedirect}
                   />
 
                   {/* Writing metrics */}
