@@ -35,16 +35,17 @@ const PLAN_COLOR: Record<string, string> = {
 };
 
 export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
-  const { plan, usage, getLimit, remaining } = useSubscription();
+  const { plan, usage, getLimit, remaining, loading: planLoading } = useSubscription();
   const { balanceCents, refresh: refreshCredits } = useCredits();
   const [checkoutPlan, setCheckoutPlan] = useState<PlanId | null>(null);
   const [buyCreditsOpen, setBuyCreditsOpen] = useState(false);
 
   if (!open) return null;
 
-  const PlanIcon = PLAN_ICON[plan ?? "starter"] ?? Zap;
-  const planColor = PLAN_COLOR[plan ?? "starter"] ?? "text-blue-400";
-  const planName = plan === "pro" ? "Pro" : plan === "campus" ? "Campus" : "Starter";
+  const resolvedPlan = planLoading ? null : (plan ?? "starter");
+  const PlanIcon = PLAN_ICON[resolvedPlan ?? "starter"] ?? Zap;
+  const planColor = PLAN_COLOR[resolvedPlan ?? "starter"] ?? "text-blue-400";
+  const planName = resolvedPlan === "pro" ? "Pro" : resolvedPlan === "campus" ? "Campus" : resolvedPlan === null ? "…" : "Starter";
 
   const creditDollars = (balanceCents / 100).toFixed(2);
 
@@ -98,24 +99,35 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
             <div className="rounded-xl border border-border bg-muted/30 p-4">
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
-                  <PlanIcon size={15} className={planColor} />
+                  <PlanIcon size={15} className={planLoading ? "text-muted-foreground" : planColor} />
                   <span className="text-sm font-semibold text-foreground">{planName} Plan</span>
                 </div>
-                {plan === "starter" && (
+                {!planLoading && resolvedPlan === "starter" && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 font-medium">
                     Free tier
                   </span>
                 )}
-                {plan === "pro" && (
+                {!planLoading && resolvedPlan === "pro" && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 font-medium flex items-center gap-1">
                     <Star size={9} /> Active
                   </span>
                 )}
+                {!planLoading && resolvedPlan === "campus" && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1">
+                    <Star size={9} /> Active
+                  </span>
+                )}
+                {planLoading && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium animate-pulse">
+                    Loading…
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-muted-foreground">
-                {plan === "starter" && "3 papers · 1 revision · 1 humanization per month included"}
-                {plan === "pro"     && "50 papers · 50 revisions · 50 humanizations per month"}
-                {plan === "campus"  && "15 papers · 15 revisions · 15 humanizations per month (seat)"}
+                {planLoading                  && "Fetching your plan…"}
+                {!planLoading && resolvedPlan === "starter" && "3 papers · 1 revision · 1 humanization per month included"}
+                {!planLoading && resolvedPlan === "pro"     && "50 papers · 50 revisions · 50 humanizations per month"}
+                {!planLoading && resolvedPlan === "campus"  && "15 papers · 15 revisions · 15 humanizations per month (seat)"}
               </p>
             </div>
 
@@ -149,7 +161,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
             </div>
 
             {/* Upgrade CTA */}
-            {plan === "starter" && (
+            {!planLoading && resolvedPlan === "starter" && (
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Crown size={14} className="text-primary" />

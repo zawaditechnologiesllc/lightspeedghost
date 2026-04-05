@@ -263,6 +263,8 @@ export default function Admin() {
   const [waking, setWaking] = useState(false);
   const [wakeResult, setWakeResult] = useState<{ ok: boolean; uptimeSeconds?: number } | null>(null);
   const [syncingSupabase, setSyncingSupabase] = useState(false);
+  const [preLoginWaking, setPreLoginWaking] = useState(false);
+  const [preLoginStatus, setPreLoginStatus] = useState<"idle" | "online" | "offline">("idle");
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", message: "", link: "", link_text: "Learn more", color: "blue" });
   const [announcementSaving, setAnnouncementSaving] = useState(false);
@@ -393,6 +395,20 @@ export default function Admin() {
       setFeedbackStats(data.feedback);
     } catch { setFeedbackStats([]); }
   }, [password]);
+
+  async function wakeBeforeLogin() {
+    setPreLoginWaking(true);
+    setPreLoginStatus("idle");
+    try {
+      const HEALTH_URL = (import.meta.env.VITE_API_URL ?? "") + "/api/healthz";
+      const res = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(60_000) });
+      setPreLoginStatus(res.ok ? "online" : "offline");
+    } catch {
+      setPreLoginStatus("offline");
+    } finally {
+      setPreLoginWaking(false);
+    }
+  }
 
   async function wakeBackend() {
     setWaking(true); setWakeResult(null);
@@ -604,8 +620,28 @@ export default function Admin() {
                   {authLoading ? "Verifying…" : "Access Panel"}
                 </button>
               </form>
-              <div className="mt-6 pt-5 border-t border-white/8 flex justify-center">
-                <Link href="/app"><span className="text-xs text-white/25 hover:text-white/50 transition-colors cursor-pointer">Back to app →</span></Link>
+              <div className="mt-6 pt-5 border-t border-white/8 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-white/25">Backend offline?</span>
+                  <button
+                    type="button"
+                    onClick={wakeBeforeLogin}
+                    disabled={preLoginWaking}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 text-white/40 hover:text-emerald-400 hover:border-emerald-500/30 hover:bg-emerald-500/8 disabled:opacity-40 transition-all"
+                  >
+                    {preLoginWaking
+                      ? <><Loader2 size={11} className="animate-spin" /> Waking…</>
+                      : preLoginStatus === "online"
+                        ? <><Signal size={11} className="text-emerald-400" /><span className="text-emerald-400">Online</span></>
+                        : preLoginStatus === "offline"
+                          ? <><Signal size={11} className="text-red-400" /><span className="text-red-400">Offline</span></>
+                          : <><Signal size={11} /> Wake server</>
+                    }
+                  </button>
+                </div>
+                <div className="flex justify-center">
+                  <Link href="/app"><span className="text-xs text-white/25 hover:text-white/50 transition-colors cursor-pointer">Back to app →</span></Link>
+                </div>
               </div>
             </div>
           </div>
