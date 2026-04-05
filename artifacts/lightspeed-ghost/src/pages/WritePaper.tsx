@@ -671,19 +671,23 @@ export default function WritePaper() {
   // ── CONFIG PHASE ──────────────────────────────────────────────────────────
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-2xl mx-auto px-4 py-6 pb-16 sm:px-6 sm:py-8 space-y-6">
-        {/* Page header — centered */}
-        <div className="text-center space-y-1.5">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <Zap size={20} className="text-primary" />
-            <span className="text-xs font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Write a Paper</h1>
-          <p className="text-muted-foreground text-sm">
-            Real verified citations · Live generation · Grade &amp; plagiarism estimates
-          </p>
+    <div className="h-full flex flex-col overflow-hidden bg-background">
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="shrink-0 border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-5 text-center">
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <Zap size={16} className="text-primary" />
+          <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
         </div>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Write a Paper</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Real verified citations · Live generation · Grade &amp; plagiarism estimates
+        </p>
+      </div>
+
+      {/* Scrollable form */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-6">
 
         {fromPlagiarism && (
           <div className="flex items-center justify-between gap-3 px-4 py-3 bg-primary/10 border border-primary/30 rounded-xl text-sm text-primary">
@@ -946,6 +950,7 @@ export default function WritePaper() {
         chooseSubscription={chooseSubscription}
         choosePayg={choosePayg}
       />
-    </div>
+      </div>{/* end flex-1 scroll */}
+    </div>{/* end outer column */}
   );
 }
