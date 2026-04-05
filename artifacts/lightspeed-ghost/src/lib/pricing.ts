@@ -78,6 +78,14 @@ export const TIER_LABELS: Record<DocumentTier, string> = {
   dissertation: "Thesis / Dissertation",
 };
 
+export const TIER_WORD_RANGES: Record<DocumentTier, string> = {
+  discussion: "≤ 500 words",
+  essay:      "500 – 1,500 words",
+  research:   "1,500 – 3,500 words",
+  proposal:   "3,500 – 6,000 words",
+  dissertation: "6,000 – 15,000 words",
+};
+
 export function getPaygPrice(tool: PaygTool, tier?: DocumentTier): number {
   const entry = PAYG_PRICES[tool];
   if (typeof entry === "number") return entry;

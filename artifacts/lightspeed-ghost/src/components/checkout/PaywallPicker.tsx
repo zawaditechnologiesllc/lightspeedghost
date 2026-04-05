@@ -4,7 +4,7 @@ import {
   ArrowRight, Lock,
 } from "lucide-react";
 import {
-  formatAmount, getPaygPrice, DOCUMENT_TIERS, TIER_LABELS,
+  formatAmount, getPaygPrice, DOCUMENT_TIERS, TIER_LABELS, TIER_WORD_RANGES,
   type PaygTool, type DocumentTier,
 } from "@/lib/pricing";
 
@@ -150,18 +150,22 @@ export function PaywallPicker({
                 <div className="grid grid-cols-1 gap-1.5">
                   {DOCUMENT_TIERS.map((t) => {
                     const price = getPaygPrice(tool, t);
+                    const active = selectedTier === t;
                     return (
                       <button
                         key={t}
                         onClick={() => setSelectedTier(t)}
-                        className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs border transition-all ${
-                          selectedTier === t
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs border transition-all ${
+                          active
                             ? "border-orange-500/40 bg-orange-900/15 text-white"
                             : "border-white/8 bg-white/[0.02] text-white/55 hover:border-white/15 hover:text-white/80"
                         }`}
                       >
-                        <span>{TIER_LABELS[t]}</span>
-                        <span className={`font-semibold ${selectedTier === t ? "text-orange-400" : "text-white/40"}`}>
+                        <span className="flex flex-col items-start gap-0.5">
+                          <span className={active ? "text-white font-medium" : ""}>{TIER_LABELS[t]}</span>
+                          <span className={`text-[10px] ${active ? "text-orange-300/60" : "text-white/25"}`}>{TIER_WORD_RANGES[t]}</span>
+                        </span>
+                        <span className={`font-semibold shrink-0 ml-2 ${active ? "text-orange-400" : "text-white/40"}`}>
                           {formatAmount(price)}
                         </span>
                       </button>

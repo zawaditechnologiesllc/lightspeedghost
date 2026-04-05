@@ -162,7 +162,7 @@ router.get("/admin/stats", async (req: Request, res: Response) => {
 router.get("/admin/users", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    const [docUsers, sessionUsers, creditRows, subRows, banRows] = await Promise.all([
+    const [docUsers, sessionUsers, creditRows, subRows, banRows, logUserRows] = await Promise.all([
       db.select({ userId: documentsTable.userId }).from(documentsTable)
         .where(sql`${documentsTable.userId} is not null`),
       db.select({ userId: studySessionsTable.userId }).from(studySessionsTable)
@@ -175,6 +175,9 @@ router.get("/admin/users", async (req: Request, res: Response) => {
       ).catch(() => ({ rows: [] })),
       pool.query<{ user_id: string; reason: string | null; banned_at: string }>(
         "SELECT user_id, reason, banned_at FROM user_bans"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ user_id: string }>(
+        "SELECT DISTINCT user_id FROM request_logs WHERE user_id IS NOT NULL"
       ).catch(() => ({ rows: [] })),
     ]);
 
@@ -193,6 +196,7 @@ router.get("/admin/users", async (req: Request, res: Response) => {
       ...Object.keys(userSessionCounts),
       ...Object.keys(creditMap),
       ...Object.keys(planMap),
+      ...logUserRows.rows.map((r) => r.user_id),
     ]);
 
     let supabaseUsers: Array<{ id: string; email: string; created_at: string; last_sign_in_at?: string }> = [];

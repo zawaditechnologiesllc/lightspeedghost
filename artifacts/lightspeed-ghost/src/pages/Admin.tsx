@@ -229,7 +229,6 @@ export default function Admin() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [hasEmailData, setHasEmailData] = useState(false);
-  const [supabaseError, setSupabaseError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
@@ -313,8 +312,8 @@ export default function Admin() {
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/admin/users", password) as { users: AdminUser[]; hasEmailData: boolean; supabaseError: string | null };
-      setUsers(data.users); setHasEmailData(data.hasEmailData); setSupabaseError(data.supabaseError ?? null);
+      const data = await adminFetch("/admin/users", password) as { users: AdminUser[]; hasEmailData: boolean };
+      setUsers(data.users); setHasEmailData(data.hasEmailData);
     } catch { setUsers([]); }
     finally { setLoading(false); }
   }, [password]);
@@ -829,16 +828,6 @@ export default function Admin() {
                   />
                 </div>
                 {deleteError && <ErrorBanner text={deleteError} />}
-                {!hasEmailData && (
-                  <div className="flex items-start gap-2 px-4 py-3 bg-amber-500/8 border border-amber-500/15 rounded-xl text-amber-400/80 text-xs">
-                    <AlertTriangle size={12} className="shrink-0 mt-px" />
-                    <span>
-                      {supabaseError
-                        ? <>Supabase sync issue &mdash; {supabaseError}</>
-                        : "Add SUPABASE_SERVICE_ROLE_KEY and SUPABASE_URL env vars on Render for email display, deletion, and banning."}
-                    </span>
-                  </div>
-                )}
                 <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
                   <div className="grid grid-cols-[1fr_72px_72px_80px_90px_70px_90px_64px] gap-2 px-4 py-2.5 border-b border-white/6">
                     {["User", "Docs", "Sessions", "Plan", "Credits", "Earned", "Joined", ""].map((h) => (
