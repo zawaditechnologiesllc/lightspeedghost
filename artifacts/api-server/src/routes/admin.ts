@@ -7,7 +7,7 @@ import type { Request, Response } from "express";
 const router = Router();
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+const SUPABASE_URL = (process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL)?.replace(/\/$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 function verifyAdminToken(req: Request): boolean {
@@ -196,16 +196,29 @@ router.get("/admin/users", async (req: Request, res: Response) => {
     ]);
 
     let supabaseUsers: Array<{ id: string; email: string; created_at: string; last_sign_in_at?: string }> = [];
-    if (SUPABASE_SERVICE_ROLE_KEY && SUPABASE_URL) {
-      const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=500`, {
-        headers: {
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-        },
-      });
-      if (r.ok) {
-        const data = await r.json() as { users?: typeof supabaseUsers };
-        supabaseUsers = data.users ?? [];
+    let supabaseError: string | null = null;
+    if (!SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_URL) {
+      supabaseError = "SUPABASE_SERVICE_ROLE_KEY or SUPABASE_URL not set on server";
+    } else {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=500`, {
+          headers: {
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+          },
+        });
+        if (r.ok) {
+          const data = await r.json() as { users?: typeof supabaseUsers };
+          supabaseUsers = data.users ?? [];
+          if (supabaseUsers.length === 0) {
+            supabaseError = "Supabase returned 0 users (check service role key and project URL)";
+          }
+        } else {
+          const errBody = await r.text().catch(() => "");
+          supabaseError = `Supabase API error ${r.status}: ${errBody.slice(0, 200)}`;
+        }
+      } catch (fetchErr) {
+        supabaseError = `Network error reaching Supabase: ${String(fetchErr).slice(0, 200)}`;
       }
     }
 
@@ -229,7 +242,7 @@ router.get("/admin/users", async (req: Request, res: Response) => {
       ? supabaseUsers.map((u) => enrich(u.id, u.email, u.created_at, u.last_sign_in_at ?? null))
       : Array.from(allUserIds).map((id) => enrich(id, null, null, null));
 
-    res.json({ users, hasEmailData: supabaseUsers.length > 0 });
+    res.json({ users, hasEmailData: supabaseUsers.length > 0, supabaseError });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }

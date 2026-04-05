@@ -229,6 +229,7 @@ export default function Admin() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [hasEmailData, setHasEmailData] = useState(false);
+  const [supabaseError, setSupabaseError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
@@ -312,8 +313,8 @@ export default function Admin() {
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/admin/users", password) as { users: AdminUser[]; hasEmailData: boolean };
-      setUsers(data.users); setHasEmailData(data.hasEmailData);
+      const data = await adminFetch("/admin/users", password) as { users: AdminUser[]; hasEmailData: boolean; supabaseError: string | null };
+      setUsers(data.users); setHasEmailData(data.hasEmailData); setSupabaseError(data.supabaseError ?? null);
     } catch { setUsers([]); }
     finally { setLoading(false); }
   }, [password]);
@@ -399,15 +400,20 @@ export default function Admin() {
   async function wakeBeforeLogin() {
     setPreLoginWaking(true);
     setPreLoginStatus("idle");
+    const HEALTH_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "") + "/api/healthz";
+    let ok = false;
     try {
-      const HEALTH_URL = (import.meta.env.VITE_API_URL ?? "") + "/api/healthz";
-      const res = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(60_000) });
-      setPreLoginStatus(res.ok ? "online" : "offline");
+      const res = await fetch(HEALTH_URL, {
+        mode: "cors",
+        credentials: "omit",
+        signal: AbortSignal.timeout(90_000),
+      });
+      ok = res.ok;
     } catch {
-      setPreLoginStatus("offline");
-    } finally {
-      setPreLoginWaking(false);
+      ok = false;
     }
+    setPreLoginStatus(ok ? "online" : "offline");
+    setPreLoginWaking(false);
   }
 
   async function wakeBackend() {
@@ -621,23 +627,31 @@ export default function Admin() {
                 </button>
               </form>
               <div className="mt-6 pt-5 border-t border-white/8 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/25">Backend offline?</span>
-                  <button
-                    type="button"
-                    onClick={wakeBeforeLogin}
-                    disabled={preLoginWaking}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 text-white/40 hover:text-emerald-400 hover:border-emerald-500/30 hover:bg-emerald-500/8 disabled:opacity-40 transition-all"
-                  >
-                    {preLoginWaking
-                      ? <><Loader2 size={11} className="animate-spin" /> Waking…</>
-                      : preLoginStatus === "online"
-                        ? <><Signal size={11} className="text-emerald-400" /><span className="text-emerald-400">Online</span></>
-                        : preLoginStatus === "offline"
-                          ? <><Signal size={11} className="text-red-400" /><span className="text-red-400">Offline</span></>
-                          : <><Signal size={11} /> Wake server</>
-                    }
-                  </button>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-white/25">Backend offline?</span>
+                    <button
+                      type="button"
+                      onClick={wakeBeforeLogin}
+                      disabled={preLoginWaking}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 text-white/40 hover:text-emerald-400 hover:border-emerald-500/30 hover:bg-emerald-500/8 disabled:opacity-40 transition-all"
+                    >
+                      {preLoginWaking
+                        ? <><Loader2 size={11} className="animate-spin" /> Waking…</>
+                        : preLoginStatus === "online"
+                          ? <><Signal size={11} className="text-emerald-400" /><span className="text-emerald-400">Online ✓</span></>
+                          : preLoginStatus === "offline"
+                            ? <><Signal size={11} className="text-red-400" /><span className="text-red-400">Unreachable — retry?</span></>
+                            : <><Signal size={11} /> Wake server</>
+                      }
+                    </button>
+                  </div>
+                  {preLoginWaking && (
+                    <p className="text-[10px] text-white/20 text-right">Cold start may take up to 60s&hellip;</p>
+                  )}
+                  {preLoginStatus === "offline" && !preLoginWaking && (
+                    <p className="text-[10px] text-red-400/50 text-right">Check VITE_API_URL on Vercel and ALLOWED_ORIGINS on Render.</p>
+                  )}
                 </div>
                 <div className="flex justify-center">
                   <Link href="/app"><span className="text-xs text-white/25 hover:text-white/50 transition-colors cursor-pointer">Back to app →</span></Link>
@@ -816,9 +830,13 @@ export default function Admin() {
                 </div>
                 {deleteError && <ErrorBanner text={deleteError} />}
                 {!hasEmailData && (
-                  <div className="flex items-center gap-2 px-4 py-3 bg-amber-500/8 border border-amber-500/15 rounded-xl text-amber-400/80 text-xs">
-                    <AlertTriangle size={12} className="shrink-0" />
-                    Add SUPABASE_SERVICE_ROLE_KEY env var for email display, deletion, and banning.
+                  <div className="flex items-start gap-2 px-4 py-3 bg-amber-500/8 border border-amber-500/15 rounded-xl text-amber-400/80 text-xs">
+                    <AlertTriangle size={12} className="shrink-0 mt-px" />
+                    <span>
+                      {supabaseError
+                        ? <>Supabase sync issue &mdash; {supabaseError}</>
+                        : "Add SUPABASE_SERVICE_ROLE_KEY and SUPABASE_URL env vars on Render for email display, deletion, and banning."}
+                    </span>
                   </div>
                 )}
                 <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
