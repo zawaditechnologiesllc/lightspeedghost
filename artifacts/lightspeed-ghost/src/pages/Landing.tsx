@@ -482,28 +482,47 @@ export default function Landing() {
                 ))}
               </ul>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-[#0b1120] p-5 sm:p-6 shadow-xl">
-              <div className="text-xs text-white/30 uppercase tracking-widest mb-4 font-medium">Generated output</div>
-              <div className="space-y-3">
-                <div className="h-5 w-3/4 bg-white/10 rounded" />
-                <div className="h-2.5 w-full bg-white/5 rounded" />
-                <div className="h-2.5 w-5/6 bg-white/5 rounded" />
-                <div className="h-2.5 w-4/5 bg-white/5 rounded" />
-                <div className="h-2.5 w-full bg-white/5 rounded" />
-                <div className="mt-4 h-2.5 w-2/3 bg-white/5 rounded" />
-                <div className="h-2.5 w-full bg-white/5 rounded" />
-                <div className="h-2.5 w-3/4 bg-white/5 rounded" />
-              </div>
-              <div className="mt-5 flex items-center gap-3">
-                <div className="flex-1 h-8 bg-blue-600/20 border border-blue-500/20 rounded-lg flex items-center px-3 gap-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                  <div className="h-2 w-16 bg-blue-400/40 rounded" />
+            <div className="rounded-2xl border border-white/10 bg-[#0b1120] p-5 sm:p-6 shadow-xl overflow-hidden">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-xs text-white/30 uppercase tracking-widest font-medium">Generated output</div>
+                <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Writing…
                 </div>
-                <div className="flex-1 h-8 bg-white/5 border border-white/10 rounded-lg" />
               </div>
-              <div className="mt-3 text-xs text-white/30 flex items-center gap-2">
-                <BarChart3 size={12} />
-                1,247 words · 6 citations · APA 7th
+
+              {/* Paper title */}
+              <p className="text-[11px] font-semibold text-white/90 leading-snug mb-3">
+                The Role of Neuroplasticity in Cognitive Recovery Following Traumatic Brain Injury
+              </p>
+
+              {/* Abstract label */}
+              <p className="text-[9px] text-blue-400 uppercase tracking-widest mb-1.5 font-semibold">Abstract</p>
+              <p className="text-[10px] text-white/50 leading-relaxed mb-4">
+                Traumatic brain injury (TBI) represents a leading cause of disability worldwide, affecting millions annually{" "}
+                <span className="text-blue-300/70">(Maas et al., 2022)</span>. Recent advances in neuroimaging have demonstrated
+                that targeted rehabilitation can stimulate cortical reorganisation, challenging prior assumptions about recovery ceilings{" "}
+                <span className="text-blue-300/70">(Chen & Park, 2023)</span>.
+              </p>
+
+              {/* References preview */}
+              <div className="border-t border-white/5 pt-3 space-y-1.5">
+                <p className="text-[9px] text-white/30 uppercase tracking-widest font-medium mb-2">References</p>
+                <p className="text-[10px] text-white/40 leading-relaxed">
+                  Maas, A. I. R., et al. (2022). Traumatic brain injury: integrated approaches.{" "}
+                  <span className="italic">Nature Reviews Neurology, 18</span>(4), 207–224.{" "}
+                  <span className="text-blue-400/60 text-[9px]">doi:10.1038/s41582-021-00568-6 ↗</span>
+                </p>
+                <p className="text-[10px] text-white/40 leading-relaxed">
+                  Chen, H., &amp; Park, J. (2023). Cortical plasticity post-TBI.{" "}
+                  <span className="italic">Brain, 146</span>(2), 489–503.{" "}
+                  <span className="text-blue-400/60 text-[9px]">doi:10.1093/brain/awac391 ↗</span>
+                </p>
+              </div>
+
+              <div className="mt-4 text-xs text-white/25 flex items-center gap-2 border-t border-white/5 pt-3">
+                <BarChart3 size={11} />
+                1,247 words · 6 citations · APA 7th edition
               </div>
             </div>
           </div>
