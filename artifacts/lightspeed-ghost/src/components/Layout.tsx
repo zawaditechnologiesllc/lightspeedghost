@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { ManageFundsModal } from "@/components/ManageFundsModal";
 import { PAYGMarketModal } from "@/components/PAYGMarketModal";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
 const navItems = [
   { path: "/app",        label: "Dashboard",           icon: LayoutDashboard },
@@ -222,7 +223,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sidebar-foreground text-xs font-medium truncate">{userEmail}</p>
-                  <p className="text-sidebar-foreground/40 text-[10px]">Student</p>
+                  <p className="text-sidebar-foreground/40 text-[10px]">User</p>
                 </div>
                 <button
                   onClick={handleSignOut}
@@ -280,6 +281,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
+
+        {/* Announcement banners */}
+        <AnnouncementBanner />
 
         {/* Page content — padded on mobile to avoid bottom nav overlap */}
         <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">

@@ -31,12 +31,29 @@ async function initAdminTables() {
       banned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       banned_by TEXT
     );
+    CREATE TABLE IF NOT EXISTS announcements (
+      id SERIAL PRIMARY KEY,
+      title TEXT,
+      message TEXT NOT NULL,
+      link TEXT,
+      link_text TEXT DEFAULT 'Learn more',
+      color TEXT NOT NULL DEFAULT 'blue',
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS tool_feedback (
+      id BIGSERIAL PRIMARY KEY,
+      user_id TEXT,
+      tool TEXT NOT NULL,
+      rating SMALLINT NOT NULL,
+      comment TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
     INSERT INTO system_settings (key, value) VALUES
       ('maintenance_mode',   'false'),
       ('allow_signups',      'true'),
       ('payg_enabled',       'true'),
-      ('announcement',       ''),
-      ('announcement_color', 'blue'),
       ('starter_paper',      '3'),
       ('starter_revision',   '1'),
       ('starter_humanizer',  '1'),
@@ -554,6 +571,135 @@ router.get("/admin/logs", async (req: Request, res: Response) => {
   }
 });
 
-// ── GET /admin/gateways (already in payments.ts — keep here for admin context) ─
+// ── GET /api/announcements (PUBLIC — no auth) ─────────────────────────────────
+
+router.get("/announcements", async (_req: Request, res: Response) => {
+  try {
+    const rows = await pool.query(
+      `SELECT id, title, message, link, link_text, color
+       FROM announcements WHERE is_active = true ORDER BY created_at DESC`
+    );
+    res.json({ announcements: rows.rows });
+  } catch {
+    res.json({ announcements: [] });
+  }
+});
+
+// ── GET /admin/announcements ─────────────────────────────────────────────────
+
+router.get("/admin/announcements", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const rows = await pool.query(
+      `SELECT id, title, message, link, link_text, color, is_active,
+              created_at::text as created_at, updated_at::text as updated_at
+       FROM announcements ORDER BY created_at DESC`
+    );
+    res.json({ announcements: rows.rows });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /admin/announcements ─────────────────────────────────────────────────
+
+router.post("/admin/announcements", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { title, message, link, link_text, color } = req.body as {
+    title?: string; message: string; link?: string; link_text?: string; color?: string;
+  };
+  if (!message?.trim()) { res.status(400).json({ error: "message is required" }); return; }
+  try {
+    const row = await pool.query(
+      `INSERT INTO announcements (title, message, link, link_text, color)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, title, message, link, link_text, color, is_active,
+                 created_at::text as created_at`,
+      [title ?? null, message.trim(), link ?? null, link_text ?? "Learn more", color ?? "blue"]
+    );
+    res.json({ announcement: row.rows[0] });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── PATCH /admin/announcements/:id ───────────────────────────────────────────
+
+router.patch("/admin/announcements/:id", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  const { title, message, link, link_text, color, is_active } = req.body as {
+    title?: string; message?: string; link?: string; link_text?: string; color?: string; is_active?: boolean;
+  };
+  try {
+    await pool.query(
+      `UPDATE announcements SET
+         title = COALESCE($1, title),
+         message = COALESCE($2, message),
+         link = COALESCE($3, link),
+         link_text = COALESCE($4, link_text),
+         color = COALESCE($5, color),
+         is_active = COALESCE($6, is_active),
+         updated_at = NOW()
+       WHERE id = $7`,
+      [title ?? null, message ?? null, link ?? null, link_text ?? null, color ?? null, is_active ?? null, id]
+    );
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── DELETE /admin/announcements/:id ──────────────────────────────────────────
+
+router.delete("/admin/announcements/:id", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM announcements WHERE id = $1", [id]);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /api/feedback (authenticated) ───────────────────────────────────────
+
+router.post("/feedback", async (req: Request, res: Response) => {
+  const userId = (req as Request & { userId?: string }).userId;
+  const { tool, rating, comment } = req.body as { tool: string; rating: 1 | -1; comment?: string };
+  if (!tool || (rating !== 1 && rating !== -1)) {
+    res.status(400).json({ error: "tool and rating (1 or -1) required" }); return;
+  }
+  try {
+    await pool.query(
+      "INSERT INTO tool_feedback (user_id, tool, rating, comment) VALUES ($1, $2, $3, $4)",
+      [userId ?? null, tool, rating, comment ?? null]
+    );
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/feedback ───────────────────────────────────────────────────────
+
+router.get("/admin/feedback", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const rows = await pool.query<{ tool: string; positive: string; negative: string; total: string; score: string }>(
+      `SELECT tool,
+              COUNT(*) FILTER (WHERE rating = 1) as positive,
+              COUNT(*) FILTER (WHERE rating = -1) as negative,
+              COUNT(*) as total,
+              ROUND(100.0 * COUNT(*) FILTER (WHERE rating = 1) / NULLIF(COUNT(*), 0)) as score
+       FROM tool_feedback WHERE created_at > NOW() - INTERVAL '30 days'
+       GROUP BY tool ORDER BY total DESC`
+    );
+    res.json({ feedback: rows.rows });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 export default router;

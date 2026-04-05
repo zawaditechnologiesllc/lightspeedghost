@@ -7,6 +7,7 @@ import {
   Coins, BarChart3, Crown, Zap, AlertTriangle, Plus, Minus,
   ArrowUp, ArrowDown, ReceiptText, UserX, UserCheck, Edit2, Check,
   Radio, ServerCrash, Database, Clock, CheckCheck, XCircle, Signal,
+  Megaphone, Link2, Eye, EyeOff, ThumbsUp, ThumbsDown,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
@@ -26,7 +27,26 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "documents" | "gateways" | "payments" | "credits" | "revenue" | "analytics" | "logs" | "settings";
+type Tab = "overview" | "users" | "documents" | "gateways" | "payments" | "credits" | "revenue" | "analytics" | "logs" | "announcements" | "settings";
+
+interface Announcement {
+  id: number;
+  title: string | null;
+  message: string;
+  link: string | null;
+  link_text: string;
+  color: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface FeedbackStat {
+  tool: string;
+  positive: string;
+  negative: string;
+  total: string;
+  score: string;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -129,8 +149,6 @@ interface SystemSettings {
   maintenance_mode: string;
   allow_signups: string;
   payg_enabled: string;
-  announcement: string;
-  announcement_color: string;
   starter_paper: string;
   starter_revision: string;
   starter_humanizer: string;
@@ -245,6 +263,12 @@ export default function Admin() {
   const [waking, setWaking] = useState(false);
   const [wakeResult, setWakeResult] = useState<{ ok: boolean; uptimeSeconds?: number } | null>(null);
   const [syncingSupabase, setSyncingSupabase] = useState(false);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [newAnnouncement, setNewAnnouncement] = useState({ title: "", message: "", link: "", link_text: "Learn more", color: "blue" });
+  const [announcementSaving, setAnnouncementSaving] = useState(false);
+  const [announcementError, setAnnouncementError] = useState("");
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [feedbackStats, setFeedbackStats] = useState<FeedbackStat[]>([]);
 
   const isAuthed = !!password;
 
@@ -354,6 +378,22 @@ export default function Admin() {
     finally { setLoading(false); }
   }, [password, logFilter]);
 
+  const loadAnnouncements = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch("/admin/announcements", password) as { announcements: Announcement[] };
+      setAnnouncements(data.announcements);
+    } catch { setAnnouncements([]); }
+    finally { setLoading(false); }
+  }, [password]);
+
+  const loadFeedback = useCallback(async () => {
+    try {
+      const data = await adminFetch("/admin/feedback", password) as { feedback: FeedbackStat[] };
+      setFeedbackStats(data.feedback);
+    } catch { setFeedbackStats([]); }
+  }, [password]);
+
   async function wakeBackend() {
     setWaking(true); setWakeResult(null);
     try {
@@ -377,8 +417,9 @@ export default function Admin() {
     if (activeTab === "credits") loadCredits();
     if (activeTab === "revenue") loadRevenue();
     if (activeTab === "settings") loadSettings();
-    if (activeTab === "analytics") loadTraffic();
+    if (activeTab === "analytics") { loadTraffic(); loadFeedback(); }
     if (activeTab === "logs") loadLogs();
+    if (activeTab === "announcements") loadAnnouncements();
   }, [isAuthed, activeTab]);
 
   useEffect(() => {
@@ -471,9 +512,52 @@ export default function Admin() {
     else if (activeTab === "credits") loadCredits();
     else if (activeTab === "revenue") loadRevenue();
     else if (activeTab === "settings") loadSettings();
-    else if (activeTab === "analytics") loadTraffic();
+    else if (activeTab === "analytics") { loadTraffic(); loadFeedback(); }
     else if (activeTab === "logs") loadLogs();
+    else if (activeTab === "announcements") loadAnnouncements();
     else loadStats();
+  }
+
+  async function createAnnouncement() {
+    if (!newAnnouncement.message.trim()) { setAnnouncementError("Message is required"); return; }
+    setAnnouncementSaving(true); setAnnouncementError("");
+    try {
+      await adminFetch("/admin/announcements", password, {
+        method: "POST", body: JSON.stringify(newAnnouncement),
+      });
+      setNewAnnouncement({ title: "", message: "", link: "", link_text: "Learn more", color: "blue" });
+      await loadAnnouncements();
+    } catch { setAnnouncementError("Failed to create announcement"); }
+    finally { setAnnouncementSaving(false); }
+  }
+
+  async function toggleAnnouncement(id: number, is_active: boolean) {
+    try {
+      await adminFetch(`/admin/announcements/${id}`, password, {
+        method: "PATCH", body: JSON.stringify({ is_active }),
+      });
+      setAnnouncements((prev) => prev.map((a) => a.id === id ? { ...a, is_active } : a));
+    } catch {}
+  }
+
+  async function deleteAnnouncement(id: number) {
+    try {
+      await adminFetch(`/admin/announcements/${id}`, password, { method: "DELETE" });
+      setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+    } catch {}
+  }
+
+  async function saveEditAnnouncement() {
+    if (!editingAnnouncement) return;
+    setAnnouncementSaving(true);
+    try {
+      await adminFetch(`/admin/announcements/${editingAnnouncement.id}`, password, {
+        method: "PATCH", body: JSON.stringify(editingAnnouncement),
+      });
+      setAnnouncements((prev) => prev.map((a) => a.id === editingAnnouncement.id ? editingAnnouncement : a));
+      setEditingAnnouncement(null);
+    } catch {}
+    finally { setAnnouncementSaving(false); }
   }
 
   // ── Auth Gate ───────────────────────────────────────────────────────────────
@@ -532,16 +616,17 @@ export default function Admin() {
 
   // ── Dashboard ───────────────────────────────────────────────────────────────
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "overview",   label: "Overview",   icon: Activity },
-    { id: "users",      label: "Students",   icon: Users },
-    { id: "documents",  label: "Documents",  icon: FileText },
-    { id: "analytics",  label: "Analytics",  icon: TrendingUp },
-    { id: "logs",       label: "Logs",       icon: Radio },
-    { id: "gateways",   label: "Gateways",   icon: Globe },
-    { id: "payments",   label: "Payments",   icon: CreditCard },
-    { id: "credits",    label: "Credits",    icon: Coins },
-    { id: "revenue",    label: "Revenue",    icon: BarChart3 },
-    { id: "settings",   label: "Settings",   icon: Settings },
+    { id: "overview",       label: "Overview",       icon: Activity },
+    { id: "users",          label: "Users",          icon: Users },
+    { id: "documents",      label: "Documents",      icon: FileText },
+    { id: "analytics",      label: "Analytics",      icon: TrendingUp },
+    { id: "logs",           label: "Logs",           icon: Radio },
+    { id: "gateways",       label: "Gateways",       icon: Globe },
+    { id: "payments",       label: "Payments",       icon: CreditCard },
+    { id: "credits",        label: "Credits",        icon: Coins },
+    { id: "revenue",        label: "Revenue",        icon: BarChart3 },
+    { id: "announcements",  label: "Announcements",  icon: Megaphone },
+    { id: "settings",       label: "Settings",       icon: Settings },
   ];
 
   const filteredUsers = userSearch
@@ -599,7 +684,7 @@ export default function Admin() {
               )}
               <button onClick={syncSupabase} disabled={syncingSupabase}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/8 transition-all disabled:opacity-40 border border-white/8"
-                title="Refresh student data from Supabase"
+                title="Refresh user data from Supabase"
               >
                 {syncingSupabase ? <Loader2 size={11} className="animate-spin" /> : <Database size={11} />}
                 <span className="hidden sm:inline">Sync</span>
@@ -624,11 +709,11 @@ export default function Admin() {
             {/* ── Overview ─────────────────────────────────────────────── */}
             {activeTab === "overview" && (
               <div className="space-y-6 max-w-5xl">
-                <SectionHeader title="Platform Overview" sub="Live metrics across all students and tools" />
+                <SectionHeader title="Platform Overview" sub="Live metrics across all users and tools" />
                 {!stats && loading ? <Spinner /> : stats ? (
                   <>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      <OverviewCard icon={<Users size={18} />} label="Students" value={stats.totalUsers} color="from-blue-600/20 to-blue-500/10" border="border-blue-500/15" iconColor="text-blue-400" />
+                      <OverviewCard icon={<Users size={18} />} label="Users" value={stats.totalUsers} color="from-blue-600/20 to-blue-500/10" border="border-blue-500/15" iconColor="text-blue-400" />
                       <OverviewCard icon={<FileText size={18} />} label="Documents" value={stats.totalDocuments} color="from-indigo-600/20 to-indigo-500/10" border="border-indigo-500/15" iconColor="text-indigo-400" />
                       <OverviewCard icon={<DollarSign size={18} />} label="Total Revenue" value={stats.totalRevenueCents} format="money" color="from-emerald-600/20 to-emerald-500/10" border="border-emerald-500/15" iconColor="text-emerald-400" />
                       <OverviewCard icon={<Crown size={18} />} label="Active Subs" value={stats.activeSubscriptions} color="from-amber-600/20 to-amber-500/10" border="border-amber-500/15" iconColor="text-amber-400" />
@@ -682,11 +767,11 @@ export default function Admin() {
               </div>
             )}
 
-            {/* ── Students ──────────────────────────────────────────────── */}
+            {/* ── Users ─────────────────────────────────────────────────── */}
             {activeTab === "users" && (
               <div className="space-y-5 max-w-6xl">
                 <div className="flex items-start justify-between flex-wrap gap-3">
-                  <SectionHeader title="Students" sub={`${users.length} ${hasEmailData ? "registered accounts" : "active users"}`} />
+                  <SectionHeader title="Users" sub={`${users.length} ${hasEmailData ? "registered accounts" : "known users"}`} />
                   <input
                     type="text" placeholder="Search by email or ID…" value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
@@ -702,12 +787,12 @@ export default function Admin() {
                 )}
                 <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
                   <div className="grid grid-cols-[1fr_72px_72px_80px_90px_70px_90px_64px] gap-2 px-4 py-2.5 border-b border-white/6">
-                    {["Student", "Docs", "Sessions", "Plan", "Credits", "Earned", "Joined", ""].map((h) => (
+                    {["User", "Docs", "Sessions", "Plan", "Credits", "Earned", "Joined", ""].map((h) => (
                       <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
                     ))}
                   </div>
                   {loading ? <div className="py-12 flex justify-center"><Loader2 size={16} className="animate-spin text-white/30" /></div>
-                    : filteredUsers.length === 0 ? <Empty text="No students found" />
+                    : filteredUsers.length === 0 ? <Empty text="No users found" />
                     : filteredUsers.map((user, i) => (
                     <div key={user.id} className={`grid grid-cols-[1fr_72px_72px_80px_90px_70px_90px_64px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < filteredUsers.length - 1 ? "border-b border-white/6" : ""} ${user.banned ? "opacity-50" : ""}`}>
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -757,10 +842,10 @@ export default function Admin() {
             {/* ── Documents ─────────────────────────────────────────────── */}
             {activeTab === "documents" && stats && (
               <div className="space-y-5 max-w-5xl">
-                <SectionHeader title="All Documents" sub="Most recent 10 documents across all students" />
+                <SectionHeader title="All Documents" sub="Most recent 10 documents across all users" />
                 <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
                   <div className="grid grid-cols-[1fr_90px_80px_130px_100px] gap-2 px-4 py-2.5 border-b border-white/6">
-                    {["Title", "Type", "Words", "Student", "Updated"].map((h) => (
+                    {["Title", "Type", "Words", "User", "Updated"].map((h) => (
                       <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
                     ))}
                   </div>
@@ -1118,6 +1203,36 @@ export default function Admin() {
                     </div>
                   </>
                 ) : <Empty text="Analytics unavailable" />}
+
+                {/* Quality feedback */}
+                {feedbackStats.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
+                      <ThumbsUp size={13} className="text-emerald-400" /> Tool Quality Ratings (30 days)
+                    </h3>
+                    <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                      <div className="grid grid-cols-[1fr_80px_80px_80px_90px] gap-2 px-4 py-2.5 border-b border-white/6">
+                        {["Tool", "👍 Positive", "👎 Negative", "Total", "Score"].map((h) => (
+                          <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
+                        ))}
+                      </div>
+                      {feedbackStats.map((f, i) => (
+                        <div key={f.tool} className={`grid grid-cols-[1fr_80px_80px_80px_90px] gap-2 items-center px-4 py-3 ${i < feedbackStats.length - 1 ? "border-b border-white/5" : ""}`}>
+                          <span className="text-sm font-medium text-white/75 capitalize">{f.tool.replace(/_/g, " ")}</span>
+                          <span className="text-sm font-semibold text-emerald-400 tabular-nums">{f.positive}</span>
+                          <span className="text-sm font-semibold text-red-400 tabular-nums">{f.negative}</span>
+                          <span className="text-sm text-white/40 tabular-nums">{f.total}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 bg-white/8 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-500/60 rounded-full" style={{ width: `${f.score ?? 0}%` }} />
+                            </div>
+                            <span className={`text-xs font-bold tabular-nums ${Number(f.score) >= 70 ? "text-emerald-400" : Number(f.score) >= 40 ? "text-amber-400" : "text-red-400"}`}>{f.score}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1206,6 +1321,143 @@ export default function Admin() {
               </div>
             )}
 
+            {/* ── Announcements ─────────────────────────────────────────── */}
+            {activeTab === "announcements" && (
+              <div className="space-y-6 max-w-3xl">
+                <SectionHeader title="Announcements" sub="Post messages that users see as a banner in their panel" />
+
+                {/* Create new */}
+                <div className="bg-white/[0.02] border border-white/8 rounded-xl p-5 space-y-4">
+                  <h3 className="text-sm font-semibold text-white/70">New Announcement</h3>
+                  {announcementError && <ErrorBanner text={announcementError} />}
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="block text-xs text-white/40 mb-1.5">Title <span className="text-white/20">(optional)</span></label>
+                      <input type="text" value={newAnnouncement.title}
+                        onChange={(e) => setNewAnnouncement((p) => ({ ...p, title: e.target.value }))}
+                        placeholder="e.g. Scheduled maintenance"
+                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-white/25 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-white/40 mb-1.5">Message <span className="text-red-400/60">*</span></label>
+                      <textarea rows={2} value={newAnnouncement.message}
+                        onChange={(e) => setNewAnnouncement((p) => ({ ...p, message: e.target.value }))}
+                        placeholder="e.g. We're upgrading servers on Sunday 2–4am UTC. Expect brief downtime."
+                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-white/25 transition-all resize-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-white/40 mb-1.5">Link URL <span className="text-white/20">(optional)</span></label>
+                        <input type="url" value={newAnnouncement.link}
+                          onChange={(e) => setNewAnnouncement((p) => ({ ...p, link: e.target.value }))}
+                          placeholder="https://..."
+                          className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-white/25 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-white/40 mb-1.5">Link Label</label>
+                        <input type="text" value={newAnnouncement.link_text}
+                          onChange={(e) => setNewAnnouncement((p) => ({ ...p, link_text: e.target.value }))}
+                          placeholder="Learn more"
+                          className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-white/25 transition-all"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-white/40 mb-1.5">Color</label>
+                      <div className="flex gap-2 flex-wrap">
+                        {[
+                          { key: "blue",    cls: "bg-blue-500/20 text-blue-300 ring-blue-500" },
+                          { key: "amber",   cls: "bg-amber-500/20 text-amber-300 ring-amber-500" },
+                          { key: "red",     cls: "bg-red-500/20 text-red-300 ring-red-500" },
+                          { key: "emerald", cls: "bg-emerald-500/20 text-emerald-300 ring-emerald-500" },
+                          { key: "violet",  cls: "bg-violet-500/20 text-violet-300 ring-violet-500" },
+                        ].map(({ key, cls }) => (
+                          <button key={key} onClick={() => setNewAnnouncement((p) => ({ ...p, color: key }))}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${cls} ${newAnnouncement.color === key ? "ring-2 ring-offset-1 ring-offset-[#04080f]" : "opacity-50 hover:opacity-80"}`}
+                          >{key}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Preview */}
+                  {newAnnouncement.message && (
+                    <AnnouncementPreview a={{ ...newAnnouncement, id: 0, is_active: true, created_at: "" } as Announcement} />
+                  )}
+                  <button onClick={createAnnouncement} disabled={announcementSaving || !newAnnouncement.message.trim()}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
+                  >
+                    {announcementSaving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                    Post Announcement
+                  </button>
+                </div>
+
+                {/* Existing announcements */}
+                <div>
+                  <h3 className="text-sm font-semibold text-white/70 mb-3">Posted Announcements</h3>
+                  {loading ? <Spinner /> : announcements.length === 0 ? <Empty text="No announcements yet — create your first one above" /> : (
+                    <div className="space-y-3">
+                      {announcements.map((a) => (
+                        <div key={a.id} className={`bg-white/[0.02] border rounded-xl p-4 transition-all ${a.is_active ? "border-white/10" : "border-white/5 opacity-50"}`}>
+                          {editingAnnouncement?.id === a.id ? (
+                            <div className="space-y-3">
+                              <input type="text" value={editingAnnouncement.title ?? ""}
+                                onChange={(e) => setEditingAnnouncement((p) => p ? { ...p, title: e.target.value } : p)}
+                                placeholder="Title"
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/25 transition-all"
+                              />
+                              <textarea rows={2} value={editingAnnouncement.message}
+                                onChange={(e) => setEditingAnnouncement((p) => p ? { ...p, message: e.target.value } : p)}
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/25 transition-all resize-none"
+                              />
+                              <input type="url" value={editingAnnouncement.link ?? ""}
+                                onChange={(e) => setEditingAnnouncement((p) => p ? { ...p, link: e.target.value } : p)}
+                                placeholder="Link URL"
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/25 transition-all"
+                              />
+                              <div className="flex gap-2">
+                                <button onClick={saveEditAnnouncement} disabled={announcementSaving}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                                >
+                                  {announcementSaving ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />} Save
+                                </button>
+                                <button onClick={() => setEditingAnnouncement(null)}
+                                  className="px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/70 hover:bg-white/8 transition-all"
+                                >Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <AnnouncementPreview a={a} />
+                              <div className="flex items-center gap-2 mt-3">
+                                <span className="text-[10px] text-white/25">{new Date(a.created_at).toLocaleString()}</span>
+                                <div className="flex-1" />
+                                <button onClick={() => toggleAnnouncement(a.id, !a.is_active)} title={a.is_active ? "Deactivate" : "Activate"}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/70 hover:bg-white/8 transition-all">
+                                  {a.is_active ? <EyeOff size={11} /> : <Eye size={11} />}
+                                  {a.is_active ? "Hide" : "Show"}
+                                </button>
+                                <button onClick={() => setEditingAnnouncement(a)}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
+                                  <Edit2 size={11} /> Edit
+                                </button>
+                                <button onClick={() => deleteAnnouncement(a.id)}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                                  <Trash2 size={11} /> Delete
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* ── Settings ──────────────────────────────────────────────── */}
             {activeTab === "settings" && (
               <div className="space-y-6 max-w-2xl">
@@ -1225,39 +1477,6 @@ export default function Admin() {
                       <SettingsToggle label="Maintenance Mode" sub="Block all user access while you deploy" value={settings.maintenance_mode === "true"} onChange={(v) => { setSettings((s) => s ? { ...s, maintenance_mode: String(v) } : s); setSettingsDirty(true); }} />
                       <SettingsToggle label="Allow New Signups" sub="Let new users create accounts" value={settings.allow_signups === "true"} onChange={(v) => { setSettings((s) => s ? { ...s, allow_signups: String(v) } : s); setSettingsDirty(true); }} />
                       <SettingsToggle label="PAYG Enabled" sub="Allow pay-per-use purchases (all tools)" value={settings.payg_enabled === "true"} onChange={(v) => { setSettings((s) => s ? { ...s, payg_enabled: String(v) } : s); setSettingsDirty(true); }} />
-                    </SettingsCard>
-
-                    {/* Announcement */}
-                    <SettingsCard title="Announcement Banner">
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-xs text-white/40 mb-1.5">Message <span className="text-white/20">(leave empty to hide)</span></label>
-                          <input type="text" value={settings.announcement} placeholder="e.g. We're upgrading servers on Sunday 2–4am UTC"
-                            onChange={(e) => { setSettings((s) => s ? { ...s, announcement: e.target.value } : s); setSettingsDirty(true); }}
-                            className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-white/25 transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-white/40 mb-1.5">Color</label>
-                          <div className="flex gap-2">
-                            {["blue", "amber", "red", "emerald"].map((c) => (
-                              <button key={c} onClick={() => { setSettings((s) => s ? { ...s, announcement_color: c } : s); setSettingsDirty(true); }}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${settings.announcement_color === c ? "ring-2 ring-white/30" : "opacity-50"} ${c === "blue" ? "bg-blue-500/20 text-blue-300" : c === "amber" ? "bg-amber-500/20 text-amber-300" : c === "red" ? "bg-red-500/20 text-red-300" : "bg-emerald-500/20 text-emerald-300"}`}
-                              >{c}</button>
-                            ))}
-                          </div>
-                        </div>
-                        {settings.announcement && (
-                          <div className={`rounded-xl px-4 py-3 text-sm font-medium ${
-                            settings.announcement_color === "blue" ? "bg-blue-500/10 border border-blue-500/20 text-blue-300"
-                            : settings.announcement_color === "amber" ? "bg-amber-500/10 border border-amber-500/20 text-amber-300"
-                            : settings.announcement_color === "red" ? "bg-red-500/10 border border-red-500/20 text-red-300"
-                            : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
-                          }`}>
-                            Preview: {settings.announcement}
-                          </div>
-                        )}
-                      </div>
                     </SettingsCard>
 
                     {/* Starter limits */}
@@ -1351,6 +1570,32 @@ export default function Admin() {
 }
 
 // ── Helper components ─────────────────────────────────────────────────────────
+
+function AnnouncementPreview({ a }: { a: { title: string | null; message: string; link: string | null; link_text: string; color: string } }) {
+  const colorMap: Record<string, string> = {
+    blue:    "bg-blue-500/10 border-blue-500/20 text-blue-200",
+    amber:   "bg-amber-500/10 border-amber-500/20 text-amber-200",
+    red:     "bg-red-500/10 border-red-500/20 text-red-200",
+    emerald: "bg-emerald-500/10 border-emerald-500/20 text-emerald-200",
+    violet:  "bg-violet-500/10 border-violet-500/20 text-violet-200",
+  };
+  const cls = colorMap[a.color] ?? colorMap.blue;
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 border rounded-xl text-sm ${cls}`}>
+      <Megaphone size={14} className="shrink-0" />
+      <span className="flex-1 min-w-0">
+        {a.title && <span className="font-semibold mr-2">{a.title}</span>}
+        {a.message}
+      </span>
+      {a.link && (
+        <a href={a.link} target="_blank" rel="noopener noreferrer"
+          className="flex items-center gap-1 shrink-0 underline underline-offset-2 hover:opacity-80 transition-opacity text-xs font-semibold">
+          {a.link_text} <Link2 size={10} />
+        </a>
+      )}
+    </div>
+  );
+}
 
 function SectionHeader({ title, sub }: { title: string; sub: string }) {
   return (
