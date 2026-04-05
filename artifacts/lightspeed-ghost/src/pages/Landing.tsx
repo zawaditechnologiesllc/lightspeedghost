@@ -394,7 +394,7 @@ export default function Landing() {
         <div className="relative max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium mb-6 sm:mb-8">
             <Zap size={11} className="text-blue-400" />
-            6 AI tools. One platform. Actually works.
+            7 AI tools. One platform. Actually works.
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-5 sm:mb-6">

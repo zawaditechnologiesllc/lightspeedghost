@@ -25,7 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { ManageFundsModal } from "@/components/ManageFundsModal";
 import { PAYGMarketModal } from "@/components/PAYGMarketModal";
-import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { AnnouncementBanner, NotificationBell } from "@/components/AnnouncementBanner";
 
 const navItems = [
   { path: "/app",        label: "Dashboard",           icon: LayoutDashboard },
@@ -273,9 +273,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Wallet size={13} />
               <span className="hidden sm:inline">Funds</span>
             </button>
+            <NotificationBell />
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground ml-1"
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground"
             >
               {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
             </button>
