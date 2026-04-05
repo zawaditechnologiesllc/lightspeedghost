@@ -9,7 +9,7 @@ import {
   GraduationCap,
   Files,
   RotateCcw,
-  History,
+  Wand2,
   Moon,
   Sun,
   LogOut,
@@ -23,22 +23,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { path: "/app",       label: "Dashboard",      icon: LayoutDashboard },
-  { path: "/write",     label: "Write Paper",     icon: PenLine },
-  { path: "/outline",   label: "Outline",         icon: BookOpen },
-  { path: "/revision",  label: "Revision",        icon: Files },
-  { path: "/plagiarism",label: "AI & Plagiarism", icon: ShieldCheck },
-  { path: "/stem",      label: "STEM Solver",     icon: FlaskConical },
-  { path: "/study",     label: "AI Study Assistant", icon: GraduationCap },
-  { path: "/documents", label: "History",          icon: Files },
+  { path: "/app",        label: "Dashboard",           icon: LayoutDashboard },
+  { path: "/write",      label: "Write Paper",          icon: PenLine },
+  { path: "/outline",    label: "Outline",              icon: BookOpen },
+  { path: "/revision",   label: "Revision",             icon: Files },
+  { path: "/humanizer",  label: "LightSpeed Humanizer", icon: Wand2 },
+  { path: "/plagiarism", label: "AI & Plagiarism",      icon: ShieldCheck },
+  { path: "/stem",       label: "STEM Solver",          icon: FlaskConical },
+  { path: "/study",      label: "AI Study Assistant",   icon: GraduationCap },
+  { path: "/documents",  label: "History",              icon: Files },
 ];
 
 const mobileBottomNav = [
-  { path: "/write",      label: "Write",   icon: PenLine },
-  { path: "/revision",   label: "Revise",  icon: RotateCcw },
-  { path: "/plagiarism", label: "Check",   icon: ShieldCheck },
-  { path: "/stem",       label: "STEM",    icon: FlaskConical },
-  { path: "/study",      label: "Study",   icon: GraduationCap },
+  { path: "/write",      label: "Write",    icon: PenLine },
+  { path: "/humanizer",  label: "Humanize", icon: Wand2 },
+  { path: "/revision",   label: "Revise",   icon: RotateCcw },
+  { path: "/plagiarism", label: "Check",    icon: ShieldCheck },
+  { path: "/study",      label: "Study",    icon: GraduationCap },
 ];
 
 function NavItem({

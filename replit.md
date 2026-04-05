@@ -32,14 +32,15 @@ Full-stack AI academic writing platform at lightspeedghost.com. Features paper w
 1. **Write Paper** `/write` — AI paper generation with citations & bibliography (APA/MLA/Chicago/Harvard/IEEE)
 2. **Outline Generator** `/outline` — Structured paper outline generation
 3. **Revision Panel** `/revision` — Paper revision with tracked changes, grade estimates
-4. **AI & Plagiarism Checker** `/plagiarism` — AI detection score, plagiarism sources, humanize button
-5. **STEM Solver** `/stem` — Step-by-step solutions with Recharts graph visualization for 7 subject areas
-6. **AI Study Assistant** `/study` — Chat-based tutor with session history, image/screenshot upload, floating chat bubble
-7. **Documents** `/documents` — All saved documents with search and filter
+4. **LightSpeed Humanizer** `/humanizer` — AI bypass tool: detect AI score then rewrite text with Claude Sonnet 4.5 SSE streaming; 3-step progress, tone selector, before/after tabs, file upload
+5. **AI & Plagiarism Checker** `/plagiarism` — AI detection score, plagiarism sources
+6. **STEM Solver** `/stem` — Step-by-step solutions with Recharts graph visualization for 7 subject areas
+7. **AI Study Assistant** `/study` — Chat-based tutor with session history, image/screenshot upload, floating chat bubble
+8. **Documents** `/documents` — All saved documents with search and filter
 
 ## Mobile Responsiveness
 
-All 8 pages fully optimized for mobile (390px+):
+All 9 pages fully optimized for mobile (390px+):
 - **Layout**: Mobile bottom nav bar (Home/Write/STEM/Study/More), hamburger sidebar, `pb-16 lg:pb-0` main area
 - **WritePaper**: Generating phase sidebar stacks vertically on mobile (`flex-col md:flex-row`), stats header scrollable, tab bar overflow-x-auto, stats grid `grid-cols-1 sm:grid-cols-3`, reduced padding on mobile
 - **Revision**: Revising sidebar collapses to top strip on mobile, all content paddings responsive, stats grid responsive

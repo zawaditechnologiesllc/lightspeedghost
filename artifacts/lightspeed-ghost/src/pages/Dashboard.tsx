@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import {
   PenLine, BookOpen, Files, ShieldCheck, FlaskConical,
-  GraduationCap, TrendingUp, Clock, ArrowRight, Sparkles, Zap,
+  GraduationCap, TrendingUp, Clock, ArrowRight, Sparkles, Zap, Wand2,
 } from "lucide-react";
 import { useGetDocumentStats } from "@workspace/api-client-react";
 
@@ -37,6 +37,14 @@ const quickActions = [
     icon: ShieldCheck,
     gradient: "from-sky-400 to-blue-500",
     glow: "group-hover:shadow-sky-500/20",
+  },
+  {
+    path: "/humanizer",
+    label: "LightSpeed Humanizer",
+    desc: "Make AI text sound genuinely human",
+    icon: Wand2,
+    gradient: "from-purple-500 to-indigo-600",
+    glow: "group-hover:shadow-purple-500/20",
   },
   {
     path: "/revision",

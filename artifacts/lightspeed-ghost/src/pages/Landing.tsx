@@ -7,7 +7,7 @@ import {
   Zap, ArrowRight, CheckCircle, Star, Menu, X,
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, ChevronUp, Sparkles, Upload, BarChart3,
-  Users, Award, Clock, Quote, MapPin, Mail, Twitter, Linkedin,
+  Users, Award, Clock, Quote, MapPin, Mail, Twitter, Linkedin, Wand2,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
@@ -96,7 +96,7 @@ const testimonials = [
 const faqs = [
   {
     q: "What is Light Speed Ghost?",
-    a: "Light Speed Ghost is an AI-powered academic writing platform built for students. It includes six tools: an AI paper writer with real citations, an outline builder, a paper revision tool, an AI and plagiarism checker with humanization, a STEM step-by-step solver, and an AI study assistant with session memory.",
+    a: "Light Speed Ghost is an AI-powered academic writing platform built for students. It includes seven tools: an AI paper writer with real citations, an outline builder, a paper revision tool, LightSpeed Humanizer for bypassing AI detectors, an AI and plagiarism checker, a STEM step-by-step solver, and an AI study assistant with session memory.",
   },
   {
     q: "Is this actually safe to use? Will my university know?",
@@ -145,7 +145,7 @@ const pricingPlans = [
       "5 outline generations / month",
       "7-day document history",
     ],
-    locked: ["Ghost Writer humanizer", "Priority AI processing", "Citation export (BibTeX / RIS)"],
+    locked: ["LightSpeed Humanizer", "Priority AI processing", "Citation export (BibTeX / RIS)"],
     cta: "Start for $1.50",
     ctaLink: "/auth",
     highlight: false,
@@ -164,7 +164,7 @@ const pricingPlans = [
       "30 STEM solver problems / day",
       "Unlimited study sessions",
       "Unlimited plagiarism + AI detection",
-      "Ghost Writer humanizer — 50 jobs / month",
+      "LightSpeed Humanizer — 50 jobs / month",
       "90-day history + BibTeX / RIS / Zotero export",
       "Priority AI processing",
     ],
@@ -219,7 +219,7 @@ const paygWritingTools = [
     ],
   },
   {
-    tool: "Ghost Writer (Humanizer)", toolId: "humanizer" as PaygTool, color: "indigo", Icon: Sparkles,
+    tool: "LightSpeed Humanizer", toolId: "humanizer" as PaygTool, color: "indigo", Icon: Sparkles,
     tiers: [
       { label: "Discussion",         words: "≤ 500 words",          price: "$0.99",  tier: "discussion" as DocumentTier },
       { label: "Essay",              words: "500 – 1,500 words",    price: "$1.99",  tier: "essay" as DocumentTier },
@@ -271,8 +271,8 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-const previewNavItems = ["Dashboard", "Write Paper", "Outline", "Revision", "AI & Plagiarism", "STEM Solver", "Study Assistant"];
-const previewUrls = ["write", "outline", "revision", "plagiarism", "stem", "study"];
+const previewNavItems = ["Dashboard", "Write Paper", "Outline", "Revision", "Humanizer", "AI & Plagiarism", "STEM Solver", "Study Assistant"];
+const previewUrls = ["write", "outline", "revision", "humanizer", "plagiarism", "stem", "study"];
 
 export default function Landing() {
   const scrolled = useScrolled();
@@ -294,7 +294,7 @@ export default function Landing() {
     const id = setInterval(() => {
       setFading(true);
       setTimeout(() => {
-        setPreviewIdx(i => (i + 1) % 6);
+        setPreviewIdx(i => (i + 1) % 7);
         setFading(false);
       }, 350);
     }, 3500);
@@ -555,6 +555,38 @@ export default function Landing() {
                 )}
 
                 {previewIdx === 3 && (
+                  /* LightSpeed Humanizer */
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Wand2 size={13} className="text-purple-400" />
+                      <span className="text-[11px] font-semibold text-white/80">LightSpeed Humanizer</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9px] text-white/40">AI score before</span>
+                      <span className="text-[9px] font-mono font-bold text-red-400">73%</span>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-3">
+                      <div className="h-full bg-red-500 rounded-full" style={{ width: "73%" }} />
+                    </div>
+                    <div className="p-2 bg-purple-600/10 border border-purple-500/15 rounded-lg text-[9px] text-purple-300/70 leading-relaxed italic">
+                      "The findings demonstrate…" →{" "}
+                      <span className="text-emerald-300 not-italic font-medium">"What emerges from this data is…"</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9px] text-white/40">AI score after</span>
+                      <span className="text-[9px] font-mono font-bold text-emerald-400">8%</span>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: "8%" }} />
+                    </div>
+                    <div className="mt-1.5 text-[9px] text-white/30 flex items-center gap-1.5">
+                      <CheckCircle size={10} className="text-emerald-400" />
+                      Passes Turnitin · GPTZero · Originality.ai
+                    </div>
+                  </div>
+                )}
+
+                {previewIdx === 4 && (
                   /* AI & Plagiarism */
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 mb-3">
@@ -584,7 +616,7 @@ export default function Landing() {
                   </div>
                 )}
 
-                {previewIdx === 4 && (
+                {previewIdx === 5 && (
                   /* STEM Solver */
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2 mb-3">
@@ -610,7 +642,7 @@ export default function Landing() {
                   </div>
                 )}
 
-                {previewIdx === 5 && (
+                {previewIdx === 6 && (
                   /* Study Assistant */
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 mb-3">
@@ -645,7 +677,7 @@ export default function Landing() {
 
           {/* Progress dots */}
           <div className="flex items-center justify-center gap-2 mt-5 relative z-20">
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 7 }).map((_, i) => (
               <button
                 key={i}
                 onClick={() => { setFading(true); setTimeout(() => { setPreviewIdx(i); setFading(false); }, 200); }}
@@ -683,7 +715,7 @@ export default function Landing() {
           <div className="max-w-2xl mb-10 sm:mb-16">
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">What it does</p>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-4 sm:mb-5">
-              Six tools.<br />One subscription.
+              Seven tools.<br />One subscription.
             </h2>
             <p className="text-white/50 text-base sm:text-lg">
               Each tool is built for a specific academic pain point. They work independently or in sequence — run your paper through the writer, then straight into the plagiarism checker.
@@ -736,7 +768,7 @@ export default function Landing() {
                 {[
                   { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with a student email. Starter plan at $1.50/month or Pro at $14.99/month. Cancel any time." },
                   { num: "02", title: "Upload your brief or describe your task", body: "Drag in your assignment PDF, paste the rubric, or just type what you need. The platform detects citation style, length, and subject automatically." },
-                  { num: "03", title: "Generate, revise, check, and submit", body: "Run any tool in sequence — paper → plagiarism check → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
+                  { num: "03", title: "Generate, revise, humanize, and submit", body: "Run any tool in sequence — paper → plagiarism check → LightSpeed Humanizer → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
                 ].map(({ num, title, body }) => (
                   <div key={num} className="flex gap-4">
                     <div className="text-3xl font-bold text-white/6 leading-none shrink-0 w-10 select-none">{num}</div>
@@ -1194,6 +1226,7 @@ export default function Landing() {
                   { label: "Paper Writer", href: "/auth" },
                   { label: "Outline Builder", href: "/auth" },
                   { label: "Revision", href: "/auth" },
+                  { label: "LightSpeed Humanizer", href: "/auth" },
                   { label: "AI & Plagiarism", href: "/auth" },
                   { label: "STEM Solver", href: "/auth" },
                   { label: "Study Assistant", href: "/auth" },

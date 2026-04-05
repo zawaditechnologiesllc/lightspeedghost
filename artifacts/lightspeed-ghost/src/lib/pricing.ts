@@ -89,7 +89,7 @@ export function getPaygLabel(tool: PaygTool, tier?: DocumentTier): string {
   const toolLabels: Record<PaygTool, string> = {
     paper: "Paper Generation",
     revision: "Paper Revision",
-    humanizer: "Ghost Writer Humanize",
+    humanizer: "LightSpeed Humanizer",
     stem: "STEM Problem",
     study: "Study Day Pass",
     plagiarism: "Plagiarism Check",

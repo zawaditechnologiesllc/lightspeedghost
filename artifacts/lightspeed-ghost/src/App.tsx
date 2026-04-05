@@ -12,6 +12,7 @@ import Dashboard from "@/pages/Dashboard";
 import WritePaper from "@/pages/WritePaper";
 import Outline from "@/pages/Outline";
 import Revision from "@/pages/Revision";
+import Humanizer from "@/pages/Humanizer";
 import Plagiarism from "@/pages/Plagiarism";
 import StemSolver from "@/pages/StemSolver";
 import StudyAssistant from "@/pages/StudyAssistant";
@@ -66,6 +67,7 @@ function AppRoutes() {
           <Route path="/write" component={WritePaper} />
           <Route path="/outline" component={Outline} />
           <Route path="/revision" component={Revision} />
+          <Route path="/humanizer" component={Humanizer} />
           <Route path="/plagiarism" component={Plagiarism} />
           <Route path="/stem" component={StemSolver} />
           <Route path="/study" component={StudyAssistant} />
