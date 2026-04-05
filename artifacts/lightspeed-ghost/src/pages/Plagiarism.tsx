@@ -486,18 +486,6 @@ export default function PlagiarismChecker() {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
 
-      {/* ── Page header ──────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-5 text-center">
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <Zap size={16} className="text-primary" />
-          <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
-        </div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">AI & Plagiarism Checker</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Detect AI content · Plagiarism risk · Code similarity · Download report · Smart revision routing
-        </p>
-      </div>
-
       {/* ── Tab switcher ─────────────────────────────────────────────────── */}
       <div className="shrink-0 border-b border-border bg-muted/10 px-6 py-2 flex gap-1 justify-center">
         {([
@@ -547,10 +535,23 @@ export default function PlagiarismChecker() {
             )}>
               <div className={cn("space-y-4", textPhase === "results" && "px-5 py-5")}>
                 {textPhase !== "results" && (
-                  <div className="space-y-1">
-                    <h2 className="font-bold text-base">Upload or paste your text</h2>
-                    <p className="text-xs text-muted-foreground">Works with papers, essays, reports, assignments, code comments, or any written content</p>
-                  </div>
+                  <>
+                    {/* Page header */}
+                    <div className="text-center space-y-1.5 pt-2 pb-1">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Zap size={16} className="text-primary" />
+                        <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+                      </div>
+                      <h1 className="text-xl sm:text-2xl font-bold tracking-tight">AI & Plagiarism Checker</h1>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Detect AI content · Plagiarism risk · Code similarity · Download report
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <h2 className="font-bold text-base">Upload or paste your text</h2>
+                      <p className="text-xs text-muted-foreground">Works with papers, essays, reports, assignments, code comments, or any written content</p>
+                    </div>
+                  </>
                 )}
 
                 <FileUploadZone

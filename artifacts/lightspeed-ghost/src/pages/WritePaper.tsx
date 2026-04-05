@@ -673,21 +673,21 @@ export default function WritePaper() {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-5 text-center">
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <Zap size={16} className="text-primary" />
-          <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
-        </div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Write a Paper</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Real verified citations · Live generation · Grade &amp; plagiarism estimates
-        </p>
-      </div>
-
       {/* Scrollable form */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-6">
+
+          {/* Page header */}
+          <div className="text-center space-y-1.5 pt-2">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Zap size={16} className="text-primary" />
+              <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Write a Paper</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Real verified citations · Live generation · Grade &amp; plagiarism estimates
+            </p>
+          </div>
 
         {fromPlagiarism && (
           <div className="flex items-center justify-between gap-3 px-4 py-3 bg-primary/10 border border-primary/30 rounded-xl text-sm text-primary">

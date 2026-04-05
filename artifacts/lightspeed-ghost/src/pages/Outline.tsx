@@ -152,18 +152,6 @@ export default function Outline() {
     <>
     <div className="h-full flex flex-col overflow-hidden bg-background">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-5 text-center">
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <Zap size={16} className="text-primary" />
-          <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
-        </div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Outline Generator</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Structure your paper before writing — 0% AI · &lt;8% plagiarism · one click to full paper
-        </p>
-      </div>
-
       {/* ── Body ───────────────────────────────────────────────────────────── */}
       {isLoading ? (
         <FullscreenLoader
@@ -193,6 +181,20 @@ export default function Outline() {
             : "max-w-xl mx-auto w-full"
         )}>
           <div className={cn("px-5 py-5 space-y-5", result && "flex-1 overflow-y-auto")}>
+
+            {/* Page header — only shown before outline is generated */}
+            {!result && (
+              <div className="text-center space-y-1.5 pt-2 pb-1">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <Zap size={16} className="text-primary" />
+                  <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Outline Generator</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Structure your paper before writing — 0% AI · &lt;8% plagiarism · one click to full paper
+                </p>
+              </div>
+            )}
 
             {error && (
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">

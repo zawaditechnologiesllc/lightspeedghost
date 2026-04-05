@@ -244,23 +244,23 @@ export default function Humanizer() {
     return (
       <div className="flex flex-col h-full overflow-hidden">
 
-        {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <div className="shrink-0 border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-5 text-center">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <Zap size={16} className="text-primary" />
-            <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">LightSpeed Humanizer</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Paste AI-written text — we detect flagged patterns and rewrite it to sound genuinely human.
-          </p>
-        </div>
-
         {/* Scrollable area — full width so the scrollbar sits at the far right edge */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto w-full">
 
           <div className="px-4 sm:px-6 py-5 space-y-5">
+
+            {/* Page header */}
+            <div className="text-center space-y-1.5 pt-2 pb-1">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Zap size={16} className="text-primary" />
+                <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Humanizer</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Paste AI-written text — we detect flagged patterns and rewrite it to sound genuinely human.
+              </p>
+            </div>
             {/* Text input */}
             <div>
               <label className="block text-xs font-semibold text-foreground mb-2">

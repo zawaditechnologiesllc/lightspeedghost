@@ -32,7 +32,7 @@ const navItems = [
   { path: "/write",      label: "Write Paper",          icon: PenLine },
   { path: "/outline",    label: "Outline",              icon: BookOpen },
   { path: "/revision",   label: "Revision",             icon: Files },
-  { path: "/humanizer",  label: "LightSpeed Humanizer", icon: Wand2 },
+  { path: "/humanizer",  label: "Humanizer", icon: Wand2 },
   { path: "/plagiarism", label: "AI & Plagiarism",      icon: ShieldCheck },
   { path: "/stem",       label: "STEM Solver",          icon: FlaskConical },
   { path: "/study",      label: "AI Study Assistant",   icon: GraduationCap },
