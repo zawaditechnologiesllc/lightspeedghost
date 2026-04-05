@@ -244,7 +244,6 @@ const paygFlatTools = [
     tool: "Plagiarism + AI Check", Icon: ShieldCheck, color: "emerald",
     price: "$0.99", unit: "per submission",
     note: "Similarity detection across 99B+ academic sources. Includes AI-generated content scoring.",
-    callout: true,
   },
   {
     tool: "Outline Generator", Icon: BookOpen, color: "orange",

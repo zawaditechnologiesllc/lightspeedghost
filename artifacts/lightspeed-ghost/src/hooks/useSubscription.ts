@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
@@ -45,6 +46,7 @@ const PLAN_LIMITS: Record<string, Partial<Record<keyof UsageData, number | null>
 };
 
 export function useSubscription() {
+  const { session, loading: authLoading } = useAuth();
   const [plan, setPlan] = useState<PlanTier>(null);
   const [usage, setUsage] = useState<Partial<UsageData>>({});
   const [loading, setLoading] = useState(true);
@@ -52,23 +54,35 @@ export function useSubscription() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
+      const token = session?.access_token;
+      const headers: HeadersInit = token
+        ? { Authorization: `Bearer ${token}` }
+        : {};
       const res = await fetch(`${API_BASE}/payments/usage`, {
         credentials: "include",
+        headers,
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setPlan("starter");
+        setUsage({});
+        return;
+      }
       const data = await res.json() as { usage: Partial<UsageData>; plan: string };
       setUsage(data.usage ?? {});
       setPlan((data.plan as PlanTier) ?? "starter");
     } catch {
       setPlan("starter");
+      setUsage({});
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [session?.access_token]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (!authLoading) {
+      refresh();
+    }
+  }, [refresh, authLoading]);
 
   function getLimit(tool: keyof UsageData): number | null {
     if (!plan || plan === "payg") return 0;
