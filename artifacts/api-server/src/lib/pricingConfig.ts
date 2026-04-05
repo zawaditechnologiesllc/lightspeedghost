@@ -1,0 +1,94 @@
+export type PlanId = "pro_monthly" | "pro_annual" | "campus_annual";
+export type PaygTool = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline";
+export type DocumentTier = "discussion" | "essay" | "research" | "proposal" | "dissertation";
+
+export interface PlanPrice {
+  amountCents: number;
+  currency: string;
+  interval: "month" | "year";
+  label: string;
+  description: string;
+}
+
+export const SUBSCRIPTION_PLANS: Record<PlanId, PlanPrice> = {
+  pro_monthly: {
+    amountCents: 1499,
+    currency: "USD",
+    interval: "month",
+    label: "Pro — Monthly",
+    description: "Full access to all LightSpeed Ghost tools",
+  },
+  pro_annual: {
+    amountCents: 9900,
+    currency: "USD",
+    interval: "year",
+    label: "Pro — Annual",
+    description: "Full access to all LightSpeed Ghost tools (billed annually)",
+  },
+  campus_annual: {
+    amountCents: 600,
+    currency: "USD",
+    interval: "month",
+    label: "Campus — Per Seat",
+    description: "Campus plan billed annually (minimum 5 seats)",
+  },
+};
+
+export const PAYG_PRICES: Record<PaygTool, number | Partial<Record<DocumentTier, number>>> = {
+  paper: {
+    discussion:   199,
+    essay:        399,
+    research:     799,
+    proposal:    1299,
+    dissertation: 2499,
+  },
+  revision: {
+    discussion:   99,
+    essay:        199,
+    research:     399,
+    proposal:     599,
+    dissertation: 999,
+  },
+  humanizer: {
+    discussion:   99,
+    essay:        199,
+    research:     399,
+    proposal:     599,
+    dissertation: 999,
+  },
+  stem:        99,
+  study:       199,
+  plagiarism:  99,
+  outline:     49,
+};
+
+export function getPaygPrice(tool: PaygTool, tier?: DocumentTier): number {
+  const entry = PAYG_PRICES[tool];
+  if (typeof entry === "number") return entry;
+  if (!tier) throw new Error(`Document tier required for tool: ${tool}`);
+  const price = entry[tier];
+  if (price === undefined) throw new Error(`Unknown tier "${tier}" for tool "${tool}"`);
+  return price;
+}
+
+export function getPaygLabel(tool: PaygTool, tier?: DocumentTier): string {
+  const labels: Record<PaygTool, string> = {
+    paper:      "Paper Generation",
+    revision:   "Paper Revision",
+    humanizer:  "Ghost Writer Humanize",
+    stem:       "STEM Problem",
+    study:      "Study Day Pass",
+    plagiarism: "Plagiarism Check",
+    outline:    "Outline Generation",
+  };
+  const tierLabel = tier ? ` — ${tier.charAt(0).toUpperCase() + tier.slice(1)}` : "";
+  return `${labels[tool]}${tierLabel}`;
+}
+
+export function formatAmount(cents: number, currency = "USD"): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(cents / 100);
+}

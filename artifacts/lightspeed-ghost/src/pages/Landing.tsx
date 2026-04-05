@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { CheckoutModal } from "@/components/checkout/CheckoutModal";
+import type { PlanId } from "@/lib/pricing";
 import {
   Zap, ArrowRight, CheckCircle, Star, Menu, X,
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
@@ -278,6 +280,8 @@ export default function Landing() {
   const [previewIdx, setPreviewIdx] = useState(0);
   const [fading, setFading] = useState(false);
   const [billingAnnual, setBillingAnnual] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<PlanId | null>(null);
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -939,11 +943,27 @@ export default function Landing() {
                     <p className="text-[10px] text-white/30 italic mb-3">Campus plan requires annual billing. Toggle above.</p>
                   )}
 
-                  <Link href={ctaLink}>
-                    <span className={`block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${highlight ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20" : "border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5"}`}>
+                  {name === "Pro" ? (
+                    <button
+                      onClick={() => setCheckoutPlan(billingAnnual ? "pro_annual" : "pro_monthly")}
+                      className={`w-full block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${highlight ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20" : "border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5"}`}
+                    >
                       {cta}
-                    </span>
-                  </Link>
+                    </button>
+                  ) : name === "Campus" ? (
+                    <button
+                      onClick={() => billingAnnual ? setCheckoutPlan("campus_annual") : setBillingAnnual(true)}
+                      className={`w-full block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5`}
+                    >
+                      {billingAnnual ? "Get Campus" : "Switch to Annual"}
+                    </button>
+                  ) : (
+                    <Link href={ctaLink}>
+                      <span className={`block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${highlight ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20" : "border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5"}`}>
+                        {cta}
+                      </span>
+                    </Link>
+                  )}
                 </div>
               );
             })}
@@ -1164,6 +1184,15 @@ export default function Landing() {
         </div>
       </footer>
 
+      {checkoutPlan && (
+        <CheckoutModal
+          open={!!checkoutPlan}
+          onClose={() => setCheckoutPlan(null)}
+          mode="subscription"
+          plan={checkoutPlan}
+          onSuccess={() => { setCheckoutPlan(null); setLocation("/app"); }}
+        />
+      )}
     </div>
   );
 }

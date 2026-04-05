@@ -27,6 +27,7 @@ import About from "@/pages/About";
 import Contact from "@/pages/Contact";
 import Careers from "@/pages/Careers";
 import Blog from "@/pages/Blog";
+import PaymentSuccess from "@/pages/PaymentSuccess";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
@@ -93,6 +94,7 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/careers" component={Careers} />
       <Route path="/blog" component={Blog} />
+      <Route path="/payment/success" component={PaymentSuccess} />
       <Route component={AppRoutes} />
     </Switch>
   );

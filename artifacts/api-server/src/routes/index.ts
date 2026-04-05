@@ -8,6 +8,7 @@ import stemRouter from "./stem";
 import studyRouter from "./study";
 import filesRouter from "./files";
 import adminRouter from "./admin";
+import paymentsRouter from "./payments";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(stemRouter);
 router.use(studyRouter);
 router.use(filesRouter);
 router.use(adminRouter);
+router.use(paymentsRouter);
 
 export default router;

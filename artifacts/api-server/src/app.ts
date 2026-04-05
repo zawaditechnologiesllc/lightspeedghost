@@ -36,7 +36,17 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json());
+// Webhook routes need raw body for signature verification
+app.use(/\/api\/payments\/webhook\//, express.raw({ type: "*/*", limit: "5mb" }));
+
+// All other routes use JSON
+app.use((req, _res, next) => {
+  if (req.headers["content-type"]?.startsWith("application/json") && !Buffer.isBuffer(req.body)) {
+    express.json()(req, _res, next);
+  } else {
+    next();
+  }
+});
 app.use(express.urlencoded({ extended: true }));
 
 // Attach userId from Supabase JWT on every request

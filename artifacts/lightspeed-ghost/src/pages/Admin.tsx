@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Users, FileText, GraduationCap, Shield, Loader2, AlertCircle,
   Trash2, FlaskConical, PenLine, Files, Lock, LogOut, RefreshCw,
   TrendingUp, Activity, ChevronRight, Menu, X,
+  CreditCard, DollarSign, Globe, Ban, CheckCircle2, Wallet, Settings,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
@@ -49,7 +50,40 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "documents";
+type Tab = "overview" | "users" | "documents" | "gateways" | "payments";
+
+interface GatewaySetting {
+  gateway: string;
+  paused: boolean;
+  notes: string | null;
+  updated_at: string;
+  configured: boolean;
+  stats: { count: number; revenue: number };
+}
+
+interface Payment {
+  id: string;
+  user_id: string;
+  gateway: string;
+  gateway_session_id: string;
+  type: string;
+  plan: string | null;
+  tool: string | null;
+  tier: string | null;
+  amount_cents: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  completed_at: string | null;
+}
+
+const GATEWAY_LABELS: Record<string, string> = {
+  stripe: "Stripe",
+  paddle: "Paddle",
+  lemon_squeezy: "Lemon Squeezy",
+  paystack: "Paystack",
+  intasend: "IntaSend",
+};
 
 export default function Admin() {
   const [password, setPassword] = useState("");
@@ -64,6 +98,9 @@ export default function Admin() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
+  const [gateways, setGateways] = useState<GatewaySetting[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [togglingGateway, setTogglingGateway] = useState<string | null>(null);
 
   const isAuthed = !!password;
 
@@ -121,10 +158,53 @@ export default function Admin() {
     }
   }
 
+  const loadGateways = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch("/admin/gateways", password) as { gateways: GatewaySetting[] };
+      setGateways(data.gateways);
+    } catch {
+      setGateways([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [password]);
+
+  const loadPayments = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch("/admin/payments", password) as { payments: Payment[] };
+      setPayments(data.payments);
+    } catch {
+      setPayments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [password]);
+
+  async function toggleGateway(gateway: string, paused: boolean) {
+    setTogglingGateway(gateway);
+    try {
+      await adminFetch(`/admin/gateways/${gateway}`, password, {
+        method: "PATCH",
+        body: JSON.stringify({ paused }),
+      });
+      setGateways((prev) =>
+        prev.map((g) => (g.gateway === gateway ? { ...g, paused } : g))
+      );
+    } catch {
+      /* ignore */
+    } finally {
+      setTogglingGateway(null);
+    }
+  }
+
   useEffect(() => {
     if (!isAuthed) return;
     if (activeTab === "overview" || activeTab === "documents") loadStats();
     if (activeTab === "users") loadUsers();
+    if (activeTab === "gateways") loadGateways();
+    if (activeTab === "payments") loadPayments();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthed, activeTab]);
 
@@ -217,9 +297,11 @@ export default function Admin() {
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "overview", label: "Overview", icon: Activity },
-    { id: "users", label: "Students", icon: Users },
-    { id: "documents", label: "Documents", icon: FileText },
+    { id: "overview",  label: "Overview",   icon: Activity },
+    { id: "users",     label: "Students",   icon: Users },
+    { id: "documents", label: "Documents",  icon: FileText },
+    { id: "gateways",  label: "Gateways",   icon: Globe },
+    { id: "payments",  label: "Payments",   icon: CreditCard },
   ];
 
   return (
@@ -277,7 +359,12 @@ export default function Admin() {
             <h1 className="text-sm font-semibold text-white/80 capitalize">{activeTab}</h1>
             <div className="ml-auto flex items-center gap-2">
               <button
-                onClick={() => activeTab === "users" ? loadUsers() : loadStats()}
+                onClick={() => {
+                  if (activeTab === "users") loadUsers();
+                  else if (activeTab === "gateways") loadGateways();
+                  else if (activeTab === "payments") loadPayments();
+                  else loadStats();
+                }}
                 disabled={loading}
                 className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/8 transition-all disabled:opacity-40"
                 title="Refresh"
@@ -427,6 +514,130 @@ export default function Admin() {
                                 </button>
                               )}
                             </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Gateways */}
+                {activeTab === "gateways" && (
+                  <div className="space-y-5 max-w-3xl">
+                    <div>
+                      <h2 className="text-lg font-bold text-white mb-0.5">Payment Gateways</h2>
+                      <p className="text-white/35 text-sm">Pause or enable individual payment processors. Active gateways are auto-selected by location.</p>
+                    </div>
+
+                    {gateways.length === 0 ? (
+                      <div className="py-12 text-center text-white/25 text-sm">
+                        {loading ? <Loader2 size={18} className="animate-spin mx-auto" /> : "No gateway data yet. Ensure the DB tables are initialized."}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {gateways.map((g) => (
+                          <div key={g.gateway} className="bg-white/[0.02] border border-white/8 rounded-xl px-5 py-4">
+                            <div className="flex items-center gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2.5 mb-1">
+                                  <span className="font-semibold text-sm text-white">
+                                    {GATEWAY_LABELS[g.gateway] ?? g.gateway}
+                                  </span>
+                                  {g.configured ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 bg-green-500/12 text-green-400 border border-green-500/20 rounded-full">
+                                      <CheckCircle2 size={9} /> Configured
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 bg-amber-500/12 text-amber-400 border border-amber-500/20 rounded-full">
+                                      <Settings size={9} /> Needs API keys
+                                    </span>
+                                  )}
+                                  {g.paused && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 bg-red-500/12 text-red-400 border border-red-500/20 rounded-full">
+                                      <Ban size={9} /> Paused
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-4 text-xs text-white/35">
+                                  <span className="flex items-center gap-1">
+                                    <DollarSign size={10} />
+                                    ${(g.stats.revenue / 100).toFixed(2)} revenue
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Wallet size={10} />
+                                    {g.stats.count} transactions
+                                  </span>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => toggleGateway(g.gateway, !g.paused)}
+                                disabled={togglingGateway === g.gateway}
+                                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                                  g.paused
+                                    ? "bg-green-500/12 text-green-400 border border-green-500/20 hover:bg-green-500/20"
+                                    : "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
+                                } disabled:opacity-50`}
+                              >
+                                {togglingGateway === g.gateway ? (
+                                  <Loader2 size={12} className="animate-spin" />
+                                ) : g.paused ? (
+                                  "Enable"
+                                ) : (
+                                  "Pause"
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="bg-blue-500/5 border border-blue-500/15 rounded-xl px-4 py-3 text-xs text-blue-300/70 space-y-1">
+                      <p className="font-medium text-blue-300/90">Routing order (by user location):</p>
+                      <p>🇰🇪 🇺🇬 🇹🇿 East Africa → IntaSend (mobile money)</p>
+                      <p>🌍 Rest of Africa → Paystack (card + mobile)</p>
+                      <p>🌐 US, EU, AU, JP, etc. → Stripe</p>
+                      <p>🌏 Rest of world → Paddle</p>
+                      <p>⚠️ High-risk users → Paystack (3D Secure)</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payments */}
+                {activeTab === "payments" && (
+                  <div className="space-y-5 max-w-5xl">
+                    <div>
+                      <h2 className="text-lg font-bold text-white mb-0.5">Payment Transactions</h2>
+                      <p className="text-white/35 text-sm">All payment records across all gateways</p>
+                    </div>
+
+                    <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                      <div className="grid grid-cols-[1fr_80px_80px_90px_90px_100px] gap-2 px-4 py-2.5 border-b border-white/6">
+                        {["User", "Gateway", "Type", "Amount", "Date", "Status"].map((h) => (
+                          <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
+                        ))}
+                      </div>
+                      {payments.length === 0 ? (
+                        <div className="py-16 text-center text-white/25 text-sm">
+                          {loading ? <Loader2 size={18} className="animate-spin mx-auto" /> : "No payments yet"}
+                        </div>
+                      ) : (
+                        payments.map((p, i) => (
+                          <div key={p.id} className={`grid grid-cols-[1fr_80px_80px_90px_90px_100px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < payments.length - 1 ? "border-b border-white/6" : ""}`}>
+                            <span className="text-[11px] text-white/50 font-mono truncate">{p.user_id.slice(0, 12)}…</span>
+                            <span className="text-xs text-white/60">{GATEWAY_LABELS[p.gateway] ?? p.gateway}</span>
+                            <span className="text-xs text-white/60 capitalize">{p.type}</span>
+                            <span className="text-xs font-semibold text-white tabular-nums">${(p.amount_cents / 100).toFixed(2)}</span>
+                            <span className="text-xs text-white/30">{new Date(p.created_at).toLocaleDateString()}</span>
+                            <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize ${
+                              p.status === "completed"
+                                ? "bg-green-500/12 text-green-400 border-green-500/20"
+                                : p.status === "failed"
+                                ? "bg-red-500/12 text-red-400 border-red-500/20"
+                                : "bg-amber-500/12 text-amber-400 border-amber-500/20"
+                            }`}>
+                              {p.status}
+                            </span>
                           </div>
                         ))
                       )}
