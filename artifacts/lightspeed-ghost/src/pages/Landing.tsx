@@ -115,7 +115,7 @@ const faqs = [
   },
   {
     q: "Is there a free plan?",
-    a: "Yes — and it's genuinely useful, not a bait-and-switch. Free includes 3 paper generations per month (any document type), 5 plagiarism + AI checks, 10 STEM queries per day, 10 study messages per day, 1 revision, and unlimited outline generation. No credit card required.",
+    a: "The entry plan is Starter at $1.50/month — lower than a cup of coffee and still the cheapest academic writing platform you'll find. It includes 3 paper generations per month, 5 plagiarism + AI checks, 10 STEM queries per day, 10 study messages per day, 1 revision, and unlimited outline generation. No tricks, just a minimal charge to keep the lights on.",
   },
   {
     q: "What's the difference between Pro monthly and annual?",
@@ -129,12 +129,12 @@ const faqs = [
 
 const pricingPlans = [
   {
-    name: "Free",
-    priceMonthly: "$0",
-    priceAnnual: "$0",
-    perMonthly: "forever",
-    perAnnual: "forever",
-    desc: "Genuinely useful. No card required. No tricks.",
+    name: "Starter",
+    priceMonthly: "$1.50",
+    priceAnnual: "$1.50",
+    perMonthly: "/ month",
+    perAnnual: "/ month",
+    desc: "All core tools. Low commitment. No hidden gotchas.",
     features: [
       "3 paper generations / month (any type)",
       "5 plagiarism + AI detection checks / mo",
@@ -145,7 +145,7 @@ const pricingPlans = [
       "7-day document history",
     ],
     locked: ["Ghost Writer humanizer", "Priority AI processing", "Citation export (BibTeX / RIS)"],
-    cta: "Start Free",
+    cta: "Start for $1.50",
     ctaLink: "/auth",
     highlight: false,
     badge: null,
@@ -156,14 +156,14 @@ const pricingPlans = [
     priceAnnual: "$8.25",
     perMonthly: "/ month",
     perAnnual: "/ month  ·  billed $99 / year",
-    desc: "Every cap removed. Every tool unlocked. One flat price.",
+    desc: "Every cap lifted. Every tool unlocked. One flat price.",
     features: [
-      "Unlimited paper generation (all types)",
-      "Unlimited revisions",
-      "Unlimited STEM solver",
+      "50 papers / month (all types)",
+      "50 revisions / month",
+      "30 STEM solver problems / day",
       "Unlimited study sessions",
       "Unlimited plagiarism + AI detection",
-      "Ghost Writer humanizer (unlimited)",
+      "Ghost Writer humanizer — 50 jobs / month",
       "90-day history + BibTeX / RIS / Zotero export",
       "Priority AI processing",
     ],
@@ -178,15 +178,15 @@ const pricingPlans = [
     priceMonthly: null,
     priceAnnual: "$6",
     perMonthly: "",
-    perAnnual: "/ user / month  ·  min 5 seats",
+    perAnnual: "/ seat / month  ·  min 5 seats  ·  annual",
     desc: "For study groups, tutoring centers, and institutions. Annual billing only.",
     features: [
-      "Everything in Pro",
+      "Pro features, per seat",
+      "15 papers / seat / month",
+      "30 STEM problems / seat / day",
       "Minimum 5 seats — single invoice",
-      "Shared document library",
-      "Admin usage dashboard",
-      "Academic integrity reporting",
-      "Priority support + SLA",
+      "Shared document library + admin dashboard",
+      "Academic integrity reporting + SLA support",
     ],
     locked: [],
     cta: "Contact Us",
@@ -243,7 +243,7 @@ const paygFlatTools = [
   {
     tool: "Plagiarism + AI Check", Icon: ShieldCheck, color: "emerald",
     price: "$0.99", unit: "per submission",
-    note: "Scribbr charges $19.95 for the same check. You pay $0.99.",
+    note: "Similarity detection across 99B+ academic sources. Includes AI-generated content scoring.",
     callout: true,
   },
   {
@@ -333,7 +333,7 @@ export default function Landing() {
             </Link>
             <Link href="/auth">
               <span className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors cursor-pointer shadow-md shadow-blue-600/20 whitespace-nowrap">
-                Get Started Free
+                Get Started
               </span>
             </Link>
           </div>
@@ -370,7 +370,7 @@ export default function Landing() {
                 <span className="block text-center px-4 py-2.5 text-sm border border-white/15 text-white rounded-lg cursor-pointer hover:bg-white/5 transition-colors">Sign In</span>
               </Link>
               <Link href="/auth">
-                <span className="block text-center px-4 py-2.5 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg cursor-pointer transition-colors">Get Started Free</span>
+                <span className="block text-center px-4 py-2.5 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg cursor-pointer transition-colors">Get Started</span>
               </Link>
             </div>
           </div>
@@ -406,7 +406,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Link href="/auth">
               <span className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-100 text-sm sm:text-base">
-                Start Free — No Card Needed
+                Try for $1.50 / month
                 <ArrowRight size={16} />
               </span>
             </Link>
@@ -415,7 +415,7 @@ export default function Landing() {
             </a>
           </div>
 
-          <p className="mt-4 text-xs text-white/30">Free forever plan · No credit card · Works in any browser</p>
+          <p className="mt-4 text-xs text-white/30">Starter at $1.50/mo · Cancel anytime · Works in any browser</p>
         </div>
 
         {/* ── Animated product preview ── */}
@@ -886,7 +886,7 @@ export default function Landing() {
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Honest pricing. No dark patterns.</h2>
             <p className="text-white/45 text-sm sm:text-base max-w-xl mx-auto">
-              Free for casual use. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
+              Starter at $1.50/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
             </p>
             <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
               <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-white" : "text-white/35"}`}>Monthly</span>
@@ -1066,7 +1066,7 @@ export default function Landing() {
             Stop staring at midnight.<br />Start with a draft.
           </h2>
           <p className="text-white/50 mb-8 sm:mb-10 text-base sm:text-lg">
-            Free forever. Six tools. No card required to start.
+            From $1.50 / month. Six tools. Cancel anytime.
           </p>
           <Link href="/auth">
             <span className="inline-flex items-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:scale-[1.02] active:scale-100 text-base sm:text-lg">

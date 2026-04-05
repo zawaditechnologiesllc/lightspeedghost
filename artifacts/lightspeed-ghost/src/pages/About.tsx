@@ -9,7 +9,7 @@ export default function About() {
         <Link href="/"><Logo size={28} textSize="text-base" className="cursor-pointer" /></Link>
         <div className="flex items-center gap-4">
           <Link href="/auth"><span className="text-sm text-white/50 hover:text-white transition-colors cursor-pointer">Sign In</span></Link>
-          <Link href="/auth"><span className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors cursor-pointer">Get Started Free</span></Link>
+          <Link href="/auth"><span className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors cursor-pointer">Get Started</span></Link>
         </div>
       </header>
 
@@ -61,7 +61,7 @@ export default function About() {
           <p className="text-white/50 mb-8">Email us at <a href="mailto:info@lightspeedghost.com" className="text-blue-400 hover:text-blue-300">info@lightspeedghost.com</a> — usually within 24 hours.</p>
           <Link href="/auth">
             <span className="inline-flex items-center gap-2 px-7 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:scale-[1.02]">
-              Start for free
+              Get Started
               <ArrowRight size={16} />
             </span>
           </Link>

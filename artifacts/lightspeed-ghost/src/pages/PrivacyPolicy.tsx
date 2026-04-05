@@ -53,7 +53,7 @@ export default function PrivacyPolicy() {
 
           <section>
             <h2 className="text-white text-xl font-semibold mb-4">5. Data Retention</h2>
-            <p>Your account data is retained as long as your account is active. Generated documents are retained for the duration of your plan (90 days for Pro, 30 days for Free). You can delete your account and all associated data at any time by contacting us.</p>
+            <p>Your account data is retained as long as your account is active. Generated documents are retained for the duration of your plan (90 days for Pro, 7 days for Starter). You can delete your account and all associated data at any time by contacting us.</p>
           </section>
 
           <section>
