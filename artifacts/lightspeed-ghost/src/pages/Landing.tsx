@@ -187,9 +187,25 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+const previewNavItems = ["Dashboard", "Write Paper", "Outline", "Revision", "AI & Plagiarism", "STEM Solver", "Study Assistant"];
+const previewUrls = ["write", "outline", "revision", "plagiarism", "stem", "study"];
+
 export default function Landing() {
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [previewIdx, setPreviewIdx] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setPreviewIdx(i => (i + 1) % 6);
+        setFading(false);
+      }, 350);
+    }, 3500);
+    return () => clearInterval(id);
+  }, []);
 
   const navLinks = [
     { label: "Tools", href: "#tools" },
@@ -315,55 +331,236 @@ export default function Landing() {
           <p className="mt-4 text-xs text-white/30">Free forever plan · No credit card · Works in any browser</p>
         </div>
 
-        {/* product preview */}
+        {/* ── Animated product preview ── */}
         <div className="relative mt-12 sm:mt-20 w-full max-w-5xl mx-auto">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#04080f] z-10 pointer-events-none" style={{ top: "60%" }} />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#04080f] z-10 pointer-events-none" style={{ top: "65%" }} />
+
           <div className="rounded-2xl border border-white/10 overflow-hidden shadow-2xl shadow-blue-900/20 bg-[#0b1120]">
+            {/* Browser chrome — URL updates with tool */}
             <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/5 bg-[#060d1a]">
               <span className="w-3 h-3 rounded-full bg-red-500/70" />
               <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
               <span className="w-3 h-3 rounded-full bg-green-500/70" />
-              <span className="ml-3 text-xs text-white/20 font-mono hidden sm:block">lightspeedghost.com/write</span>
+              <span
+                className="ml-3 text-xs text-white/20 font-mono hidden sm:block transition-opacity duration-300"
+                style={{ opacity: fading ? 0 : 1 }}
+              >
+                lightspeedghost.com/{previewUrls[previewIdx]}
+              </span>
             </div>
-            <div className="flex" style={{ minHeight: "280px" }}>
+
+            <div className="flex" style={{ minHeight: "300px" }}>
+              {/* Sidebar — highlights active tool */}
               <div className="w-44 bg-[#060d1a] border-r border-white/5 p-3 shrink-0 hidden sm:block">
                 <div className="mb-4 px-2">
                   <Logo size={20} textSize="text-[10px]" />
                 </div>
-                {[
-                  { label: "Dashboard", active: false },
-                  { label: "Write Paper", active: true },
-                  { label: "Revision", active: false },
-                  { label: "AI & Plagiarism", active: false },
-                  { label: "STEM Solver", active: false },
-                  { label: "Study Assistant", active: false },
-                ].map(({ label, active }) => (
-                  <div key={label} className={`px-3 py-2 rounded-lg text-xs mb-0.5 font-medium ${active ? "bg-blue-600 text-white" : "text-white/30"}`}>
+                {previewNavItems.map((label, i) => (
+                  <div
+                    key={label}
+                    className={`px-3 py-2 rounded-lg text-xs mb-0.5 font-medium transition-all duration-300 ${
+                      i === previewIdx + 1 ? "bg-blue-600 text-white" : "text-white/30"
+                    }`}
+                  >
                     {label}
                   </div>
                 ))}
               </div>
-              <div className="flex-1 p-4 sm:p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="h-5 w-36 bg-white/10 rounded-md" />
-                  <div className="h-5 w-16 bg-blue-500/20 rounded-full" />
-                </div>
-                <div className="h-2.5 w-72 bg-white/5 rounded" />
-                <div className="space-y-2.5 mt-4">
-                  <div className="h-9 bg-white/5 rounded-lg border border-white/8" />
-                  <div className="h-9 bg-white/5 rounded-lg border border-white/8" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="h-9 bg-white/5 rounded-lg border border-white/8" />
-                    <div className="h-9 bg-white/5 rounded-lg border border-white/8" />
+
+              {/* Main content — fades between tools */}
+              <div
+                className="flex-1 p-4 sm:p-5 transition-opacity duration-300"
+                style={{ opacity: fading ? 0 : 1 }}
+              >
+                {previewIdx === 0 && (
+                  /* Write Paper */
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <PenLine size={13} className="text-blue-400" />
+                      <span className="text-[11px] font-semibold text-white/80">Write Your Paper</span>
+                    </div>
+                    <div className="h-8 bg-white/5 rounded-lg border border-white/8 flex items-center px-3 gap-2">
+                      <div className="h-2 w-3 bg-white/20 rounded" /><div className="h-1.5 w-40 bg-white/8 rounded" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="h-8 bg-white/5 rounded-lg border border-white/8 flex items-center px-3">
+                        <div className="h-1.5 w-16 bg-white/8 rounded" />
+                      </div>
+                      <div className="h-8 bg-white/5 rounded-lg border border-white/8 flex items-center px-3">
+                        <div className="h-1.5 w-12 bg-white/8 rounded" />
+                      </div>
+                    </div>
+                    <div className="h-14 bg-white/5 rounded-lg border border-white/8" />
+                    <div className="h-8 bg-blue-600/40 rounded-lg border border-blue-500/30 flex items-center justify-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                      <div className="h-2 w-28 bg-blue-400/50 rounded" />
+                    </div>
+                    <div className="text-[9px] text-white/25 mt-1">APA 7th · 1,500 words · Streaming…</div>
                   </div>
-                  <div className="h-16 bg-white/5 rounded-lg border border-white/8" />
-                  <div className="h-9 bg-blue-600/35 rounded-lg border border-blue-500/25 flex items-center justify-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                    <div className="h-2.5 w-28 bg-blue-400/50 rounded" />
+                )}
+
+                {previewIdx === 1 && (
+                  /* Outline Builder */
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BookOpen size={13} className="text-indigo-400" />
+                      <span className="text-[11px] font-semibold text-white/80">Outline Builder</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {[
+                        { depth: 0, marker: "I.", text: "Introduction & Background" },
+                        { depth: 1, marker: "A.", text: "Historical context" },
+                        { depth: 1, marker: "B.", text: "Problem statement" },
+                        { depth: 0, marker: "II.", text: "Literature Review" },
+                        { depth: 1, marker: "A.", text: "Prior studies (2018–2024)" },
+                        { depth: 1, marker: "B.", text: "Theoretical framework" },
+                        { depth: 0, marker: "III.", text: "Methodology" },
+                        { depth: 1, marker: "A.", text: "Data collection" },
+                        { depth: 0, marker: "IV.", text: "Conclusion & Implications" },
+                      ].map(({ depth, marker, text }, i) => (
+                        <div key={i} className={`flex items-center gap-2 ${depth === 1 ? "pl-5" : ""}`}>
+                          <span className={`font-mono text-[9px] shrink-0 ${depth === 0 ? "text-indigo-400/70" : "text-white/25"}`}>{marker}</span>
+                          <span className={`text-[10px] ${depth === 0 ? "text-white/70 font-medium" : "text-white/40"}`}>{text}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {previewIdx === 2 && (
+                  /* Revision */
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <FileText size={13} className="text-violet-400" />
+                        <span className="text-[11px] font-semibold text-white/80">Paper Revision</span>
+                      </div>
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-400 border border-violet-500/20">Target: A</span>
+                    </div>
+                    <p className="text-[10px] text-white/55 leading-relaxed">
+                      The results{" "}
+                      <span className="line-through text-red-400/60">shows</span>{" "}
+                      <span className="text-emerald-400">demonstrate</span>{" "}
+                      a significant correlation between{" "}
+                      <span className="bg-emerald-500/15 text-emerald-300 px-0.5 rounded">neural pathway activation and cognitive outcomes</span>
+                      {" "}across all three cohorts.{" "}
+                      <span className="text-emerald-400">Furthermore, the longitudinal data suggests a causal</span>{" "}
+                      <span className="line-through text-red-400/60">link</span>{" "}
+                      <span className="text-emerald-400">relationship</span>…
+                    </p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <div className="flex items-center gap-1.5 text-[9px] text-emerald-400">
+                        <div className="w-2 h-2 rounded bg-emerald-500/30" /> 14 improvements
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[9px] text-red-400/70">
+                        <div className="w-2 h-2 rounded bg-red-500/20" /> 3 removed
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {previewIdx === 3 && (
+                  /* AI & Plagiarism */
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ShieldCheck size={13} className="text-emerald-400" />
+                      <span className="text-[11px] font-semibold text-white/80">AI & Plagiarism Check</span>
+                      <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">PASS</span>
+                    </div>
+                    {[
+                      { label: "AI Content", pct: 6, color: "bg-emerald-500", txt: "text-emerald-400" },
+                      { label: "Plagiarism", pct: 3, color: "bg-emerald-500", txt: "text-emerald-400" },
+                      { label: "Similarity",  pct: 11, color: "bg-amber-500",  txt: "text-amber-400" },
+                    ].map(({ label, pct, color, txt }) => (
+                      <div key={label}>
+                        <div className="flex justify-between text-[9px] mb-1">
+                          <span className="text-white/40">{label}</span>
+                          <span className={`font-mono font-semibold ${txt}`}>{pct}%</span>
+                        </div>
+                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct * 4}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                    <div className="mt-2 text-[9px] text-white/30 flex items-center gap-1.5">
+                      <CheckCircle size={10} className="text-emerald-400" />
+                      Safe to submit — humanization not required
+                    </div>
+                  </div>
+                )}
+
+                {previewIdx === 4 && (
+                  /* STEM Solver */
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <FlaskConical size={13} className="text-cyan-400" />
+                      <span className="text-[11px] font-semibold text-white/80">STEM Solver</span>
+                    </div>
+                    <div className="flex gap-1.5 flex-wrap mb-3">
+                      {["Math", "Physics", "Chemistry", "Biology", "CS"].map((s, i) => (
+                        <span key={s} className={`text-[9px] px-2 py-0.5 rounded-full border font-medium ${i === 1 ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" : "bg-white/5 text-white/30 border-white/8"}`}>{s}</span>
+                      ))}
+                    </div>
+                    <div className="space-y-1.5">
+                      {["Identify all forces acting on the body", "Apply Newton's 2nd law: F = ma", "Solve for acceleration: a = 4 m/s²"].map((step, i) => (
+                        <div key={step} className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full bg-cyan-600/25 border border-cyan-500/25 text-cyan-300 text-[8px] flex items-center justify-center shrink-0">{i + 1}</div>
+                          <span className="text-[10px] text-white/50">{step}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="p-2 bg-cyan-600/5 border border-cyan-500/15 rounded-lg text-[10px] text-cyan-300 font-mono mt-1">
+                      F = ma → a = 12/3 = <span className="text-cyan-200 font-bold">4 m/s²</span>
+                    </div>
+                  </div>
+                )}
+
+                {previewIdx === 5 && (
+                  /* Study Assistant */
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-3">
+                      <GraduationCap size={13} className="text-amber-400" />
+                      <span className="text-[11px] font-semibold text-white/80">AI Study Assistant</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-end">
+                        <div className="bg-blue-600/30 border border-blue-500/20 rounded-xl rounded-tr-sm px-3 py-1.5 text-[10px] text-white/70 max-w-[78%]">
+                          Explain the Krebs cycle simply
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                          <Zap size={9} className="text-amber-400" />
+                        </div>
+                        <div className="bg-white/5 border border-white/8 rounded-xl rounded-tl-sm px-3 py-1.5 text-[10px] text-white/55 leading-relaxed">
+                          The Krebs cycle runs in the mitochondria, breaking down acetyl-CoA to produce ATP, NADH, and CO₂ across 8 enzymatic steps…
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5 mt-1 flex-wrap">
+                      {["Quiz me", "Simplify more", "Key takeaways"].map(s => (
+                        <span key={s} className="text-[8px] px-2 py-0.5 rounded-full bg-white/5 border border-white/8 text-white/35 cursor-pointer">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+          </div>
+
+          {/* Progress dots */}
+          <div className="flex items-center justify-center gap-2 mt-5 relative z-20">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { setFading(true); setTimeout(() => { setPreviewIdx(i); setFading(false); }, 200); }}
+                className={`rounded-full transition-all duration-300 ${
+                  i === previewIdx
+                    ? "w-6 h-1.5 bg-blue-400"
+                    : "w-1.5 h-1.5 bg-white/20 hover:bg-white/40"
+                }`}
+              />
+            ))}
           </div>
         </div>
       </section>
