@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight, CheckCircle } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { login, signup } from "@/lib/auth";
-import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
 
 type Tab = "login" | "signup";
@@ -20,7 +19,6 @@ export default function Auth() {
   const [emailSent, setEmailSent] = useState(false);
   const [forgotMode, setForgotMode] = useState(false);
   const [, navigate] = useLocation();
-  const { refreshUser } = useAuth();
 
   const reset = () => {
     setError("");
@@ -40,14 +38,14 @@ export default function Auth() {
     e.preventDefault();
     setError("");
     setStatus("loading");
-    try {
-      await login(email, password);
-      await refreshUser();
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setError(error.message);
+      setStatus("error");
+    } else {
       setStatus("done");
       navigate("/app");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed");
-      setStatus("error");
     }
   }
 
@@ -65,14 +63,21 @@ export default function Auth() {
     }
 
     setStatus("loading");
-    try {
-      await signup(email, password);
-      await refreshUser();
-      setStatus("done");
-      navigate("/app");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Signup failed");
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/confirm-email`,
+      },
+    });
+
+    if (error) {
+      setError(error.message);
       setStatus("error");
+    } else {
+      setEmailSent(true);
+      setStatus("done");
     }
   }
 
@@ -80,8 +85,18 @@ export default function Auth() {
     e.preventDefault();
     setError("");
     setStatus("loading");
-    setError("Password reset via email is not available in this version. Please contact support.");
-    setStatus("error");
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      setError(error.message);
+      setStatus("error");
+    } else {
+      setEmailSent(true);
+      setStatus("done");
+    }
   }
 
   return (

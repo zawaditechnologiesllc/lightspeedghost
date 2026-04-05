@@ -12,19 +12,21 @@ export interface CreditsState {
 }
 
 export function useCredits(): CreditsState {
-  const { user, loading: authLoading } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const [balanceCents, setBalanceCents] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      if (!user) {
+      const token = session?.access_token;
+      if (!token) {
         setBalanceCents(0);
         return;
       }
       const res = await fetch(`${API_BASE}/payments/credits`, {
         credentials: "include",
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) { setBalanceCents(0); return; }
       const data = await res.json() as { balanceCents: number };
@@ -34,7 +36,7 @@ export function useCredits(): CreditsState {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [session?.access_token]);
 
   useEffect(() => {
     if (!authLoading) refresh();
@@ -45,12 +47,16 @@ export function useCredits(): CreditsState {
     tier: DocumentTier | undefined,
     amountCents: number
   ): Promise<{ ok: boolean; newBalanceCents: number; error?: string }> => {
-    if (!user) return { ok: false, newBalanceCents: balanceCents, error: "Not authenticated" };
+    const token = session?.access_token;
+    if (!token) return { ok: false, newBalanceCents: balanceCents, error: "Not authenticated" };
     try {
       const res = await fetch(`${API_BASE}/payments/credits/spend`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ tool, tier, amountCents }),
       });
       const data = await res.json() as { success?: boolean; newBalanceCents?: number; error?: string };
@@ -63,7 +69,7 @@ export function useCredits(): CreditsState {
     } catch {
       return { ok: false, newBalanceCents: balanceCents, error: "Network error" };
     }
-  }, [user?.id, balanceCents]);
+  }, [session?.access_token, balanceCents]);
 
   return { balanceCents, loading, refresh, spendCredits };
 }

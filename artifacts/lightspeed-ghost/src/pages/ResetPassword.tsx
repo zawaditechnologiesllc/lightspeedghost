@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { updatePassword } from "@/lib/auth";
-import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
 
 export default function ResetPassword() {
@@ -11,7 +10,13 @@ export default function ResetPassword() {
   const [showPw, setShowPw] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [error, setError] = useState("");
-  const { user } = useAuth();
+  const [hasSession, setHasSession] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setHasSession(!!data.session);
+    });
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,12 +32,12 @@ export default function ResetPassword() {
     }
 
     setStatus("loading");
-    try {
-      await updatePassword(password);
-      setStatus("done");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update password");
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    if (updateError) {
+      setError(updateError.message);
       setStatus("error");
+    } else {
+      setStatus("done");
     }
   }
 
@@ -57,7 +62,7 @@ export default function ResetPassword() {
                 </span>
               </Link>
             </div>
-          ) : !user ? (
+          ) : hasSession === false ? (
             <div className="text-center py-4">
               <div className="w-14 h-14 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
                 <AlertCircle size={28} className="text-red-400" />

@@ -46,7 +46,7 @@ const PLAN_LIMITS: Record<string, Partial<Record<keyof UsageData, number | null>
 };
 
 export function useSubscription() {
-  const { user, loading: authLoading } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const [plan, setPlan] = useState<PlanTier>(null);
   const [usage, setUsage] = useState<Partial<UsageData>>({});
   const [loading, setLoading] = useState(true);
@@ -54,8 +54,13 @@ export function useSubscription() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
+      const token = session?.access_token;
+      const headers: HeadersInit = token
+        ? { Authorization: `Bearer ${token}` }
+        : {};
       const res = await fetch(`${API_BASE}/payments/usage`, {
         credentials: "include",
+        headers,
       });
       if (!res.ok) {
         setPlan("starter");
@@ -71,7 +76,7 @@ export function useSubscription() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [session?.access_token]);
 
   useEffect(() => {
     if (!authLoading) {
