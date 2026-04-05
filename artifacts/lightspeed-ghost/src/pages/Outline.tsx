@@ -50,7 +50,7 @@ const SECTION_COLORS = [
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function Outline() {
-  const { session } = useAuth();
+  const { user } = useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
@@ -119,12 +119,12 @@ export default function Outline() {
     setLoadingMsg("Analysing your topic and crafting a structured outline…");
 
     try {
-      const token = session?.access_token;
+      
       const resp = await fetch(`${API_BASE}/writing/outline`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          
         },
         body: JSON.stringify({
           topic: topic.trim(),

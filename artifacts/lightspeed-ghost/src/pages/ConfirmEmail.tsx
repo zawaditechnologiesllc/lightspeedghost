@@ -1,41 +1,12 @@
-import { useState, useEffect } from "react";
-import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle, AlertCircle } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ConfirmEmail() {
-  const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    async function verify() {
-      const params = new URLSearchParams(window.location.search);
-      const tokenHash = params.get("token_hash");
-      const type = params.get("type") as "email" | "signup" | null;
-
-      if (tokenHash && type) {
-        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: type === "signup" ? "signup" : "email" });
-        if (error) {
-          setMessage(error.message);
-          setStatus("error");
-        } else {
-          setStatus("done");
-        }
-        return;
-      }
-
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        setStatus("done");
-      } else {
-        setMessage("This confirmation link has expired or already been used.");
-        setStatus("error");
-      }
-    }
-
-    verify();
-  }, []);
+  const { user } = useAuth();
+  const status = user ? "done" : "error";
+  const message = "Please sign in to confirm your account.";
 
   return (
     <div className="min-h-screen bg-[#04080f] flex flex-col items-center justify-center px-6">
@@ -45,16 +16,6 @@ export default function ConfirmEmail() {
         </Link>
 
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 text-center">
-          {status === "loading" && (
-            <>
-              <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
-                <Loader2 size={28} className="text-blue-400 animate-spin" />
-              </div>
-              <h2 className="text-xl font-bold text-white mb-2">Confirming your email…</h2>
-              <p className="text-white/40 text-sm">Just a moment.</p>
-            </>
-          )}
-
           {status === "done" && (
             <>
               <div className="w-14 h-14 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mx-auto mb-5">

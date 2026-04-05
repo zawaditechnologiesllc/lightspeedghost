@@ -276,7 +276,7 @@ const previewUrls = ["write", "outline", "revision", "humanizer", "plagiarism", 
 
 export default function Landing() {
   const scrolled = useScrolled();
-  const { session } = useAuth();
+  const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [previewIdx, setPreviewIdx] = useState(0);
   const [fading, setFading] = useState(false);
@@ -286,7 +286,7 @@ export default function Landing() {
   const [, setLocation] = useLocation();
 
   function handleBuyPayg(tool: PaygTool, tier?: DocumentTier) {
-    if (!session) { setLocation("/auth"); return; }
+    if (!user) { setLocation("/auth"); return; }
     setPaygCheckout({ tool, tier });
   }
 

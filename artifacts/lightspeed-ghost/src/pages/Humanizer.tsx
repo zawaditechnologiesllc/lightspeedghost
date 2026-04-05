@@ -93,7 +93,7 @@ function RiskBadge({ score, label }: { score: number; label: string }) {
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function Humanizer() {
-  const { session } = useAuth();
+  const { user } = useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
@@ -149,7 +149,7 @@ export default function Humanizer() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+            
           },
           body: JSON.stringify({ text }),
         });
@@ -178,7 +178,7 @@ export default function Humanizer() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          
         },
         body: JSON.stringify({ text, tone, instructions: instructions.trim() || undefined }),
         signal: abortRef.current.signal,
@@ -219,7 +219,7 @@ export default function Humanizer() {
       if (err instanceof Error && err.name === "AbortError") return;
       setPhase("decision");
     }
-  }, [inputText, tone, instructions, session, API_BASE]);
+  }, [inputText, tone, instructions, API_BASE]);
 
   function handleCopy(text: string) {
     navigator.clipboard.writeText(text).then(() => {
@@ -274,16 +274,15 @@ export default function Humanizer() {
               />
               {inputText.trim() && (
                 <p className="text-[10px] text-muted-foreground/50 mt-1 text-right tabular-nums">
-                  {inputText.trim().split(/\s+/).filter(Boolean).length} words
+                  {inputText.trim().split(" ").filter(Boolean).length} words
                 </p>
               )}
             </div>
 
             {/* File upload */}
             <FileUploadZone
-              onExtracted={(files: ExtractedFile[]) => {
-                const joined = files.map((f) => f.content).join("\n\n");
-                setInputText((prev) => prev ? `${prev}\n\n${joined}` : joined);
+              onExtracted={(file: ExtractedFile) => {
+                setInputText((prev) => prev ? `${prev}\n\n${file.text}` : file.text);
               }}
               accept=".pdf,.docx,.doc,.txt"
               label="Or upload a file (PDF, Word, TXT)"

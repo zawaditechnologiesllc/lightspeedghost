@@ -101,7 +101,7 @@ function ScoreBadge({ score, label, inverse = false }: { score: number; label: s
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function Revision() {
-  const { session } = useAuth();
+  const { user } = useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
@@ -180,12 +180,12 @@ export default function Revision() {
     setPhase("analysing");
 
     try {
-      const token = session?.access_token;
+      
       const resp = await fetch(`${API_BASE}/revision/analyse`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          
         },
         body: JSON.stringify({ text }),
       });
@@ -213,12 +213,12 @@ export default function Revision() {
     ]);
 
     try {
-      const token = session?.access_token;
+      
       const resp = await fetch(`${API_BASE}/revision/submit-stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          
         },
         body: JSON.stringify({
           originalText: paperText.trim(),
@@ -371,7 +371,7 @@ export default function Revision() {
               />
               {rubricText && (
                 <p className="text-[10px] text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
-                  <CheckCircle size={10} /> Rubric loaded ({rubricText.split(/\s+/).length} words)
+                  <CheckCircle size={10} /> Rubric loaded ({rubricText.trim().split(" ").filter(Boolean).length} words)
                 </p>
               )}
             </div>
@@ -392,7 +392,7 @@ export default function Revision() {
               />
               {referenceText && (
                 <p className="text-[10px] text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
-                  <CheckCircle size={10} /> {referenceText.split(/\s+/).filter(Boolean).length.toLocaleString()} words of reference material loaded
+                  <CheckCircle size={10} /> {referenceText.trim().split(" ").filter(Boolean).length.toLocaleString()} words of reference material loaded
                 </p>
               )}
             </div>

@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Loader2, User } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { supabase } from "@/lib/supabase";
+import { updatePassword } from "@/lib/auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "wouter";
 
 export default function Invite() {
@@ -11,19 +12,7 @@ export default function Invite() {
   const [showPw, setShowPw] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [error, setError] = useState("");
-  const [hasSession, setHasSession] = useState<boolean | null>(null);
-  const [email, setEmail] = useState("");
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        setHasSession(true);
-        setEmail(data.session.user.email ?? "");
-      } else {
-        setHasSession(false);
-      }
-    });
-  }, []);
+  const { user } = useAuth();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,16 +28,12 @@ export default function Invite() {
     }
 
     setStatus("loading");
-
-    const updates: { password: string; data?: { full_name: string } } = { password };
-    if (name.trim()) updates.data = { full_name: name.trim() };
-
-    const { error: updateError } = await supabase.auth.updateUser(updates);
-    if (updateError) {
-      setError(updateError.message);
-      setStatus("error");
-    } else {
+    try {
+      await updatePassword(password);
       setStatus("done");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to set password");
+      setStatus("error");
     }
   }
 
@@ -73,7 +58,7 @@ export default function Invite() {
                 </span>
               </Link>
             </div>
-          ) : hasSession === false ? (
+          ) : !user ? (
             <div className="text-center py-4">
               <div className="w-14 h-14 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
                 <AlertCircle size={28} className="text-red-400" />
@@ -90,7 +75,7 @@ export default function Invite() {
             <>
               <div className="mb-7">
                 <h1 className="text-2xl font-bold text-white mb-1.5">Accept your invite</h1>
-                {email && <p className="text-white/40 text-sm">Invited as <span className="text-white/60">{email}</span></p>}
+                {user?.email && <p className="text-white/40 text-sm">Invited as <span className="text-white/60">{user.email}</span></p>}
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">

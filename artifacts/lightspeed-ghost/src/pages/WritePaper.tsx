@@ -69,11 +69,15 @@ const STEP_ORDER = ["citations", "stem", "writing", "bibliography", "stats"];
 
 function renderMarkdown(text: string): React.ReactNode[] {
   return text.split("\n").map((line, i) => {
-    if (/^# /.test(line))   return <h1 key={i} className="text-xl font-bold mt-6 mb-2 text-foreground">{line.slice(2)}</h1>;
-    if (/^## /.test(line))  return <h2 key={i} className="text-base font-bold mt-5 mb-2 text-foreground border-b border-border pb-1">{line.slice(3)}</h2>;
-    if (/^### /.test(line)) return <h3 key={i} className="text-sm font-semibold mt-4 mb-1.5 text-foreground">{line.slice(4)}</h3>;
+    if (line.startsWith("# "))   return <h1 key={i} className="text-xl font-bold mt-6 mb-2 text-foreground">{line.slice(2)}</h1>;
+    if (line.startsWith("## "))  return <h2 key={i} className="text-base font-bold mt-5 mb-2 text-foreground border-b border-border pb-1">{line.slice(3)}</h2>;
+    if (line.startsWith("### ")) return <h3 key={i} className="text-sm font-semibold mt-4 mb-1.5 text-foreground">{line.slice(4)}</h3>;
     if (line.trim() === "")  return <div key={i} className="h-2" />;
-    const parts = line.split(/(\*\*.*?\*\*)/g);
+    const boldPattern = "**";
+    const parts = line.split(boldPattern).reduce<string[]>((acc, part, idx) => {
+      if (idx % 2 === 0) { acc.push(part); } else { acc.push("**" + part + "**"); }
+      return acc;
+    }, []);
     return (
       <p key={i} className="text-sm text-foreground leading-relaxed mb-1">
         {parts.map((p, j) =>
@@ -135,7 +139,7 @@ ${content
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function WritePaper() {
-  const { session } = useAuth();
+  const { user } = useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
@@ -232,12 +236,12 @@ export default function WritePaper() {
     setSteps(initialSteps);
 
     try {
-      const token = session?.access_token;
+      
       const resp = await fetch(`${API_BASE}/writing/generate-stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          
         },
         body: JSON.stringify({
           topic: topic.trim(),
@@ -317,12 +321,12 @@ export default function WritePaper() {
     if (!result) return;
     setIsSaving(true);
     try {
-      const token = session?.access_token;
+      
       const resp = await fetch(`${API_BASE}/writing/save/${result.documentId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          
         },
         body: JSON.stringify({ content: editedContent }),
       });
@@ -344,7 +348,7 @@ export default function WritePaper() {
     const total = steps.filter(s => s.status !== "pending" || s.message).length || steps.length;
     const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
     // Approximate live word count from streamed content
-    const liveWords = streamedContent.split(/\s+/).filter(Boolean).length;
+    const liveWords = streamedContent.trim().split(" ").filter(Boolean).length;
     const runningStep = steps.find(s => s.status === "running");
 
     return (
@@ -729,7 +733,7 @@ export default function WritePaper() {
             />
             {rubricText && (
               <p className="text-[10px] text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
-                <CheckCircle size={10} /> Rubric loaded ({rubricText.split(/\s+/).length} words)
+                <CheckCircle size={10} /> Rubric loaded ({rubricText.trim().split(" ").filter(Boolean).length} words)
               </p>
             )}
           </div>
@@ -749,7 +753,7 @@ export default function WritePaper() {
           />
           {referenceText && (
             <p className="text-[10px] text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
-              <CheckCircle size={10} /> Reference materials loaded ({referenceText.split(/\s+/).length.toLocaleString()} words) — AI will draw on these while writing
+              <CheckCircle size={10} /> Reference materials loaded ({referenceText.trim().split(" ").filter(Boolean).length.toLocaleString()} words) — AI will draw on these while writing
             </p>
           )}
         </div>
@@ -940,6 +944,7 @@ export default function WritePaper() {
             </button>
           </p>
         </div>
+        </div>
       </div>
       <PaywallFlow
         pickerState={pickerState}
@@ -950,7 +955,6 @@ export default function WritePaper() {
         chooseSubscription={chooseSubscription}
         choosePayg={choosePayg}
       />
-      </div>{/* end flex-1 scroll */}
-    </div>{/* end outer column */}
+    </div>
   );
 }

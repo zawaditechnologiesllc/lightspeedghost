@@ -408,7 +408,7 @@ export default function StudyAssistant() {
             />
             <div className="flex items-center gap-2 px-4 pb-3 border-t border-border/40">
               <span className="text-[11px] text-muted-foreground/40">
-                {topic.trim() ? `${topic.trim().split(/\s+/).length} words` : "Type or paste above · or upload notes below"}
+                {topic.trim() ? `${topic.trim().split(" ").filter(Boolean).length} words` : "Type or paste above · or upload notes below"}
               </span>
               {topic.trim() && (
                 <button onClick={() => setTopic("")} className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors ml-auto">
