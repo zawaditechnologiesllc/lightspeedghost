@@ -6,6 +6,7 @@ import {
   CreditCard, DollarSign, Globe, Ban, CheckCircle2, Wallet, Settings,
   Coins, BarChart3, Crown, Zap, AlertTriangle, Plus, Minus,
   ArrowUp, ArrowDown, ReceiptText, UserX, UserCheck, Edit2, Check,
+  Radio, ServerCrash, Database, Clock, CheckCheck, XCircle, Signal,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
@@ -25,7 +26,7 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "documents" | "gateways" | "payments" | "credits" | "revenue" | "settings";
+type Tab = "overview" | "users" | "documents" | "gateways" | "payments" | "credits" | "revenue" | "analytics" | "logs" | "settings";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -139,10 +140,59 @@ interface SystemSettings {
   starter_outline: string;
 }
 
+interface TrafficData {
+  totalRegisteredUsers: number;
+  totalActiveUsers: number;
+  dailyActiveUsers: number;
+  liveUsers: number;
+  byCountry: Array<{ country: string; requests: string; users: string }>;
+  byHour: Array<{ hour: string; requests: string; errors: string }>;
+}
+
+interface LogEntry {
+  id: number;
+  method: string;
+  path: string;
+  status: number;
+  duration_ms: number | null;
+  user_id: string | null;
+  country: string;
+  error_msg: string | null;
+  created_at: string;
+}
+
+interface LogSummary {
+  total: string;
+  success: string;
+  client_errors: string;
+  server_errors: string;
+  avg_ms: string;
+}
+
 const GATEWAY_LABELS: Record<string, string> = {
   stripe: "Stripe", paddle: "Paddle",
   lemon_squeezy: "Lemon Squeezy", paystack: "Paystack", intasend: "IntaSend",
 };
+
+const COUNTRY_NAMES: Record<string, string> = {
+  KE:"Kenya",NG:"Nigeria",UG:"Uganda",TZ:"Tanzania",GH:"Ghana",ZA:"South Africa",
+  RW:"Rwanda",ET:"Ethiopia",US:"United States",GB:"United Kingdom",CA:"Canada",
+  AU:"Australia",IN:"India",DE:"Germany",FR:"France",NL:"Netherlands",SG:"Singapore",
+  AE:"UAE",ZM:"Zambia",MW:"Malawi",ZW:"Zimbabwe",CM:"Cameroon",SN:"Senegal",
+  CI:"Côte d'Ivoire",PK:"Pakistan",BD:"Bangladesh",PH:"Philippines",ID:"Indonesia",
+  BR:"Brazil",MX:"Mexico",LS:"Lesotho",MZ:"Mozambique",BW:"Botswana",NA:"Namibia",
+};
+
+function countryFlag(code: string): string {
+  if (!code || code === "??" || code.length !== 2) return "🌍";
+  return code.toUpperCase().split("").map((c) =>
+    String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
+  ).join("");
+}
+
+function countryName(code: string): string {
+  return COUNTRY_NAMES[code] ?? code ?? "Unknown";
+}
 
 const PLAN_COLORS: Record<string, string> = {
   starter: "bg-blue-500/12 text-blue-300 border-blue-500/20",
@@ -187,6 +237,14 @@ export default function Admin() {
   const [banTogglingId, setBanTogglingId] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "completed" | "pending" | "failed">("all");
+  const [traffic, setTraffic] = useState<TrafficData | null>(null);
+  const [requestLogs, setRequestLogs] = useState<LogEntry[]>([]);
+  const [errorLogs, setErrorLogs] = useState<LogEntry[]>([]);
+  const [logSummary, setLogSummary] = useState<LogSummary | null>(null);
+  const [logFilter, setLogFilter] = useState<"all" | "success" | "errors">("all");
+  const [waking, setWaking] = useState(false);
+  const [wakeResult, setWakeResult] = useState<{ ok: boolean; uptimeSeconds?: number } | null>(null);
+  const [syncingSupabase, setSyncingSupabase] = useState(false);
 
   const isAuthed = !!password;
 
@@ -279,17 +337,53 @@ export default function Admin() {
     finally { setLoading(false); }
   }, [password]);
 
+  const loadTraffic = useCallback(async () => {
+    setLoading(true);
+    try { setTraffic(await adminFetch("/admin/traffic", password) as TrafficData); } catch { setTraffic(null); }
+    finally { setLoading(false); }
+  }, [password]);
+
+  const loadLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch(`/admin/logs?filter=${logFilter}`, password) as {
+        logs: LogEntry[]; errors: LogEntry[]; summary: LogSummary;
+      };
+      setRequestLogs(data.logs); setErrorLogs(data.errors); setLogSummary(data.summary);
+    } catch { setRequestLogs([]); setErrorLogs([]); }
+    finally { setLoading(false); }
+  }, [password, logFilter]);
+
+  async function wakeBackend() {
+    setWaking(true); setWakeResult(null);
+    try {
+      const data = await adminFetch("/admin/ping", password) as { ok: boolean; uptimeSeconds: number };
+      setWakeResult(data);
+    } catch { setWakeResult({ ok: false }); }
+    finally { setWaking(false); }
+  }
+
+  async function syncSupabase() {
+    setSyncingSupabase(true);
+    try { await loadUsers(); } finally { setSyncingSupabase(false); }
+  }
+
   useEffect(() => {
     if (!isAuthed) return;
     if (activeTab === "overview" || activeTab === "documents") loadStats();
-    if (activeTab === "users") loadUsers();
+    if (activeTab === "users") { loadUsers(); loadSubscriptions(); }
     if (activeTab === "gateways") loadGateways();
     if (activeTab === "payments") loadPayments();
     if (activeTab === "credits") loadCredits();
     if (activeTab === "revenue") loadRevenue();
     if (activeTab === "settings") loadSettings();
-    if (activeTab === "users") loadSubscriptions();
+    if (activeTab === "analytics") loadTraffic();
+    if (activeTab === "logs") loadLogs();
   }, [isAuthed, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "logs" && isAuthed) loadLogs();
+  }, [logFilter]);
 
   async function toggleGateway(gateway: string, paused: boolean) {
     setTogglingGateway(gateway);
@@ -377,6 +471,8 @@ export default function Admin() {
     else if (activeTab === "credits") loadCredits();
     else if (activeTab === "revenue") loadRevenue();
     else if (activeTab === "settings") loadSettings();
+    else if (activeTab === "analytics") loadTraffic();
+    else if (activeTab === "logs") loadLogs();
     else loadStats();
   }
 
@@ -436,14 +532,16 @@ export default function Admin() {
 
   // ── Dashboard ───────────────────────────────────────────────────────────────
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "overview",       label: "Overview",       icon: Activity },
-    { id: "users",          label: "Students",       icon: Users },
-    { id: "documents",      label: "Documents",      icon: FileText },
-    { id: "gateways",       label: "Gateways",       icon: Globe },
-    { id: "payments",       label: "Payments",       icon: CreditCard },
-    { id: "credits",        label: "Credits",        icon: Coins },
-    { id: "revenue",        label: "Revenue",        icon: BarChart3 },
-    { id: "settings",       label: "Settings",       icon: Settings },
+    { id: "overview",   label: "Overview",   icon: Activity },
+    { id: "users",      label: "Students",   icon: Users },
+    { id: "documents",  label: "Documents",  icon: FileText },
+    { id: "analytics",  label: "Analytics",  icon: TrendingUp },
+    { id: "logs",       label: "Logs",       icon: Radio },
+    { id: "gateways",   label: "Gateways",   icon: Globe },
+    { id: "payments",   label: "Payments",   icon: CreditCard },
+    { id: "credits",    label: "Credits",    icon: Coins },
+    { id: "revenue",    label: "Revenue",    icon: BarChart3 },
+    { id: "settings",   label: "Settings",   icon: Settings },
   ];
 
   const filteredUsers = userSearch
@@ -488,15 +586,34 @@ export default function Admin() {
 
         {/* Main */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <header className="flex items-center gap-3 px-5 py-3.5 border-b border-white/8 bg-white/[0.01] shrink-0">
+          <header className="flex items-center gap-2 px-5 py-3.5 border-b border-white/8 bg-white/[0.01] shrink-0">
             <button className="lg:hidden text-white/40 hover:text-white/70 transition-colors" onClick={() => setMobileNav(!mobileNav)}>
               {mobileNav ? <X size={18} /> : <Menu size={18} />}
             </button>
             <h1 className="text-sm font-semibold text-white/80 capitalize">{activeTab}</h1>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
+              {wakeResult && (
+                <span className={`text-[10px] font-medium px-2 py-1 rounded-lg border ${wakeResult.ok ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"}`}>
+                  {wakeResult.ok ? `✓ Online · ${wakeResult.uptimeSeconds ? Math.floor(wakeResult.uptimeSeconds / 60) + "m uptime" : ""}` : "✗ Offline"}
+                </span>
+              )}
+              <button onClick={syncSupabase} disabled={syncingSupabase}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/8 transition-all disabled:opacity-40 border border-white/8"
+                title="Refresh student data from Supabase"
+              >
+                {syncingSupabase ? <Loader2 size={11} className="animate-spin" /> : <Database size={11} />}
+                <span className="hidden sm:inline">Sync</span>
+              </button>
+              <button onClick={wakeBackend} disabled={waking}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-emerald-400 hover:bg-emerald-500/8 transition-all disabled:opacity-40 border border-white/8"
+                title="Ping backend to wake it up"
+              >
+                {waking ? <Loader2 size={11} className="animate-spin" /> : <Signal size={11} />}
+                <span className="hidden sm:inline">Wake</span>
+              </button>
               <button onClick={refreshTab} disabled={loading}
                 className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/8 transition-all disabled:opacity-40"
-                title="Refresh"
+                title="Refresh current tab"
               >
                 <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
               </button>
@@ -920,6 +1037,175 @@ export default function Admin() {
               </div>
             )}
 
+            {/* ── Analytics ─────────────────────────────────────────────── */}
+            {activeTab === "analytics" && (
+              <div className="space-y-6 max-w-5xl">
+                <SectionHeader title="Traffic & Analytics" sub="Real-time and historical usage by region" />
+                {!traffic && loading ? <Spinner /> : traffic ? (
+                  <>
+                    {/* KPI row */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      <OverviewCard icon={<Users size={18} />} label="Registered Users" value={traffic.totalRegisteredUsers} color="from-blue-600/20 to-blue-500/10" border="border-blue-500/15" iconColor="text-blue-400" />
+                      <OverviewCard icon={<Activity size={18} />} label="Active (All Time)" value={traffic.totalActiveUsers} color="from-violet-600/20 to-violet-500/10" border="border-violet-500/15" iconColor="text-violet-400" />
+                      <OverviewCard icon={<Clock size={18} />} label="Daily Active (24h)" value={traffic.dailyActiveUsers} color="from-amber-600/20 to-amber-500/10" border="border-amber-500/15" iconColor="text-amber-400" />
+                      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600/20 to-emerald-500/10 border border-emerald-500/15 rounded-xl p-5">
+                        <div className="text-emerald-400 mb-3 flex items-center gap-2">
+                          <Radio size={18} />
+                          {traffic.liveUsers > 0 && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
+                        </div>
+                        <div className="text-2xl font-bold text-white tabular-nums">{traffic.liveUsers}</div>
+                        <div className="text-xs text-white/45 mt-1 font-medium">Live Now (5 min)</div>
+                      </div>
+                    </div>
+
+                    {/* 24h request bar chart */}
+                    {traffic.byHour.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-white/70 mb-3">Requests — Last 24 Hours</h3>
+                        <div className="bg-white/[0.02] border border-white/8 rounded-xl p-4">
+                          <div className="flex items-end gap-1 h-24">
+                            {(() => {
+                              const max = Math.max(...traffic.byHour.map((h) => Number(h.requests)), 1);
+                              return traffic.byHour.map((h, i) => (
+                                <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+                                  <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur rounded px-1.5 py-1 text-[10px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                    {h.hour} · {h.requests} req{Number(h.errors) > 0 ? ` · ${h.errors} err` : ""}
+                                  </div>
+                                  <div className="w-full rounded-t-sm" style={{ height: `${(Number(h.requests) / max) * 88}px`, background: Number(h.errors) > Number(h.requests) * 0.1 ? "rgb(239 68 68 / 0.5)" : "rgb(99 102 241 / 0.6)" }} />
+                                </div>
+                              ));
+                            })()}
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-[10px] text-white/30">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-indigo-500/60 inline-block" />Normal</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500/50 inline-block" />&gt;10% errors</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* By country */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-white/70 mb-3">Traffic by Region (30 days)</h3>
+                      <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                        {traffic.byCountry.length === 0 ? <Empty text="No traffic recorded yet — data builds as users make requests" /> : (
+                          <>
+                            <div className="grid grid-cols-[1fr_1fr_100px_100px] gap-2 px-4 py-2.5 border-b border-white/6">
+                              {["Country", "", "Requests", "Unique Users"].map((h) => (
+                                <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
+                              ))}
+                            </div>
+                            {(() => {
+                              const maxReq = Math.max(...traffic.byCountry.map((r) => Number(r.requests)), 1);
+                              return traffic.byCountry.map((r, i) => (
+                                <div key={r.country} className={`grid grid-cols-[1fr_1fr_100px_100px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < traffic.byCountry.length - 1 ? "border-b border-white/6" : ""}`}>
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="text-lg leading-none">{countryFlag(r.country)}</span>
+                                    <span className="text-sm text-white/80 font-medium">{countryName(r.country)}</span>
+                                    <span className="text-[10px] text-white/25 font-mono">{r.country}</span>
+                                  </div>
+                                  <div className="h-1.5 bg-white/6 rounded-full overflow-hidden">
+                                    <div className="h-full bg-indigo-500/50 rounded-full" style={{ width: `${(Number(r.requests) / maxReq) * 100}%` }} />
+                                  </div>
+                                  <span className="text-sm font-semibold text-white/70 tabular-nums">{Number(r.requests).toLocaleString()}</span>
+                                  <span className="text-sm text-white/40 tabular-nums">{Number(r.users).toLocaleString()}</span>
+                                </div>
+                              ));
+                            })()}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : <Empty text="Analytics unavailable" />}
+              </div>
+            )}
+
+            {/* ── Logs ──────────────────────────────────────────────────── */}
+            {activeTab === "logs" && (
+              <div className="space-y-5 max-w-6xl">
+                <div className="flex items-start justify-between flex-wrap gap-3">
+                  <SectionHeader title="Request Logs" sub="Last 200 API requests and all server errors" />
+                  <div className="flex gap-1.5">
+                    {(["all", "success", "errors"] as const).map((f) => (
+                      <button key={f} onClick={() => setLogFilter(f)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize ${logFilter === f ? "bg-white/10 text-white" : "text-white/35 hover:text-white/60"}`}
+                      >{f}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Summary stats */}
+                {logSummary && (
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {[
+                      { label: "Total (24h)", value: logSummary.total, color: "text-white" },
+                      { label: "Success", value: logSummary.success, color: "text-green-400" },
+                      { label: "Client Errors (4xx)", value: logSummary.client_errors, color: "text-amber-400" },
+                      { label: "Server Errors (5xx)", value: logSummary.server_errors, color: "text-red-400" },
+                      { label: "Avg Response", value: logSummary.avg_ms ? `${logSummary.avg_ms}ms` : "—", color: "text-blue-400" },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className="bg-white/[0.025] border border-white/8 rounded-xl px-4 py-3">
+                        <p className="text-[10px] text-white/35 mb-1">{label}</p>
+                        <p className={`text-lg font-bold tabular-nums ${color}`}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Server error log */}
+                {errorLogs.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-red-400/80 mb-3 flex items-center gap-2">
+                      <ServerCrash size={14} /> Server Errors (5xx)
+                    </h3>
+                    <div className="bg-red-500/5 border border-red-500/15 rounded-xl overflow-hidden">
+                      <div className="grid grid-cols-[70px_200px_60px_80px_1fr_110px] gap-2 px-4 py-2.5 border-b border-red-500/10">
+                        {["Method", "Path", "Status", "Country", "Error", "Time"].map((h) => (
+                          <span key={h} className="text-[10px] font-semibold text-red-400/40 uppercase tracking-wide">{h}</span>
+                        ))}
+                      </div>
+                      {errorLogs.map((e, i) => (
+                        <div key={e.id} className={`grid grid-cols-[70px_200px_60px_80px_1fr_110px] gap-2 items-start px-4 py-3 hover:bg-red-500/5 transition-colors ${i < errorLogs.length - 1 ? "border-b border-red-500/8" : ""}`}>
+                          <MethodBadge method={e.method} />
+                          <span className="text-xs text-white/60 font-mono truncate">{e.path}</span>
+                          <span className="text-xs font-bold text-red-400 tabular-nums">{e.status}</span>
+                          <span className="text-xs text-white/40">{countryFlag(e.country)} {e.country}</span>
+                          <span className="text-xs text-red-300/70 break-all">{e.error_msg ?? "No message captured"}</span>
+                          <span className="text-[10px] text-white/25">{new Date(e.created_at).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Request log */}
+                <div>
+                  <h3 className="text-sm font-semibold text-white/70 mb-3">Request Log</h3>
+                  <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                    <div className="grid grid-cols-[70px_1fr_60px_80px_70px_80px_110px] gap-2 px-4 py-2.5 border-b border-white/6">
+                      {["Method", "Path", "Status", "Country", "Time", "User", "When"].map((h) => (
+                        <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
+                      ))}
+                    </div>
+                    {loading ? <div className="py-12 flex justify-center"><Loader2 size={16} className="animate-spin text-white/30" /></div>
+                      : requestLogs.length === 0 ? <Empty text="No requests logged yet" />
+                      : requestLogs.map((log, i) => (
+                      <div key={log.id} className={`grid grid-cols-[70px_1fr_60px_80px_70px_80px_110px] gap-2 items-center px-4 py-2.5 hover:bg-white/[0.02] transition-colors ${i < requestLogs.length - 1 ? "border-b border-white/5" : ""}`}>
+                        <MethodBadge method={log.method} />
+                        <span className="text-xs text-white/55 font-mono truncate" title={log.path}>{log.path}</span>
+                        <span className={`text-xs font-bold tabular-nums ${log.status < 300 ? "text-green-400" : log.status < 400 ? "text-blue-400" : log.status < 500 ? "text-amber-400" : "text-red-400"}`}>{log.status}</span>
+                        <span className="text-xs text-white/35">{countryFlag(log.country)} {log.country}</span>
+                        <span className="text-xs text-white/30 tabular-nums">{log.duration_ms != null ? `${log.duration_ms}ms` : "—"}</span>
+                        <span className="text-[10px] text-white/25 font-mono truncate">{log.user_id ? log.user_id.slice(0, 8) + "…" : "anon"}</span>
+                        <span className="text-[10px] text-white/25">{new Date(log.created_at).toLocaleTimeString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ── Settings ──────────────────────────────────────────────── */}
             {activeTab === "settings" && (
               <div className="space-y-6 max-w-2xl">
@@ -1105,6 +1391,21 @@ function Badge({ color, children }: { color: "green" | "amber" | "red" | "blue";
   }[color];
   return (
     <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 border rounded-full ${cls}`}>{children}</span>
+  );
+}
+
+function MethodBadge({ method }: { method: string }) {
+  const styles: Record<string, string> = {
+    GET:    "bg-blue-500/15 text-blue-300 border-blue-500/20",
+    POST:   "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
+    PATCH:  "bg-amber-500/15 text-amber-300 border-amber-500/20",
+    PUT:    "bg-violet-500/15 text-violet-300 border-violet-500/20",
+    DELETE: "bg-red-500/15 text-red-300 border-red-500/20",
+  };
+  return (
+    <span className={`inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 border rounded font-mono ${styles[method] ?? "bg-white/10 text-white/50 border-white/15"}`}>
+      {method}
+    </span>
   );
 }
 

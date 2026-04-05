@@ -447,6 +447,113 @@ router.post("/admin/settings", async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /admin/ping ───────────────────────────────────────────────────────────
+
+router.get("/admin/ping", (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  res.json({ ok: true, timestamp: new Date().toISOString(), uptimeSeconds: Math.floor(process.uptime()) });
+});
+
+// ── GET /admin/traffic ────────────────────────────────────────────────────────
+
+router.get("/admin/traffic", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [activeAll, activeToday, activeLive, byCountry, byHour] = await Promise.all([
+      pool.query<{ cnt: string }>(
+        `SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs WHERE user_id IS NOT NULL`
+      ).catch(() => ({ rows: [{ cnt: "0" }] })),
+      pool.query<{ cnt: string }>(
+        `SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs WHERE user_id IS NOT NULL AND created_at > NOW() - INTERVAL '24 hours'`
+      ).catch(() => ({ rows: [{ cnt: "0" }] })),
+      pool.query<{ cnt: string }>(
+        `SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs WHERE user_id IS NOT NULL AND created_at > NOW() - INTERVAL '5 minutes'`
+      ).catch(() => ({ rows: [{ cnt: "0" }] })),
+      pool.query<{ country: string; requests: string; users: string }>(
+        `SELECT country, COUNT(*) as requests, COUNT(DISTINCT user_id) as users
+         FROM request_logs WHERE created_at > NOW() - INTERVAL '30 days'
+         GROUP BY country ORDER BY requests DESC LIMIT 30`
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ hour: string; requests: string; errors: string }>(
+        `SELECT TO_CHAR(DATE_TRUNC('hour', created_at), 'HH24:MI') as hour,
+                COUNT(*) as requests,
+                COUNT(*) FILTER (WHERE status >= 400) as errors
+         FROM request_logs WHERE created_at > NOW() - INTERVAL '24 hours'
+         GROUP BY DATE_TRUNC('hour', created_at) ORDER BY DATE_TRUNC('hour', created_at) ASC`
+      ).catch(() => ({ rows: [] })),
+    ]);
+
+    let totalRegisteredUsers = 0;
+    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=500`, {
+          headers: { Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, apikey: SUPABASE_SERVICE_ROLE_KEY },
+        });
+        if (r.ok) {
+          const data = await r.json() as { users?: unknown[] };
+          totalRegisteredUsers = data.users?.length ?? 0;
+        }
+      } catch {}
+    }
+
+    // Clean up logs older than 60 days (fire-and-forget)
+    pool.query(`DELETE FROM request_logs WHERE created_at < NOW() - INTERVAL '60 days'`).catch(() => {});
+
+    res.json({
+      totalRegisteredUsers,
+      totalActiveUsers: Number(activeAll.rows[0]?.cnt ?? 0),
+      dailyActiveUsers: Number(activeToday.rows[0]?.cnt ?? 0),
+      liveUsers: Number(activeLive.rows[0]?.cnt ?? 0),
+      byCountry: byCountry.rows,
+      byHour: byHour.rows,
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/logs ───────────────────────────────────────────────────────────
+
+router.get("/admin/logs", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const filter = (req.query.filter as string) ?? "all";
+  try {
+    let where = `WHERE path NOT IN ('/api/healthz') AND path NOT LIKE '%/admin/%'`;
+    if (filter === "success") where += " AND status < 400";
+    else if (filter === "errors") where += " AND status >= 400";
+
+    const [requestLogs, errorLogs, summary] = await Promise.all([
+      pool.query(
+        `SELECT id, method, path, status, duration_ms, user_id, country, error_msg,
+                created_at::text as created_at
+         FROM request_logs ${where}
+         ORDER BY created_at DESC LIMIT 200`
+      ).catch(() => ({ rows: [] })),
+      pool.query(
+        `SELECT id, method, path, status, user_id, country, error_msg, created_at::text as created_at
+         FROM api_errors ORDER BY created_at DESC LIMIT 100`
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ total: string; success: string; client_errors: string; server_errors: string; avg_ms: string }>(
+        `SELECT
+           COUNT(*) as total,
+           COUNT(*) FILTER (WHERE status < 400) as success,
+           COUNT(*) FILTER (WHERE status >= 400 AND status < 500) as client_errors,
+           COUNT(*) FILTER (WHERE status >= 500) as server_errors,
+           ROUND(AVG(duration_ms))::text as avg_ms
+         FROM request_logs WHERE created_at > NOW() - INTERVAL '24 hours'`
+      ).catch(() => ({ rows: [] })),
+    ]);
+
+    res.json({
+      logs: requestLogs.rows,
+      errors: errorLogs.rows,
+      summary: summary.rows[0] ?? { total: "0", success: "0", client_errors: "0", server_errors: "0", avg_ms: "0" },
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── GET /admin/gateways (already in payments.ts — keep here for admin context) ─
 
 export default router;
