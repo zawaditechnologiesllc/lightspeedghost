@@ -12,7 +12,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     stem:      10,   // per day
     study:     10,   // per day (messages)
     plagiarism: 5,
-    outline:   null, // unlimited
+    outline:   5,
   },
   pro: {
     paper:     50,

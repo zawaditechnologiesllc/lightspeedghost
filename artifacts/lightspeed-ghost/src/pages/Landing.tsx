@@ -115,7 +115,7 @@ const faqs = [
   },
   {
     q: "Is there a free plan?",
-    a: "The entry plan is Starter at $1.50/month — lower than a cup of coffee and still the cheapest academic writing platform you'll find. It includes 3 paper generations per month, 5 plagiarism + AI checks, 10 STEM queries per day, 10 study messages per day, 1 revision, and unlimited outline generation. No tricks, just a minimal charge to keep the lights on.",
+    a: "The entry plan is Starter at $1.50/month — lower than a cup of coffee and still the cheapest academic writing platform you'll find. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 10 STEM queries per day, 10 study messages per day, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
   },
   {
     q: "What's the difference between Pro monthly and annual?",
@@ -141,7 +141,7 @@ const pricingPlans = [
       "10 STEM solver queries / day",
       "10 study messages / day",
       "1 revision / month",
-      "Outline generator (unlimited)",
+      "5 outline generations / month",
       "7-day document history",
     ],
     locked: ["Ghost Writer humanizer", "Priority AI processing", "Citation export (BibTeX / RIS)"],
