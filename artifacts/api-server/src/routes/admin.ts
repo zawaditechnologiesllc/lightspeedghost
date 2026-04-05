@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { documentsTable, studySessionsTable, studentProfilesTable } from "@workspace/db";
+import { db, pool } from "@workspace/db";
+import { documentsTable, studySessionsTable } from "@workspace/db";
 import { desc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 
@@ -16,7 +16,53 @@ function verifyAdminToken(req: Request): boolean {
   return token === ADMIN_PASSWORD;
 }
 
-/** Verify admin password — returns a token to use in subsequent calls */
+// ── Bootstrap admin tables ───────────────────────────────────────────────────
+
+async function initAdminTables() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS user_bans (
+      user_id TEXT PRIMARY KEY,
+      reason TEXT,
+      banned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      banned_by TEXT
+    );
+    INSERT INTO system_settings (key, value) VALUES
+      ('maintenance_mode',   'false'),
+      ('allow_signups',      'true'),
+      ('payg_enabled',       'true'),
+      ('announcement',       ''),
+      ('announcement_color', 'blue'),
+      ('starter_paper',      '3'),
+      ('starter_revision',   '1'),
+      ('starter_humanizer',  '1'),
+      ('starter_stem',       '10'),
+      ('starter_study',      '10'),
+      ('starter_plagiarism', '5'),
+      ('starter_outline',    '5')
+    ON CONFLICT (key) DO NOTHING;
+  `);
+}
+
+initAdminTables().catch(() => {});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function getSettings(): Promise<Record<string, string>> {
+  try {
+    const rows = await pool.query<{ key: string; value: string }>("SELECT key, value FROM system_settings");
+    return Object.fromEntries(rows.rows.map((r) => [r.key, r.value]));
+  } catch {
+    return {};
+  }
+}
+
+// ── POST /admin/verify ────────────────────────────────────────────────────────
+
 router.post("/admin/verify", (req, res) => {
   const { password } = req.body as { password?: string };
   if (!ADMIN_PASSWORD) {
@@ -30,34 +76,47 @@ router.post("/admin/verify", (req, res) => {
   }
 });
 
-/** Platform-wide stats */
+// ── GET /admin/stats ──────────────────────────────────────────────────────────
+
 router.get("/admin/stats", async (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    const allDocs = await db.select().from(documentsTable);
-    const allSessions = await db.select().from(studySessionsTable);
+    const [allDocs, allSessions, revenueRows, creditsRow, activeSubsRow] = await Promise.all([
+      db.select().from(documentsTable),
+      db.select().from(studySessionsTable),
+      pool.query<{ gateway: string; total: string; cnt: string }>(`
+        SELECT gateway, SUM(amount_cents) as total, COUNT(*) as cnt
+        FROM payments WHERE status = 'completed'
+        GROUP BY gateway
+      `).catch(() => ({ rows: [] })),
+      pool.query<{ total: string }>(`
+        SELECT COALESCE(SUM(lifetime_earned_cents), 0) as total FROM user_credits
+      `).catch(() => ({ rows: [{ total: "0" }] })),
+      pool.query<{ cnt: string }>(`
+        SELECT COUNT(*) as cnt FROM user_subscriptions WHERE plan != 'starter'
+      `).catch(() => ({ rows: [{ cnt: "0" }] })),
+    ]);
 
     const uniqueUsers = new Set([
       ...allDocs.map((d) => d.userId).filter(Boolean),
       ...allSessions.map((s) => s.userId).filter(Boolean),
     ]);
 
-    const docsByType = allDocs.reduce(
-      (acc, d) => {
-        acc[d.type] = (acc[d.type] ?? 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
+    const docsByType = allDocs.reduce((acc, d) => {
+      acc[d.type] = (acc[d.type] ?? 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
     const recentDocs = await db
       .select()
       .from(documentsTable)
       .orderBy(desc(documentsTable.updatedAt))
       .limit(10);
+
+    const totalRevenue = revenueRows.rows.reduce((s, r) => s + Number(r.total), 0);
+    const revenueByGateway = Object.fromEntries(
+      revenueRows.rows.map((r) => [r.gateway, { revenue: Number(r.total), count: Number(r.cnt) }])
+    );
 
     res.json({
       totalUsers: uniqueUsers.size,
@@ -66,6 +125,10 @@ router.get("/admin/stats", async (req: Request, res: Response) => {
       revisionsCompleted: docsByType["revision"] ?? 0,
       stemSolved: docsByType["stem"] ?? 0,
       studySessions: allSessions.length,
+      totalRevenueCents: totalRevenue,
+      activeSubscriptions: Number(activeSubsRow.rows[0]?.cnt ?? 0),
+      totalCreditsIssuedCents: Number(creditsRow.rows[0]?.total ?? 0),
+      revenueByGateway,
       recentDocuments: recentDocs.map((d) => ({
         ...d,
         createdAt: d.createdAt.toISOString(),
@@ -77,72 +140,77 @@ router.get("/admin/stats", async (req: Request, res: Response) => {
   }
 });
 
-/** List all users (from DB distinct userIds + Supabase admin API if service role set) */
+// ── GET /admin/users ──────────────────────────────────────────────────────────
+
 router.get("/admin/users", async (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    // First, collect distinct userIds from DB
-    const docUsers = await db
-      .select({ userId: documentsTable.userId })
-      .from(documentsTable)
-      .where(sql`${documentsTable.userId} is not null`);
-
-    const sessionUsers = await db
-      .select({ userId: studySessionsTable.userId })
-      .from(studySessionsTable)
-      .where(sql`${studySessionsTable.userId} is not null`);
+    const [docUsers, sessionUsers, creditRows, subRows, banRows] = await Promise.all([
+      db.select({ userId: documentsTable.userId }).from(documentsTable)
+        .where(sql`${documentsTable.userId} is not null`),
+      db.select({ userId: studySessionsTable.userId }).from(studySessionsTable)
+        .where(sql`${studySessionsTable.userId} is not null`),
+      pool.query<{ user_id: string; balance_cents: number; lifetime_earned_cents: number; lifetime_spent_cents: number }>(
+        "SELECT user_id, balance_cents, lifetime_earned_cents, lifetime_spent_cents FROM user_credits"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ user_id: string; plan: string; billing: string | null }>(
+        "SELECT user_id, plan, billing FROM user_subscriptions"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ user_id: string; reason: string | null; banned_at: string }>(
+        "SELECT user_id, reason, banned_at FROM user_bans"
+      ).catch(() => ({ rows: [] })),
+    ]);
 
     const userDocCounts: Record<string, number> = {};
-    for (const { userId } of docUsers) {
-      if (userId) userDocCounts[userId] = (userDocCounts[userId] ?? 0) + 1;
-    }
+    for (const { userId } of docUsers) if (userId) userDocCounts[userId] = (userDocCounts[userId] ?? 0) + 1;
 
     const userSessionCounts: Record<string, number> = {};
-    for (const { userId } of sessionUsers) {
-      if (userId) userSessionCounts[userId] = (userSessionCounts[userId] ?? 0) + 1;
-    }
+    for (const { userId } of sessionUsers) if (userId) userSessionCounts[userId] = (userSessionCounts[userId] ?? 0) + 1;
 
-    const allUserIds = new Set([...Object.keys(userDocCounts), ...Object.keys(userSessionCounts)]);
+    const creditMap = Object.fromEntries(creditRows.rows.map((r) => [r.user_id, r]));
+    const planMap = Object.fromEntries(subRows.rows.map((r) => [r.user_id, r]));
+    const banMap = Object.fromEntries(banRows.rows.map((r) => [r.user_id, r]));
 
-    // If service role key is set, fetch user details from Supabase
+    const allUserIds = new Set([
+      ...Object.keys(userDocCounts),
+      ...Object.keys(userSessionCounts),
+      ...Object.keys(creditMap),
+      ...Object.keys(planMap),
+    ]);
+
     let supabaseUsers: Array<{ id: string; email: string; created_at: string; last_sign_in_at?: string }> = [];
-
     if (SUPABASE_SERVICE_ROLE_KEY && SUPABASE_URL) {
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=500`, {
+      const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=500`, {
         headers: {
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           apikey: SUPABASE_SERVICE_ROLE_KEY,
         },
       });
-
-      if (response.ok) {
-        const data = await response.json() as { users?: typeof supabaseUsers };
+      if (r.ok) {
+        const data = await r.json() as { users?: typeof supabaseUsers };
         supabaseUsers = data.users ?? [];
       }
     }
 
-    // Merge DB stats with Supabase user data
+    const enrich = (id: string, email: string | null, createdAt: string | null, lastSignIn: string | null) => ({
+      id,
+      email,
+      createdAt,
+      lastSignIn,
+      documentCount: userDocCounts[id] ?? 0,
+      sessionCount: userSessionCounts[id] ?? 0,
+      plan: planMap[id]?.plan ?? "starter",
+      billing: planMap[id]?.billing ?? null,
+      creditBalance: creditMap[id]?.balance_cents ?? 0,
+      lifetimeEarned: creditMap[id]?.lifetime_earned_cents ?? 0,
+      lifetimeSpent: creditMap[id]?.lifetime_spent_cents ?? 0,
+      banned: !!banMap[id],
+      banReason: banMap[id]?.reason ?? null,
+    });
+
     const users = supabaseUsers.length > 0
-      ? supabaseUsers.map((u) => ({
-          id: u.id,
-          email: u.email,
-          createdAt: u.created_at,
-          lastSignIn: u.last_sign_in_at ?? null,
-          documentCount: userDocCounts[u.id] ?? 0,
-          sessionCount: userSessionCounts[u.id] ?? 0,
-        }))
-      : Array.from(allUserIds).map((id) => ({
-          id,
-          email: null,
-          createdAt: null,
-          lastSignIn: null,
-          documentCount: userDocCounts[id] ?? 0,
-          sessionCount: userSessionCounts[id] ?? 0,
-        }));
+      ? supabaseUsers.map((u) => enrich(u.id, u.email, u.created_at, u.last_sign_in_at ?? null))
+      : Array.from(allUserIds).map((id) => enrich(id, null, null, null));
 
     res.json({ users, hasEmailData: supabaseUsers.length > 0 });
   } catch (err) {
@@ -150,17 +218,13 @@ router.get("/admin/users", async (req: Request, res: Response) => {
   }
 });
 
-/** Delete a user (requires service role key) */
-router.delete("/admin/users/:id", async (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  if (!SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_URL) {
-    res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY not configured" });
-    return;
-  }
+// ── DELETE /admin/users/:id ───────────────────────────────────────────────────
 
+router.delete("/admin/users/:id", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  if (!SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_URL) {
+    res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY not configured" }); return;
+  }
   const { id } = req.params;
   try {
     const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${id}`, {
@@ -170,16 +234,219 @@ router.delete("/admin/users/:id", async (req: Request, res: Response) => {
         apikey: SUPABASE_SERVICE_ROLE_KEY,
       },
     });
-
     if (response.ok) {
       res.json({ ok: true });
     } else {
       const err = await response.json().catch(() => ({}));
       res.status(response.status).json({ error: "Failed to delete user", details: err });
     }
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// ── PATCH /admin/users/:id/ban ────────────────────────────────────────────────
+
+router.patch("/admin/users/:id/ban", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  const { banned, reason } = req.body as { banned: boolean; reason?: string };
+  try {
+    if (banned) {
+      await pool.query(
+        "INSERT INTO user_bans (user_id, reason) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET reason = $2, banned_at = NOW()",
+        [id, reason ?? null]
+      );
+    } else {
+      await pool.query("DELETE FROM user_bans WHERE user_id = $1", [id]);
+    }
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to update ban status" });
+  }
+});
+
+// ── PATCH /admin/users/:id/plan ───────────────────────────────────────────────
+
+router.patch("/admin/users/:id/plan", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  const { plan, billing } = req.body as { plan: string; billing?: string };
+  try {
+    await pool.query(`
+      INSERT INTO user_subscriptions (user_id, plan, billing, gateway)
+      VALUES ($1, $2, $3, 'manual')
+      ON CONFLICT (user_id) DO UPDATE SET plan = $2, billing = $3
+    `, [id, plan, billing ?? null]);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to update plan" });
+  }
+});
+
+// ── POST /admin/users/:id/credits ─────────────────────────────────────────────
+
+router.post("/admin/users/:id/credits", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  const { amountCents, reason } = req.body as { amountCents: number; reason?: string };
+  if (!amountCents || amountCents === 0) {
+    res.status(400).json({ error: "amountCents must be non-zero" }); return;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      "INSERT INTO user_credits (user_id, balance_cents, lifetime_earned_cents, lifetime_spent_cents) VALUES ($1, 0, 0, 0) ON CONFLICT (user_id) DO NOTHING",
+      [id]
+    );
+    const earns = amountCents > 0 ? amountCents : 0;
+    const spends = amountCents < 0 ? Math.abs(amountCents) : 0;
+    const updated = await client.query<{ balance_cents: number }>(
+      "UPDATE user_credits SET balance_cents = balance_cents + $2, lifetime_earned_cents = lifetime_earned_cents + $3, lifetime_spent_cents = lifetime_spent_cents + $4, updated_at = NOW() WHERE user_id = $1 RETURNING balance_cents",
+      [id, amountCents, earns, spends]
+    );
+    const newBalance = updated.rows[0]?.balance_cents ?? 0;
+    if (newBalance < 0) { await client.query("ROLLBACK"); res.status(400).json({ error: "Insufficient credits" }); return; }
+    await client.query(
+      "INSERT INTO credit_transactions (user_id, amount_cents, type, description) VALUES ($1, $2, $3, $4)",
+      [id, amountCents, amountCents > 0 ? "bonus" : "spend", reason ?? "Admin adjustment"]
+    );
+    await client.query("COMMIT");
+    res.json({ ok: true, newBalanceCents: newBalance });
+  } catch {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: "Failed to adjust credits" });
+  } finally {
+    client.release();
+  }
+});
+
+// ── GET /admin/credits ────────────────────────────────────────────────────────
+
+router.get("/admin/credits", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [creditsRows, recentTx] = await Promise.all([
+      pool.query<{ user_id: string; balance_cents: number; lifetime_earned_cents: number; lifetime_spent_cents: number; updated_at: string }>(
+        "SELECT user_id, balance_cents, lifetime_earned_cents, lifetime_spent_cents, updated_at FROM user_credits ORDER BY balance_cents DESC LIMIT 100"
+      ),
+      pool.query<{ user_id: string; amount_cents: number; type: string; description: string; created_at: string }>(
+        "SELECT user_id, amount_cents, type, description, created_at FROM credit_transactions ORDER BY created_at DESC LIMIT 50"
+      ),
+    ]);
+    const totals = await pool.query<{ total_balance: string; total_earned: string; total_spent: string }>(
+      "SELECT COALESCE(SUM(balance_cents),0) as total_balance, COALESCE(SUM(lifetime_earned_cents),0) as total_earned, COALESCE(SUM(lifetime_spent_cents),0) as total_spent FROM user_credits"
+    );
+    res.json({
+      users: creditsRows.rows,
+      recentTransactions: recentTx.rows,
+      totals: totals.rows[0] ?? { total_balance: "0", total_earned: "0", total_spent: "0" },
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/revenue ────────────────────────────────────────────────────────
+
+router.get("/admin/revenue", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [byGateway, byMonth, byType, topUsers, summary] = await Promise.all([
+      pool.query<{ gateway: string; revenue: string; count: string }>(
+        "SELECT gateway, SUM(amount_cents) as revenue, COUNT(*) as count FROM payments WHERE status = 'completed' GROUP BY gateway ORDER BY revenue DESC"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ month: string; revenue: string; count: string }>(
+        "SELECT TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') as month, SUM(amount_cents) as revenue, COUNT(*) as count FROM payments WHERE status = 'completed' GROUP BY month ORDER BY month DESC LIMIT 12"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ type: string; revenue: string; count: string }>(
+        "SELECT type, SUM(amount_cents) as revenue, COUNT(*) as count FROM payments WHERE status = 'completed' GROUP BY type ORDER BY revenue DESC"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ user_id: string; revenue: string; count: string }>(
+        "SELECT user_id, SUM(amount_cents) as revenue, COUNT(*) as count FROM payments WHERE status = 'completed' GROUP BY user_id ORDER BY revenue DESC LIMIT 10"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ total: string; this_month: string; last_month: string; pending: string }>(
+        `SELECT
+          COALESCE(SUM(amount_cents) FILTER (WHERE status = 'completed'), 0) as total,
+          COALESCE(SUM(amount_cents) FILTER (WHERE status = 'completed' AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())), 0) as this_month,
+          COALESCE(SUM(amount_cents) FILTER (WHERE status = 'completed' AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW() - INTERVAL '1 month')), 0) as last_month,
+          COALESCE(SUM(amount_cents) FILTER (WHERE status = 'pending'), 0) as pending
+        FROM payments`
+      ).catch(() => ({ rows: [{ total: "0", this_month: "0", last_month: "0", pending: "0" }] })),
+    ]);
+    res.json({
+      byGateway: byGateway.rows,
+      byMonth: byMonth.rows,
+      byType: byType.rows,
+      topUsers: topUsers.rows,
+      summary: summary.rows[0] ?? { total: "0", this_month: "0", last_month: "0", pending: "0" },
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/subscriptions ──────────────────────────────────────────────────
+
+router.get("/admin/subscriptions", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const rows = await pool.query<{ user_id: string; plan: string; billing: string | null; gateway: string | null; created_at: string }>(
+      "SELECT user_id, plan, billing, gateway, created_at FROM user_subscriptions WHERE plan != 'starter' ORDER BY created_at DESC"
+    ).catch(() => ({ rows: [] }));
+    const counts = await pool.query<{ plan: string; cnt: string }>(
+      "SELECT plan, COUNT(*) as cnt FROM user_subscriptions GROUP BY plan"
+    ).catch(() => ({ rows: [] }));
+    res.json({
+      subscriptions: rows.rows,
+      counts: Object.fromEntries(counts.rows.map((r) => [r.plan, Number(r.cnt)])),
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/settings ───────────────────────────────────────────────────────
+
+router.get("/admin/settings", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const settings = await getSettings();
+    res.json({ settings });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /admin/settings ──────────────────────────────────────────────────────
+
+router.post("/admin/settings", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { settings } = req.body as { settings: Record<string, string> };
+  if (!settings || typeof settings !== "object") {
+    res.status(400).json({ error: "Invalid settings" }); return;
+  }
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const [key, value] of Object.entries(settings)) {
+        await client.query(
+          "INSERT INTO system_settings (key, value, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()",
+          [key, String(value)]
+        );
+      }
+      await client.query("COMMIT");
+    } finally {
+      client.release();
+    }
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to save settings" });
+  }
+});
+
+// ── GET /admin/gateways (already in payments.ts — keep here for admin context) ─
 
 export default router;
