@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
-import type { PlanId } from "@/lib/pricing";
+import { useAuth } from "@/contexts/AuthContext";
+import type { PlanId, PaygTool, DocumentTier } from "@/lib/pricing";
 import {
   Zap, ArrowRight, CheckCircle, Star, Menu, X,
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
@@ -198,55 +199,55 @@ const pricingPlans = [
 
 const paygWritingTools = [
   {
-    tool: "Paper Writer", color: "blue", Icon: PenLine,
+    tool: "Paper Writer", toolId: "paper" as PaygTool, color: "blue", Icon: PenLine,
     tiers: [
-      { label: "Discussion / Short response", words: "≤ 500 words",          price: "$1.99" },
-      { label: "Essay",                        words: "500 – 1,500 words",    price: "$3.99" },
-      { label: "Research Paper",               words: "1,500 – 3,500 words",  price: "$7.99" },
-      { label: "Proposal / Report",            words: "3,500 – 6,000 words",  price: "$12.99" },
-      { label: "Dissertation / Thesis",        words: "6,000 – 15,000 words", price: "$24.99" },
+      { label: "Discussion / Short response", words: "≤ 500 words",          price: "$1.99", tier: "discussion" as DocumentTier },
+      { label: "Essay",                        words: "500 – 1,500 words",    price: "$3.99", tier: "essay" as DocumentTier },
+      { label: "Research Paper",               words: "1,500 – 3,500 words",  price: "$7.99", tier: "research" as DocumentTier },
+      { label: "Proposal / Report",            words: "3,500 – 6,000 words",  price: "$12.99", tier: "proposal" as DocumentTier },
+      { label: "Dissertation / Thesis",        words: "6,000 – 15,000 words", price: "$24.99", tier: "dissertation" as DocumentTier },
     ],
   },
   {
-    tool: "Revision", color: "violet", Icon: FileText,
+    tool: "Revision", toolId: "revision" as PaygTool, color: "violet", Icon: FileText,
     tiers: [
-      { label: "Discussion",         words: "≤ 500 words",          price: "$0.99" },
-      { label: "Essay",              words: "500 – 1,500 words",    price: "$1.99" },
-      { label: "Research Paper",     words: "1,500 – 3,500 words",  price: "$3.99" },
-      { label: "Proposal / Report",  words: "3,500 – 6,000 words",  price: "$5.99" },
-      { label: "Dissertation",       words: "6,000 – 15,000 words", price: "$9.99" },
+      { label: "Discussion",         words: "≤ 500 words",          price: "$0.99",  tier: "discussion" as DocumentTier },
+      { label: "Essay",              words: "500 – 1,500 words",    price: "$1.99",  tier: "essay" as DocumentTier },
+      { label: "Research Paper",     words: "1,500 – 3,500 words",  price: "$3.99",  tier: "research" as DocumentTier },
+      { label: "Proposal / Report",  words: "3,500 – 6,000 words",  price: "$5.99",  tier: "proposal" as DocumentTier },
+      { label: "Dissertation",       words: "6,000 – 15,000 words", price: "$9.99",  tier: "dissertation" as DocumentTier },
     ],
   },
   {
-    tool: "Ghost Writer (Humanizer)", color: "indigo", Icon: Sparkles,
+    tool: "Ghost Writer (Humanizer)", toolId: "humanizer" as PaygTool, color: "indigo", Icon: Sparkles,
     tiers: [
-      { label: "Discussion",         words: "≤ 500 words",          price: "$0.99" },
-      { label: "Essay",              words: "500 – 1,500 words",    price: "$1.99" },
-      { label: "Research Paper",     words: "1,500 – 3,500 words",  price: "$3.99" },
-      { label: "Proposal / Report",  words: "3,500 – 6,000 words",  price: "$5.99" },
-      { label: "Dissertation",       words: "6,000 – 15,000 words", price: "$9.99" },
+      { label: "Discussion",         words: "≤ 500 words",          price: "$0.99",  tier: "discussion" as DocumentTier },
+      { label: "Essay",              words: "500 – 1,500 words",    price: "$1.99",  tier: "essay" as DocumentTier },
+      { label: "Research Paper",     words: "1,500 – 3,500 words",  price: "$3.99",  tier: "research" as DocumentTier },
+      { label: "Proposal / Report",  words: "3,500 – 6,000 words",  price: "$5.99",  tier: "proposal" as DocumentTier },
+      { label: "Dissertation",       words: "6,000 – 15,000 words", price: "$9.99",  tier: "dissertation" as DocumentTier },
     ],
   },
 ];
 
 const paygFlatTools = [
   {
-    tool: "STEM Solver", Icon: FlaskConical, color: "cyan",
+    tool: "STEM Solver", toolId: "stem" as PaygTool, Icon: FlaskConical, color: "cyan",
     price: "$0.99", unit: "per problem",
     note: "Math, Physics, Chemistry, Biology, CS — step-by-step with formulas",
   },
   {
-    tool: "Study Assistant", Icon: GraduationCap, color: "amber",
+    tool: "Study Assistant", toolId: "study" as PaygTool, Icon: GraduationCap, color: "amber",
     price: "$1.99", unit: "/ day pass",
     note: "Unlimited Q&A turns for 24 hours. Flashcards, summaries, quiz mode.",
   },
   {
-    tool: "Plagiarism + AI Check", Icon: ShieldCheck, color: "emerald",
+    tool: "Plagiarism + AI Check", toolId: "plagiarism" as PaygTool, Icon: ShieldCheck, color: "emerald",
     price: "$0.99", unit: "per submission",
     note: "Similarity detection across 99B+ academic sources. Includes AI-generated content scoring.",
   },
   {
-    tool: "Outline Generator", Icon: BookOpen, color: "orange",
+    tool: "Outline Generator", toolId: "outline" as PaygTool, Icon: BookOpen, color: "orange",
     price: "$0.49", unit: "per outline",
     note: "Full hierarchical outline for any document type. APA / MLA ready.",
   },
@@ -275,12 +276,19 @@ const previewUrls = ["write", "outline", "revision", "plagiarism", "stem", "stud
 
 export default function Landing() {
   const scrolled = useScrolled();
+  const { session } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [previewIdx, setPreviewIdx] = useState(0);
   const [fading, setFading] = useState(false);
   const [billingAnnual, setBillingAnnual] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<PlanId | null>(null);
+  const [paygCheckout, setPaygCheckout] = useState<{ tool: PaygTool; tier?: DocumentTier } | null>(null);
   const [, setLocation] = useLocation();
+
+  function handleBuyPayg(tool: PaygTool, tier?: DocumentTier) {
+    if (!session) { setLocation("/auth"); return; }
+    setPaygCheckout({ tool, tier });
+  }
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -409,12 +417,13 @@ export default function Landing() {
                 <ArrowRight size={16} />
               </span>
             </Link>
-            <a href="#tools" className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 border border-white/15 hover:border-white/30 text-white/70 hover:text-white rounded-xl transition-all hover:bg-white/5 text-sm sm:text-base">
-              See What It Does
+            <a href="#payg" className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 border border-orange-500/30 hover:border-orange-400/50 text-orange-400/80 hover:text-orange-300 rounded-xl transition-all hover:bg-orange-500/8 text-sm sm:text-base">
+              <Zap size={15} className="text-orange-400" />
+              No subscription — pay once
             </a>
           </div>
 
-          <p className="mt-4 text-xs text-white/30">Starter at $1.50/mo · Cancel anytime · Works in any browser</p>
+          <p className="mt-4 text-xs text-white/30">Starter at $1.50/mo · Or pay per use · No expiry on PAYG charges</p>
         </div>
 
         {/* ── Animated product preview ── */}
@@ -707,39 +716,76 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10 sm:mb-16">
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">How it works</p>
-            <h2 className="text-3xl sm:text-4xl font-bold">From brief to submission in three steps</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold">Two ways to get started</h2>
+            <p className="text-white/40 text-sm mt-3 max-w-xl mx-auto">Subscribe for ongoing use, or pay once for exactly what you need right now. No lock-in either way.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 sm:gap-10">
-            {[
-              {
-                num: "01",
-                title: "Upload or describe your task",
-                body: "Drag in your assignment PDF, paste the brief, or describe what you need. The platform reads the rubric and figures out the rest — citation style, length, subject.",
-                icon: Upload,
-              },
-              {
-                num: "02",
-                title: "Generate, revise, or check",
-                body: "Pick your tool. Full paper, outline, revision, plagiarism scan, STEM solution — or all in sequence. Each output feeds cleanly into the next.",
-                icon: Sparkles,
-              },
-              {
-                num: "03",
-                title: "Review, edit, and submit",
-                body: "Everything generated is a starting point, not a finish line. Read it, adjust your voice, and submit something you can genuinely stand behind.",
-                icon: CheckCircle,
-              },
-            ].map(({ num, title, body, icon: Icon }) => (
-              <div key={num} className="relative">
-                <div className="text-5xl sm:text-6xl font-bold text-white/5 leading-none mb-4 select-none">{num}</div>
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
-                  <Icon size={18} className="text-blue-400" />
+          <div className="grid md:grid-cols-2 gap-8 sm:gap-12">
+            {/* Path A — Subscribe */}
+            <div className="rounded-2xl border border-blue-500/15 bg-blue-900/5 p-6 sm:p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
+                  <Sparkles size={15} className="text-blue-400" />
                 </div>
-                <h3 className="font-semibold text-white mb-3 text-base sm:text-lg">{title}</h3>
-                <p className="text-white/50 text-sm leading-relaxed">{body}</p>
+                <div>
+                  <p className="text-white font-semibold text-sm">Subscribe</p>
+                  <p className="text-blue-400/70 text-[11px]">From $1.50 / month</p>
+                </div>
               </div>
-            ))}
+              <div className="space-y-6">
+                {[
+                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with a student email. Starter plan at $1.50/month or Pro at $14.99/month. Cancel any time." },
+                  { num: "02", title: "Upload your brief or describe your task", body: "Drag in your assignment PDF, paste the rubric, or just type what you need. The platform detects citation style, length, and subject automatically." },
+                  { num: "03", title: "Generate, revise, check, and submit", body: "Run any tool in sequence — paper → plagiarism check → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
+                ].map(({ num, title, body }) => (
+                  <div key={num} className="flex gap-4">
+                    <div className="text-3xl font-bold text-white/6 leading-none shrink-0 w-10 select-none">{num}</div>
+                    <div>
+                      <h3 className="font-semibold text-white mb-1.5 text-sm">{title}</h3>
+                      <p className="text-white/45 text-xs leading-relaxed">{body}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Link href="/auth">
+                <span className="mt-7 block text-center py-2.5 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer">
+                  Start for $1.50 / month
+                </span>
+              </Link>
+            </div>
+
+            {/* Path B — Pay once */}
+            <div className="rounded-2xl border border-orange-500/15 bg-orange-900/5 p-6 sm:p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-xl bg-orange-500/15 border border-orange-500/20 flex items-center justify-center">
+                  <Zap size={15} className="text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold text-sm">Pay as you go</p>
+                  <p className="text-orange-400/70 text-[11px]">From $0.49 per use · no subscription</p>
+                </div>
+              </div>
+              <div className="space-y-6">
+                {[
+                  { num: "01", title: "Pick exactly what you need", body: "One paper, one plagiarism check, one STEM problem. Browse the pricing table below and choose the tool and tier that matches your task." },
+                  { num: "02", title: "Pay once — instant access", body: "Checkout takes under a minute. Pay by card or mobile money (M-Pesa, MTN, Airtel). Your access unlocks immediately after payment." },
+                  { num: "03", title: "Use it, download it, done", body: "No account required beyond signup. Your PAYG purchase never expires — come back whenever you need it. No recurring charge, ever." },
+                ].map(({ num, title, body }) => (
+                  <div key={num} className="flex gap-4">
+                    <div className="text-3xl font-bold text-white/6 leading-none shrink-0 w-10 select-none">{num}</div>
+                    <div>
+                      <h3 className="font-semibold text-white mb-1.5 text-sm">{title}</h3>
+                      <p className="text-white/45 text-xs leading-relaxed">{body}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <a href="#payg">
+                <span className="mt-7 block text-center py-2.5 rounded-xl text-sm font-semibold border border-orange-500/30 hover:border-orange-400/50 text-orange-400 hover:text-orange-300 hover:bg-orange-500/8 transition-all cursor-pointer">
+                  See PAYG pricing below
+                </span>
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -969,33 +1015,44 @@ export default function Landing() {
           </div>
 
           {/* ── Pay-As-You-Go ── */}
-          <div>
+          <div id="payg">
             <div className="text-center mb-8 sm:mb-12">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 text-xs font-medium mb-4">
+                <Zap size={11} className="text-orange-400" />
+                No subscription required
+              </div>
               <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3">Pay-As-You-Go</h3>
               <p className="text-white/40 text-sm max-w-lg mx-auto">
-                No subscription. No expiry. Pay for exactly what you need — one paper, one check, one session.
+                Pick exactly what you need. Pay once. No expiry. Ideal for a one-off deadline — paper, check, or STEM problem.
               </p>
             </div>
 
             {/* Writing tools — tiered by document type */}
             <div className="grid md:grid-cols-3 gap-4 sm:gap-5 mb-4 sm:mb-5">
-              {paygWritingTools.map(({ tool, color, Icon, tiers }) => {
+              {paygWritingTools.map(({ tool, toolId, color, Icon, tiers }) => {
                 const iconCls: Record<string,string> = { blue: "text-blue-400", violet: "text-violet-400", indigo: "text-indigo-400" };
                 const divCls: Record<string,string>  = { blue: "border-blue-500/15", violet: "border-violet-500/15", indigo: "border-indigo-500/15" };
+                const btnCls: Record<string,string>  = { blue: "bg-blue-500/15 text-blue-300 border-blue-500/20 hover:bg-blue-500/25", violet: "bg-violet-500/15 text-violet-300 border-violet-500/20 hover:bg-violet-500/25", indigo: "bg-indigo-500/15 text-indigo-300 border-indigo-500/20 hover:bg-indigo-500/25" };
                 return (
                   <div key={tool} className={`bg-white/[0.02] border rounded-2xl p-5 sm:p-6 ${divCls[color] ?? "border-white/8"}`}>
                     <div className="flex items-center gap-2 mb-4">
                       <Icon size={14} className={iconCls[color]} />
                       <span className="text-sm font-semibold text-white">{tool}</span>
                     </div>
-                    <div className="space-y-2.5">
-                      {tiers.map(({ label, words, price }) => (
-                        <div key={label} className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-[11px] text-white/60 font-medium leading-tight">{label}</p>
+                    <div className="space-y-2">
+                      {tiers.map(({ label, words, price, tier }) => (
+                        <div key={label} className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] text-white/60 font-medium leading-tight truncate">{label}</p>
                             <p className="text-[10px] text-white/28">{words}</p>
                           </div>
-                          <span className={`text-sm font-bold shrink-0 ${iconCls[color]}`}>{price}</span>
+                          <span className={`text-xs font-bold shrink-0 ${iconCls[color]}`}>{price}</span>
+                          <button
+                            onClick={() => handleBuyPayg(toolId, tier)}
+                            className={`shrink-0 px-2.5 py-1 text-[10px] font-semibold rounded-lg border transition-all ${btnCls[color] ?? "bg-white/10 text-white border-white/15 hover:bg-white/15"}`}
+                          >
+                            Buy
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1006,23 +1063,24 @@ export default function Landing() {
 
             {/* Flat-rate tools */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
-              {paygFlatTools.map(({ tool, Icon, color, price, unit, note, callout }) => {
+              {paygFlatTools.map(({ tool, toolId, Icon, color, price, unit, note }) => {
                 const iconCls: Record<string,string> = { cyan: "text-cyan-400", amber: "text-amber-400", emerald: "text-emerald-400", orange: "text-orange-400" };
-                const borderCls = callout ? "border-emerald-500/25 bg-emerald-900/5" : "border-white/8 bg-white/[0.02]";
+                const btnBg: Record<string,string>   = { cyan: "bg-cyan-500/15 text-cyan-300 border-cyan-500/20 hover:bg-cyan-500/25", amber: "bg-amber-500/15 text-amber-300 border-amber-500/20 hover:bg-amber-500/25", emerald: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/25", orange: "bg-orange-500/15 text-orange-300 border-orange-500/20 hover:bg-orange-500/25" };
                 return (
-                  <div key={tool} className={`border rounded-2xl p-4 sm:p-5 ${borderCls}`}>
+                  <div key={tool} className="border border-white/8 bg-white/[0.02] rounded-2xl p-4 sm:p-5 flex flex-col">
                     <Icon size={16} className={`${iconCls[color]} mb-3`} />
                     <p className="text-xs font-semibold text-white mb-1.5">{tool}</p>
                     <div className="flex items-end gap-1 mb-2">
                       <span className={`text-xl font-bold ${iconCls[color]}`}>{price}</span>
                       <span className="text-white/30 text-[10px] mb-0.5">{unit}</span>
                     </div>
-                    <p className="text-[10px] text-white/35 leading-relaxed">{note}</p>
-                    {callout && (
-                      <div className="mt-2.5 text-[9px] px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 font-semibold text-center">
-                        Scribbr charges $19.95 for the same check
-                      </div>
-                    )}
+                    <p className="text-[10px] text-white/35 leading-relaxed flex-1">{note}</p>
+                    <button
+                      onClick={() => handleBuyPayg(toolId)}
+                      className={`mt-3 w-full py-1.5 text-[11px] font-semibold rounded-xl border transition-all ${btnBg[color] ?? "bg-white/10 text-white border-white/15"}`}
+                    >
+                      Buy — {price}
+                    </button>
                   </div>
                 );
               })}
@@ -1065,19 +1123,36 @@ export default function Landing() {
             Stop staring at midnight.<br />Start with a draft.
           </h2>
           <p className="text-white/50 mb-8 sm:mb-10 text-base sm:text-lg">
-            From $1.50 / month. Six tools. Cancel anytime.
+            Subscribe from $1.50/month — or pay once per task. No lock-in.
           </p>
-          <Link href="/auth">
-            <span className="inline-flex items-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:scale-[1.02] active:scale-100 text-base sm:text-lg">
-              Open the Platform
-              <ArrowRight size={18} />
-            </span>
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/auth">
+              <span className="inline-flex items-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:scale-[1.02] active:scale-100 text-base sm:text-lg">
+                Subscribe — from $1.50/mo
+                <ArrowRight size={18} />
+              </span>
+            </Link>
+            <a href="#payg" className="inline-flex items-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 border border-orange-500/30 hover:border-orange-400/50 text-orange-400 hover:text-orange-300 rounded-xl transition-all hover:bg-orange-500/8 text-base sm:text-lg font-semibold">
+              <Zap size={18} />
+              Buy per task
+            </a>
+          </div>
           <p className="mt-5 text-xs text-white/25">
             Trusted by students at UCL, Georgia Tech, Edinburgh, UT Austin, and 197 other universities
           </p>
         </div>
       </section>
+
+      {/* ─── PAYG checkout modal (direct purchase from landing page) ─── */}
+      {paygCheckout && (
+        <CheckoutModal
+          open={!!paygCheckout}
+          onClose={() => setPaygCheckout(null)}
+          mode="payg"
+          tool={paygCheckout.tool}
+          tier={paygCheckout.tier}
+        />
+      )}
 
       {/* ─── FOOTER ─── */}
       <footer className="border-t border-white/5 py-12 sm:py-14 px-4 sm:px-6">

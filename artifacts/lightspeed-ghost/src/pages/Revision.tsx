@@ -103,7 +103,7 @@ function ScoreBadge({ score, label, inverse = false }: { score: number; label: s
 export default function Revision() {
   const { session } = useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
-  const { guard, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
+  const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   // ── phase
   const [phase, setPhase] = useState<Phase>("upload");
@@ -450,6 +450,12 @@ export default function Revision() {
               {!paperText.trim() && (
                 <p className="text-center text-xs text-muted-foreground mt-2">Upload or paste your paper to continue</p>
               )}
+              <p className="text-center text-[11px] text-muted-foreground/50 mt-1.5">
+                or{" "}
+                <button type="button" onClick={() => openBuy("revision")} className="text-orange-400 hover:text-orange-300 transition-colors font-medium">
+                  buy a single revision →
+                </button>
+              </p>
             </div>
           </div>
         </div>

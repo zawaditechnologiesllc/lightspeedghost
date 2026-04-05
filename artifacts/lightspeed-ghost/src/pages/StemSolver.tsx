@@ -152,7 +152,7 @@ export default function StemSolver() {
 
   const solveStem = useSolveStem();
   const { data: subjects } = useGetStemSubjects();
-  const { guard, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
+  const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -346,12 +346,21 @@ export default function StemSolver() {
             <input type="checkbox" {...form.register("generateGraph")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
             <span className="text-xs text-muted-foreground">Generate graph</span>
           </label>
-          <button
-            type="submit"
-            className="ml-auto flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/25"
-          >
-            <Zap size={14} /> Solve
-          </button>
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => openBuy("stem")}
+              className="text-[11px] text-orange-400 hover:text-orange-300 transition-colors font-medium"
+            >
+              Buy one solve →
+            </button>
+            <button
+              type="submit"
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/25"
+            >
+              <Zap size={14} /> Solve
+            </button>
+          </div>
         </div>
       </div>
     </form>

@@ -42,8 +42,13 @@ export function usePaywallGuard() {
     setCheckoutState({ open: true, mode: "payg", tool, tier });
   }
 
+  function openBuy(tool: PaygTool, tier?: DocumentTier) {
+    setPickerState({ open: true, tool, tier });
+  }
+
   return {
     guard,
+    openBuy,
     plan,
     isAtLimit,
     pickerState,

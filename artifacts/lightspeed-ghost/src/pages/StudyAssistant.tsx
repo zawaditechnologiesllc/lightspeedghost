@@ -159,7 +159,7 @@ async function callGenerate(
 export default function StudyAssistant() {
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const imageInputRef   = useRef<HTMLInputElement>(null);
-  const { guard, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
+  const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
   const chatEndRef      = useRef<HTMLDivElement>(null);
   const chatInputRef    = useRef<HTMLTextAreaElement>(null);
   const subjectInputRef = useRef<HTMLInputElement>(null);
@@ -575,6 +575,12 @@ export default function StudyAssistant() {
               {isGenerating ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />}
               {isGenerating ? "Generating…" : `Generate ${OUTPUT_TYPES.find((t) => t.key === selectedType)?.label ?? "Content"}`}
             </button>
+            <p className="text-center text-[11px] text-muted-foreground/50 mt-2">
+              or{" "}
+              <button type="button" onClick={() => openBuy("study")} className="text-orange-400 hover:text-orange-300 transition-colors font-medium">
+                buy a day pass →
+              </button>
+            </p>
           </div>
 
           {/* ── 6. PROGRESS DISPLAY ───────────────────────────────────── */}

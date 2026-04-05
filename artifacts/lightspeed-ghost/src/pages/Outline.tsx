@@ -52,7 +52,7 @@ const SECTION_COLORS = [
 export default function Outline() {
   const { session } = useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
-  const { guard, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
+  const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   const [topic, setTopic] = useState("");
   const [subject, setSubject] = useState("");
@@ -309,6 +309,12 @@ export default function Outline() {
             {(!topic.trim() || !subject.trim()) && !isLoading && (
               <p className="text-center text-xs text-muted-foreground -mt-2">Enter a topic and subject to continue</p>
             )}
+            <p className="text-center text-[11px] text-muted-foreground/50">
+              or{" "}
+              <button type="button" onClick={() => openBuy("outline")} className="text-orange-400 hover:text-orange-300 transition-colors font-medium">
+                buy a single outline →
+              </button>
+            </p>
           </div>
         </div>
 

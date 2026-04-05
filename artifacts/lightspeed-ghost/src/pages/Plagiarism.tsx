@@ -356,7 +356,7 @@ function ActionButtons({
 
 export default function PlagiarismChecker() {
   const [, navigate] = useLocation();
-  const { guard, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
+  const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
   const [pageTab, setPageTab] = useState<PageTab>("text");
 
   // ── Text check state
@@ -542,6 +542,13 @@ export default function PlagiarismChecker() {
                       className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-all disabled:opacity-50"
                     >
                       <ShieldCheck size={15} /> {textPhase === "results" ? "Re-run Check" : "Run Full Check"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openBuy("plagiarism")}
+                      className="text-[11px] text-orange-400 hover:text-orange-300 transition-colors font-medium whitespace-nowrap"
+                    >
+                      Buy check →
                     </button>
                   </div>
                 </div>

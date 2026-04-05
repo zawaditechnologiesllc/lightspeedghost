@@ -137,7 +137,7 @@ ${content
 export default function WritePaper() {
   const { session } = useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
-  const { guard, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
+  const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   // ── phase
   const [phase, setPhase] = useState<Phase>("config");
@@ -929,6 +929,12 @@ export default function WritePaper() {
           {(!topic.trim() || !subject.trim()) && (
             <p className="text-center text-xs text-muted-foreground mt-2">Enter a topic and subject to continue</p>
           )}
+          <p className="text-center text-[11px] text-muted-foreground/50 mt-1.5">
+            or{" "}
+            <button type="button" onClick={() => openBuy("paper")} className="text-orange-400 hover:text-orange-300 transition-colors font-medium">
+              buy a single paper →
+            </button>
+          </p>
         </div>
       </div>
       <PaywallFlow
