@@ -113,59 +113,141 @@ const faqs = [
   },
   {
     q: "Is there a free plan?",
-    a: "Yes. Free includes 3 paper generations per month, unlimited plagiarism checks, full STEM solver access, and the study assistant with no session limit. No credit card required to sign up.",
+    a: "Yes — and it's genuinely useful, not a bait-and-switch. Free includes 3 paper generations per month (any document type), 5 plagiarism + AI checks, 10 STEM queries per day, 10 study messages per day, 1 revision, and unlimited outline generation. No credit card required.",
+  },
+  {
+    q: "What's the difference between Pro monthly and annual?",
+    a: "Same features, different price. Monthly is $14.99/month. Annual is $99/year — that works out to $8.25/month, saving you 45%. Most students buy annual at the start of a semester. You can cancel anytime and keep access until the billing period ends.",
+  },
+  {
+    q: "How does Pay-As-You-Go work?",
+    a: "No subscription needed. You pay per job at the time of use. Paper generation is priced by document type — from $1.99 for a short discussion post up to $24.99 for a full dissertation. Plagiarism checks are $0.99 per submission (Scribbr charges $19.95 for the same thing). Credits never expire. If you find yourself using PAYG more than twice a month, Pro becomes the better deal.",
   },
 ];
 
 const pricingPlans = [
   {
     name: "Free",
-    price: "$0",
-    per: "forever",
-    desc: "Good enough to try. Actually useful for occasional work.",
+    priceMonthly: "$0",
+    priceAnnual: "$0",
+    perMonthly: "forever",
+    perAnnual: "forever",
+    desc: "Genuinely useful. No card required. No tricks.",
     features: [
-      "3 paper generations / month",
-      "Unlimited plagiarism checks",
-      "Full STEM solver",
-      "Study assistant (unlimited sessions)",
-      "File upload & OCR",
+      "3 paper generations / month (any type)",
+      "5 plagiarism + AI detection checks / mo",
+      "10 STEM solver queries / day",
+      "10 study messages / day",
+      "1 revision / month",
+      "Outline generator (unlimited)",
+      "7-day document history",
     ],
+    locked: ["Ghost Writer humanizer", "Priority AI processing", "Citation export (BibTeX / RIS)"],
     cta: "Start Free",
     ctaLink: "/auth",
     highlight: false,
+    badge: null,
   },
   {
     name: "Pro",
-    price: "$12",
-    per: "per month",
-    desc: "For students who have deadlines every week and need all caps removed.",
+    priceMonthly: "$14.99",
+    priceAnnual: "$8.25",
+    perMonthly: "/ month",
+    perAnnual: "/ month  ·  billed $99 / year",
+    desc: "Every cap removed. Every tool unlocked. One flat price.",
     features: [
-      "Unlimited paper generation",
+      "Unlimited paper generation (all types)",
       "Unlimited revisions",
+      "Unlimited STEM solver",
+      "Unlimited study sessions",
+      "Unlimited plagiarism + AI detection",
+      "Ghost Writer humanizer (unlimited)",
+      "90-day history + BibTeX / RIS / Zotero export",
       "Priority AI processing",
-      "Full humanization suite",
-      "Document history (90 days)",
-      "Citation export (BibTeX, RIS)",
     ],
+    locked: [],
     cta: "Get Pro",
     ctaLink: "/auth",
     highlight: true,
+    badge: "Most popular",
   },
   {
-    name: "Team",
-    price: "$8",
-    per: "per user / month",
-    desc: "Study groups, tutoring centers, small institutions.",
+    name: "Campus",
+    priceMonthly: null,
+    priceAnnual: "$6",
+    perMonthly: "",
+    perAnnual: "/ user / month  ·  min 5 seats",
+    desc: "For study groups, tutoring centers, and institutions. Annual billing only.",
     features: [
       "Everything in Pro",
+      "Minimum 5 seats — single invoice",
       "Shared document library",
-      "5–50 seats",
-      "Usage dashboard",
-      "Priority support",
+      "Admin usage dashboard",
+      "Academic integrity reporting",
+      "Priority support + SLA",
     ],
+    locked: [],
     cta: "Contact Us",
     ctaLink: "/contact",
     highlight: false,
+    badge: "Annual only",
+  },
+];
+
+const paygWritingTools = [
+  {
+    tool: "Paper Writer", color: "blue", Icon: PenLine,
+    tiers: [
+      { label: "Discussion / Short response", words: "≤ 500 words",          price: "$1.99" },
+      { label: "Essay",                        words: "500 – 1,500 words",    price: "$3.99" },
+      { label: "Research Paper",               words: "1,500 – 3,500 words",  price: "$7.99" },
+      { label: "Proposal / Report",            words: "3,500 – 6,000 words",  price: "$12.99" },
+      { label: "Dissertation / Thesis",        words: "6,000 – 15,000 words", price: "$24.99" },
+    ],
+  },
+  {
+    tool: "Revision", color: "violet", Icon: FileText,
+    tiers: [
+      { label: "Discussion",         words: "≤ 500 words",          price: "$0.99" },
+      { label: "Essay",              words: "500 – 1,500 words",    price: "$1.99" },
+      { label: "Research Paper",     words: "1,500 – 3,500 words",  price: "$3.99" },
+      { label: "Proposal / Report",  words: "3,500 – 6,000 words",  price: "$5.99" },
+      { label: "Dissertation",       words: "6,000 – 15,000 words", price: "$9.99" },
+    ],
+  },
+  {
+    tool: "Ghost Writer (Humanizer)", color: "indigo", Icon: Sparkles,
+    tiers: [
+      { label: "Discussion",         words: "≤ 500 words",          price: "$0.99" },
+      { label: "Essay",              words: "500 – 1,500 words",    price: "$1.99" },
+      { label: "Research Paper",     words: "1,500 – 3,500 words",  price: "$3.99" },
+      { label: "Proposal / Report",  words: "3,500 – 6,000 words",  price: "$5.99" },
+      { label: "Dissertation",       words: "6,000 – 15,000 words", price: "$9.99" },
+    ],
+  },
+];
+
+const paygFlatTools = [
+  {
+    tool: "STEM Solver", Icon: FlaskConical, color: "cyan",
+    price: "$0.99", unit: "per problem",
+    note: "Math, Physics, Chemistry, Biology, CS — step-by-step with formulas",
+  },
+  {
+    tool: "Study Assistant", Icon: GraduationCap, color: "amber",
+    price: "$1.99", unit: "/ day pass",
+    note: "Unlimited Q&A turns for 24 hours. Flashcards, summaries, quiz mode.",
+  },
+  {
+    tool: "Plagiarism + AI Check", Icon: ShieldCheck, color: "emerald",
+    price: "$0.99", unit: "per submission",
+    note: "Scribbr charges $19.95 for the same check. You pay $0.99.",
+    callout: true,
+  },
+  {
+    tool: "Outline Generator", Icon: BookOpen, color: "orange",
+    price: "$0.49", unit: "per outline",
+    note: "Full hierarchical outline for any document type. APA / MLA ready.",
   },
 ];
 
@@ -195,6 +277,7 @@ export default function Landing() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [previewIdx, setPreviewIdx] = useState(0);
   const [fading, setFading] = useState(false);
+  const [billingAnnual, setBillingAnnual] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -792,55 +875,145 @@ export default function Landing() {
 
       {/* ─── PRICING ─── */}
       <section id="pricing" className="py-14 sm:py-20 md:py-28 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-10 sm:mb-16">
+        <div className="max-w-6xl mx-auto">
+
+          {/* Header + toggle */}
+          <div className="text-center mb-10 sm:mb-14">
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Honest pricing. No dark patterns.</h2>
-            <p className="text-white/45 text-sm sm:text-base">The free plan is actually useful. Pro removes every cap.</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
-            {pricingPlans.map(({ name, price, per, desc, features, cta, ctaLink, highlight }) => (
-              <div
-                key={name}
-                className={`relative p-6 sm:p-7 rounded-2xl border ${
-                  highlight
-                    ? "bg-blue-600/10 border-blue-500/40 shadow-xl shadow-blue-900/20"
-                    : "bg-white/[0.02] border-white/8"
-                }`}
+            <p className="text-white/45 text-sm sm:text-base max-w-xl mx-auto">
+              Free for casual use. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
+            </p>
+            <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
+              <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-white" : "text-white/35"}`}>Monthly</span>
+              <button
+                onClick={() => setBillingAnnual(b => !b)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${billingAnnual ? "bg-blue-600" : "bg-white/15"}`}
               >
-                {highlight && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">
-                    Most popular
-                  </div>
-                )}
-                <div className="mb-5">
-                  <h3 className="font-semibold text-white mb-1">{name}</h3>
-                  <div className="flex items-end gap-1.5">
-                    <span className="text-3xl sm:text-4xl font-bold text-white">{price}</span>
-                    <span className="text-white/40 text-sm mb-1">{per}</span>
-                  </div>
-                  <p className="text-white/45 text-xs mt-2 leading-relaxed">{desc}</p>
-                </div>
-                <ul className="space-y-2.5 mb-7">
-                  {features.map(feat => (
-                    <li key={feat} className="flex items-center gap-2.5 text-sm text-white/65">
-                      <CheckCircle size={13} className={highlight ? "text-blue-400 shrink-0" : "text-white/30 shrink-0"} />
-                      {feat}
-                    </li>
-                  ))}
-                </ul>
-                <Link href={ctaLink}>
-                  <span className={`block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
-                    highlight
-                      ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20"
-                      : "border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5"
-                  }`}>
-                    {cta}
-                  </span>
-                </Link>
-              </div>
-            ))}
+                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200 ${billingAnnual ? "left-6" : "left-1"}`} />
+              </button>
+              <span className={`text-sm font-medium transition-colors ${billingAnnual ? "text-white" : "text-white/35"}`}>Annual</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-semibold">Save 45%</span>
+            </div>
           </div>
+
+          {/* ── Subscription plan cards ── */}
+          <div className="grid md:grid-cols-3 gap-4 sm:gap-6 mb-16 sm:mb-24">
+            {pricingPlans.map(({ name, priceMonthly, priceAnnual, perMonthly, perAnnual, desc, features, locked, cta, ctaLink, highlight, badge }) => {
+              const showAnnual = billingAnnual || priceMonthly === null;
+              const price = showAnnual ? priceAnnual : priceMonthly;
+              const per   = showAnnual ? perAnnual   : perMonthly;
+              const isCampus = name === "Campus";
+              return (
+                <div key={name} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col ${highlight ? "bg-blue-600/10 border-blue-500/40 shadow-xl shadow-blue-900/20" : "bg-white/[0.02] border-white/8"}`}>
+                  {badge && (
+                    <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${highlight ? "bg-blue-600 text-white" : "bg-white/10 text-white/55 border border-white/15"}`}>
+                      {badge}
+                    </div>
+                  )}
+                  <div className="mb-5">
+                    <h3 className="font-semibold text-white mb-2">{name}</h3>
+                    <div className="flex items-end gap-1.5">
+                      <span className="text-3xl sm:text-4xl font-bold text-white">{price}</span>
+                    </div>
+                    <p className="text-white/30 text-[11px] mt-1 leading-relaxed">{per}</p>
+                    <p className="text-white/50 text-xs mt-3 leading-relaxed">{desc}</p>
+                  </div>
+
+                  <ul className="space-y-2 mb-6 flex-1">
+                    {features.map(feat => (
+                      <li key={feat} className="flex items-start gap-2.5 text-sm text-white/65">
+                        <CheckCircle size={13} className={`shrink-0 mt-0.5 ${highlight ? "text-blue-400" : "text-emerald-400/70"}`} />
+                        {feat}
+                      </li>
+                    ))}
+                    {locked.map(feat => (
+                      <li key={feat} className="flex items-start gap-2.5 text-sm text-white/22 line-through decoration-white/15">
+                        <div className="w-3 h-3 rounded-full border border-white/12 shrink-0 mt-0.5" />
+                        {feat}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {isCampus && !billingAnnual && (
+                    <p className="text-[10px] text-white/30 italic mb-3">Campus plan requires annual billing. Toggle above.</p>
+                  )}
+
+                  <Link href={ctaLink}>
+                    <span className={`block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${highlight ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20" : "border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5"}`}>
+                      {cta}
+                    </span>
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Pay-As-You-Go ── */}
+          <div>
+            <div className="text-center mb-8 sm:mb-12">
+              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3">Pay-As-You-Go</h3>
+              <p className="text-white/40 text-sm max-w-lg mx-auto">
+                No subscription. No expiry. Pay for exactly what you need — one paper, one check, one session.
+              </p>
+            </div>
+
+            {/* Writing tools — tiered by document type */}
+            <div className="grid md:grid-cols-3 gap-4 sm:gap-5 mb-4 sm:mb-5">
+              {paygWritingTools.map(({ tool, color, Icon, tiers }) => {
+                const iconCls: Record<string,string> = { blue: "text-blue-400", violet: "text-violet-400", indigo: "text-indigo-400" };
+                const divCls: Record<string,string>  = { blue: "border-blue-500/15", violet: "border-violet-500/15", indigo: "border-indigo-500/15" };
+                return (
+                  <div key={tool} className={`bg-white/[0.02] border rounded-2xl p-5 sm:p-6 ${divCls[color] ?? "border-white/8"}`}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Icon size={14} className={iconCls[color]} />
+                      <span className="text-sm font-semibold text-white">{tool}</span>
+                    </div>
+                    <div className="space-y-2.5">
+                      {tiers.map(({ label, words, price }) => (
+                        <div key={label} className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-[11px] text-white/60 font-medium leading-tight">{label}</p>
+                            <p className="text-[10px] text-white/28">{words}</p>
+                          </div>
+                          <span className={`text-sm font-bold shrink-0 ${iconCls[color]}`}>{price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Flat-rate tools */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
+              {paygFlatTools.map(({ tool, Icon, color, price, unit, note, callout }) => {
+                const iconCls: Record<string,string> = { cyan: "text-cyan-400", amber: "text-amber-400", emerald: "text-emerald-400", orange: "text-orange-400" };
+                const borderCls = callout ? "border-emerald-500/25 bg-emerald-900/5" : "border-white/8 bg-white/[0.02]";
+                return (
+                  <div key={tool} className={`border rounded-2xl p-4 sm:p-5 ${borderCls}`}>
+                    <Icon size={16} className={`${iconCls[color]} mb-3`} />
+                    <p className="text-xs font-semibold text-white mb-1.5">{tool}</p>
+                    <div className="flex items-end gap-1 mb-2">
+                      <span className={`text-xl font-bold ${iconCls[color]}`}>{price}</span>
+                      <span className="text-white/30 text-[10px] mb-0.5">{unit}</span>
+                    </div>
+                    <p className="text-[10px] text-white/35 leading-relaxed">{note}</p>
+                    {callout && (
+                      <div className="mt-2.5 text-[9px] px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 font-semibold text-center">
+                        Scribbr charges $19.95 for the same check
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="text-center text-white/20 text-xs mt-6 sm:mt-8">
+              PAYG charges never expire · Billed at time of use · No subscription required
+            </p>
+          </div>
+
         </div>
       </section>
 
