@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "d-gZlXxv30Cuk7xZvR2ue"
+uri = "file://PAYMENT_ENV_VARS.md"
+type = "text"
+title = "Payment Gateway — Environment Variables Reference"
