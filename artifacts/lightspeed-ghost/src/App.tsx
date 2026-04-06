@@ -33,6 +33,18 @@ import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 
+function TidioChat() {
+  useEffect(() => {
+    const key = import.meta.env.VITE_TIDIO_PUBLIC_KEY;
+    if (!key || document.querySelector(`script[src*="tidio.co"]`)) return;
+    const s = document.createElement("script");
+    s.src = `//code.tidio.co/${key}.js`;
+    s.async = true;
+    document.head.appendChild(s);
+  }, []);
+  return null;
+}
+
 const queryClient = new QueryClient();
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -113,6 +125,7 @@ function App() {
             </AuthProvider>
           </WouterRouter>
           <Toaster />
+          <TidioChat />
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
