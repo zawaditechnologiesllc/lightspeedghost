@@ -1272,6 +1272,7 @@ export default function Landing() {
                 {[
                   { label: "Privacy Policy", href: "/privacy" },
                   { label: "Terms of Service", href: "/terms" },
+                  { label: "Refund Policy", href: "/refunds" },
                   { label: "Cookie Policy", href: "/cookies" },
                   { label: "Academic Use", href: "/academic-use" },
                 ].map(({ label, href }) => (

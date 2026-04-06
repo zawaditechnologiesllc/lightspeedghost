@@ -28,6 +28,7 @@ import About from "@/pages/About";
 import Contact from "@/pages/Contact";
 import Careers from "@/pages/Careers";
 import Blog from "@/pages/Blog";
+import RefundPolicy from "@/pages/RefundPolicy";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
@@ -102,6 +103,7 @@ function Router() {
       <Route path="/invite" component={Invite} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/terms" component={TermsOfService} />
+      <Route path="/refunds" component={RefundPolicy} />
       <Route path="/cookies" component={CookiePolicy} />
       <Route path="/academic-use" component={AcademicUsePolicy} />
       <Route path="/about" component={About} />
