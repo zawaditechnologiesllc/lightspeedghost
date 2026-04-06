@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="application-name" content="Light Speed Ghost" />
+    <meta name="msapplication-TileColor" content="#0d1f5c" />
+    <meta name="format-detection" content="telephone=no" />
 
     <!-- Primary SEO -->
     <title>Light Speed Ghost — AI Academic Writing &amp; Humanizer for Students</title>
@@ -72,28 +75,35 @@
       "offers": [
         {
           "@type": "Offer",
-          "name": "Free Plan",
-          "price": "0",
+          "name": "Starter",
+          "price": "1.50",
           "priceCurrency": "USD",
-          "description": "3 paper generations per month, unlimited plagiarism checks, full STEM solver, unlimited study assistant sessions. No credit card required."
+          "description": "3 paper generations per month, 5 outlines, 5 plagiarism and AI detection checks, 10 STEM queries per day, 10 study messages per day, 1 revision. All 7 tools included."
         },
         {
           "@type": "Offer",
-          "name": "Pro Plan",
-          "price": "12",
+          "name": "Pro Monthly",
+          "price": "14.99",
           "priceCurrency": "USD",
-          "description": "Unlimited paper generation, unlimited revisions, priority AI processing, full humanization suite, 90-day document history, citation export"
+          "description": "50 papers per month, 50 revisions, 30 STEM problems per day, unlimited study sessions, unlimited plagiarism and AI detection, LightSpeed Humanizer (50 jobs/month), 90-day history, BibTeX/RIS/Zotero export, priority AI processing."
         },
         {
           "@type": "Offer",
-          "name": "Team Plan",
-          "price": "8",
+          "name": "Pro Annual",
+          "price": "99",
           "priceCurrency": "USD",
-          "description": "Everything in Pro for 5-50 users, shared document library, usage dashboard, priority support"
+          "description": "Same as Pro Monthly billed annually at $99/year ($8.25/month). 45% saving versus monthly billing."
+        },
+        {
+          "@type": "Offer",
+          "name": "Campus",
+          "price": "6",
+          "priceCurrency": "USD",
+          "description": "Pro features per seat for 5–50 users. 15 papers per seat per month, shared document library, admin dashboard, academic integrity reporting. Annual billing only, minimum 5 seats."
         }
       ],
       "featureList": [
-        "AI academic paper writing with real Semantic Scholar citations",
+        "AI academic paper writing grounded in 10 live databases (1B+ papers): OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, Europe PMC",
         "APA, MLA, Chicago, Harvard, IEEE citation styles",
         "LightSpeed Humanizer — bypass Turnitin and GPTZero AI detection",
         "AI content detection and plagiarism checking",
@@ -166,7 +176,7 @@
           "name": "What is Light Speed Ghost?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Light Speed Ghost is an AI-powered academic writing platform for students. It includes six tools: an AI paper writer with real academic citations, an outline builder, a paper revision tool, an AI and plagiarism detector with humanization, a STEM problem solver with photo upload, and an AI study assistant with session memory."
+            "text": "Light Speed Ghost is an AI-powered academic writing platform for students. It includes seven tools: an AI paper writer with real citations from 10 academic databases (1B+ papers), an outline builder, a paper revision tool, LightSpeed Humanizer for bypassing AI detectors, an AI and plagiarism checker, a STEM problem solver with photo upload, and an AI study assistant with long-term personalized memory."
           }
         },
         {
@@ -182,7 +192,7 @@
           "name": "How good is the AI paper writing quality?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Light Speed Ghost pulls real academic sources from Semantic Scholar and uses subject-specific AI prompting — not generic writing. It generates solid drafts with working, verified citations that you can build from, not placeholder text."
+            "text": "Light Speed Ghost simultaneously queries 10 live academic databases — OpenAlex, CrossRef, PubMed NCBI, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, and Europe PMC — covering over 1 billion papers. Results are ranked by citation count so the most-cited, highest-impact research surfaces first. Papers are grade-targeted using uploaded rubric criteria, plagiarism-gated below 8%, and humanized below 5% AI detection. No Wikipedia. No hallucinated citations."
           }
         },
         {
@@ -271,7 +281,7 @@
         {
           "@type": "HowToStep",
           "name": "Generate your paper",
-          "text": "Click Generate. Light Speed Ghost searches Semantic Scholar for real academic sources, builds an argument structure, and streams the full paper with properly formatted in-text citations and a bibliography in real-time.",
+          "text": "Click Generate. Light Speed Ghost simultaneously queries 10 live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, and Europe PMC — for real academic sources ranked by citation count. It builds an argument structure and streams the full paper with properly formatted in-text citations and a complete bibliography in real-time.",
           "position": 2
         },
         {
@@ -284,13 +294,25 @@
     }
     </script>
 
-    <!-- Speakable markup for AI assistants (AEO) -->
+    <!-- Structured Data: WebPage with speakable + date signals (AEO) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebPage",
       "name": "Light Speed Ghost — AI Academic Writing Platform",
       "url": "https://lightspeedghost.com",
+      "datePublished": "2025-01-01",
+      "dateModified": "2026-04-06",
+      "inLanguage": "en-US",
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "Light Speed Ghost",
+        "url": "https://lightspeedghost.com"
+      },
+      "about": {
+        "@type": "Thing",
+        "name": "AI Academic Writing Tools for Students"
+      },
       "speakable": {
         "@type": "SpeakableSpecification",
         "cssSelector": ["h1", "h2", ".speakable"]
@@ -309,10 +331,103 @@
     }
     </script>
 
-    <!-- Fonts -->
+    <!-- Structured Data: ItemList — 7 tools (AI search feature extraction) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "Light Speed Ghost — All Academic Writing Tools",
+      "description": "Seven AI-powered academic writing tools for students in one platform.",
+      "numberOfItems": 7,
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "AI Paper Writer",
+          "description": "Generates full academic papers from 10 live databases (1B+ papers). Real DOI citations. Rubric-targeted. Plagiarism-gated below 8%. APA, MLA, Chicago, Harvard, IEEE.",
+          "url": "https://lightspeedghost.com/write"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "LightSpeed Humanizer",
+          "description": "Rewrites AI-generated text to pass Turnitin, GPTZero, and Originality.ai. Real detect-rewrite-re-detect loop. Targets below 5% AI detection score.",
+          "url": "https://lightspeedghost.com/humanizer"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Outline Builder",
+          "description": "Generates hierarchical paper outlines from a topic, subject, or uploaded brief. Roman numeral structure with sub-points.",
+          "url": "https://lightspeedghost.com/outline"
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "name": "Paper Revision",
+          "description": "Revises student drafts toward a target grade. Upload a grading rubric to align every change with assessed criteria. Explains every edit.",
+          "url": "https://lightspeedghost.com/revision"
+        },
+        {
+          "@type": "ListItem",
+          "position": 5,
+          "name": "AI and Plagiarism Checker",
+          "description": "Detects AI-generated content using lexical diversity analysis. Detects plagiarism using cosine similarity. Highlights flagged sections with one-click humanization.",
+          "url": "https://lightspeedghost.com/plagiarism"
+        },
+        {
+          "@type": "ListItem",
+          "position": 6,
+          "name": "STEM Solver",
+          "description": "Step-by-step solutions for Math, Physics, Chemistry, Biology, Computer Science, Engineering. Photo upload with OCR. KaTeX equations, data visualizations, and linked research papers.",
+          "url": "https://lightspeedghost.com/stem"
+        },
+        {
+          "@type": "ListItem",
+          "position": 7,
+          "name": "AI Study Assistant",
+          "description": "Conversational AI tutor with long-term personalized memory. Builds a per-student profile of strengths and struggles. Supports file upload for lecture notes and textbooks.",
+          "url": "https://lightspeedghost.com/study"
+        }
+      ]
+    }
+    </script>
+
+    <!-- Structured Data: EducationalOrganization (AI/Google education signals) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "EducationalOrganization",
+      "name": "Light Speed Ghost",
+      "url": "https://lightspeedghost.com",
+      "logo": "https://lightspeedghost.com/favicon.svg",
+      "description": "AI-powered academic writing tools trusted by students at universities worldwide. Seven tools covering paper writing, humanization, plagiarism checking, STEM solving, and personalized tutoring.",
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Academic Writing Tools",
+        "itemListElement": [
+          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "AI Paper Writing", "url": "https://lightspeedghost.com/write"}},
+          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "LightSpeed Humanizer", "url": "https://lightspeedghost.com/humanizer"}},
+          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "STEM Problem Solver", "url": "https://lightspeedghost.com/stem"}},
+          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "AI Study Assistant", "url": "https://lightspeedghost.com/study"}},
+          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Plagiarism and AI Checker", "url": "https://lightspeedghost.com/plagiarism"}}
+        ]
+      },
+      "sameAs": [
+        "https://twitter.com/lightspeedghost",
+        "https://linkedin.com/company/lightspeedghost"
+      ]
+    }
+    </script>
+
+    <!-- AI context files — discoverable by AI crawlers -->
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM context file" />
+    <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLM full context file" />
+
+    <!-- Fonts — preconnect + font-display:swap to avoid render blocking -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&font-display=swap" rel="stylesheet" />
 
     <!-- Push Tidio widget above the mobile bottom nav bar -->
     <style>

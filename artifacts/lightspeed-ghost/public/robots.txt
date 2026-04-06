@@ -1,26 +1,96 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Crawl-delay: 1
 
-# AI crawlers — welcome
+# ── Google ────────────────────────────────────────────────────────────────────
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Googlebot-Image
+Allow: /
+
+# Google AI — allow training on our content (builds AI citations)
+User-agent: Google-Extended
+Allow: /
+
+# ── Bing / Microsoft ──────────────────────────────────────────────────────────
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 0
+
+User-agent: BingPreview
+Allow: /
+
+# ── OpenAI / ChatGPT ──────────────────────────────────────────────────────────
 User-agent: GPTBot
 Allow: /
 
 User-agent: ChatGPT-User
 Allow: /
 
-User-agent: PerplexityBot
+User-agent: OAI-SearchBot
 Allow: /
 
+# ── Anthropic / Claude ────────────────────────────────────────────────────────
 User-agent: Claude-Web
 Allow: /
 
 User-agent: anthropic-ai
 Allow: /
 
-User-agent: Googlebot
+User-agent: ClaudeBot
 Allow: /
 
-User-agent: Bingbot
+# ── Perplexity ────────────────────────────────────────────────────────────────
+User-agent: PerplexityBot
 Allow: /
 
+# ── Meta AI ───────────────────────────────────────────────────────────────────
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: FacebookBot
+Allow: /
+
+# ── Apple ─────────────────────────────────────────────────────────────────────
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# ── Common Crawl (feeds many AI models) ──────────────────────────────────────
+User-agent: CCBot
+Allow: /
+
+# ── Cohere ────────────────────────────────────────────────────────────────────
+User-agent: cohere-ai
+Allow: /
+
+# ── ByteDance / TikTok ────────────────────────────────────────────────────────
+User-agent: Bytespider
+Allow: /
+
+# ── DuckDuckGo ────────────────────────────────────────────────────────────────
+User-agent: DuckDuckBot
+Allow: /
+
+# ── SEO crawlers (Ahrefs, Semrush, Moz) ──────────────────────────────────────
+User-agent: AhrefsBot
+Allow: /
+
+User-agent: SemrushBot
+Allow: /
+
+User-agent: MJ12bot
+Allow: /
+
+# ── Sitemaps ──────────────────────────────────────────────────────────────────
 Sitemap: https://lightspeedghost.com/sitemap.xml
+
+# ── AI context files ──────────────────────────────────────────────────────────
+# llms.txt and llms-full.txt are available for AI model context
+# https://lightspeedghost.com/llms.txt
+# https://lightspeedghost.com/llms-full.txt
