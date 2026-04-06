@@ -103,6 +103,9 @@ async function buildAll() {
       "pdf-parse",
       "pdf2json",
       "mammoth",
+      "@memvid/sdk",
+      "file-type",
+      "officeparser",
     ],
     sourcemap: "linked",
     plugins: [

@@ -66,8 +66,8 @@ const tools = [
   {
     icon: GraduationCap,
     name: "AI Study Assistant",
-    desc: "Ask anything, upload lecture notes, quiz yourself with flashcards. It remembers your sessions so you pick up exactly where you left off.",
-    badge: null,
+    desc: "Ask anything, upload lecture notes, quiz yourself with flashcards. LightSpeed AI builds a personal memory of everything you've studied — so it recalls your past struggles, past topics, and past sessions to tutor you better every single time.",
+    badge: "Long-term memory",
     href: "/auth",
     color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   },
@@ -739,6 +739,94 @@ export default function Landing() {
                   <p className="text-sm text-white/50 leading-relaxed">{desc}</p>
                 </div>
               </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── AI CAPABILITIES ─── */}
+      <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-y border-white/5 bg-gradient-to-b from-[#04080f] to-[#060d1a]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10 sm:mb-16">
+            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">Under the hood</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">LightSpeed AI Capabilities</h2>
+            <p className="text-white/45 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+              Every tool on this platform is powered by a set of purpose-built AI capabilities — not a generic chatbot wrapper. Here's what makes the difference.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {[
+              {
+                icon: "🧠",
+                title: "Persistent Student Memory",
+                desc: "Every study session you have is silently indexed into your personal AI memory. Next time you ask a question, the AI already knows what topics you've covered, where you've struggled, and how you like to learn — across every session, forever.",
+                color: "border-amber-500/20 bg-amber-500/5",
+                tag: "Study Assistant",
+              },
+              {
+                icon: "🔍",
+                title: "Semantic Recall",
+                desc: "LightSpeed AI doesn't search your history by keyword — it understands meaning. Ask about 'Newton's laws' and it surfaces relevant past context even if you originally asked about 'force and acceleration.' Recall that actually makes sense.",
+                color: "border-blue-500/20 bg-blue-500/5",
+                tag: "Study Assistant",
+              },
+              {
+                icon: "📚",
+                title: "Real Citation Verification",
+                desc: "Papers are generated with citations sourced live from academic databases. Every reference is a real, retrievable paper — not a hallucinated title with a broken URL. APA, MLA, Chicago, Harvard, and IEEE all supported.",
+                color: "border-violet-500/20 bg-violet-500/5",
+                tag: "Paper Writer",
+              },
+              {
+                icon: "⚗️",
+                title: "Multi-Step STEM Reasoning",
+                desc: "STEM problems run through a structured reasoning loop: the AI thinks, acts, observes, and reflects before giving you an answer. A second critic layer then checks for math and logic errors — so you don't get confidently wrong results.",
+                color: "border-cyan-500/20 bg-cyan-500/5",
+                tag: "STEM Solver",
+              },
+              {
+                icon: "🔬",
+                title: "Chemistry & Molecule Intelligence",
+                desc: "Chemistry problems unlock molecule lookup — SMILES notation, CAS registry numbers, molecular weight, LogP, H-bond data, and GHS safety classifications. Backed by PubChem's database of 100M+ compounds.",
+                color: "border-emerald-500/20 bg-emerald-500/5",
+                tag: "STEM Solver · Chemistry",
+              },
+              {
+                icon: "🛡️",
+                title: "Structural Code Plagiarism Detection",
+                desc: "Code similarity detection uses a fingerprinting algorithm — the same approach used by Stanford's MOSS system. It catches plagiarism even when variable names are changed, code is reformatted, or logic is reshuffled.",
+                color: "border-rose-500/20 bg-rose-500/5",
+                tag: "AI & Plagiarism Checker",
+              },
+              {
+                icon: "✍️",
+                title: "AI Humanization Engine",
+                desc: "The humanizer doesn't just paraphrase — it runs a detect → rewrite → re-detect loop, rewriting up to three passes until the AI score drops below 25%. You control the intensity: light polish, medium rewrite, or deep ghost-write.",
+                color: "border-indigo-500/20 bg-indigo-500/5",
+                tag: "LightSpeed Humanizer",
+              },
+              {
+                icon: "🌍",
+                title: "Smart Payment Routing",
+                desc: "Payments are routed to the right gateway based on your location — card processors for international users, mobile money (M-Pesa, MTN MoMo, Airtel Money) for East and West Africa. One checkout, every country.",
+                color: "border-green-500/20 bg-green-500/5",
+                tag: "Payments",
+              },
+              {
+                icon: "🎯",
+                title: "Adaptive Tutoring Modes",
+                desc: "The Study Assistant has four distinct modes: Tutor (guided, Socratic), Explain (fast, example-driven), Quiz (test-and-reveal), and Summarize (structured key points). Switch mid-session — the AI tracks context across every mode change.",
+                color: "border-orange-500/20 bg-orange-500/5",
+                tag: "Study Assistant",
+              },
+            ].map(({ icon, title, desc, color, tag }) => (
+              <div key={title} className={`p-5 sm:p-6 rounded-2xl border ${color} hover:bg-white/[0.04] transition-all`}>
+                <div className="text-2xl mb-3">{icon}</div>
+                <div className="text-[10px] font-semibold text-white/30 uppercase tracking-widest mb-2">{tag}</div>
+                <h3 className="font-semibold text-white text-sm mb-2">{title}</h3>
+                <p className="text-xs text-white/50 leading-relaxed">{desc}</p>
+              </div>
             ))}
           </div>
         </div>

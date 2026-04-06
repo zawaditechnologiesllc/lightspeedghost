@@ -6,6 +6,7 @@ import { AskStudyAssistantBody, GetSessionMessagesParams } from "@workspace/api-
 import { anthropic, openai } from "../lib/ai";
 import { TUTOR_SOUL } from "../lib/soul";
 import { getStudentMemory, updateStudentMemory, buildMemoryContext, memoryFlush } from "../lib/memory";
+import { indexStudyExchange, recallStudyContext } from "../lib/memvidMemory";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage } from "../lib/usageTracker";
 import multer from "multer";
@@ -84,9 +85,14 @@ router.post("/study/ask", async (req, res) => {
       content: body.question,
     });
 
-    // 1. Load student persistent memory (Jarvis Effect)
+    // 1. Load student persistent memory (Jarvis Effect) + semantic long-term recall
     const memory = await getStudentMemory();
     const memoryContext = buildMemoryContext(memory);
+
+    // 1b. Semantic recall from long-term memory capsule (fire-and-forget safe)
+    const semanticContext = req.userId
+      ? await recallStudyContext(req.userId, body.question, 3).catch(() => "")
+      : "";
 
     // 2. Load conversation history for context
     const history = await db
@@ -116,7 +122,7 @@ router.post("/study/ask", async (req, res) => {
     const systemPrompt = `${TUTOR_SOUL}
 
 ${memoryContext}
-
+${semanticContext ? `\n${semanticContext}\n` : ""}
 CURRENT MODE: ${(body.mode ?? "tutor").toUpperCase()}
 Mode instructions: ${modeInstruction}
 
@@ -182,6 +188,17 @@ TOPIC_TAG: [single topic label for this conversation, e.g. "Integration by parts
     const struggleSignals = /confused|don't understand|struggling|lost|wrong|error|mistake|help/i.test(body.question);
     if (struggleSignals) {
       memoryFlush(`Student struggled with: ${topicTag}`).catch(() => {});
+    }
+
+    // 11. Index this exchange into the user's long-term memory capsule (fire-and-forget)
+    if (req.userId) {
+      indexStudyExchange(
+        req.userId,
+        body.question,
+        answer,
+        topicTag,
+        body.subject ?? "General",
+      ).catch(() => {});
     }
 
     res.json({

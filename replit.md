@@ -111,7 +111,7 @@ All routes prefixed with `/api`:
 - `GET /study/sessions/:id/messages` — Session messages
 - `POST /study/ask` — Ask study assistant
 
-## Integrated GitHub Repos (5 total)
+## Integrated GitHub Repos (7 total)
 
 ### Repo 1: awesome-ai-for-science
 - Source: `stemResources.ts` — 200+ AI tools mapped by subject (Math, Physics, Chemistry, Biology, Engineering, CS, Stats)
@@ -133,6 +133,25 @@ All routes prefixed with `/api`:
 - Real structural similarity detection (works even with renamed variables)
 - Algorithm: k-gram hashing + sliding window fingerprint selection (Stanford MOSS approach)
 - Attribution: Aiken et al. SIGMOD 2003
+
+### Repo 6: OpenClaw
+- `soul.ts` — SOUL.md AI personas (ACADEMIC, STEM, TUTOR, WRITER, HUMANIZER)
+- `modelRouter.ts` — ClawRouter multi-model routing (Claude 3.5 Sonnet / GPT-4o / GPT-4o-mini)
+- `reactLoop.ts` — ReAct Pi Engine (THOUGHT→ACTION→OBSERVE→REFLECT) for STEM solving
+- `cove.ts` — Chain-of-Verification critic agent (~80% math/logic error reduction)
+- `memory.ts` — MEMORY.md + memU student persistent memory (Jarvis Effect)
+- `contextManager.ts` — Two-Layer Memory Architecture sliding window for long documents
+- `citationVerifier.ts` — AutoResearchClaw arXiv + Semantic Scholar real citation verification
+
+### Repo 7: Memvid
+- `memvidMemory.ts` — LightSpeed AI Memory: persistent per-student semantic memory capsule
+- Storage: `.mv2` capsule stored as base64 in `user_memory_capsules` PostgreSQL table (no extra infra)
+- Pattern: PostgreSQL ↔ /tmp/{userId}.mv2 ↔ @memvid/sdk ↔ PostgreSQL
+- `indexStudyExchange()` — indexes every study Q&A into the user's capsule (fire-and-forget)
+- `recallStudyContext()` — BM25 semantic search over past sessions injected into AI system prompt
+- `getStudyTimeline()` — chronological topic history for the Study Assistant dashboard
+- DB table: `user_memory_capsules` (user_id, capsule_data TEXT base64, frame_count, updated_at)
+- Build: `@memvid/sdk` and transitive deps externalized in `build.mjs`
 
 ### Repo 5: Plagiarism-Checker-and-AI-Text-Detection
 - Cosine similarity plagiarism detection: TF vector dot products against academic corpus
