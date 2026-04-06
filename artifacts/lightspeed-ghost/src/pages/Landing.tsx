@@ -8,6 +8,7 @@ import {
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, ChevronUp, Sparkles, Upload, BarChart3,
   Users, Award, Clock, Quote, MapPin, Mail, Twitter, Linkedin, Wand2,
+  Lock, Building2,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
@@ -1282,6 +1283,109 @@ export default function Landing() {
                 ))}
               </ul>
             </div>
+          </div>
+
+          {/* ── Payment Methods + Security Trust Strip ── */}
+          <div className="border-t border-white/5 pt-8 pb-6 space-y-5">
+
+            {/* Payment method logos row */}
+            <div>
+              <p className="text-[10px] font-semibold text-white/20 uppercase tracking-widest mb-3">Accepted payment methods</p>
+              <div className="flex flex-wrap gap-2 items-center">
+
+                {/* Visa */}
+                <div className="h-8 px-3 rounded-md flex items-center" style={{ backgroundColor: "#1a1f71" }}>
+                  <span className="text-white font-extrabold italic text-sm" style={{ letterSpacing: "0.12em" }}>VISA</span>
+                </div>
+
+                {/* Mastercard */}
+                <div className="h-8 px-2.5 rounded-md bg-[#1a1a1a] border border-white/10 flex items-center gap-2">
+                  <div className="relative flex items-center" style={{ width: "30px", height: "20px" }}>
+                    <div className="absolute rounded-full" style={{ width: "20px", height: "20px", background: "#eb001b", left: 0 }} />
+                    <div className="absolute rounded-full" style={{ width: "20px", height: "20px", background: "#f79e1b", left: "10px", opacity: 0.9 }} />
+                  </div>
+                  <span className="text-white/75 font-semibold" style={{ fontSize: "10px" }}>Mastercard</span>
+                </div>
+
+                {/* American Express */}
+                <div className="h-8 px-3 rounded-md flex items-center" style={{ backgroundColor: "#2557a7" }}>
+                  <span className="text-white font-bold" style={{ fontSize: "10px", letterSpacing: "0.05em" }}>AMEX</span>
+                </div>
+
+                {/* Verve */}
+                <div className="h-8 px-3 rounded-md border flex items-center" style={{ borderColor: "#d4712a55", backgroundColor: "#d4712a18" }}>
+                  <span className="font-bold" style={{ fontSize: "11px", color: "#e8863a" }}>Verve</span>
+                </div>
+
+                {/* PayPal */}
+                <div className="h-8 px-3 rounded-md border border-white/10 bg-white/5 flex items-center gap-0.5">
+                  <span className="font-bold text-sm" style={{ color: "#009cde" }}>Pay</span>
+                  <span className="font-bold text-sm" style={{ color: "#003087" }}>Pal</span>
+                </div>
+
+                {/* Apple Pay */}
+                <div className="h-8 px-3 rounded-md border border-white/10 bg-white/5 flex items-center gap-1.5">
+                  <svg width="13" height="16" viewBox="0 0 814 1000" fill="white">
+                    <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 391.8 0 263.1 0 140.8c0-94.3 32.6-181.5 92.4-245.7 50.4-55.5 127.8-91.8 212.6-91.8 81.1 0 153.2 56.8 205.6 56.8 50 0 128.2-60.8 217.7-60.8 35.3 0 130.9 3.2 197.9 115.3zm-170.1-175.5c30.3-32.5 50.7-81.3 50.7-130.1 0-6.5-.6-13-1.9-18.3-48.1 1.9-104.9 33.8-140.8 71.1-27.6 30.3-51.9 78.1-51.9 127.6 0 7.1 1.3 14.3 1.9 16.5 3.2.6 8.4 1.3 13.6 1.3 43.4 0 98.1-29 128.4-68.1z" />
+                  </svg>
+                  <span className="text-white font-semibold" style={{ fontSize: "11px" }}>Pay</span>
+                </div>
+
+                {/* Google Pay */}
+                <div className="h-8 px-3 rounded-md border border-white/10 bg-white/5 flex items-center gap-1">
+                  <span className="font-bold" style={{ fontSize: "12px", background: "linear-gradient(135deg,#4285f4,#34a853,#fbbc05,#ea4335)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>G</span>
+                  <span className="text-white/80 font-semibold" style={{ fontSize: "11px" }}>Pay</span>
+                </div>
+
+                {/* M-Pesa */}
+                <div className="h-8 px-3 rounded-md border flex items-center" style={{ borderColor: "#00a65155", backgroundColor: "#00a65118" }}>
+                  <span className="font-bold" style={{ fontSize: "11px", color: "#00a651", letterSpacing: "0.03em" }}>M-PESA</span>
+                </div>
+
+                {/* Airtel Money */}
+                <div className="h-8 px-3 rounded-md border flex items-center" style={{ borderColor: "#ff000040", backgroundColor: "#ff000012" }}>
+                  <span className="font-bold" style={{ fontSize: "10px", color: "#f87171", letterSpacing: "0.02em" }}>Airtel Money</span>
+                </div>
+
+                {/* MTN MoMo */}
+                <div className="h-8 px-3 rounded-md border flex items-center gap-1.5" style={{ borderColor: "#ffd70040", backgroundColor: "#ffd70010" }}>
+                  <span className="font-bold" style={{ fontSize: "10px", color: "#fcd34d", letterSpacing: "0.02em" }}>MTN MoMo</span>
+                </div>
+
+                {/* Bank Transfer */}
+                <div className="h-8 px-3 rounded-md border border-white/8 bg-white/4 flex items-center gap-1.5">
+                  <Building2 size={11} className="text-white/35" />
+                  <span className="text-white/40 font-medium" style={{ fontSize: "10px" }}>Bank Transfer</span>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Security trust badges */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <div className="flex items-center gap-1.5 text-white/25">
+                <Lock size={11} />
+                <span style={{ fontSize: "10px" }} className="font-medium">256-bit SSL Encrypted</span>
+              </div>
+              <div className="hidden sm:block w-px h-3 bg-white/10" />
+              <div className="flex items-center gap-1.5 text-white/25">
+                <ShieldCheck size={11} />
+                <span style={{ fontSize: "10px" }} className="font-medium">PCI DSS Level 1 Compliant</span>
+              </div>
+              <div className="hidden sm:block w-px h-3 bg-white/10" />
+              <div className="flex items-center gap-1.5 text-white/25">
+                <CheckCircle size={11} />
+                <span style={{ fontSize: "10px" }} className="font-medium">Secure Checkout</span>
+              </div>
+              <div className="hidden sm:block w-px h-3 bg-white/10" />
+              <div className="flex items-center gap-1.5 text-white/25">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+                <span style={{ fontSize: "10px" }} className="font-medium">Fraud Protection</span>
+              </div>
+            </div>
+
           </div>
 
           <div className="border-t border-white/5 pt-6 sm:pt-7 flex flex-col sm:flex-row items-center justify-between gap-3">
