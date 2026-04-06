@@ -26,7 +26,7 @@ const tools = [
   {
     icon: PenLine,
     name: "AI Paper Writer",
-    desc: "Papers grounded in 50,000+ peer-reviewed databases. Upload your rubric and we target the A-grade criteria only. Plagiarism checked below 8% before delivery. Real DOI citations, no Wikipedia.",
+    desc: "Papers grounded in 10 live academic databases (1B+ papers). Upload your rubric and we target the A-grade criteria only. Plagiarism checked below 8% before delivery. Real DOI citations, no Wikipedia.",
     badge: "Most used",
     href: "/auth",
     color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -105,7 +105,7 @@ const faqs = [
   },
   {
     q: "How is the paper quality? I've tried AI writers before and they're terrible.",
-    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We search 50,000+ peer-reviewed databases for real abstracts — not fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop until the AI score is below 5%. That is the pipeline on every single output.",
+    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 10 live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, and Europe PMC — pulling over a billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop until the AI score is below 5%. That is the pipeline on every single output.",
   },
   {
     q: "Does file upload work with PDFs from my university portal?",
@@ -721,9 +721,9 @@ export default function Landing() {
                 border: "border-violet-500/20 bg-violet-500/5",
               },
               {
-                value: "50,000+",
-                label: "Academic databases",
-                sub: "OpenAlex · CrossRef · Semantic Scholar · arXiv · Europe PMC",
+                value: "10",
+                label: "Live academic databases",
+                sub: "1B+ papers · OpenAlex · PubMed · CrossRef · Semantic Scholar · ERIC · Zenodo · arXiv + 3 more",
                 color: "text-amber-400",
                 border: "border-amber-500/20 bg-amber-500/5",
               },
