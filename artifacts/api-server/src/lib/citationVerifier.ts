@@ -4,6 +4,8 @@
  * Implements VerifiedRegistry: only grounded, real citations appear in papers.
  */
 
+import { withCache } from "./cache.js";
+
 export interface VerifiedCitation {
   id: string;
   title: string;
@@ -141,21 +143,30 @@ export async function getVerifiedCitations(
   count = 5,
   style: "apa" | "mla" | "chicago" | "harvard" | "ieee" = "apa"
 ): Promise<VerifiedCitation[]> {
-  const query = `${topic} ${subject}`;
-  const ssCount = Math.ceil(count * 0.6);
-  const arxivCount = Math.ceil(count * 0.4);
+  return withCache(
+    "citations",
+    async () => {
+      const query = `${topic} ${subject}`;
+      const ssCount = Math.ceil(count * 0.6);
+      const arxivCount = Math.ceil(count * 0.4);
 
-  const [ssCites, arxivCites] = await Promise.all([
-    searchSemanticScholar(query, ssCount),
-    searchArxiv(query, arxivCount),
-  ]);
+      const [ssCites, arxivCites] = await Promise.all([
+        searchSemanticScholar(query, ssCount),
+        searchArxiv(query, arxivCount),
+      ]);
 
-  const merged = [...ssCites, ...arxivCites].slice(0, count);
+      const merged = [...ssCites, ...arxivCites].slice(0, count);
 
-  return merged.map((c, i) => ({
-    ...c,
-    formatted: formatCitation(c, style, i),
-  }));
+      return merged.map((c, i) => ({
+        ...c,
+        formatted: formatCitation(c, style, i),
+      }));
+    },
+    topic,
+    subject,
+    String(count),
+    style
+  );
 }
 
 function formatCitation(c: VerifiedCitation, style: string, idx: number): string {

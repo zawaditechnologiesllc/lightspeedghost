@@ -12,6 +12,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
     "@memvid/sdk": "^2.0.159",
+    "@upstash/redis": "^1.37.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "bcryptjs": "^3.0.3",

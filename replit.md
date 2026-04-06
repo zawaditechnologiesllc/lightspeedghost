@@ -63,7 +63,13 @@ All 9 pages fully optimized for mobile (390px+):
 - `cove.ts` — Chain-of-Verification critic agent (error elimination)
 - `contextManager.ts` — Sliding window context for long documents
 - `memory.ts` — Student persistent memory CRUD (Jarvis Effect)
-- `citationVerifier.ts` — Real citations from Semantic Scholar + arXiv APIs
+- `citationVerifier.ts` — Real citations from Semantic Scholar + arXiv APIs (cache-wrapped)
+- `academicSources.ts` — 10-database academic search aggregator (cache-wrapped)
+- `cache.ts` — Upstash Redis cache layer (graceful no-op when env vars not set)
+  - TTLs: citations 6h, academic RAG 2h, STEM papers 6h, outline 24h
+  - Env vars required on Render: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+  - `withCache(op, compute, ...keyParts)` — generic get-or-compute helper
+  - Cache status exposed at `GET /api/healthz` → `{ cache: "redis:upstash" | "disabled" }`
 - `apiCost.ts` — Usage tracking + daily budget guardrails ($5/day default)
 
 ### STEM Pipeline

@@ -17,6 +17,8 @@
  * preventing hallucination.
  */
 
+import { withCache } from "./cache.js";
+
 export interface AcademicPaper {
   title: string;
   authors: string;
@@ -791,9 +793,9 @@ async function searchZenodo(
  * @param limit   - Maximum number of papers to return
  * @param subject - Optional subject hint for specialised routing
  */
-export async function searchAllAcademicSources(
+async function _fetchAllAcademicSources(
   query: string,
-  limit = 10,
+  limit: number,
   subject?: string
 ): Promise<AcademicPaper[]> {
   const combinedCtx = (subject ?? "") + " " + query;
@@ -884,6 +886,24 @@ export async function searchAllAcademicSources(
   });
 
   return merged.slice(0, limit);
+}
+
+/**
+ * Cache-wrapped version of _fetchAllAcademicSources.
+ * Identical API — callers see no difference.
+ */
+export async function searchAllAcademicSources(
+  query: string,
+  limit = 10,
+  subject?: string
+): Promise<AcademicPaper[]> {
+  return withCache(
+    "academicRag",
+    () => _fetchAllAcademicSources(query, limit, subject),
+    query,
+    String(limit),
+    subject ?? "general"
+  );
 }
 
 /**

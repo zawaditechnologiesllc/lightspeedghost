@@ -172,6 +172,9 @@ importers:
       '@memvid/sdk':
         specifier: ^2.0.159
         version: 2.0.159(@llamaindex/env@0.1.31)(@napi-rs/canvas@0.1.97)(@opentelemetry/api@1.9.0)(openai@6.33.0(ws@8.20.0)(zod@3.25.76))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(ws@8.20.0)(zod@3.25.76)
+      '@upstash/redis':
+        specifier: ^1.37.0
+        version: 1.37.0
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -192,7 +195,7 @@ importers:
         version: 2.8.6
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(pg@8.20.0)
+        version: 0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(@upstash/redis@1.37.0)(pg@8.20.0)
       express:
         specifier: ^5
         version: 5.2.1
@@ -677,10 +680,10 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(pg@8.20.0)
+        version: 0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(@upstash/redis@1.37.0)(pg@8.20.0)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(pg@8.20.0))(zod@3.25.76)
+        version: 0.8.3(drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(@upstash/redis@1.37.0)(pg@8.20.0))(zod@3.25.76)
       pg:
         specifier: ^8.20.0
         version: 8.20.0
@@ -2302,6 +2305,9 @@ packages:
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+
+  '@upstash/redis@1.37.0':
+    resolution: {integrity: sha512-LqOJ3+XWPLSZ2rGSed5DYG3ixybxb8EhZu3yQqF7MdZX1wLBG/FRcI6xcUZXHy/SS7mmXWyadrud0HJHkOc+uw==}
 
   '@vercel/oidc@3.1.0':
     resolution: {integrity: sha512-Fw28YZpRnA3cAHHDlkt7xQHiJ0fcL+NRcIqsocZQUSmbzeIKRpwttJjik5ZGanXP+vlA4SbTg+AbA3bP363l+w==}
@@ -4355,6 +4361,9 @@ packages:
     resolution: {integrity: sha512-rvKSBiC5zqCCiDZ9kAOszZcDvdAHwwIKJG33Ykj43OKcWsnmcBRL09YTU4nOeHZ8Y2a7l1MgTd08SBe9A8Qj6A==}
     engines: {node: '>=18'}
 
+  uncrypto@0.1.3:
+    resolution: {integrity: sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==}
+
   underscore@1.13.8:
     resolution: {integrity: sha512-DXtD3ZtEQzc7M8m4cXotyHR+FAS18C64asBYY5vqZexfYryNNnDc02W4hKg3rdQuqOYas1jkseX0+nZXjTXnvQ==}
 
@@ -6323,6 +6332,10 @@ snapshots:
     dependencies:
       '@types/node': 25.3.5
 
+  '@upstash/redis@1.37.0':
+    dependencies:
+      uncrypto: 0.1.3
+
   '@vercel/oidc@3.1.0': {}
 
   '@vitejs/plugin-react@5.1.4(vite@7.3.1(@types/node@25.3.5)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2))':
@@ -6761,15 +6774,16 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(pg@8.20.0):
+  drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(@upstash/redis@1.37.0)(pg@8.20.0):
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
       '@types/pg': 8.18.0
+      '@upstash/redis': 1.37.0
       pg: 8.20.0
 
-  drizzle-zod@0.8.3(drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(pg@8.20.0))(zod@3.25.76):
+  drizzle-zod@0.8.3(drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(@upstash/redis@1.37.0)(pg@8.20.0))(zod@3.25.76):
     dependencies:
-      drizzle-orm: 0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(pg@8.20.0)
+      drizzle-orm: 0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.18.0)(@upstash/redis@1.37.0)(pg@8.20.0)
       zod: 3.25.76
 
   duck@0.1.12:
@@ -8331,6 +8345,8 @@ snapshots:
       random-bytes: 1.0.0
 
   uint8array-extras@1.5.0: {}
+
+  uncrypto@0.1.3: {}
 
   underscore@1.13.8: {}
 
