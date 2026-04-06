@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useListDocuments, useDeleteDocument, getListDocumentsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, FileText, PenLine, FlaskConical, GraduationCap, Files, Search } from "lucide-react";
+import { Trash2, FileText, PenLine, FlaskConical, GraduationCap, Files, Search, ListOrdered } from "lucide-react";
 
 const typeFilters = [
   { value: undefined, label: "All" },
   { value: "paper" as const, label: "Papers" },
   { value: "revision" as const, label: "Revisions" },
+  { value: "outline" as const, label: "Outlines" },
   { value: "stem" as const, label: "STEM" },
   { value: "study" as const, label: "Study" },
 ];
@@ -14,6 +15,7 @@ const typeFilters = [
 const typeIcons: Record<string, React.ReactNode> = {
   paper: <PenLine size={14} className="text-primary" />,
   revision: <Files size={14} className="text-blue-500" />,
+  outline: <ListOrdered size={14} className="text-emerald-500" />,
   stem: <FlaskConical size={14} className="text-indigo-500" />,
   study: <GraduationCap size={14} className="text-cyan-500" />,
 };
@@ -21,12 +23,13 @@ const typeIcons: Record<string, React.ReactNode> = {
 const typeBadgeColors: Record<string, string> = {
   paper: "bg-primary/10 text-primary",
   revision: "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400",
+  outline: "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400",
   stem: "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400",
   study: "bg-cyan-100 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-400",
 };
 
 export default function Documents() {
-  const [selectedType, setSelectedType] = useState<"paper" | "revision" | "stem" | "study" | undefined>();
+  const [selectedType, setSelectedType] = useState<"paper" | "revision" | "stem" | "study" | "outline" | undefined>();
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
 
@@ -50,7 +53,7 @@ export default function Documents() {
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
       <div>
         <h1 className="text-xl sm:text-2xl font-bold">History</h1>
-        <p className="text-muted-foreground text-sm mt-1">All your saved papers, revisions, STEM solutions, and study sessions</p>
+        <p className="text-muted-foreground text-sm mt-1">All your saved papers, outlines, revisions, STEM solutions, and study sessions</p>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">

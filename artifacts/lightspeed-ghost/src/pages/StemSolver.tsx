@@ -196,6 +196,9 @@ export default function StemSolver() {
     let res;
     try {
       res = await solveStem.mutateAsync(data);
+    } catch {
+      // error is stored in solveStem.error by React Query — form will re-render with error shown
+      return;
     } finally {
       if (solveIntervalRef.current) { clearInterval(solveIntervalRef.current); solveIntervalRef.current = null; }
     }
@@ -373,6 +376,17 @@ export default function StemSolver() {
   // ── Shared input form ─────────────────────────────────────────────────────
   const InputForm = (
     <form onSubmit={form.handleSubmit(onSubmit)}>
+      {solveStem.isError && (
+        <div className="mb-3 flex items-start gap-2 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/30 text-xs text-destructive">
+          <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">Solve failed</p>
+            <p className="opacity-80 mt-0.5">
+              {solveStem.error instanceof Error ? solveStem.error.message : "Something went wrong — please check your problem and try again."}
+            </p>
+          </div>
+        </div>
+      )}
       <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm ring-1 ring-transparent focus-within:ring-primary/30 transition-all">
         {/* Upload tools row */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-0 flex-wrap">

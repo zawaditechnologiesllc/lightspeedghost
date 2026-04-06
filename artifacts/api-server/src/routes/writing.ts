@@ -238,7 +238,7 @@ Each section should contain only content appropriate for that section of an acad
     // ── Step 3: Write paper (streaming) ──────────────────────────────────────
     send("step", {
       id: "writing",
-      message: `Claude Sonnet 4.5 is writing your ${targetWords.toLocaleString()}-word paper — structuring arguments and placing in-text citations every 150–200 words…`,
+      message: `LightSpeed AI is writing your ${targetWords.toLocaleString()}-word ${body.paperType} on "${body.topic}" — structuring arguments and weaving in-text citations every 150–200 words…`,
       status: "running",
     });
 
@@ -660,6 +660,27 @@ router.post("/writing/outline", async (req, res) => {
         ],
       };
     }
+
+    // Save to documents table for history
+    try {
+      const userId = req.userId ?? null;
+      const outlineText = [
+        outline.title,
+        "",
+        ...outline.sections.flatMap((s: { heading: string; subsections: string[] }, i: number) => [
+          `${i + 1}. ${s.heading}`,
+          ...s.subsections.map((sub: string, j: number) => `   ${i + 1}.${j + 1} ${sub}`),
+        ]),
+      ].join("\n");
+      await db.insert(documentsTable).values({
+        userId,
+        title: outline.title || `Outline: ${body.topic} (${body.paperType}, ${body.subject})`,
+        content: outlineText,
+        type: "outline",
+        subject: body.subject,
+        wordCount: outlineText.split(/\s+/).filter(Boolean).length,
+      });
+    } catch { /* non-fatal — continue even if save fails */ }
 
     res.json(outline);
   } catch (err) {

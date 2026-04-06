@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { studySessionsTable, studyMessagesTable } from "@workspace/db";
+import { studySessionsTable, studyMessagesTable, documentsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { AskStudyAssistantBody, GetSessionMessagesParams } from "@workspace/api-zod";
 import { anthropic, openai } from "../lib/ai";
@@ -371,6 +371,21 @@ router.post("/study/generate", async (req, res) => {
       req.log.error({ raw }, "Failed to parse study generate JSON");
       return res.status(500).json({ error: "Failed to parse AI response" });
     }
+
+    // Save to documents history (non-fatal)
+    try {
+      const userId = req.userId ?? null;
+      const typeLabel = body.type.charAt(0).toUpperCase() + body.type.slice(1);
+      const topicPreview = body.content.slice(0, 80).replace(/\s+/g, " ").trim();
+      await db.insert(documentsTable).values({
+        userId,
+        title: `${typeLabel}: ${subject} — ${topicPreview}${topicPreview.length >= 80 ? "…" : ""}`,
+        content: raw.slice(0, 4000),
+        type: "study",
+        subject,
+        wordCount: raw.split(/\s+/).filter(Boolean).length,
+      });
+    } catch { /* non-fatal */ }
 
     res.json({ type: body.type, data: parsed });
   } catch (err) {

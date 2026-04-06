@@ -397,6 +397,23 @@ export default function StudyAssistant() {
             </div>
           </div>
 
+          {/* ── GENERATING: show compact generating state instead of input ── */}
+          {isGenerating && (
+            <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5">
+              <Loader2 size={14} className="animate-spin text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-primary">
+                  Generating {OUTPUT_TYPES.find((t) => t.key === selectedType)?.label ?? "content"}…
+                </p>
+                {topic.trim() && (
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{topic.trim().slice(0, 80)}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!isGenerating && (
+          <>
           {/* ── 1. MAIN TOPIC TEXTAREA ────────────────────────────────── */}
           <div className="rounded-2xl border border-border bg-card shadow-sm focus-within:border-primary/40 focus-within:shadow-[0_0_0_3px_hsl(var(--primary)/0.06)] transition-all">
             <textarea
@@ -582,6 +599,7 @@ export default function StudyAssistant() {
               </button>
             </p>
           </div>
+          </>)}
 
           {/* ── 6. PROGRESS DISPLAY ───────────────────────────────────── */}
           {isGenerating && (

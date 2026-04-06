@@ -273,6 +273,7 @@ export default function WritePaper() {
         });
       };
 
+      let receivedFinalEvent = false;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -296,12 +297,14 @@ export default function WritePaper() {
                   return next;
                 });
               } else if (event === "done") {
+                receivedFinalEvent = true;
                 setResult(data as PaperResult);
                 setEditedContent(data.content);
                 setPhase("results");
                 setResultTab("paper");
                 setViewMode("view");
               } else if (event === "error") {
+                receivedFinalEvent = true;
                 setGenError(data.message ?? "Unknown error");
                 setPhase("config");
               }
@@ -309,6 +312,11 @@ export default function WritePaper() {
             event = "";
           }
         }
+      }
+      // Stream ended without a final "done" or "error" event — connection was interrupted
+      if (!receivedFinalEvent) {
+        setGenError("Connection was interrupted before the paper was completed. The server may need more time — please try again.");
+        setPhase("config");
       }
     } catch (err) {
       setGenError(err instanceof Error ? err.message : "Network error — please try again");
