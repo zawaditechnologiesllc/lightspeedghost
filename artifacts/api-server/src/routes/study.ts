@@ -7,6 +7,7 @@ import { anthropic, openai } from "../lib/ai";
 import { TUTOR_SOUL } from "../lib/soul";
 import { getStudentMemory, updateStudentMemory, buildMemoryContext, memoryFlush } from "../lib/memory";
 import { indexStudyExchange, recallStudyContext } from "../lib/memvidMemory";
+import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage } from "../lib/usageTracker";
 import multer from "multer";
@@ -85,14 +86,17 @@ router.post("/study/ask", async (req, res) => {
       content: body.question,
     });
 
-    // 1. Load student persistent memory (Jarvis Effect) + semantic long-term recall
-    const memory = await getStudentMemory();
-    const memoryContext = buildMemoryContext(memory);
+    // 1. Load student memory + academic RAG in parallel (both fire-and-forget safe)
+    const [memory, semanticContext, ragPapers] = await Promise.all([
+      getStudentMemory(),
+      req.userId
+        ? recallStudyContext(req.userId, body.question, 3).catch(() => "")
+        : Promise.resolve(""),
+      searchAllAcademicSources(body.question, 6).catch(() => []),
+    ]);
 
-    // 1b. Semantic recall from long-term memory capsule (fire-and-forget safe)
-    const semanticContext = req.userId
-      ? await recallStudyContext(req.userId, body.question, 3).catch(() => "")
-      : "";
+    const memoryContext = buildMemoryContext(memory);
+    const ragContext = buildRAGContext(ragPapers);
 
     // 2. Load conversation history for context
     const history = await db
@@ -122,7 +126,18 @@ router.post("/study/ask", async (req, res) => {
     const systemPrompt = `${TUTOR_SOUL}
 
 ${memoryContext}
-${semanticContext ? `\n${semanticContext}\n` : ""}
+${semanticContext ? `\n${semanticContext}\n` : ""}${body.documentContext ? `
+STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — answer from this material first and foremost):
+${body.documentContext.slice(0, 6000)}
+
+INSTRUCTION: The student has uploaded their own notes/materials above. Base your answer primarily on what is in those materials. If the question is answered there, cite from it directly. Only use the academic sources below for supplementary depth.
+
+` : ""}${ragContext ? `${ragContext}\n\n` : ""}ANSWER QUALITY STANDARDS:
+• Accuracy target: 92%+ — ground every claim in the student's materials or the verified sources above
+• Do NOT cite Wikipedia or unverified sources
+• If you are uncertain, say so explicitly rather than speculating
+• Cite sources by [Source N] number when drawing from the academic knowledge base above
+
 CURRENT MODE: ${(body.mode ?? "tutor").toUpperCase()}
 Mode instructions: ${modeInstruction}
 
