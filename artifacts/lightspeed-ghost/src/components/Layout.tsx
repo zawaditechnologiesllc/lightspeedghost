@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { ManageFundsModal } from "@/components/ManageFundsModal";
 import { PAYGMarketModal } from "@/components/PAYGMarketModal";
 import { AnnouncementBanner, NotificationBell } from "@/components/AnnouncementBanner";
+import OfflineBanner from "@/components/OfflineBanner";
 
 const navItems = [
   { path: "/app",        label: "Dashboard",           icon: LayoutDashboard },
@@ -282,6 +283,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
+
+        {/* Offline / connection status */}
+        <OfflineBanner />
 
         {/* Announcement banners */}
         <AnnouncementBanner />

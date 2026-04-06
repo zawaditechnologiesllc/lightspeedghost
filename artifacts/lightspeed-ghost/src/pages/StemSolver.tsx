@@ -14,7 +14,6 @@ import {
 import type { StemSolution } from "@workspace/api-client-react";
 import StemImageOcr from "@/components/StemImageOcr";
 import MathRenderer from "@/components/MathRenderer";
-import FullscreenLoader from "@/components/FullscreenLoader";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -149,6 +148,8 @@ export default function StemSolver() {
   const [copied, setCopied] = useState(false);
   const [solvedProblem, setSolvedProblem] = useState("");
   const [showInput, setShowInput] = useState(true);
+  const [solveStep, setSolveStep] = useState(0);
+  const solveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const solveStem = useSolveStem();
   const { data: subjects } = useGetStemSubjects();
@@ -185,8 +186,20 @@ export default function StemSolver() {
     setRecommendations({});
     setSolvedProblem(data.problem);
     setExpandedSteps({});
+    setSolveStep(0);
 
-    const res = await solveStem.mutateAsync(data);
+    const STEP_COUNT = 8;
+    solveIntervalRef.current = setInterval(() => {
+      setSolveStep(prev => (prev < STEP_COUNT - 1 ? prev + 1 : prev));
+    }, 1100);
+
+    let res;
+    try {
+      res = await solveStem.mutateAsync(data);
+    } finally {
+      if (solveIntervalRef.current) { clearInterval(solveIntervalRef.current); solveIntervalRef.current = null; }
+    }
+    if (!res) return;
     setResult(res);
     setActiveTab("papers");
     setShowInput(false);
@@ -257,26 +270,73 @@ export default function StemSolver() {
   const toggleStep = (n: number) => setExpandedSteps(p => ({ ...p, [n]: !(p[n] ?? true) }));
   const toggleGroup = (label: string) => setExpandedGroups(p => ({ ...p, [label]: !p[label] }));
 
-  // ── Solving animation ──────────────────────────────────────────────────────
+  // ── Solving progress panel ─────────────────────────────────────────────────
+  const SOLVE_STEPS = [
+    "Parsing problem — identifying knowns and unknowns",
+    "THOUGHT — understanding domain scope and constraints",
+    "ACTION — selecting strategy, theorem, or formula",
+    "OBSERVATION — setting up equations and expressions",
+    "THOUGHT 2 — executing calculation with full working",
+    "Chain-of-Verification — checking solution for errors",
+    "Applying critic corrections if needed",
+    "Building step-by-step explanation",
+  ];
+
   if (solveStem.isPending) {
     return (
-      <div className="h-full flex flex-col overflow-hidden bg-background">
-        <FullscreenLoader
-          icon={<FlaskConical size={32} />}
-          title="Solving your problem…"
-          subtitle="Multi-agent reasoning with step-by-step verification"
-          steps={[
-            "Parsing problem — identifying knowns and unknowns",
-            "THOUGHT — understanding domain scope and constraints",
-            "ACTION — selecting strategy, theorem, or formula",
-            "OBSERVATION — setting up equations and expressions",
-            "THOUGHT 2 — executing calculation with full working",
-            "Chain-of-Verification — checking solution for errors",
-            "Applying critic corrections if needed",
-            "Building step-by-step explanation",
-          ]}
-          stepInterval={1100}
-        />
+      <div className="h-full flex flex-col items-center justify-center bg-background px-6 gap-8">
+        <div className="text-center space-y-3">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Zap size={16} className="text-primary" />
+            <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <FlaskConical size={24} className="text-primary" />
+          </div>
+          <h2 className="text-xl font-bold">Solving your problem…</h2>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            Multi-agent reasoning with step-by-step verification
+          </p>
+        </div>
+
+        <div className="w-full max-w-sm">
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-700"
+              style={{ width: `${Math.round(((solveStep + 1) / SOLVE_STEPS.length) * 100)}%` }}
+            />
+          </div>
+          <div className="flex justify-between mt-1.5">
+            <span className="text-[10px] text-muted-foreground/60">ReAct loop running</span>
+            <span className="text-[10px] text-muted-foreground/60 tabular-nums">
+              {Math.round(((solveStep + 1) / SOLVE_STEPS.length) * 100)}%
+            </span>
+          </div>
+        </div>
+
+        <div className="w-full max-w-sm space-y-2">
+          {SOLVE_STEPS.map((step, i) => (
+            <div
+              key={i}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border transition-all duration-500 ${
+                i < solveStep
+                  ? "bg-primary/5 border-primary/20 text-foreground"
+                  : i === solveStep
+                    ? "bg-card border-border text-foreground shadow-sm"
+                    : "bg-muted/30 border-transparent text-muted-foreground/40"
+              }`}
+            >
+              {i < solveStep ? (
+                <CheckCircle size={13} className="text-primary shrink-0" />
+              ) : i === solveStep ? (
+                <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shrink-0" />
+              ) : (
+                <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20 shrink-0" />
+              )}
+              <span className="text-xs">{step}</span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -571,11 +631,13 @@ export default function StemSolver() {
                           {isOpen && (
                             <div className="px-5 pb-4 pl-14 space-y-2">
                               {step.expression && (
-                                <div className="px-3.5 py-2.5 bg-muted/60 rounded-xl border border-border">
-                                  <MathRenderer text={step.expression} className="text-sm font-mono" />
+                                <div className="handwritten-expression">
+                                  <MathRenderer text={step.expression} className="text-sm" />
                                 </div>
                               )}
-                              <MathRenderer text={step.explanation} className="text-sm text-muted-foreground leading-relaxed" />
+                              <div className="handwritten-block">
+                                <MathRenderer text={step.explanation} className="text-sm leading-relaxed" />
+                              </div>
                             </div>
                           )}
                         </div>

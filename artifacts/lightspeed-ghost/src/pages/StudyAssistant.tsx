@@ -794,7 +794,7 @@ export default function StudyAssistant() {
                       ? "bg-primary text-primary-foreground rounded-br-sm"
                       : "bg-muted text-foreground rounded-bl-sm")}>
                     {msg.role === "assistant"
-                      ? <MathRenderer text={msg.content} className="text-[11px]" />
+                      ? <MathRenderer text={msg.content} className={`text-[11px] ${msg.content.includes("$") ? "font-handwritten" : ""}`} />
                       : msg.content}
                   </div>
                   {msg.role === "assistant" && msg.followUpQuestions?.slice(0, 2).map((q, qi) => (
@@ -913,7 +913,7 @@ function FlashcardsView({ cards, cardIdx, flipped, mastered, onFlip, onPrev, onN
           <div className="absolute inset-0 rounded-2xl bg-primary/8 flex flex-col items-center justify-center p-8 text-center"
             style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
             <p className="text-[10px] uppercase tracking-widest text-primary/50 mb-4">Answer</p>
-            <MathRenderer text={card.back} className="text-sm text-foreground leading-relaxed" />
+            <MathRenderer text={card.back} className={`text-sm text-foreground leading-relaxed ${card.back.includes("$") ? "font-handwritten" : ""}`} />
           </div>
         </div>
       </div>

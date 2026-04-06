@@ -1,9 +1,8 @@
 import { useState, useCallback } from "react";
 import {
   ListTree, ChevronRight, Copy, CheckCheck, PenLine, ChevronDown,
-  BookOpen, FileText, Zap, CheckCircle, AlertTriangle,
+  BookOpen, FileText, Zap, CheckCircle, AlertTriangle, RotateCcw,
 } from "lucide-react";
-import FullscreenLoader from "@/components/FullscreenLoader";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +14,7 @@ import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 type PaperType = "research" | "essay" | "thesis" | "literature_review" | "report";
+type Phase = "config" | "generating" | "results";
 
 interface OutlineSection {
   heading: string;
@@ -47,10 +47,19 @@ const SECTION_COLORS = [
   "border-l-indigo-400 bg-indigo-400/5",
 ];
 
+const PROGRESS_STEPS = [
+  "Analysing topic scope and academic depth requirements",
+  "Designing section hierarchy and argument flow",
+  "Generating section titles and sub-headings",
+  "Mapping thesis statement and conclusion arc",
+  "Adding research angle and evidence prompts per section",
+  "Finalising outline — ready to write",
+];
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function Outline() {
-  const { user } = useAuth();
+  useAuth();
   const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
@@ -62,8 +71,8 @@ export default function Outline() {
   const [instructionsLoaded, setInstructionsLoaded] = useState(false);
   const [referenceWordCount, setReferenceWordCount] = useState(0);
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [_loadingMsg, setLoadingMsg] = useState("");
+  const [phase, setPhase] = useState<Phase>("config");
+  const [activeStep, setActiveStep] = useState(0);
   const [error, setError] = useState("");
   const [result, setResult] = useState<OutlineResult | null>(null);
   const [copied, setCopied] = useState(false);
@@ -114,12 +123,17 @@ export default function Outline() {
   const handleGenerate = async () => {
     if (!topic.trim() || !subject.trim()) return;
     if (isAtLimit("outline")) { guard("outline", () => {}); return; }
-    setIsLoading(true);
+
+    setPhase("generating");
     setError("");
-    setLoadingMsg("Analysing your topic and crafting a structured outline…");
+    setActiveStep(0);
+
+    // Animate through progress steps while the API call is in flight
+    const stepInterval = setInterval(() => {
+      setActiveStep(prev => (prev < PROGRESS_STEPS.length - 1 ? prev + 1 : prev));
+    }, 1000);
 
     try {
-      
       const resp = await fetch(`${API_BASE}/writing/outline`, {
         method: "POST",
         headers: {
@@ -135,66 +149,110 @@ export default function Outline() {
         }),
       });
 
+      clearInterval(stepInterval);
+
       if (!resp.ok) throw new Error("Failed to generate outline — please try again");
       const data: OutlineResult = await resp.json();
       setResult(data);
       setExpandedSections(new Set(data.sections.map((_, i) => i)));
+      setPhase("results");
     } catch (err) {
+      clearInterval(stepInterval);
       setError(err instanceof Error ? err.message : "Something went wrong");
+      setPhase("config");
     }
-    setIsLoading(false);
-    setLoadingMsg("");
   };
 
-  // ── LAYOUT ─────────────────────────────────────────────────────────────────
+  const handleReset = () => {
+    setPhase("config");
+    setResult(null);
+    setError("");
+    setTopic("");
+    setSubject("");
+    setInstructionsText("");
+    setReferenceText("");
+    setInstructionsLoaded(false);
+    setReferenceWordCount(0);
+  };
 
-  return (
-    <>
-    <div className="h-full flex flex-col overflow-hidden bg-background">
+  // ── PHASE: GENERATING ─────────────────────────────────────────────────────
 
-      {/* ── Body ───────────────────────────────────────────────────────────── */}
-      {isLoading ? (
-        <FullscreenLoader
-          icon={<ListTree size={32} />}
-          title="Generating your outline…"
-          subtitle={`Building a structured plan for "${topic}" in ${subject}`}
-          steps={[
-            "Analysing topic scope and academic depth requirements",
-            "Designing section hierarchy and argument flow",
-            "Generating section titles and sub-headings",
-            "Mapping thesis statement and conclusion arc",
-            "Adding research angle and evidence prompts per section",
-            "Finalising outline — ready to write",
-          ]}
-        />
-      ) : (
-      <div className={cn(
-        "flex-1 min-h-0",
-        result ? "flex flex-col md:flex-row overflow-hidden" : "overflow-y-auto"
-      )}>
+  if (phase === "generating") {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-background px-6 gap-8">
+        <div className="text-center space-y-3">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Zap size={16} className="text-primary" />
+            <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+          </div>
+          <h2 className="text-xl font-bold">Generating your outline…</h2>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            Building a structured plan for <span className="text-foreground font-medium">{topic}</span> in {subject}
+          </p>
+        </div>
 
-        {/* ── Form panel ─────────────────────────────────────────────────── */}
-        <div className={cn(
-          "flex flex-col bg-card/50",
-          result
-            ? "shrink-0 overflow-hidden border-b md:border-b-0 md:border-r border-border md:w-80 max-h-[40vh] md:max-h-none"
-            : "max-w-xl mx-auto w-full"
-        )}>
-          <div className={cn("px-5 py-5 space-y-5", result && "flex-1 overflow-y-auto")}>
+        {/* Progress bar */}
+        <div className="w-full max-w-sm">
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-700"
+              style={{ width: `${Math.round(((activeStep + 1) / PROGRESS_STEPS.length) * 100)}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground/60 text-right mt-1.5 tabular-nums">
+            {Math.round(((activeStep + 1) / PROGRESS_STEPS.length) * 100)}%
+          </p>
+        </div>
 
-            {/* Page header — only shown before outline is generated */}
-            {!result && (
-              <div className="text-center space-y-1.5 pt-2 pb-1">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <Zap size={16} className="text-primary" />
-                  <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
-                </div>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Outline Generator</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Structure your paper before writing — 0% AI · &lt;8% plagiarism · one click to full paper
-                </p>
+        {/* Step list */}
+        <div className="w-full max-w-sm space-y-2">
+          {PROGRESS_STEPS.map((step, i) => (
+            <div
+              key={i}
+              className={cn(
+                "flex items-center gap-3 px-4 py-2.5 rounded-lg border transition-all duration-500",
+                i < activeStep
+                  ? "bg-primary/5 border-primary/20 text-foreground"
+                  : i === activeStep
+                    ? "bg-card border-border text-foreground shadow-sm"
+                    : "bg-muted/30 border-transparent text-muted-foreground/40"
+              )}
+            >
+              {i < activeStep ? (
+                <CheckCircle size={13} className="text-primary shrink-0" />
+              ) : i === activeStep ? (
+                <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shrink-0" />
+              ) : (
+                <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20 shrink-0" />
+              )}
+              <span className="text-xs">{step}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── PHASE: CONFIG ─────────────────────────────────────────────────────────
+
+  if (phase === "config") {
+    return (
+      <>
+      <div className="h-full flex flex-col overflow-hidden bg-background">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-xl mx-auto w-full px-5 py-5 space-y-5">
+
+            {/* Page header */}
+            <div className="text-center space-y-1.5 pt-2 pb-1">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Zap size={16} className="text-primary" />
+                <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
               </div>
-            )}
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Outline Generator</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Structure your paper before writing — 0% AI · &lt;8% plagiarism · one click to full paper
+              </p>
+            </div>
 
             {error && (
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
@@ -249,7 +307,7 @@ export default function Outline() {
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
               <div className="relative flex justify-center">
-                <span className="px-2 text-[10px] text-muted-foreground bg-card/50">or fill manually</span>
+                <span className="px-2 text-[10px] text-muted-foreground bg-background">or fill manually</span>
               </div>
             </div>
 
@@ -313,7 +371,7 @@ export default function Outline() {
               Generate Outline
             </button>
 
-            {(!topic.trim() || !subject.trim()) && !isLoading && (
+            {(!topic.trim() || !subject.trim()) && (
               <p className="text-center text-xs text-muted-foreground -mt-2">Enter a topic and subject to continue</p>
             )}
             <p className="text-center text-[11px] text-muted-foreground/50">
@@ -324,101 +382,127 @@ export default function Outline() {
             </p>
           </div>
         </div>
+      </div>
 
-        {/* ── Result panel ───────────────────────────────────────────────── */}
+      <PaywallFlow
+        pickerState={pickerState}
+        checkoutState={checkoutState}
+        plan={plan}
+        closePicker={closePicker}
+        closeCheckout={closeCheckout}
+        chooseSubscription={chooseSubscription}
+        choosePayg={choosePayg}
+      />
+      </>
+    );
+  }
+
+  // ── PHASE: RESULTS ────────────────────────────────────────────────────────
+
+  return (
+    <>
+    <div className="h-full flex flex-col overflow-hidden bg-background">
+
+      {/* Top bar */}
+      <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border bg-card/80 backdrop-blur-sm">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <ListTree size={14} className="text-primary" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-bold text-sm text-foreground leading-tight truncate">{result?.title}</h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{result?.sections.length} sections</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={copyOutline}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2.5 py-1.5 transition-colors"
+          >
+            {copied ? <CheckCheck size={12} className="text-green-500" /> : <Copy size={12} />}
+            {copied ? "Copied!" : "Copy"}
+          </button>
+          <Link href={`/write?topic=${encodeURIComponent(topic)}&subject=${encodeURIComponent(subject)}&type=${paperType}`}>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:opacity-80 border border-primary/30 bg-primary/5 rounded-lg px-2.5 py-1.5 transition-all cursor-pointer">
+              <PenLine size={12} />
+              Write paper
+            </div>
+          </Link>
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2.5 py-1.5 transition-colors"
+          >
+            <RotateCcw size={11} /> New
+          </button>
+        </div>
+      </div>
+
+      {/* Sections */}
+      <div className="flex-1 overflow-y-auto">
         {result && (
-          <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-            {/* Result header */}
-            <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border bg-muted/10">
-              <div>
-                <h2 className="font-bold text-sm text-foreground leading-tight">{result.title}</h2>
-                <p className="text-[11px] text-muted-foreground mt-0.5">{result.sections.length} sections</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={copyOutline}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2.5 py-1.5 transition-colors"
-                >
-                  {copied ? <CheckCheck size={12} className="text-green-500" /> : <Copy size={12} />}
-                  {copied ? "Copied!" : "Copy"}
-                </button>
-                <Link href={`/write?topic=${encodeURIComponent(topic)}&subject=${encodeURIComponent(subject)}&type=${paperType}`}>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:opacity-80 border border-primary/30 bg-primary/5 rounded-lg px-2.5 py-1.5 transition-all cursor-pointer">
-                    <PenLine size={12} />
-                    Write paper
-                  </div>
-                </Link>
-              </div>
-            </div>
+          <div className="divide-y divide-border">
+            {result.sections.map((section, i) => {
+              const isExpanded = expandedSections.has(i);
+              const colorClass = SECTION_COLORS[i % SECTION_COLORS.length];
+              return (
+                <div key={i}>
+                  <button
+                    onClick={() => toggleSection(i)}
+                    className="w-full text-left px-5 py-3.5 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold border-l-2 shrink-0", colorClass)}>
+                        {i + 1}
+                      </div>
+                      <span className="text-sm font-semibold flex-1 text-foreground">{section.heading}</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {section.subsections.length > 0 && (
+                          <span className="text-[10px] text-muted-foreground hidden sm:block">
+                            {section.subsections.length} subsections
+                          </span>
+                        )}
+                        {isExpanded
+                          ? <ChevronDown size={14} className="text-muted-foreground" />
+                          : <ChevronRight size={14} className="text-muted-foreground" />}
+                      </div>
+                    </div>
+                  </button>
 
-            {/* Sections */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="divide-y divide-border">
-                {result.sections.map((section, i) => {
-                  const isExpanded = expandedSections.has(i);
-                  const colorClass = SECTION_COLORS[i % SECTION_COLORS.length];
-                  return (
-                    <div key={i}>
-                      <button
-                        onClick={() => toggleSection(i)}
-                        className="w-full text-left px-5 py-3.5 hover:bg-muted/30 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={cn("w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold border-l-2 shrink-0", colorClass)}>
-                            {i + 1}
-                          </div>
-                          <span className="text-sm font-semibold flex-1 text-foreground">{section.heading}</span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {section.subsections.length > 0 && (
-                              <span className="text-[10px] text-muted-foreground hidden sm:block">
-                                {section.subsections.length} subsections
-                              </span>
-                            )}
-                            {isExpanded
-                              ? <ChevronDown size={14} className="text-muted-foreground" />
-                              : <ChevronRight size={14} className="text-muted-foreground" />}
-                          </div>
+                  {isExpanded && section.subsections.length > 0 && (
+                    <div className="px-5 pb-3 space-y-1 bg-muted/5">
+                      {section.subsections.map((sub, j) => (
+                        <div key={j} className="flex items-start gap-2 py-1 pl-10">
+                          <span className="text-[10px] text-primary font-mono mt-0.5 shrink-0 w-7">
+                            {i + 1}.{j + 1}
+                          </span>
+                          <ChevronRight size={11} className="text-primary/50 mt-0.5 shrink-0" />
+                          <span className="text-sm text-muted-foreground">{sub}</span>
                         </div>
-                      </button>
-
-                      {isExpanded && section.subsections.length > 0 && (
-                        <div className="px-5 pb-3 space-y-1 bg-muted/5">
-                          {section.subsections.map((sub, j) => (
-                            <div key={j} className="flex items-start gap-2 py-1 pl-10">
-                              <span className="text-[10px] text-primary font-mono mt-0.5 shrink-0 w-7">
-                                {i + 1}.{j + 1}
-                              </span>
-                              <ChevronRight size={11} className="text-primary/50 mt-0.5 shrink-0" />
-                              <span className="text-sm text-muted-foreground">{sub}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Write paper CTA */}
-              <div className="p-5">
-                <Link href={`/write?topic=${encodeURIComponent(topic)}&subject=${encodeURIComponent(subject)}&type=${paperType}`}>
-                  <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-5 py-4 hover:bg-primary/10 transition-colors cursor-pointer group">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <PenLine size={15} className="text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-primary">Write the full paper</div>
-                      <div className="text-xs text-muted-foreground">Generate the complete paper using this outline — topic and subject will be pre-filled</div>
-                    </div>
-                    <ChevronRight size={16} className="text-primary group-hover:translate-x-0.5 transition-transform shrink-0" />
-                  </div>
-                </Link>
-              </div>
-            </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
+
+        {/* Write paper CTA */}
+        <div className="p-5 max-w-2xl mx-auto">
+          <Link href={`/write?topic=${encodeURIComponent(topic)}&subject=${encodeURIComponent(subject)}&type=${paperType}`}>
+            <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-5 py-4 hover:bg-primary/10 transition-colors cursor-pointer group">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <PenLine size={15} className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-primary">Write the full paper</div>
+                <div className="text-xs text-muted-foreground">Generate the complete paper using this outline — topic and subject will be pre-filled</div>
+              </div>
+              <ChevronRight size={16} className="text-primary group-hover:translate-x-0.5 transition-transform shrink-0" />
+            </div>
+          </Link>
+        </div>
       </div>
-      )}
     </div>
 
     <PaywallFlow

@@ -271,3 +271,68 @@
     inset: -1px;
   }
 }
+
+/* ── Handwritten / pen-on-paper style for STEM + Study math ── */
+.font-handwritten,
+.font-handwritten .math-renderer,
+.handwritten-block {
+  font-family: 'Kalam', cursive !important;
+  letter-spacing: 0.01em;
+}
+
+.handwritten-block {
+  background: linear-gradient(135deg, #fffef5 0%, #fdf8e1 100%);
+  border-left: 3px solid #5b8dd9;
+  border-radius: 0 12px 12px 0;
+  padding: 14px 18px;
+  color: #1a2a4a;
+  line-height: 1.8;
+  position: relative;
+}
+
+.dark .handwritten-block {
+  background: linear-gradient(135deg, #1a1f2e 0%, #161b29 100%);
+  border-left-color: #5b8dd9;
+  color: #c8d8f0;
+}
+
+.handwritten-block::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    rgba(91, 141, 217, 0.08) 27px,
+    rgba(91, 141, 217, 0.08) 28px
+  );
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.handwritten-block .math-renderer {
+  font-family: 'Kalam', cursive !important;
+  position: relative;
+  z-index: 1;
+}
+
+.handwritten-block .katex {
+  font-size: 1.05em;
+}
+
+.handwritten-expression {
+  font-family: 'Kalam', cursive !important;
+  background: rgba(91, 141, 217, 0.08);
+  border: 1px solid rgba(91, 141, 217, 0.2);
+  border-radius: 8px;
+  padding: 8px 14px;
+  color: #1a2a4a;
+  display: inline-block;
+  width: 100%;
+}
+
+.dark .handwritten-expression {
+  background: rgba(91, 141, 217, 0.12);
+  border-color: rgba(91, 141, 217, 0.25);
+  color: #c8d8f0;
+}

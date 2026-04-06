@@ -30,12 +30,12 @@ Full-stack AI academic writing platform at lightspeedghost.com. Features paper w
 ## Features
 
 1. **Write Paper** `/write` — AI paper generation with citations & bibliography (APA/MLA/Chicago/Harvard/IEEE)
-2. **Outline Generator** `/outline` — Structured paper outline generation
+2. **Outline Generator** `/outline` — Structured paper outline generation with phase-based UX: config → animated progress bar (6 steps) → full-screen results
 3. **Revision Panel** `/revision` — Paper revision with tracked changes, grade estimates
 4. **LightSpeed Humanizer** `/humanizer` — AI bypass tool: detect AI score then rewrite text with Claude Sonnet 4.5 SSE streaming; 3-step progress, tone selector, before/after tabs, file upload
 5. **AI & Plagiarism Checker** `/plagiarism` — AI detection score, plagiarism sources
-6. **STEM Solver** `/stem` — Step-by-step solutions with Recharts graph visualization for 7 subject areas
-7. **AI Study Assistant** `/study` — Chat-based tutor with session history, image/screenshot upload, floating chat bubble
+6. **STEM Solver** `/stem` — Step-by-step solutions with Recharts graph visualization for 7 subject areas; in-page animated progress panel (replaces FullscreenLoader); handwritten pen-on-paper style for step explanations and math expressions (Kalam font + blue ruled background)
+7. **AI Study Assistant** `/study` — Chat-based tutor with session history, image/screenshot upload, floating chat bubble; math-containing answers use handwritten font (Kalam) for pen-on-paper feel
 8. **Documents** `/documents` — All saved documents with search and filter
 
 ## Mobile Responsiveness
@@ -45,7 +45,7 @@ All 9 pages fully optimized for mobile (390px+):
 - **WritePaper**: Generating phase sidebar stacks vertically on mobile (`flex-col md:flex-row`), stats header scrollable, tab bar overflow-x-auto, stats grid `grid-cols-1 sm:grid-cols-3`, reduced padding on mobile
 - **Revision**: Revising sidebar collapses to top strip on mobile, all content paddings responsive, stats grid responsive
 - **Plagiarism**: Results side panel (`w-[400px]`) stacks below input on mobile with `max-h-[45vh]`
-- **Outline**: Form panel (`w-80`) stacks above results on mobile with `max-h-[40vh]`
+- **Outline**: Phase-based full-screen: config (form) → generating (progress) → results (full-width sections)
 - **Dashboard/Documents**: Responsive padding `p-4 sm:p-6`, headings `text-xl/2xl sm:text-2xl/3xl`
 
 ## AI Architecture (OpenClaw-Inspired)
@@ -70,6 +70,31 @@ All 9 pages fully optimized for mobile (390px+):
 1. ReAct loop: Think → Act → Observe (Claude 3.5 Sonnet)
 2. Chain-of-Verification: Critic Agent checks for math/logic errors
 3. KaTeX rendering of all LaTeX output in frontend
+
+## Frontend Infrastructure
+
+### Handwritten Math Rendering
+- **Font**: Kalam (Google Fonts, 300/400/700 weights) — pen-on-paper feel
+- **Classes**: `.font-handwritten` (Kalam text), `.handwritten-block` (cream/dark background with ruled lines + blue left border), `.handwritten-expression` (formula container with blue tint)
+- **Applied to**: StemSolver step explanations + expressions; StudyAssistant math-containing chat messages; StudyAssistant flashcard answers
+- **Preserves**: KaTeX formula rendering stays crisp in its own math font
+
+### Service Worker (Offline Support)
+- **File**: `artifacts/lightspeed-ghost/public/sw.js`
+- **Strategy**: Cache-first for static assets, network-first for navigation (falls back to cached index.html), API requests are network-only (no stale data)
+- **Registration**: `src/main.tsx` via `navigator.serviceWorker.register('/sw.js')` on load event
+
+### Offline Banner
+- **Component**: `src/components/OfflineBanner.tsx`
+- **Behavior**: Shows amber banner when offline, green "Connection restored" banner for 3s when reconnecting
+- **Placement**: Inside Layout.tsx above AnnouncementBanner
+
+### Phase-Based Progress UX
+- **Outline** (`/outline`): config → generating (animated 6-step progress bar) → results (full-screen)
+- **StemSolver** (`/stem`): progress via `solveStep` state + 1.1s interval timer; 8-step STEM-specific progress panel
+- **WritePaper** (`/write`): pre-existing; phase config → generating (streaming SSE) → results
+- **Revision** (`/revision`): pre-existing; phases upload → analysing → decision → revising → results
+- **Humanizer** (`/humanizer`): pre-existing; phases input → detecting → decision → humanizing → results
 
 ### Humanizer Pipeline
 1. Claude 3.5 Sonnet with HUMANIZER_SOUL persona
