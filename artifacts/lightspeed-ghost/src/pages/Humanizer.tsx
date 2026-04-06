@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
+import { ExportButtons } from "@/components/ExportButtons";
+import { mdToBodyHtml, wrapDocHtml } from "@/lib/exportUtils";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -540,19 +542,11 @@ export default function Humanizer() {
               <span className="text-[11px] text-muted-foreground">AI score reduced to {estimatedAiScore}% · {wordCount.toLocaleString()} words</span>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleCopy(humanizedText)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors"
-              >
-                {copied ? <CheckCheck size={12} className="text-green-500" /> : <Copy size={12} />}
-                {copied ? "Copied" : "Copy"}
-              </button>
-              <button
-                onClick={() => downloadHumanized(humanizedText)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors"
-              >
-                <Download size={12} /> Download
-              </button>
+              <ExportButtons
+                getHtml={() => wrapDocHtml("Humanized Text", mdToBodyHtml(humanizedText))}
+                getText={() => humanizedText}
+                filename="humanized_text"
+              />
               <button
                 onClick={handleReset}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors"

@@ -10,6 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
+import { ExportButtons } from "@/components/ExportButtons";
+import { mdToBodyHtml, wrapDocHtml } from "@/lib/exportUtils";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -754,19 +756,11 @@ export default function Revision() {
             <span className="text-xs text-green-600 dark:text-green-400 font-semibold bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full">
               {result.gradeEstimate}
             </span>
-            <button
-              onClick={copyRevised}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2.5 py-1.5 transition-colors"
-            >
-              {copied ? <CheckCheck size={12} className="text-green-500" /> : <Copy size={12} />}
-              {copied ? "Copied!" : "Copy"}
-            </button>
-            <button
-              onClick={() => downloadRevised(result.revisedText)}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2.5 py-1.5 transition-colors"
-            >
-              <Download size={12} /> Download
-            </button>
+            <ExportButtons
+              getHtml={() => wrapDocHtml("Revised Paper", mdToBodyHtml(result.revisedText))}
+              getText={() => result.revisedText}
+              filename="revised_paper"
+            />
             <button
               onClick={() => { setPhase("upload"); setResult(null); setAnalysis(null); setPaperText(""); setError(""); }}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2.5 py-1.5 transition-colors"

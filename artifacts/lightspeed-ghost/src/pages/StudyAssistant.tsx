@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
+import { ExportButtons } from "@/components/ExportButtons";
+import { wrapDocHtml, mdToBodyHtml } from "@/lib/exportUtils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 
@@ -674,6 +676,50 @@ export default function StudyAssistant() {
                   </button>
                 )}
               </div>
+
+              {/* Export buttons for exportable views */}
+              {activeView && activeView !== "weakpoints" && (
+                <div className="flex justify-end -mt-1">
+                  <ExportButtons
+                    getHtml={() => {
+                      if (activeView === "flashcards" && flashcards.length) {
+                        return wrapDocHtml("Flashcards", flashcards.map((c, i) => `<div style="margin-bottom:16px;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><p style="margin:0 0 6px 0"><strong>Card ${i + 1}${c.tag ? ` · ${c.tag}` : ""}:</strong></p><p style="margin:0 0 4px 0"><strong>Q:</strong> ${c.front}</p><p style="margin:0;color:#374151"><strong>A:</strong> ${c.back}</p></div>`).join(""));
+                      }
+                      if (activeView === "quiz" && quiz.length) {
+                        return wrapDocHtml("Quiz", quiz.map((q, i) => `<div style="margin-bottom:16px"><p><strong>${i + 1}. ${q.question}</strong></p><ul>${q.options.map((o, oi) => `<li${oi === q.correct ? ' style="color:#059669;font-weight:bold"' : ""}>${o}</li>`).join("")}</ul><p style="color:#6b7280;font-size:10pt"><em>Explanation: ${q.explanation}</em></p></div>`).join(""));
+                      }
+                      if (activeView === "summary" && summary) {
+                        const body = `<p>${summary.overview}</p>` + summary.sections.map(s => `<h2>${s.heading}</h2><ul>${s.points.map(p => `<li>${p}</li>`).join("")}</ul>${s.keyTerms?.length ? `<p>${s.keyTerms.map(t => `<strong>${t.term}:</strong> ${t.definition}`).join(" · ")}</p>` : ""}`).join("") + `<h2>Key Takeaways</h2><ul>${summary.takeaways.map(t => `<li>${t}</li>`).join("")}</ul>`;
+                        return wrapDocHtml(summary.title, body);
+                      }
+                      if (activeView === "studyguide" && studyGuide) {
+                        const body = studyGuide.sections.map(s => {
+                          if (s.type === "overview") return `<h2>${s.heading}</h2><p>${s.content}</p>`;
+                          if (s.type === "concepts") return `<h2>${s.heading}</h2>${s.items.map(item => `<p><strong>${item.name}:</strong> ${item.explanation}${item.example ? ` <em>(e.g. ${item.example})</em>` : ""}</p>`).join("")}`;
+                          if (s.type === "process") return `<h2>${s.heading}</h2><ol>${s.steps.map(step => `<li>${step}</li>`).join("")}</ol>`;
+                          if (s.type === "tips") return `<h2>${s.heading}</h2><ul>${s.tips.map(t => `<li>${t}</li>`).join("")}</ul>`;
+                          return "";
+                        }).join("") + (studyGuide.quickRef?.length ? `<h2>Quick Reference</h2><table><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody>${studyGuide.quickRef.map(r => `<tr><td><strong>${r.label}</strong></td><td>${r.value}</td></tr>`).join("")}</tbody></table>` : "");
+                        return wrapDocHtml(studyGuide.title, body);
+                      }
+                      if (activeView === "slides" && slides) {
+                        const body = slides.slides.map(s => `<h2>${s.type === "title" ? "" : `Slide ${s.slideNum}: `}${s.title}</h2>${s.subtitle ? `<p><em>${s.subtitle}</em></p>` : ""}${s.bullets?.length ? `<ul>${s.bullets.map(b => `<li>${b}</li>`).join("")}</ul>` : ""}${s.notes ? `<p style="color:#6b7280;font-size:10pt"><em>Notes: ${s.notes}</em></p>` : ""}`).join("<hr style='margin:20px 0'>");
+                        return wrapDocHtml(slides.title, body);
+                      }
+                      return "";
+                    }}
+                    getText={() => {
+                      if (activeView === "flashcards" && flashcards.length) return flashcards.map((c, i) => `${i + 1}. ${c.front}\n→ ${c.back}`).join("\n\n");
+                      if (activeView === "quiz" && quiz.length) return quiz.map((q, i) => `${i + 1}. ${q.question}\n${q.options.map((o, oi) => `  ${String.fromCharCode(65 + oi)}) ${o}${oi === q.correct ? " ✓" : ""}`).join("\n")}\nExplanation: ${q.explanation}`).join("\n\n");
+                      if (activeView === "summary" && summary) return `${summary.title}\n\n${summary.overview}\n\n${summary.sections.map(s => `${s.heading}\n${s.points.map(p => `• ${p}`).join("\n")}`).join("\n\n")}\n\nKey Takeaways:\n${summary.takeaways.map(t => `• ${t}`).join("\n")}`;
+                      if (activeView === "studyguide" && studyGuide) return `${studyGuide.title}\n\n${studyGuide.sections.map(s => { if (s.type === "overview") return `${s.heading}\n${s.content}`; if (s.type === "concepts") return `${s.heading}\n${s.items.map(i => `• ${i.name}: ${i.explanation}`).join("\n")}`; if (s.type === "process") return `${s.heading}\n${s.steps.map((step, i) => `${i + 1}. ${step}`).join("\n")}`; if (s.type === "tips") return `${s.heading}\n${s.tips.map(t => `• ${t}`).join("\n")}`; return ""; }).join("\n\n")}`;
+                      if (activeView === "slides" && slides) return slides.slides.map(s => `[Slide ${s.slideNum}] ${s.title}\n${s.bullets?.join("\n") ?? ""}`).join("\n\n");
+                      return "";
+                    }}
+                    filename={`study_${activeView}`}
+                  />
+                </div>
+              )}
 
               {/* Rendered output */}
               {activeView === "flashcards" && (

@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { detectPaperType, detectCitationStyle, extractTopic, extractSubject } from "@/lib/autofill";
+import { ExportButtons } from "@/components/ExportButtons";
+import { mdToBodyHtml, wrapDocHtml } from "@/lib/exportUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
@@ -511,13 +513,11 @@ export default function WritePaper() {
                 {isSaving ? "Saving…" : "Save Changes"}
               </button>
             )}
-            <button
-              onClick={() => downloadPaper(result.content, result.title, result.bibliography)}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors"
-            >
-              <Download size={12} />
-              Download
-            </button>
+            <ExportButtons
+              getHtml={() => wrapDocHtml(result.title, mdToBodyHtml(result.content) + `<div style="margin-top:32px;border-top:1px solid #ccc;padding-top:16px"><h2>References</h2><p>${result.bibliography.replace(/\n/g, "<br>")}</p></div>`)}
+              getText={() => `${result.content}\n\nReferences:\n${result.bibliography}`}
+              filename={(result.title || "paper").replace(/[^a-z0-9]/gi, "_").toLowerCase()}
+            />
             <button
               onClick={() => { setPhase("config"); setResult(null); setStreamedContent(""); }}
               className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors"

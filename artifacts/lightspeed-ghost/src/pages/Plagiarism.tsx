@@ -12,6 +12,7 @@ import { Slider } from "@/components/ui/slider";
 import { Link, useLocation } from "wouter";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { cn } from "@/lib/utils";
+import { ExportButtons } from "@/components/ExportButtons";
 import { extractTopic, extractSubject } from "@/lib/autofill";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
@@ -24,10 +25,10 @@ type CodePhase = "idle" | "comparing" | "results";
 
 // ── Report generator ──────────────────────────────────────────────────────────
 
-function downloadReport(result: PlagiarismResult, text: string) {
+function buildReportHtml(result: PlagiarismResult, text: string): string {
   const date = new Date().toLocaleString();
   const wordCount = text.split(/\s+/).filter(Boolean).length;
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -94,19 +95,11 @@ ${result.plagiarismSources.map((s: { url: string; similarity: number; matchedTex
 </div>
 </body>
 </html>`;
-
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `plagiarism_report_${Date.now()}.html`;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
-function downloadCodeReport(result: CodeCompareResult) {
+function buildCodeReportHtml(result: CodeCompareResult): string {
   const date = new Date().toLocaleString();
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><title>Code Similarity Report — LightSpeed Ghost</title>
 <style>
@@ -132,14 +125,6 @@ function downloadCodeReport(result: CodeCompareResult) {
 </div>
 <div class="footer"><strong>LightSpeed Ghost</strong> · Code Similarity Checker · Winnowing (MOSS) algorithm</div>
 </body></html>`;
-
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `code_similarity_report_${Date.now()}.html`;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -616,12 +601,11 @@ export default function PlagiarismChecker() {
                       {result.overallRisk === "high" ? <ShieldAlert size={12} /> : result.overallRisk === "medium" ? <AlertTriangle size={12} /> : <ShieldCheck size={12} />}
                       Overall Risk: {result.overallRisk.toUpperCase()}
                     </div>
-                    <button
-                      onClick={() => downloadReport(result, text)}
-                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors"
-                    >
-                      <Download size={12} /> Download Report
-                    </button>
+                    <ExportButtons
+                      getHtml={() => buildReportHtml(result, text)}
+                      getText={() => `AI Detection: ${result.aiScore}%\nPlagiarism Risk: ${result.plagiarismScore}%\nOverall Risk: ${result.overallRisk}\n${result.aiFlags?.length ? "\nAI Indicators:\n" + result.aiFlags.join("\n") : ""}`}
+                      filename={`plagiarism_report_${Date.now()}`}
+                    />
                   </div>
 
                   {/* Score cards */}
@@ -917,12 +901,11 @@ export default function PlagiarismChecker() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs opacity-75">Algorithm: {codeResult.algorithm}</span>
-                    <button
-                      onClick={() => downloadCodeReport(codeResult)}
-                      className="flex items-center gap-1 text-xs border border-current/30 rounded-lg px-2.5 py-1 hover:opacity-80 transition-opacity"
-                    >
-                      <Download size={11} /> Report
-                    </button>
+                    <ExportButtons
+                      getHtml={() => buildCodeReportHtml(codeResult)}
+                      getText={() => `Code Similarity Report\nAlgorithm: ${codeResult.algorithm}\nSubmission A matched: ${codeResult.similarity1}%\nSubmission B matched: ${codeResult.similarity2}%\nOverall Similarity: ${codeResult.overallSimilarity}%\nRisk: ${codeResult.riskLevel.toUpperCase()}`}
+                      filename={`code_similarity_report_${Date.now()}`}
+                    />
                   </div>
                 </div>
 

@@ -5,6 +5,8 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
+import { ExportButtons } from "@/components/ExportButtons";
+import { wrapDocHtml } from "@/lib/exportUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { detectPaperType, extractTopic, extractSubject } from "@/lib/autofill";
@@ -435,13 +437,30 @@ export default function Outline() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={exportOutline}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2.5 py-1.5 transition-colors"
-          >
-            {copied ? <CheckCheck size={12} className="text-green-500" /> : <Download size={12} />}
-            {copied ? "Exported!" : "Export"}
-          </button>
+          <ExportButtons
+            getHtml={() => {
+              if (!result) return "";
+              const sectionsHtml = result.sections.map((sec, i) => `
+                <h2>${i + 1}. ${sec.heading}</h2>
+                ${sec.subsections.length ? `<ul>${sec.subsections.map((sub, j) => `<li><strong>${i + 1}.${j + 1}</strong> ${sub}</li>`).join("")}</ul>` : ""}
+              `).join("");
+              return wrapDocHtml(result.title || topic, sectionsHtml, `${subject} · ${paperType.replace("_", " ")}`);
+            }}
+            getText={() => {
+              if (!result) return "";
+              return [
+                `# ${result.title || topic}`,
+                `Subject: ${subject} | Type: ${paperType}`,
+                "",
+                ...result.sections.flatMap((sec, i) => [
+                  `## ${i + 1}. ${sec.heading}`,
+                  ...sec.subsections.map((sub, j) => `  ${i + 1}.${j + 1} ${sub}`),
+                  "",
+                ]),
+              ].join("\n");
+            }}
+            filename={`outline_${topic.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "outline"}`}
+          />
           <Link href={`/write?topic=${encodeURIComponent(topic)}&subject=${encodeURIComponent(subject)}&type=${paperType}`}>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:opacity-80 border border-primary/30 bg-primary/5 rounded-lg px-2.5 py-1.5 transition-all cursor-pointer">
               <PenLine size={12} />

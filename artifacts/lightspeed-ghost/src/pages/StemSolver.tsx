@@ -14,6 +14,8 @@ import {
 import type { StemSolution } from "@workspace/api-client-react";
 import StemImageOcr from "@/components/StemImageOcr";
 import MathRenderer from "@/components/MathRenderer";
+import { ExportButtons } from "@/components/ExportButtons";
+import { wrapDocHtml } from "@/lib/exportUtils";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -561,15 +563,16 @@ export default function StemSolver() {
                     <CheckCircle size={16} className="text-green-500 shrink-0" />
                     <span className="text-sm font-bold text-green-800 dark:text-green-200">Answer</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <button onClick={handleCopy} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground border border-border bg-card rounded-lg px-2 py-1 transition-colors">
-                      {copied ? <CheckCheck size={11} className="text-green-500" /> : <Copy size={11} />}
-                      {copied ? "Copied" : "Copy"}
-                    </button>
-                    <button onClick={handleDownload} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground border border-border bg-card rounded-lg px-2 py-1 transition-colors">
-                      <Download size={11} /> Save
-                    </button>
-                  </div>
+                  <ExportButtons
+                    getHtml={() => wrapDocHtml(`STEM Solution — ${result.subject}`, [
+                      `<p><strong>Problem:</strong> ${solvedProblem}</p>`,
+                      `<p><strong>Answer:</strong></p><p>${result.answer.replace(/\n/g, "<br>")}</p>`,
+                      result.corrections?.length ? `<h2>Corrections</h2><ul>${result.corrections.map((c: string) => `<li>${c}</li>`).join("")}</ul>` : "",
+                      result.steps.length ? `<h2>Step-by-Step Solution</h2>${result.steps.map((s: { stepNumber: number; description: string; expression?: string; explanation: string }) => `<div style="margin-bottom:12px"><p><strong>Step ${s.stepNumber}: ${s.description}</strong></p>${s.expression ? `<p style="font-family:monospace">${s.expression}</p>` : ""}<p>${s.explanation}</p></div>`).join("")}` : "",
+                    ].join(""))}
+                    getText={() => buildSolutionText(result, solvedProblem)}
+                    filename={`stem_${result.subject.replace(/\s+/g, "_").toLowerCase()}`}
+                  />
                 </div>
                 <div className="px-5 py-5">
                   <MathRenderer text={result.answer} className="text-base text-foreground leading-relaxed" />
