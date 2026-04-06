@@ -4,7 +4,7 @@ import {
   GraduationCap, Wand2, ShoppingCart, ChevronDown,
 } from "lucide-react";
 import {
-  PAYG_PRICES, DOCUMENT_TIERS, TIER_LABELS, formatAmount,
+  PAYG_PRICES, DOCUMENT_TIERS, TIER_LABELS, TIER_WORD_RANGES, formatAmount,
   type PaygTool, type DocumentTier,
 } from "@/lib/pricing";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
@@ -120,7 +120,7 @@ export function PAYGMarketModal({ open, onClose }: PAYGMarketModalProps) {
                             <option value="">Select document type…</option>
                             {DOCUMENT_TIERS.map((t) => (
                               <option key={t} value={t}>
-                                {TIER_LABELS[t]} — {formatAmount((PAYG_PRICES[tool.key] as Record<DocumentTier, number>)[t])}
+                                {TIER_LABELS[t]} · {TIER_WORD_RANGES[t]} — {formatAmount((PAYG_PRICES[tool.key] as Record<DocumentTier, number>)[t])}
                               </option>
                             ))}
                           </select>
