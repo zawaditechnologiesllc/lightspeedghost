@@ -958,7 +958,7 @@ export default function Landing() {
                   "Plagiarism enforced below 8% — not estimated, measured",
                   "STEM mode: equations mapped to the right section (Methods, Results, etc.)",
                   "APA 7th, MLA 9th, Chicago 17th, Harvard, IEEE — latest editions",
-                  "500 to 2,500+ words, streamed in real time",
+                  "500 to 15,000 words — essays, research papers, dissertations, and theses",
                 ].map(item => (
                   <li key={item} className="flex items-center gap-3 text-sm text-white/70">
                     <CheckCircle size={14} className="text-blue-400 shrink-0" />
