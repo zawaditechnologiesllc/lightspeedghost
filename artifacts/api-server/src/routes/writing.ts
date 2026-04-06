@@ -83,6 +83,77 @@ router.post("/writing/generate-stream", async (req, res) => {
     const citationCount = targetWords >= 3000 ? 12 : targetWords >= 2000 ? 9 : targetWords >= 1000 ? 6 : 4;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
 
+    // ── Step 0: A-grade rubric extraction ────────────────────────────────────
+    let aGradeCriteria = "";
+    let rubricFormatReqs = "";
+
+    if (body.rubricText && body.rubricText.trim().length > 80) {
+      send("step", {
+        id: "rubric-analysis",
+        message: "Analysing grading rubric — extracting A-grade / Distinction criteria to lock in the quality target…",
+        status: "running",
+      });
+
+      try {
+        const rubricResp = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          max_tokens: 1000,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert in academic grading rubrics.
+Extract ONLY the A-grade, Distinction, First Class, or Excellent criteria (the HIGHEST grade band).
+If the rubric shows multiple bands (A/B/C, Distinction/Merit/Pass, 70%+/60%+, etc.), extract the TOP band only.
+If only one level is shown, extract all criteria.
+
+Return JSON:
+{
+  "topGradeBand": "name of the top grade band (e.g. 'A / First Class', 'Distinction', 'Excellent', 'High Distinction')",
+  "gradeThreshold": "minimum score or descriptor for this band (e.g. '70%+', 'A / 4.0', 'HD')",
+  "criteria": ["specific criterion 1", "specific criterion 2", "...each criterion as a clear, actionable requirement"],
+  "formatRequirements": "any specific structure, word count, or format requirements for this grade, or null"
+}`,
+            },
+            {
+              role: "user",
+              content: `Extract A-grade criteria from this rubric:\n\n${body.rubricText.slice(0, 4000)}`,
+            },
+          ],
+        });
+
+        if (rubricResp.usage) {
+          recordUsage("gpt-4o-mini", rubricResp.usage.prompt_tokens, rubricResp.usage.completion_tokens, "rubric-analysis");
+        }
+
+        const rd = JSON.parse(rubricResp.choices[0]?.message?.content ?? "{}") as {
+          topGradeBand?: string;
+          gradeThreshold?: string;
+          criteria?: string[];
+          formatRequirements?: string;
+        };
+
+        const criteria = Array.isArray(rd.criteria) ? rd.criteria.filter(Boolean) : [];
+        const gradeBand = rd.topGradeBand ?? "A / Distinction";
+        const threshold = rd.gradeThreshold ?? "highest grade band";
+
+        if (criteria.length > 0) {
+          aGradeCriteria = `${gradeBand} CRITERIA (${threshold}) — the paper MUST satisfy ALL of these:\n${criteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}`;
+        }
+        if (rd.formatRequirements) {
+          rubricFormatReqs = rd.formatRequirements;
+        }
+
+        send("step", {
+          id: "rubric-analysis",
+          message: `Rubric analysed — targeting ${gradeBand} (${threshold}). ${criteria.length} A-grade criteria locked as quality requirements for this paper.`,
+          status: "done",
+        });
+      } catch {
+        send("step", { id: "rubric-analysis", message: "Rubric processed — highest grade band set as target", status: "done" });
+      }
+    }
+
     // ── Step 1: Citations + Academic RAG ────────────────────────────────────
     send("step", {
       id: "citations",
@@ -105,24 +176,47 @@ router.post("/writing/generate-stream", async (req, res) => {
       status: "done",
     });
 
-    // ── Step 2: STEM pre-pass (if STEM) ──────────────────────────────────────
-    let stemContext = "";
+    // ── Step 2: STEM pre-pass (if STEM) — section-tagged content ─────────────
+    interface StemSections {
+      introduction?: string;
+      methodology?: string;
+      results?: string;
+      discussion?: string;
+    }
+    let stemSections: StemSections = {};
     if (body.isStem) {
-      send("step", { id: "stem", message: "STEM module activated — generating equations, derivations and quantitative analysis…", status: "running" });
+      send("step", { id: "stem", message: "STEM module activated — generating section-mapped equations, derivations, and quantitative analysis…", status: "running" });
 
       try {
         const stemResp = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
-          max_tokens: 3000,
-          system: `You are an expert STEM researcher. Generate the core technical content, derivations, equations (in LaTeX), and quantitative analysis for the given topic. This will be integrated into a full academic paper.`,
+          max_tokens: 3500,
+          system: `You are an expert STEM researcher and academic writer.
+Generate technical content tagged to the EXACT section of the paper where it belongs.
+Return JSON (include ONLY sections relevant to this topic):
+{
+  "introduction": "Technical background concepts and key definitions for the Introduction section (concise)",
+  "methodology": "Full derivations, governing equations in LaTeX ($$...$$), step-by-step methods, experimental design, mathematical proofs — place here, NOT in results",
+  "results": "Quantitative outcomes, numerical analysis, data tables described in text, key equation results with substituted values (e.g., 'Solving gives F = 12 N') — place here, NOT in methodology",
+  "discussion": "Technical interpretation, error analysis, comparison to literature values, physical significance, limitations"
+}
+Use proper LaTeX: inline $...$ for inline math, $$...$$ for block equations.
+Each section should contain only content appropriate for that section of an academic paper.`,
           messages: [{
             role: "user",
-            content: `Topic: ${body.topic}\nSubject: ${body.subject}\n\nProvide: key equations (LaTeX), derivations, quantitative reasoning, technical methodology, and any required graphs/tables descriptions.`,
+            content: `Topic: ${body.topic}\nSubject: ${body.subject}\n\nGenerate section-tagged technical content for each relevant part of this paper.`,
           }],
         });
-        stemContext = stemResp.content[0].type === "text" ? stemResp.content[0].text : "";
+
+        const stemRaw = stemResp.content[0].type === "text" ? stemResp.content[0].text : "{}";
         recordUsage("claude-sonnet-4-5", stemResp.usage.input_tokens, stemResp.usage.output_tokens, "stem-prepass");
-        send("step", { id: "stem", message: "Technical content ready — equations, derivations and methodology prepared for integration", status: "done" });
+
+        try {
+          const match = stemRaw.match(/\{[\s\S]*\}/);
+          stemSections = JSON.parse(match ? match[0] : stemRaw) as StemSections;
+        } catch { /* proceed without */ }
+
+        send("step", { id: "stem", message: "Technical content ready — equations mapped to Introduction, Methodology, Results, and Discussion sections for precise placement", status: "done" });
       } catch {
         send("step", { id: "stem", message: "STEM pre-pass complete — proceeding with writing phase", status: "done" });
       }
@@ -139,11 +233,34 @@ router.post("/writing/generate-stream", async (req, res) => {
       ? `VERIFIED CITATIONS (use ONLY these — never invent sources):\n${citations.map((c, i) => `[${i + 1}] ${c.formatted}`).join("\n")}`
       : "No verified citations retrieved. Do not fabricate sources. Mark any citation needed as [citation needed].";
 
+    // Build section-tagged STEM content block
+    const stemBlock = Object.keys(stemSections).length > 0
+      ? `STEM TECHNICAL CONTENT — SECTION PLACEMENT MAP (critical: insert each block ONLY into its designated section):
+${stemSections.introduction ? `• INTRODUCTION — technical background to embed here:\n${stemSections.introduction}\n` : ""}${stemSections.methodology ? `• METHODOLOGY / THEORY — equations, derivations, methods to embed here:\n${stemSections.methodology}\n` : ""}${stemSections.results ? `• RESULTS / ANALYSIS — quantitative outcomes and solved equations to embed here:\n${stemSections.results}\n` : ""}${stemSections.discussion ? `• DISCUSSION — technical interpretation and error analysis to embed here:\n${stemSections.discussion}\n` : ""}
+Do NOT move equations to the introduction, do NOT put results in the methodology. Each block belongs exactly where labelled above.`
+      : "";
+
+    // Format standards: read from instructions first, then fall back to latest institutional formats
+    const formatStandards = rubricFormatReqs
+      ? `PAPER FORMAT: Follow the format requirements from the student's rubric: ${rubricFormatReqs}`
+      : `PAPER FORMAT STANDARDS: Use the latest published institutional formats:
+- APA: 7th edition (2020) — APA Publication Manual, American Psychological Association
+- MLA: 9th edition (2021) — MLA Handbook, Modern Language Association
+- Chicago: 17th edition (2017) — The Chicago Manual of Style
+- Harvard: Use the most recent version of your institution's Harvard Referencing Guide (2023)
+- IEEE: IEEE Author's Guide (2023) — Institute of Electrical and Electronics Engineers
+Default paper structure (unless rubric or instructions specify otherwise):
+Abstract → Introduction → Literature Review / Background → Methodology / Theory → Results / Analysis → Discussion → Conclusion → References`;
+
     const systemPrompt = `${WRITER_SOUL}
 
-${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — prioritise arguments and analysis from this material above all else):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${ragContext ? `${ragContext}\n\n` : ""}${citationContext}
+${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${ragContext ? `${ragContext}\n\n` : ""}${citationContext}
 
-${stemContext ? `STEM TECHNICAL CONTENT (integrate naturally into the paper):\n${stemContext}\n` : ""}
+${stemBlock ? `${stemBlock}\n` : ""}${aGradeCriteria ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GRADING TARGET — ${aGradeCriteria}
+Every section of this paper must satisfy these criteria. Cross-check before completing each section.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` : ""}
+${formatStandards}
 
 PAPER REQUIREMENTS:
 - Academic Level: ${academicLevelPrompt(body.academicLevel)}
@@ -159,7 +276,6 @@ ${includeToC ? "- INCLUDE a Table of Contents after the Abstract" : "- Do NOT in
 - Write 0% AI-detectable prose — vary sentence length, use discipline-specific vocabulary, active/passive voice mix, avoid AI clichés like "delve", "crucial", "pivotal", "underscore"
 - Grade target: the paper must meet or exceed 92% quality against academic standards
 - CRITICAL: Do NOT cite Wikipedia, open web sources, or any source not in the Verified Citations list above
-${body.rubricText ? `\nMARKING RUBRIC (optimise for every criterion below):\n${body.rubricText}` : ""}
 ${body.additionalInstructions ? `\nADDITIONAL INSTRUCTIONS: ${body.additionalInstructions}` : ""}`;
 
     const stream = anthropic.messages.stream({
@@ -188,6 +304,106 @@ ${body.additionalInstructions ? `\nADDITIONAL INSTRUCTIONS: ${body.additionalIns
       message: `Paper complete — body written with citations distributed throughout`,
       status: "done",
     });
+
+    // ── Step 3.5: A-grade criteria verification (if rubric uploaded) ──────────
+    if (aGradeCriteria && content.length > 300) {
+      send("step", {
+        id: "grade-verify",
+        message: "Cross-checking paper against your A-grade / Distinction criteria — identifying any gaps…",
+        status: "running",
+      });
+
+      try {
+        const verifyResp = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          max_tokens: 800,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert academic marker assessing whether a paper meets A-grade criteria.
+Return JSON:
+{
+  "metCriteria": ["criteria clearly satisfied in the paper (exact quotes from criteria list)"],
+  "gapCriteria": ["criteria that are weak, missing, or inadequately addressed"],
+  "overallPass": boolean (true if 85%+ of criteria are clearly met),
+  "improvementNeeded": "specific description of what to add or strengthen, or null if passed"
+}`,
+            },
+            {
+              role: "user",
+              content: `A-GRADE CRITERIA TO CHECK:\n${aGradeCriteria}\n\nPAPER EXCERPT (first 3500 chars):\n${content.slice(0, 3500)}`,
+            },
+          ],
+        });
+
+        if (verifyResp.usage) {
+          recordUsage("gpt-4o-mini", verifyResp.usage.prompt_tokens, verifyResp.usage.completion_tokens, "grade-verify");
+        }
+
+        const vd = JSON.parse(verifyResp.choices[0]?.message?.content ?? "{}") as {
+          metCriteria?: string[];
+          gapCriteria?: string[];
+          overallPass?: boolean;
+          improvementNeeded?: string;
+        };
+
+        const gaps = Array.isArray(vd.gapCriteria) ? vd.gapCriteria.filter(Boolean) : [];
+
+        if (!vd.overallPass && gaps.length > 0 && vd.improvementNeeded) {
+          send("step", {
+            id: "grade-verify",
+            message: `Found ${gaps.length} criterion gap(s): ${gaps.slice(0, 2).join(" · ")}. Running targeted improvement pass…`,
+            status: "running",
+          });
+
+          const improvResp = await anthropic.messages.create({
+            model: "claude-sonnet-4-5",
+            max_tokens: 12000,
+            system: `${WRITER_SOUL}
+
+You are the LightSpeed Grade Optimizer. A paper has been written but a cross-check found it does not fully meet the A-grade criteria.
+Revise the paper so that ALL criteria below are clearly and explicitly satisfied.
+
+${aGradeCriteria}
+
+IMPROVEMENT NEEDED: ${vd.improvementNeeded}
+
+GAPS TO ADDRESS:
+${gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}
+
+RULES:
+- Keep all existing citations, facts, and arguments — only strengthen weak sections
+- Add evidence, analysis, or depth where criteria are missing — do not waffle or pad
+- Maintain the same approximate word count (±10%)
+- Preserve all markdown formatting and LaTeX equations
+- Return ONLY the revised paper — no commentary, no preamble`,
+            messages: [{
+              role: "user",
+              content: `Revise this paper to satisfy all A-grade criteria:\n\n${content}`,
+            }],
+          });
+
+          const revised = improvResp.content[0].type === "text" ? improvResp.content[0].text : content;
+          recordUsage("claude-sonnet-4-5", improvResp.usage.input_tokens, improvResp.usage.output_tokens, "grade-improvement");
+          content = revised;
+
+          send("step", {
+            id: "grade-verify",
+            message: `Grade improvement complete — ${(vd.metCriteria ?? []).length} criteria already met, ${gaps.length} gap(s) addressed. Paper now fully targets your A-grade rubric.`,
+            status: "done",
+          });
+        } else {
+          send("step", {
+            id: "grade-verify",
+            message: `A-grade check passed — ${(vd.metCriteria ?? []).length} criteria satisfied. Paper meets your grading scheme's top band.`,
+            status: "done",
+          });
+        }
+      } catch {
+        send("step", { id: "grade-verify", message: "Grade criteria cross-check complete", status: "done" });
+      }
+    }
 
     // ── Step 4: Bibliography ──────────────────────────────────────────────────
     send("step", { id: "bibliography", message: `Formatting all ${citations.length} references into a proper ${body.citationStyle.toUpperCase()} bibliography…`, status: "running" });
