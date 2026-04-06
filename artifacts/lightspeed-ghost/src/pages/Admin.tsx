@@ -27,7 +27,7 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "documents" | "gateways" | "payments" | "credits" | "revenue" | "analytics" | "logs" | "announcements" | "settings";
+type Tab = "overview" | "users" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "settings";
 
 interface Announcement {
   id: number;
@@ -57,9 +57,15 @@ interface AdminStats {
   revisionsCompleted: number;
   stemSolved: number;
   studySessions: number;
+  humanizerCompleted: number;
+  plagiarismChecks: number;
+  outlineCount: number;
   totalRevenueCents: number;
   activeSubscriptions: number;
   totalCreditsIssuedCents: number;
+  planDistribution: Record<string, number>;
+  newUsersThisWeek: number;
+  mrrCents: number;
   revenueByGateway: Record<string, { revenue: number; count: number }>;
   recentDocuments: Array<{
     id: number;
@@ -70,6 +76,17 @@ interface AdminStats {
     wordCount: number;
     updatedAt: string;
   }>;
+}
+
+interface AdminDocument {
+  id: number;
+  userId: string | null;
+  title: string;
+  type: string;
+  subject: string | null;
+  wordCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AdminUser {
@@ -271,6 +288,10 @@ export default function Admin() {
   const [announcementError, setAnnouncementError] = useState("");
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [feedbackStats, setFeedbackStats] = useState<FeedbackStat[]>([]);
+  const [documents, setDocuments] = useState<AdminDocument[]>([]);
+  const [docTotal, setDocTotal] = useState(0);
+  const [docSearch, setDocSearch] = useState("");
+  const [docTypeFilter, setDocTypeFilter] = useState("all");
 
   const isAuthed = !!password;
 
@@ -345,6 +366,16 @@ export default function Admin() {
   const loadRevenue = useCallback(async () => {
     setLoading(true);
     try { setRevenue(await adminFetch("/admin/revenue", password) as RevenueData); } catch { setRevenue(null); }
+    finally { setLoading(false); }
+  }, [password]);
+
+  const loadDocuments = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch("/admin/documents", password) as { documents: AdminDocument[]; total: number };
+      setDocuments(data.documents);
+      setDocTotal(data.total);
+    } catch { setDocuments([]); setDocTotal(0); }
     finally { setLoading(false); }
   }, [password]);
 
@@ -431,12 +462,13 @@ export default function Admin() {
 
   useEffect(() => {
     if (!isAuthed) return;
-    if (activeTab === "overview" || activeTab === "documents") loadStats();
+    if (activeTab === "overview") loadStats();
+    if (activeTab === "documents") loadDocuments();
     if (activeTab === "users") { loadUsers(); loadSubscriptions(); }
     if (activeTab === "gateways") loadGateways();
     if (activeTab === "payments") loadPayments();
     if (activeTab === "credits") loadCredits();
-    if (activeTab === "revenue") loadRevenue();
+    if (activeTab === "finance") loadRevenue();
     if (activeTab === "settings") loadSettings();
     if (activeTab === "analytics") { loadTraffic(); loadFeedback(); }
     if (activeTab === "logs") loadLogs();
@@ -528,10 +560,11 @@ export default function Admin() {
 
   function refreshTab() {
     if (activeTab === "users") loadUsers();
+    else if (activeTab === "documents") loadDocuments();
     else if (activeTab === "gateways") loadGateways();
     else if (activeTab === "payments") loadPayments();
     else if (activeTab === "credits") loadCredits();
-    else if (activeTab === "revenue") loadRevenue();
+    else if (activeTab === "finance") loadRevenue();
     else if (activeTab === "settings") loadSettings();
     else if (activeTab === "analytics") { loadTraffic(); loadFeedback(); }
     else if (activeTab === "logs") loadLogs();
@@ -673,7 +706,7 @@ export default function Admin() {
     { id: "gateways",       label: "Gateways",       icon: Globe },
     { id: "payments",       label: "Payments",       icon: CreditCard },
     { id: "credits",        label: "Credits",        icon: Coins },
-    { id: "revenue",        label: "Revenue",        icon: BarChart3 },
+    { id: "finance",        label: "Finance",        icon: BarChart3 },
     { id: "announcements",  label: "Announcements",  icon: Megaphone },
     { id: "settings",       label: "Settings",       icon: Settings },
   ];
@@ -766,6 +799,36 @@ export default function Admin() {
                       <OverviewCard icon={<FileText size={18} />} label="Documents" value={stats.totalDocuments} color="from-indigo-600/20 to-indigo-500/10" border="border-indigo-500/15" iconColor="text-indigo-400" />
                       <OverviewCard icon={<DollarSign size={18} />} label="Total Revenue" value={stats.totalRevenueCents} format="money" color="from-emerald-600/20 to-emerald-500/10" border="border-emerald-500/15" iconColor="text-emerald-400" />
                       <OverviewCard icon={<Crown size={18} />} label="Active Subs" value={stats.activeSubscriptions} color="from-amber-600/20 to-amber-500/10" border="border-amber-500/15" iconColor="text-amber-400" />
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
+                      <OverviewCard icon={<TrendingUp size={18} />} label="MRR (30 days)" value={stats.mrrCents} format="money" color="from-emerald-600/15 to-emerald-500/5" border="border-emerald-500/12" iconColor="text-emerald-400" />
+                      <OverviewCard icon={<Users size={18} />} label="New Users (7 days)" value={stats.newUsersThisWeek} color="from-blue-600/15 to-blue-500/5" border="border-blue-500/12" iconColor="text-blue-400" />
+                      <div className="bg-gradient-to-br from-violet-600/10 to-violet-500/5 border border-violet-500/12 rounded-xl p-4">
+                        <p className="text-xs text-white/40 mb-2 font-medium">Plan Distribution</p>
+                        <div className="space-y-1.5">
+                          {[["starter", "text-blue-400"], ["pro", "text-amber-400"], ["campus", "text-emerald-400"]].map(([plan, color]) => (
+                            <div key={plan} className="flex items-center justify-between">
+                              <span className={`text-[11px] font-semibold capitalize ${color}`}>{plan}</span>
+                              <span className="text-xs text-white/60 tabular-nums">{(stats.planDistribution[plan] ?? 0).toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="bg-white/[0.025] border border-white/8 rounded-xl p-4">
+                        <p className="text-xs text-white/40 mb-2 font-medium">AI Tools Breakdown</p>
+                        <div className="space-y-1.5">
+                          {[
+                            ["Humanizer", stats.humanizerCompleted, "text-pink-400"],
+                            ["Plagiarism", stats.plagiarismChecks, "text-cyan-400"],
+                            ["Outlines", stats.outlineCount, "text-indigo-400"],
+                          ].map(([label, val, color]) => (
+                            <div key={label as string} className="flex items-center justify-between">
+                              <span className={`text-[11px] font-semibold ${color}`}>{label}</span>
+                              <span className="text-xs text-white/60 tabular-nums">{(val as number).toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                       <MiniCard icon={<PenLine size={14} className="text-violet-400" />} label="Papers" value={stats.papersWritten} />
@@ -883,26 +946,54 @@ export default function Admin() {
             )}
 
             {/* ── Documents ─────────────────────────────────────────────── */}
-            {activeTab === "documents" && stats && (
+            {activeTab === "documents" && (
               <div className="space-y-5 max-w-5xl">
-                <SectionHeader title="All Documents" sub="Most recent 10 documents across all users" />
+                <div className="flex items-start justify-between flex-wrap gap-3">
+                  <SectionHeader title="All Documents" sub={`${docTotal.toLocaleString()} total · showing up to 200`} />
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <input
+                      type="text" placeholder="Search title…" value={docSearch}
+                      onChange={(e) => setDocSearch(e.target.value)}
+                      className="w-48 px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-white/25 transition-all"
+                    />
+                    <button onClick={loadDocuments} disabled={loading}
+                      className="px-3 py-1.5 rounded-xl bg-white/8 border border-white/10 text-xs text-white/60 hover:text-white hover:bg-white/12 transition-all disabled:opacity-40"
+                    >Search</button>
+                  </div>
+                </div>
+                <div className="flex gap-1.5 flex-wrap">
+                  {(["all", "paper", "revision", "humanizer", "stem", "study", "plagiarism", "outline"] as const).map((t) => (
+                    <button key={t} onClick={() => setDocTypeFilter(t)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize ${docTypeFilter === t ? "bg-white/10 text-white" : "text-white/35 hover:text-white/60"}`}
+                    >{t === "all" ? "All Types" : t}</button>
+                  ))}
+                </div>
                 <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                  <div className="grid grid-cols-[1fr_90px_80px_130px_100px] gap-2 px-4 py-2.5 border-b border-white/6">
+                  <div className="grid grid-cols-[1fr_100px_80px_140px_100px] gap-2 px-4 py-2.5 border-b border-white/6">
                     {["Title", "Type", "Words", "User", "Updated"].map((h) => (
                       <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
                     ))}
                   </div>
-                  {stats.recentDocuments.length === 0 ? <Empty text="No documents yet" /> : (
-                    stats.recentDocuments.map((doc, i) => (
-                      <div key={doc.id} className={`grid grid-cols-[1fr_90px_80px_130px_100px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < stats.recentDocuments.length - 1 ? "border-b border-white/6" : ""}`}>
-                        <p className="text-sm text-white/75 font-medium truncate">{doc.title}</p>
-                        <TypeBadge type={doc.type} />
-                        <span className="text-xs text-white/35 tabular-nums">{doc.wordCount.toLocaleString()}w</span>
-                        <span className="text-[11px] text-white/30 font-mono truncate">{doc.userId ? doc.userId.slice(0, 10) + "…" : "anon"}</span>
-                        <span className="text-xs text-white/30">{new Date(doc.updatedAt).toLocaleDateString()}</span>
-                      </div>
-                    ))
-                  )}
+                  {loading && documents.length === 0
+                    ? <div className="py-12 flex justify-center"><Loader2 size={16} className="animate-spin text-white/30" /></div>
+                    : (() => {
+                        const filtered = documents.filter((d) => {
+                          if (docTypeFilter !== "all" && d.type !== docTypeFilter) return false;
+                          if (docSearch.trim() && !d.title.toLowerCase().includes(docSearch.toLowerCase())) return false;
+                          return true;
+                        });
+                        if (filtered.length === 0) return <Empty text="No documents found" />;
+                        return filtered.map((doc, i) => (
+                          <div key={doc.id} className={`grid grid-cols-[1fr_100px_80px_140px_100px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < filtered.length - 1 ? "border-b border-white/6" : ""}`}>
+                            <p className="text-sm text-white/75 font-medium truncate" title={doc.title}>{doc.title}</p>
+                            <TypeBadge type={doc.type} />
+                            <span className="text-xs text-white/35 tabular-nums">{doc.wordCount.toLocaleString()}w</span>
+                            <span className="text-[11px] text-white/30 font-mono truncate" title={doc.userId ?? ""}>{doc.userId ? doc.userId.slice(0, 10) + "…" : "anon"}</span>
+                            <span className="text-xs text-white/30">{new Date(doc.updatedAt).toLocaleDateString()}</span>
+                          </div>
+                        ));
+                      })()
+                  }
                 </div>
               </div>
             )}
@@ -1064,10 +1155,10 @@ export default function Admin() {
               </div>
             )}
 
-            {/* ── Revenue ───────────────────────────────────────────────── */}
-            {activeTab === "revenue" && (
+            {/* ── Finance ───────────────────────────────────────────────── */}
+            {activeTab === "finance" && (
               <div className="space-y-6 max-w-5xl">
-                <SectionHeader title="Revenue Analytics" sub="Breakdown of all completed payments" />
+                <SectionHeader title="Finance" sub="Breakdown of all completed payments and revenue" />
                 {loading && !revenue ? <Spinner /> : revenue ? (
                   <>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

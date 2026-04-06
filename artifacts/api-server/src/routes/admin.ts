@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { documentsTable, studySessionsTable } from "@workspace/db";
-import { desc, sql } from "drizzle-orm";
+import { desc, sql, eq, ilike, and } from "drizzle-orm";
 import type { Request, Response } from "express";
 
 const router = Router();
@@ -98,7 +98,7 @@ router.post("/admin/verify", (req, res) => {
 router.get("/admin/stats", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    const [allDocs, allSessions, revenueRows, creditsRow, activeSubsRow] = await Promise.all([
+    const [allDocs, allSessions, revenueRows, creditsRow, activeSubsRow, planDistRows, newUsersWeekRow, mrrRow] = await Promise.all([
       db.select().from(documentsTable),
       db.select().from(studySessionsTable),
       pool.query<{ gateway: string; total: string; cnt: string }>(`
@@ -112,6 +112,18 @@ router.get("/admin/stats", async (req: Request, res: Response) => {
       pool.query<{ cnt: string }>(`
         SELECT COUNT(*) as cnt FROM user_subscriptions WHERE plan != 'starter'
       `).catch(() => ({ rows: [{ cnt: "0" }] })),
+      pool.query<{ plan: string; cnt: string }>(`
+        SELECT plan, COUNT(*) as cnt FROM user_subscriptions GROUP BY plan
+      `).catch(() => ({ rows: [] })),
+      pool.query<{ cnt: string }>(`
+        SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs
+        WHERE user_id IS NOT NULL AND created_at > NOW() - INTERVAL '7 days'
+      `).catch(() => ({ rows: [{ cnt: "0" }] })),
+      pool.query<{ mrr: string }>(`
+        SELECT COALESCE(SUM(amount_cents), 0) as mrr FROM payments
+        WHERE status = 'completed' AND type = 'subscription'
+        AND created_at > NOW() - INTERVAL '30 days'
+      `).catch(() => ({ rows: [{ mrr: "0" }] })),
     ]);
 
     const uniqueUsers = new Set([
@@ -134,6 +146,8 @@ router.get("/admin/stats", async (req: Request, res: Response) => {
     const revenueByGateway = Object.fromEntries(
       revenueRows.rows.map((r) => [r.gateway, { revenue: Number(r.total), count: Number(r.cnt) }])
     );
+    const planDistribution: Record<string, number> = {};
+    for (const r of planDistRows.rows) planDistribution[r.plan] = Number(r.cnt);
 
     res.json({
       totalUsers: uniqueUsers.size,
@@ -142,9 +156,15 @@ router.get("/admin/stats", async (req: Request, res: Response) => {
       revisionsCompleted: docsByType["revision"] ?? 0,
       stemSolved: docsByType["stem"] ?? 0,
       studySessions: allSessions.length,
+      humanizerCompleted: docsByType["humanizer"] ?? 0,
+      plagiarismChecks: docsByType["plagiarism"] ?? 0,
+      outlineCount: docsByType["outline"] ?? 0,
       totalRevenueCents: totalRevenue,
       activeSubscriptions: Number(activeSubsRow.rows[0]?.cnt ?? 0),
       totalCreditsIssuedCents: Number(creditsRow.rows[0]?.total ?? 0),
+      planDistribution,
+      newUsersThisWeek: Number(newUsersWeekRow.rows[0]?.cnt ?? 0),
+      mrrCents: Number(mrrRow.rows[0]?.mrr ?? 0),
       revenueByGateway,
       recentDocuments: recentDocs.map((d) => ({
         ...d,
@@ -205,12 +225,15 @@ router.get("/admin/users", async (req: Request, res: Response) => {
       supabaseError = "SUPABASE_SERVICE_ROLE_KEY or SUPABASE_URL not set on server";
     } else {
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10_000);
         const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=500`, {
+          signal: controller.signal,
           headers: {
             Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             apikey: SUPABASE_SERVICE_ROLE_KEY,
           },
-        });
+        }).finally(() => clearTimeout(timeout));
         if (r.ok) {
           const data = await r.json() as { users?: typeof supabaseUsers };
           supabaseUsers = data.users ?? [];
@@ -540,6 +563,42 @@ router.get("/admin/traffic", async (req: Request, res: Response) => {
       liveUsers: Number(activeLive.rows[0]?.cnt ?? 0),
       byCountry: byCountry.rows,
       byHour: byHour.rows,
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/documents ──────────────────────────────────────────────────────
+
+router.get("/admin/documents", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { type, search } = req.query as { type?: string; search?: string };
+  try {
+    const conditions = [];
+    if (type && type !== "all") conditions.push(eq(documentsTable.type, type));
+    if (search && search.trim()) conditions.push(ilike(documentsTable.title, `%${search.trim()}%`));
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const [docs, countResult] = await Promise.all([
+      db.select({
+        id: documentsTable.id,
+        userId: documentsTable.userId,
+        title: documentsTable.title,
+        type: documentsTable.type,
+        subject: documentsTable.subject,
+        wordCount: documentsTable.wordCount,
+        createdAt: documentsTable.createdAt,
+        updatedAt: documentsTable.updatedAt,
+      }).from(documentsTable).where(where).orderBy(desc(documentsTable.updatedAt)).limit(200),
+      db.select({ count: sql<string>`count(*)` }).from(documentsTable).where(where),
+    ]);
+    res.json({
+      documents: docs.map((d) => ({
+        ...d,
+        createdAt: d.createdAt.toISOString(),
+        updatedAt: d.updatedAt.toISOString(),
+      })),
+      total: Number(countResult[0]?.count ?? 0),
     });
   } catch {
     res.status(500).json({ error: "Internal server error" });
