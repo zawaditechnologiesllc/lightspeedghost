@@ -10,6 +10,7 @@ import { analyseTextPlagiarism } from "../lib/textAnalysis";
 import { recordUsage } from "../lib/apiCost";
 import { eq } from "drizzle-orm";
 import { trackUsage } from "../lib/usageTracker";
+import { recordSearchResults, recordQualitySignal } from "../lib/learningEngine";
 
 const router = Router();
 
@@ -157,21 +158,33 @@ Return JSON:
     // ── Step 1: Citations + Academic RAG ────────────────────────────────────
     send("step", {
       id: "citations",
-      message: `Searching 50,000+ peer-reviewed databases (OpenAlex, CrossRef, Semantic Scholar, arXiv, Europe PMC) for verified sources on "${body.topic}"…`,
+      message: `Searching 10 live academic databases (1B+ papers: OpenAlex, CrossRef, Semantic Scholar, PubMed, arXiv, CORE, DOAJ, ERIC, Zenodo, Europe PMC) for "${body.topic}"…`,
       status: "running",
     });
 
     const [citations, ragPapers] = await Promise.all([
       getVerifiedCitations(body.topic, body.subject, citationCount, body.citationStyle as "apa" | "mla" | "chicago" | "harvard" | "ieee"),
-      searchAllAcademicSources(`${body.topic} ${body.subject}`, 10, body.subject),
+      searchAllAcademicSources(`${body.topic} ${body.subject}`, 12, body.subject),
     ]);
 
     const ragContext = buildRAGContext(ragPapers);
 
+    // Record source effectiveness for the learning engine (fire-and-forget)
+    if (ragPapers.length > 0) {
+      const sourceCounts = ragPapers.reduce<Record<string, number>>((acc, p) => {
+        acc[p.source] = (acc[p.source] ?? 0) + 1;
+        return acc;
+      }, {});
+      recordSearchResults(
+        Object.entries(sourceCounts).map(([source, resultCount]) => ({ source, resultCount })),
+        body.subject ?? "general"
+      ).catch(() => {});
+    }
+
     send("step", {
       id: "citations",
       message: citations.length > 0
-        ? `Located ${citations.length} verified citations + ${ragPapers.length} source abstracts from peer-reviewed databases — all DOI-traceable, no Wikipedia`
+        ? `Found ${citations.length} verified citations + ${ragPapers.length} ranked source abstracts from 10 databases — citation-ordered by impact, no Wikipedia`
         : "Academic databases queried — paper will draw from verified sources only",
       status: "done",
     });

@@ -6,6 +6,7 @@ import { AskStudyAssistantBody, GetSessionMessagesParams } from "@workspace/api-
 import { anthropic, openai } from "../lib/ai";
 import { TUTOR_SOUL } from "../lib/soul";
 import { getStudentMemory, updateStudentMemory, buildMemoryContext, memoryFlush } from "../lib/memory";
+import { recordSearchResults, recordTopicSearch } from "../lib/learningEngine";
 import { indexStudyExchange, recallStudyContext } from "../lib/memvidMemory";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { recordUsage } from "../lib/apiCost";
@@ -88,12 +89,34 @@ router.post("/study/ask", async (req, res) => {
 
     // 1. Load student memory + academic RAG in parallel (both fire-and-forget safe)
     const [memory, semanticContext, ragPapers] = await Promise.all([
-      getStudentMemory(),
+      getStudentMemory(req.userId),
       req.userId
         ? recallStudyContext(req.userId, body.question, 3).catch(() => "")
         : Promise.resolve(""),
-      searchAllAcademicSources(body.question, 6).catch(() => []),
+      searchAllAcademicSources(body.question, 8, body.subject).catch(() => []),
     ]);
+
+    // Record which sources returned results (fire-and-forget — learning engine)
+    if (ragPapers.length > 0) {
+      const sourceCounts = ragPapers.reduce<Record<string, number>>((acc, p) => {
+        acc[p.source] = (acc[p.source] ?? 0) + 1;
+        return acc;
+      }, {});
+      const subject = body.subject ?? (
+        /biolog|medicine|health/i.test(body.question) ? "biomedical" :
+        /physics|math|computer/i.test(body.question) ? "stem" :
+        /history|art|law|social/i.test(body.question) ? "humanities" : "general"
+      );
+      recordSearchResults(
+        Object.entries(sourceCounts).map(([source, resultCount]) => ({ source, resultCount })),
+        subject
+      ).catch(() => {});
+    }
+
+    // Track topic for personalised future suggestions (fire-and-forget)
+    if (req.userId) {
+      recordTopicSearch(req.userId, body.question.slice(0, 120)).catch(() => {});
+    }
 
     const memoryContext = buildMemoryContext(memory);
     const ragContext = buildRAGContext(ragPapers);
@@ -193,16 +216,16 @@ TOPIC_TAG: [single topic label for this conversation, e.g. "Integration by parts
       .set({ lastActivity: new Date(), messageCount: history.length + 2 })
       .where(eq(studySessionsTable.id, sessionId));
 
-    // 9. Update student memory — Jarvis Effect (fire-and-forget)
+    // 9. Update student memory — Jarvis Effect (fire-and-forget, per-user)
     updateStudentMemory({
       newTopic: topicTag,
       subject: body.subject ?? "General",
-    }).catch(() => {});
+    }, req.userId).catch(() => {});
 
     // 10. Detect struggle signals and log to memory
     const struggleSignals = /confused|don't understand|struggling|lost|wrong|error|mistake|help/i.test(body.question);
     if (struggleSignals) {
-      memoryFlush(`Student struggled with: ${topicTag}`).catch(() => {});
+      memoryFlush(`Student struggled with: ${topicTag}`, req.userId).catch(() => {});
     }
 
     // 11. Index this exchange into the user's long-term memory capsule (fire-and-forget)
