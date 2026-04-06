@@ -156,6 +156,58 @@ router.get("/stem/papers", async (req, res) => {
   }
 });
 
+// GET: used by frontend (?paperId=... or ?q=...) — returns similar/related papers
+router.get("/stem/papers/recommend", async (req, res) => {
+  try {
+    const paperId = typeof req.query.paperId === "string" ? req.query.paperId.trim() : "";
+    const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+
+    if (!paperId && !q) return res.status(400).json({ error: "paperId or q is required" });
+
+    // Use Semantic Scholar's recommendations API when a paper ID is provided
+    if (paperId) {
+      try {
+        const recResp = await fetch(
+          `https://api.semanticscholar.org/recommendations/v1/papers/forpaper/${encodeURIComponent(paperId)}?limit=5&fields=title,authors,year,abstract,url,openAccessPdf,citationCount`,
+          { headers: { "User-Agent": "LightSpeedGhost/1.0" }, signal: AbortSignal.timeout(8000) }
+        );
+        if (recResp.ok) {
+          const recData = (await recResp.json()) as {
+            recommendedPapers?: Array<{
+              paperId?: string;
+              title?: string;
+              authors?: Array<{ name: string }>;
+              year?: number;
+              abstract?: string;
+              url?: string;
+              openAccessPdf?: { url: string };
+              citationCount?: number;
+            }>;
+          };
+          const papers = (recData.recommendedPapers ?? []).map((p) => ({
+            paperId: p.paperId ?? "",
+            title: p.title ?? "Unknown",
+            authors: (p.authors ?? []).map((a) => a.name).join(", "),
+            year: p.year ?? null,
+            abstract: p.abstract ?? null,
+            url: p.openAccessPdf?.url ?? p.url ?? `https://www.semanticscholar.org/paper/${p.paperId}`,
+            citationCount: p.citationCount ?? 0,
+          }));
+          if (papers.length > 0) return res.json({ papers });
+        }
+      } catch { /* fall through to keyword search */ }
+    }
+
+    // Fallback: keyword search
+    const papers = await searchSemanticScholar(q || paperId, 5);
+    res.json({ papers });
+  } catch (err) {
+    req.log.error({ err }, "Error recommending papers");
+    res.json({ papers: [] });
+  }
+});
+
+// POST: legacy / direct calls with topic in body
 router.post("/stem/papers/recommend", async (req, res) => {
   try {
     const { topic, subject } = req.body as { topic?: string; subject?: string };
@@ -194,7 +246,20 @@ router.get("/stem/biomodels", async (req, res) => {
   }
 });
 
+// Accept both POST (body.name) and GET (?q=...) so the frontend helper works either way
+router.get("/stem/molecule", async (req, res) => {
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (!q) return res.status(400).json({ error: "q query param is required" });
+  req.body = { name: q };
+  // fall through to the shared handler below by calling the POST handler inline
+  return handleMoleculeLookup(req, res);
+});
+
 router.post("/stem/molecule", async (req, res) => {
+  return handleMoleculeLookup(req, res);
+});
+
+async function handleMoleculeLookup(req: import("express").Request, res: import("express").Response) {
   try {
     const { name } = req.body as { name?: string };
     if (!name) return res.status(400).json({ error: "name is required" });
@@ -227,7 +292,7 @@ router.post("/stem/molecule", async (req, res) => {
       casNumber: getProp("CAS-like style SMILES")?.sval ?? null,
       smiles: getProp("SMILES", "Canonical")?.sval ?? null,
       formula: getProp("Molecular Formula")?.sval ?? null,
-      molecularWeight: getProp("Molecular Weight")?.fval ?? null,
+      molecularWeight: getProp("Molecular Weight")?.fval ?? (getProp("Molecular Weight")?.sval ? parseFloat(getProp("Molecular Weight")!.sval!) : null),
       xLogP: getProp("Log P")?.fval ?? null,
       hBondDonors: getProp("Count", "Hydrogen Bond Donor")?.ival ?? null,
       hBondAcceptors: getProp("Count", "Hydrogen Bond Acceptor")?.ival ?? null,
@@ -241,7 +306,7 @@ router.post("/stem/molecule", async (req, res) => {
     req.log.error({ err }, "Error looking up molecule");
     res.status(500).json({ error: "Internal server error" });
   }
-});
+}
 
 function generateGraphForSubject(
   subject: string,
