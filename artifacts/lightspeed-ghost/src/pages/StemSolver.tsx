@@ -575,7 +575,9 @@ export default function StemSolver() {
                   />
                 </div>
                 <div className="px-5 py-5">
-                  <MathRenderer text={result.answer} className="text-base text-foreground leading-relaxed" />
+                  <div className="handwritten-block">
+                    <MathRenderer text={result.answer} className="text-base" />
+                  </div>
                 </div>
                 {result.corrections && result.corrections.length > 0 && (
                   <div className="mx-5 mb-5 p-3.5 bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-800/50">
@@ -634,9 +636,7 @@ export default function StemSolver() {
                             onClick={() => toggleStep(step.stepNumber)}
                             className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/20 transition-colors"
                           >
-                            <div className="w-6 h-6 rounded-full bg-primary/90 flex items-center justify-center shrink-0 shadow-sm">
-                              <span className="text-[10px] font-bold text-primary-foreground">{step.stepNumber}</span>
-                            </div>
+                            <span className="handwritten-step-num shrink-0">{step.stepNumber}</span>
                             <div className="flex-1 flex items-center gap-2 min-w-0">
                               <span className="text-xs font-semibold text-foreground truncate">{step.description}</span>
                               <StepTypeBadge desc={step.description} />
@@ -646,14 +646,14 @@ export default function StemSolver() {
                               : <ChevronDown size={13} className="text-muted-foreground shrink-0" />}
                           </button>
                           {isOpen && (
-                            <div className="px-5 pb-4 pl-14 space-y-2">
+                            <div className="px-5 pb-5 pl-14 space-y-2.5">
                               {step.expression && (
                                 <div className="handwritten-expression">
                                   <MathRenderer text={step.expression} className="text-sm" />
                                 </div>
                               )}
                               <div className="handwritten-block">
-                                <MathRenderer text={step.explanation} className="text-sm leading-relaxed" />
+                                <MathRenderer text={step.explanation} className="text-sm" />
                               </div>
                             </div>
                           )}

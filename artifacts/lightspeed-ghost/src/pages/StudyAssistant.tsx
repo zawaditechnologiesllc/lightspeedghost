@@ -1188,11 +1188,21 @@ function StudyGuideView({ data, onGenerate }: { data: StudyGuideData | null; onG
               )}
               {sec.type === "process" && (
                 <ol className="space-y-3">
-                  {sec.steps.map((step, si) => (
-                    <li key={si} className="flex items-start gap-3 text-sm text-muted-foreground">
-                      <span className="text-[10px] font-bold text-primary/60 mt-0.5 shrink-0 w-4">{si + 1}.</span>{step}
-                    </li>
-                  ))}
+                  {sec.steps.map((step, si) => {
+                    const hasMath = step.includes("$") || /\d[\+\-\*\/=]\d/.test(step);
+                    return (
+                      <li key={si} className="flex items-start gap-3">
+                        <span className="handwritten-step-num mt-0.5 shrink-0">{si + 1}</span>
+                        {hasMath ? (
+                          <div className="handwritten-block flex-1">
+                            <MathRenderer text={step} className="text-sm" />
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground leading-relaxed">{step}</span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ol>
               )}
               {sec.type === "tips" && (

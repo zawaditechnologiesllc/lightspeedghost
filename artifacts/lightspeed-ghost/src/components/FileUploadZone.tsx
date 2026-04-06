@@ -54,6 +54,8 @@ export default function FileUploadZone({
   const [uploadedFile, setUploadedFile] = useState<ExtractedFile | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const API = import.meta.env.VITE_API_URL ?? "";
+
   const processFile = useCallback(
     async (file: File) => {
       setStatus("extracting");
@@ -64,7 +66,7 @@ export default function FileUploadZone({
       formData.append("file", file);
 
       try {
-        const res = await fetch("/api/files/extract", {
+        const res = await fetch(`${API}/api/files/extract`, {
           method: "POST",
           body: formData,
         });

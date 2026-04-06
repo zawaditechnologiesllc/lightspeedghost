@@ -96,7 +96,12 @@ router.post("/stem/solve", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error solving STEM problem");
-    res.status(500).json({ error: "Failed to solve problem. Please try again." });
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("API_KEY") || msg.includes("not set")) {
+      res.status(503).json({ error: "AI service not configured on this server. Please contact support." });
+    } else {
+      res.status(500).json({ error: "Failed to solve problem. Please try again." });
+    }
   }
 });
 

@@ -83,6 +83,10 @@ router.post("/writing/generate-stream", async (req, res) => {
     const targetWords = body.wordCount ?? 1500;
     const citationCount = targetWords >= 3000 ? 12 : targetWords >= 2000 ? 9 : targetWords >= 1000 ? 6 : 4;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
+    const maxTokens = Math.min(12000, Math.max(3000, Math.ceil(targetWords * 2.8)));
+
+    // Keep-alive ping so the SSE connection stays open during slow citation/DB calls
+    send("ping", { t: Date.now() });
 
     // ── Step 0: A-grade rubric extraction ────────────────────────────────────
     let aGradeCriteria = "";
@@ -184,8 +188,8 @@ Return JSON:
     send("step", {
       id: "citations",
       message: citations.length > 0
-        ? `Found ${citations.length} verified citations + ${ragPapers.length} ranked source abstracts from 10 databases — citation-ordered by impact, no Wikipedia`
-        : "Academic databases queried — paper will draw from verified sources only",
+        ? `Retrieved ${citations.length} verified citations (target: ${citationCount}) + ${ragPapers.length} supporting abstracts from 10 databases — ranked by impact, no Wikipedia`
+        : "Academic databases queried — paper will use verified sources only",
       status: "done",
     });
 
@@ -243,8 +247,8 @@ Each section should contain only content appropriate for that section of an acad
     });
 
     const citationContext = citations.length > 0
-      ? `VERIFIED CITATIONS (use ONLY these — never invent sources):\n${citations.map((c, i) => `[${i + 1}] ${c.formatted}`).join("\n")}`
-      : "No verified citations retrieved. Do not fabricate sources. Mark any citation needed as [citation needed].";
+      ? `VERIFIED CITATIONS — use ONLY these ${citations.length} sources. Number them exactly as shown. DO NOT add any other references.\n${citations.map((c, i) => `[${i + 1}] ${c.formatted}`).join("\n")}\n\nREFERENCE SECTION RULE: Your References/Bibliography section at the end must list ONLY these ${citations.length} numbered entries above — no additional sources, no Wikipedia, no invented references.`
+      : "No verified citations retrieved. Do not fabricate sources. Mark any citation needed as [citation needed]. Your References section should be empty or omitted.";
 
     // Build section-tagged STEM content block
     const stemBlock = Object.keys(stemSections).length > 0
@@ -267,7 +271,7 @@ Abstract → Introduction → Literature Review / Background → Methodology / T
 
     const systemPrompt = `${WRITER_SOUL}
 
-${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${ragContext ? `${ragContext}\n\n` : ""}${citationContext}
+${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${ragContext ? `BACKGROUND READING (context only — DO NOT cite these in the paper or add them to the References section; they inform the arguments but are NOT verified citations):\n${ragContext}\n\n` : ""}${citationContext}
 
 ${stemBlock ? `${stemBlock}\n` : ""}${aGradeCriteria ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GRADING TARGET — ${aGradeCriteria}
@@ -281,19 +285,20 @@ PAPER REQUIREMENTS:
 - Subject: ${body.subject}
 - Citation Style: ${body.citationStyle.toUpperCase()}
 - Target body word count: exactly ${targetWords} words (EXCLUDING abstract, table of contents, references section, in-text citation parentheses, and figure/table captions)
-- Use ONLY the verified citations above; reference them by number (e.g. [1], [2])
+- CITATION FREQUENCY: Insert at least one in-text citation every 200 words throughout the body — citations must be distributed evenly, not clustered at the end
+- CITATION SOURCE: Reference ONLY the numbered verified citations above (e.g. [1], [2]). Do NOT cite anything from the Background Reading section. Do NOT add any source not listed in the VERIFIED CITATIONS block.
 - Write in full markdown: # Title, ## sections, ### subsections
 - All math in LaTeX: inline $...$ and block $$...$$
 ${includeToC ? "- INCLUDE a Table of Contents after the Abstract" : "- Do NOT include a Table of Contents"}
-- End with a full References section formatted in ${body.citationStyle.toUpperCase()} style
+- End with a References section listing ONLY the verified citations numbered above — exactly as formatted there
 - Write 0% AI-detectable prose — vary sentence length, use discipline-specific vocabulary, active/passive voice mix, avoid AI clichés like "delve", "crucial", "pivotal", "underscore"
 - Grade target: the paper must meet or exceed 92% quality against academic standards
-- CRITICAL: Do NOT cite Wikipedia, open web sources, or any source not in the Verified Citations list above
+- CRITICAL: Do NOT cite Wikipedia, open web sources, or any source not in the Verified Citations block above
 ${body.additionalInstructions ? `\nADDITIONAL INSTRUCTIONS: ${body.additionalInstructions}` : ""}`;
 
     const stream = anthropic.messages.stream({
       model: "claude-sonnet-4-5",
-      max_tokens: 12000,
+      max_tokens: maxTokens,
       system: systemPrompt,
       messages: [{
         role: "user",
