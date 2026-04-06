@@ -57,8 +57,8 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
-            <div className="flex items-center gap-2.5">
+          <div className="relative flex items-center justify-center px-5 py-4 border-b border-border shrink-0">
+            <div className="flex flex-col items-center gap-1.5 text-center">
               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Wallet size={15} className="text-primary" />
               </div>
@@ -67,7 +67,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                 <p className="text-[11px] text-muted-foreground">Plan, credits &amp; usage</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground">
+            <button onClick={onClose} className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground">
               <X size={16} />
             </button>
           </div>

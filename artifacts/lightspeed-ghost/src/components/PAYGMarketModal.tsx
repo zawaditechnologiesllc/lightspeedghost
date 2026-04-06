@@ -67,8 +67,8 @@ export function PAYGMarketModal({ open, onClose }: PAYGMarketModalProps) {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
-            <div className="flex items-center gap-2.5">
+          <div className="relative flex items-center justify-center px-5 py-4 border-b border-border shrink-0">
+            <div className="flex flex-col items-center gap-1.5 text-center">
               <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
                 <ShoppingCart size={15} className="text-orange-400" />
               </div>
@@ -77,14 +77,14 @@ export function PAYGMarketModal({ open, onClose }: PAYGMarketModalProps) {
                 <p className="text-[11px] text-muted-foreground">One-time purchases · no subscription needed</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground">
+            <button onClick={onClose} className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground">
               <X size={16} />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
             <p className="text-[11px] text-muted-foreground px-0.5">
-              Pay per use with any available payment method — card, M-Pesa, Airtel, MTN MoMo, and more — based on your region.
+              Pay once per use. Credits deduct automatically. No subscription, no recurring charge.
             </p>
 
             {TOOLS.map((tool) => {

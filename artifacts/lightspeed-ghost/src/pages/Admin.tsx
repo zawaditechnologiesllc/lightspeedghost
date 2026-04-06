@@ -874,6 +874,38 @@ export default function Admin() {
                         </div>
                       </div>
                     )}
+                    {/* ── Quick Access to All Panels ── */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-white/70 mb-3">Quick Access</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+                        {([
+                          { id: "users",         label: "Users",          sub: "Accounts & bans",           icon: Users,        color: "text-blue-400",    bg: "bg-blue-500/8",    border: "border-blue-500/12" },
+                          { id: "documents",     label: "Documents",      sub: "All generated content",     icon: FileText,     color: "text-indigo-400",  bg: "bg-indigo-500/8",  border: "border-indigo-500/12" },
+                          { id: "analytics",     label: "Analytics",      sub: "Traffic & usage",           icon: TrendingUp,   color: "text-violet-400",  bg: "bg-violet-500/8",  border: "border-violet-500/12" },
+                          { id: "logs",          label: "Logs",           sub: "API request logs",          icon: Radio,        color: "text-cyan-400",    bg: "bg-cyan-500/8",    border: "border-cyan-500/12" },
+                          { id: "gateways",      label: "Gateways",       sub: "Payment gateway config",    icon: Globe,        color: "text-teal-400",    bg: "bg-teal-500/8",    border: "border-teal-500/12" },
+                          { id: "payments",      label: "Payments",       sub: "Transaction history",       icon: CreditCard,   color: "text-green-400",   bg: "bg-green-500/8",   border: "border-green-500/12" },
+                          { id: "credits",       label: "Credits",        sub: "Balances & topups",         icon: Coins,        color: "text-orange-400",  bg: "bg-orange-500/8",  border: "border-orange-500/12" },
+                          { id: "finance",       label: "Finance",        sub: "Revenue & reports",         icon: BarChart3,    color: "text-emerald-400", bg: "bg-emerald-500/8", border: "border-emerald-500/12" },
+                          { id: "announcements", label: "Announcements",  sub: "Banner messages",           icon: Megaphone,    color: "text-pink-400",    bg: "bg-pink-500/8",    border: "border-pink-500/12" },
+                          { id: "settings",      label: "Settings",       sub: "Platform config",           icon: Settings,     color: "text-white/50",    bg: "bg-white/5",       border: "border-white/10" },
+                        ] as const).map(({ id, label, sub, icon: Icon, color, bg, border }) => (
+                          <button
+                            key={id}
+                            onClick={() => setActiveTab(id)}
+                            className={`flex items-start gap-2.5 p-3 rounded-xl ${bg} border ${border} hover:bg-white/8 hover:border-white/15 transition-all text-left group`}
+                          >
+                            <div className={`w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-white/10 transition-colors`}>
+                              <Icon size={13} className={color} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className={`text-xs font-semibold ${color}`}>{label}</p>
+                              <p className="text-[10px] text-white/30 leading-tight mt-0.5">{sub}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </>
                 ) : <Empty text="Stats unavailable" />}
               </div>

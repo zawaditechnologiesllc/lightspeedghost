@@ -1289,9 +1289,9 @@ export default function Landing() {
           <div className="border-t border-white/5 pt-8 pb-6 space-y-5">
 
             {/* Payment method logos row */}
-            <div>
+            <div className="text-center">
               <p className="text-[10px] font-semibold text-white/20 uppercase tracking-widest mb-3">Accepted payment methods</p>
-              <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex flex-wrap gap-2 items-center justify-center">
 
                 {/* Visa */}
                 <div className="h-8 px-3 rounded-md flex items-center" style={{ backgroundColor: "#1a1f71" }}>
@@ -1310,6 +1310,17 @@ export default function Landing() {
                 {/* American Express */}
                 <div className="h-8 px-3 rounded-md flex items-center" style={{ backgroundColor: "#2557a7" }}>
                   <span className="text-white font-bold" style={{ fontSize: "10px", letterSpacing: "0.05em" }}>AMEX</span>
+                </div>
+
+                {/* Discover */}
+                <div className="h-8 px-3 rounded-md border flex items-center gap-1.5" style={{ borderColor: "#f7971e55", backgroundColor: "#f7971e12" }}>
+                  <div className="w-4 h-4 rounded-full" style={{ background: "#f7971e" }} />
+                  <span className="font-bold" style={{ fontSize: "10px", color: "#f7971e" }}>Discover</span>
+                </div>
+
+                {/* UnionPay */}
+                <div className="h-8 px-3 rounded-md flex items-center gap-1" style={{ background: "linear-gradient(135deg,#c0392b,#8b0000)" }}>
+                  <span className="text-white font-bold" style={{ fontSize: "10px", letterSpacing: "0.05em" }}>UnionPay</span>
                 </div>
 
                 {/* Verve */}
@@ -1337,6 +1348,26 @@ export default function Landing() {
                   <span className="text-white/80 font-semibold" style={{ fontSize: "11px" }}>Pay</span>
                 </div>
 
+                {/* Klarna */}
+                <div className="h-8 px-3 rounded-md flex items-center" style={{ backgroundColor: "#ffb3c7" }}>
+                  <span className="font-black" style={{ fontSize: "11px", color: "#17120e", letterSpacing: "0.02em" }}>klarna</span>
+                </div>
+
+                {/* Afterpay */}
+                <div className="h-8 px-3 rounded-md flex items-center gap-1" style={{ backgroundColor: "#b2fce4" }}>
+                  <span className="font-black" style={{ fontSize: "10px", color: "#000", letterSpacing: "0.01em" }}>Afterpay</span>
+                </div>
+
+                {/* Alipay */}
+                <div className="h-8 px-3 rounded-md border flex items-center gap-1.5" style={{ borderColor: "#1677ff55", backgroundColor: "#1677ff15" }}>
+                  <span className="font-bold" style={{ fontSize: "10px", color: "#1677ff" }}>Alipay</span>
+                </div>
+
+                {/* WeChat Pay */}
+                <div className="h-8 px-3 rounded-md border flex items-center gap-1.5" style={{ borderColor: "#07c16055", backgroundColor: "#07c16015" }}>
+                  <span className="font-bold" style={{ fontSize: "10px", color: "#07c160" }}>WeChat Pay</span>
+                </div>
+
                 {/* M-Pesa */}
                 <div className="h-8 px-3 rounded-md border flex items-center" style={{ borderColor: "#00a65155", backgroundColor: "#00a65118" }}>
                   <span className="font-bold" style={{ fontSize: "11px", color: "#00a651", letterSpacing: "0.03em" }}>M-PESA</span>
@@ -1362,7 +1393,7 @@ export default function Landing() {
             </div>
 
             {/* Security trust badges */}
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
               <div className="flex items-center gap-1.5 text-white/25">
                 <Lock size={11} />
                 <span style={{ fontSize: "10px" }} className="font-medium">256-bit SSL Encrypted</span>
