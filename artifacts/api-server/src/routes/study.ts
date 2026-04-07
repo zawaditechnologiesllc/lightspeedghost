@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuth } from "../middlewares/auth";
 import { db } from "@workspace/db";
 import { studySessionsTable, studyMessagesTable, documentsTable } from "@workspace/db";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
@@ -61,7 +62,7 @@ router.get("/study/sessions/:id/messages", async (req, res) => {
   }
 });
 
-router.post("/study/ask", async (req, res) => {
+router.post("/study/ask", requireAuth, async (req, res) => {
   try {
     if (req.userId) trackUsage(req.userId, "study").catch(() => {});
     const body = AskStudyAssistantBody.parse(req.body);
@@ -330,7 +331,7 @@ Return ONLY valid JSON, exactly this format:
 {"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"explanation":"...","targetsTopic":"which weak topic this addresses"}]}`,
 };
 
-router.post("/study/generate", async (req, res) => {
+router.post("/study/generate", requireAuth, async (req, res) => {
   try {
     const body = GenerateBody.parse(req.body);
     const subject = body.subject ?? "General";

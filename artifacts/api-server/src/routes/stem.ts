@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuth } from "../middlewares/auth";
 import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { SolveStemBody } from "@workspace/api-zod";
@@ -27,7 +28,7 @@ router.get("/stem/subjects", async (req, res) => {
   res.json({ subjects: STEM_SUBJECTS });
 });
 
-router.post("/stem/solve", async (req, res) => {
+router.post("/stem/solve", requireAuth, async (req, res) => {
   try {
     if (req.userId) trackUsage(req.userId, "stem").catch(() => {});
     const body = SolveStemBody.parse(req.body);

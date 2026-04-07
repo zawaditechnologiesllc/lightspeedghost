@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuth } from "../middlewares/auth";
 import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { anthropic, openai } from "../lib/ai";
@@ -11,7 +12,7 @@ const router = Router();
 
 // ── Quick AI + plagiarism analysis ────────────────────────────────────────────
 
-router.post("/revision/analyse", async (req, res) => {
+router.post("/revision/analyse", requireAuth, async (req, res) => {
   try {
     const { text } = req.body as { text: string };
     if (!text || text.trim().length < 50) {
@@ -78,7 +79,7 @@ Return ONLY valid JSON:
 
 // ── SSE comprehensive revision ─────────────────────────────────────────────────
 
-router.post("/revision/submit-stream", async (req, res) => {
+router.post("/revision/submit-stream", requireAuth, async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");

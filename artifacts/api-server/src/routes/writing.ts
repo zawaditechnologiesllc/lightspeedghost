@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { GenerateOutlineBody } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/auth";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { anthropic, openai } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
@@ -54,7 +55,7 @@ function academicLevelPrompt(level: string): string {
 
 // ── SSE streaming paper generation ───────────────────────────────────────────
 
-router.post("/writing/generate-stream", async (req, res) => {
+router.post("/writing/generate-stream", requireAuth, async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -617,7 +618,7 @@ router.put("/writing/save/:id", async (req, res) => {
 
 // ── Outline generation (kept) ─────────────────────────────────────────────────
 
-router.post("/writing/outline", async (req, res) => {
+router.post("/writing/outline", requireAuth, async (req, res) => {
   try {
     if (req.userId) trackUsage(req.userId, "outline").catch(() => {});
     const body = GenerateOutlineBody.parse(req.body);

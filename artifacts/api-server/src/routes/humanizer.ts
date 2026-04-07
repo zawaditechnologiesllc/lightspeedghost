@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuth } from "../middlewares/auth";
 import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { anthropic, openai } from "../lib/ai";
@@ -151,7 +152,7 @@ Return ONLY the humanized text. No commentary, no JSON wrapper, no preamble.`;
 
 // ── Quick AI detection scan ────────────────────────────────────────────────────
 
-router.post("/humanizer/detect", async (req, res) => {
+router.post("/humanizer/detect", requireAuth, async (req, res) => {
   try {
     const { text } = req.body as { text: string };
     if (!text || text.trim().length < 30) {
@@ -180,7 +181,7 @@ router.post("/humanizer/detect", async (req, res) => {
 
 // ── SSE humanizer stream — multi-pass to <5% AI score ─────────────────────────
 
-router.post("/humanizer/humanize-stream", async (req, res) => {
+router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");

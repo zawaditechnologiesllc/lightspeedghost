@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuth } from "../middlewares/auth";
 import { CheckPlagiarismBody, HumanizeTextBody } from "@workspace/api-zod";
 import { compareDocuments } from "../lib/winnow";
 import { analyseTextPlagiarism, analyseAIContent } from "../lib/textAnalysis";
@@ -13,7 +14,7 @@ import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 const router = Router();
 
 // Plagiarism + AI detection (local algorithms — already solid)
-router.post("/plagiarism/check", async (req, res) => {
+router.post("/plagiarism/check", requireAuth, async (req, res) => {
   try {
     if (req.userId) trackUsage(req.userId, "plagiarism").catch(() => {});
     const body = CheckPlagiarismBody.parse(req.body);
@@ -90,7 +91,7 @@ router.post("/plagiarism/check", async (req, res) => {
  * Writes → Detects AI score → Rewrites if still detected → Repeats until passes.
  * Max 3 passes. Returns the version with the lowest AI detection score.
  */
-router.post("/plagiarism/humanize", async (req, res) => {
+router.post("/plagiarism/humanize", requireAuth, async (req, res) => {
   try {
     if (req.userId) trackUsage(req.userId, "humanizer").catch(() => {});
     const body = HumanizeTextBody.parse(req.body);
@@ -208,7 +209,7 @@ CRITICAL: Return ONLY the humanized text. No explanations, no preamble, no "Here
 });
 
 // Code similarity via Winnowing (already real — keeping unchanged)
-router.post("/plagiarism/code", async (req, res) => {
+router.post("/plagiarism/code", requireAuth, async (req, res) => {
   try {
     const { doc1, doc2, language, kgramSize: rawK, windowSize: rawW } = req.body as Record<string, unknown>;
     if (typeof doc1 !== "string" || doc1.length < 10 || doc1.length > 50000) {
