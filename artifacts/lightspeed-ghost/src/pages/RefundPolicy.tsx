@@ -72,9 +72,9 @@ export default function RefundPolicy() {
           </section>
 
           <section>
-            <h2 className="text-white text-xl font-semibold mb-4">5. Free Plan and Trial Access</h2>
+            <h2 className="text-white text-xl font-semibold mb-4">5. Starter Plan</h2>
             <p>
-              The free plan requires no payment and is therefore not subject to any refund considerations. If you upgrade from the free plan to a paid plan, the paid plan terms in Section 2 apply from the date of upgrade.
+              The Starter plan is a paid monthly plan at $1.50/month and is subject to the same refund terms as other paid plans in Section 2. If you upgrade from Starter to Pro or Campus, the higher-tier plan terms in Section 2 apply from the date of upgrade.
             </p>
           </section>
 

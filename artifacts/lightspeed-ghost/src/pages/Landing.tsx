@@ -116,8 +116,8 @@ const faqs = [
     a: "ChatGPT is a general-purpose chatbot. Light Speed Ghost is purpose-built for academic work: real, verifiable citations, specific citation formats, plagiarism checking, grade-targeted revision, and a STEM solver with step-by-step verification — all in one platform with a student-focused interface.",
   },
   {
-    q: "Is there a free plan?",
-    a: "The entry plan is Starter at $1.50/month — lower than a cup of coffee and still the cheapest academic writing platform you'll find. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 10 STEM queries per day, 10 study messages per day, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
+    q: "What's the cheapest plan?",
+    a: "The Starter plan is $1.50/month — less than a coffee and the cheapest academic writing platform you'll find anywhere. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 10 STEM queries per day, 10 study messages per day, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
   },
   {
     q: "What's the difference between Pro monthly and annual?",

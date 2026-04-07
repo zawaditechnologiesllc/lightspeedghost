@@ -193,12 +193,12 @@ export default function Auth() {
                 ) : (
                   <>
                     <h2 className="text-2xl font-bold text-white mb-1">
-                      {tab === "login" ? "Welcome back" : "Get started free"}
+                      {tab === "login" ? "Welcome back" : "Create your account"}
                     </h2>
                     <p className="text-white/40 text-sm mb-6">
                       {tab === "login"
                         ? "Sign in to your Light Speed Ghost account"
-                        : "No credit card required"}
+                        : "Starter plan from $1.50/month — cancel any time"}
                     </p>
 
                     <form

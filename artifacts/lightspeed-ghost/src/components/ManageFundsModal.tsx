@@ -103,8 +103,8 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                   <span className="text-sm font-semibold text-foreground">{planName} Plan</span>
                 </div>
                 {!planLoading && resolvedPlan === "starter" && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 font-medium">
-                    Free tier
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20 font-medium">
+                    $1.50/mo
                   </span>
                 )}
                 {!planLoading && resolvedPlan === "pro" && (

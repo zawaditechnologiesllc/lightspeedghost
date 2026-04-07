@@ -51,7 +51,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-white text-xl font-semibold mb-4">6. Subscriptions and Billing</h2>
-            <p>Free plans are available without payment. Pro and Team plans are billed monthly. You may cancel at any time; cancellation takes effect at the end of the current billing period. We do not offer refunds for partial months. Pricing is subject to change with 30 days notice.</p>
+            <p>The Starter plan is $1.50/month. Pro and Campus plans are billed monthly or annually. You may cancel at any time; cancellation takes effect at the end of the current billing period. We do not offer refunds for partial months. Pricing is subject to change with 30 days notice.</p>
           </section>
 
           <section>

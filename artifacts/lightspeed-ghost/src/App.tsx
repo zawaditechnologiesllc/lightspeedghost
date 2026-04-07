@@ -28,6 +28,7 @@ import About from "@/pages/About";
 import Contact from "@/pages/Contact";
 import Careers from "@/pages/Careers";
 import Blog from "@/pages/Blog";
+import BlogPost from "@/pages/BlogPost";
 import RefundPolicy from "@/pages/RefundPolicy";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import NotFound from "@/pages/not-found";
@@ -109,6 +110,7 @@ function Router() {
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
       <Route path="/careers" component={Careers} />
+      <Route path="/blog/:slug" component={BlogPost} />
       <Route path="/blog" component={Blog} />
       <Route path="/payment/success" component={PaymentSuccess} />
       <Route component={AppRoutes} />
