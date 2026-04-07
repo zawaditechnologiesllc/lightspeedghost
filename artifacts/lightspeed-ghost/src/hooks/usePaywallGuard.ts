@@ -4,7 +4,7 @@ import type { PaygTool, DocumentTier } from "@/lib/pricing";
 
 export type PickerState =
   | { open: false }
-  | { open: true; tool: PaygTool; tier?: DocumentTier };
+  | { open: true; tool: PaygTool; tier?: DocumentTier; pickerMode: "paywall" | "buy" };
 
 export type CheckoutState =
   | { open: false }
@@ -19,7 +19,7 @@ export function usePaywallGuard() {
     (tool: PaygTool, fn: () => void, tier?: DocumentTier): void => {
       if (loading) { fn(); return; }
       if (!isAtLimit(tool)) { fn(); return; }
-      setPickerState({ open: true, tool, tier });
+      setPickerState({ open: true, tool, tier, pickerMode: "paywall" });
     },
     [isAtLimit, loading],
   );
@@ -43,7 +43,7 @@ export function usePaywallGuard() {
   }
 
   function openBuy(tool: PaygTool, tier?: DocumentTier) {
-    setPickerState({ open: true, tool, tier });
+    setPickerState({ open: true, tool, tier, pickerMode: "buy" });
   }
 
   return {

@@ -31,6 +31,7 @@ export function PaywallFlow({
           tool={pickerState.tool}
           tier={pickerState.tier}
           currentPlan={plan}
+          mode={pickerState.pickerMode}
           onChooseSubscription={chooseSubscription}
           onChoosePayg={(tier) => choosePayg(pickerState.tool, tier)}
         />

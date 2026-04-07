@@ -16,6 +16,7 @@ interface PaywallPickerProps {
   onChooseSubscription: () => void;
   onChoosePayg: (tier?: DocumentTier) => void;
   currentPlan?: string | null;
+  mode?: "paywall" | "buy";
 }
 
 const TOOL_LABELS: Record<PaygTool, string> = {
@@ -58,6 +59,7 @@ export function PaywallPicker({
   onChooseSubscription,
   onChoosePayg,
   currentPlan,
+  mode = "paywall",
 }: PaywallPickerProps) {
   const needsTier = TIER_TOOLS.includes(tool);
   const [selectedTier, setSelectedTier] = useState<DocumentTier | undefined>(initialTier);
@@ -78,9 +80,11 @@ export function PaywallPicker({
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-orange-500/20 flex items-center justify-center">
-              <Lock size={13} className="text-orange-400" />
+              {mode === "buy" ? <CreditCard size={13} className="text-orange-400" /> : <Lock size={13} className="text-orange-400" />}
             </div>
-            <span className="text-sm font-semibold text-white">Limit reached</span>
+            <span className="text-sm font-semibold text-white">
+              {mode === "buy" ? `Buy a single ${TOOL_LABELS[tool]}` : "Limit reached"}
+            </span>
           </div>
           <button
             onClick={onClose}
@@ -92,9 +96,12 @@ export function PaywallPicker({
 
         <div className="px-5 py-4 space-y-3">
           <p className="text-xs text-white/45 leading-relaxed">
-            You've used all your {TOOL_LABELS[tool]}s for this period on your{" "}
-            <span className="text-white/70 font-medium capitalize">{currentPlan ?? "Starter"}</span> plan.
-            Choose how to continue:
+            {mode === "buy"
+              ? `Purchase a single ${TOOL_LABELS[tool]} without upgrading your plan — credits never expire.`
+              : <>You've used all your {TOOL_LABELS[tool]}s for this period on your{" "}
+                  <span className="text-white/70 font-medium capitalize">{currentPlan ?? "Starter"}</span> plan.
+                  {" "}Choose how to continue:</>
+            }
           </p>
 
           {/* ── Option A: Subscribe ── */}
