@@ -68,18 +68,23 @@
 
 /* LIGHT MODE */
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
+  --button-outline: rgba(0,0,0, .12);
+  --badge-outline: rgba(0,0,0, .07);
   --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
+  --elevate-1: rgba(0,0,0, .05);
+  --elevate-2: rgba(0,0,0, .10);
 
-  --background: 213 100% 98%;
-  --foreground: 215 50% 15%;
-  --border: 214 40% 88%;
-  --card: 0 0% 100%;
-  --card-foreground: 215 50% 15%;
-  --card-border: 214 40% 90%;
+  /* Page canvas — soft blue-gray, notably not white */
+  --background: 215 28% 89%;
+  /* Text — deep navy, high contrast */
+  --foreground: 220 42% 10%;
+  /* Borders — clearly visible */
+  --border: 215 22% 72%;
+  /* Cards — lifted above the page canvas */
+  --card: 215 20% 96%;
+  --card-foreground: 220 42% 10%;
+  --card-border: 215 20% 78%;
+  /* Sidebar — keep dark (brand navy) */
   --sidebar: 215 60% 13%;
   --sidebar-foreground: 213 60% 90%;
   --sidebar-border: 215 50% 20%;
@@ -88,39 +93,45 @@
   --sidebar-accent: 215 55% 20%;
   --sidebar-accent-foreground: 213 60% 90%;
   --sidebar-ring: 211 100% 55%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 215 50% 15%;
-  --popover-border: 214 40% 88%;
-  --primary: 211 100% 50%;
+  /* Popovers — same as cards */
+  --popover: 215 20% 96%;
+  --popover-foreground: 220 42% 10%;
+  --popover-border: 215 20% 78%;
+  /* Brand blue — slightly richer, not glaring */
+  --primary: 211 88% 44%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 213 60% 92%;
-  --secondary-foreground: 215 50% 20%;
-  --muted: 213 40% 94%;
-  --muted-foreground: 215 25% 45%;
-  --accent: 199 90% 48%;
+  /* Secondary surfaces — slightly darker than background */
+  --secondary: 215 25% 84%;
+  --secondary-foreground: 220 40% 12%;
+  /* Muted zones — clearly distinct from cards */
+  --muted: 215 22% 86%;
+  --muted-foreground: 215 24% 34%;
+  /* Accent — teal, calmer saturation */
+  --accent: 199 75% 40%;
   --accent-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
+  --destructive: 0 72% 52%;
   --destructive-foreground: 0 0% 100%;
-  --input: 214 40% 84%;
-  --ring: 211 100% 50%;
-  --chart-1: 211 100% 50%;
-  --chart-2: 199 90% 48%;
-  --chart-3: 225 70% 55%;
-  --chart-4: 168 80% 42%;
-  --chart-5: 280 70% 60%;
+  /* Input fields — clearly visible */
+  --input: 215 22% 74%;
+  --ring: 211 88% 44%;
+  --chart-1: 211 88% 44%;
+  --chart-2: 199 75% 40%;
+  --chart-3: 225 65% 50%;
+  --chart-4: 168 72% 38%;
+  --chart-5: 280 62% 52%;
 
   --app-font-sans: 'Inter', sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: Menlo, monospace;
   --radius: .5rem;
-  --shadow-2xs: 0px 1px 2px 0px hsl(211 100% 50% / 0.06);
-  --shadow-xs: 0px 1px 3px 0px hsl(211 100% 50% / 0.08);
-  --shadow-sm: 0px 1px 3px 0px hsl(211 100% 50% / 0.08), 0px 1px 2px -1px hsl(211 100% 50% / 0.06);
-  --shadow: 0px 2px 4px 0px hsl(211 100% 50% / 0.08), 0px 1px 2px -1px hsl(211 100% 50% / 0.06);
-  --shadow-md: 0px 4px 6px -1px hsl(211 100% 50% / 0.08), 0px 2px 4px -1px hsl(211 100% 50% / 0.06);
-  --shadow-lg: 0px 10px 15px -3px hsl(211 100% 50% / 0.08), 0px 4px 6px -2px hsl(211 100% 50% / 0.05);
-  --shadow-xl: 0px 20px 25px -5px hsl(211 100% 50% / 0.10), 0px 8px 10px -6px hsl(211 100% 50% / 0.06);
-  --shadow-2xl: 0px 25px 50px -12px hsl(211 100% 50% / 0.15);
+  --shadow-2xs: 0px 1px 2px 0px hsl(215 30% 40% / 0.10);
+  --shadow-xs: 0px 1px 3px 0px hsl(215 30% 40% / 0.12);
+  --shadow-sm: 0px 1px 3px 0px hsl(215 30% 40% / 0.12), 0px 1px 2px -1px hsl(215 30% 40% / 0.08);
+  --shadow: 0px 2px 4px 0px hsl(215 30% 40% / 0.12), 0px 1px 2px -1px hsl(215 30% 40% / 0.08);
+  --shadow-md: 0px 4px 6px -1px hsl(215 30% 40% / 0.12), 0px 2px 4px -1px hsl(215 30% 40% / 0.08);
+  --shadow-lg: 0px 10px 15px -3px hsl(215 30% 40% / 0.12), 0px 4px 6px -2px hsl(215 30% 40% / 0.07);
+  --shadow-xl: 0px 20px 25px -5px hsl(215 30% 40% / 0.14), 0px 8px 10px -6px hsl(215 30% 40% / 0.08);
+  --shadow-2xl: 0px 25px 50px -12px hsl(215 30% 40% / 0.20);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
