@@ -13,6 +13,7 @@ import { Link, useLocation } from "wouter";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { cn } from "@/lib/utils";
 import { ExportButtons } from "@/components/ExportButtons";
+import { makeLsgFilename } from "@/lib/exportUtils";
 import { extractTopic, extractSubject } from "@/lib/autofill";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
@@ -604,7 +605,7 @@ export default function PlagiarismChecker() {
                     <ExportButtons
                       getHtml={() => buildReportHtml(result, text)}
                       getText={() => `AI Detection: ${result.aiScore}%\nPlagiarism Risk: ${result.plagiarismScore}%\nOverall Risk: ${result.overallRisk}\n${result.aiFlags?.length ? "\nAI Indicators:\n" + result.aiFlags.join("\n") : ""}`}
-                      filename={`plagiarism_report_${Date.now()}`}
+                      filename={makeLsgFilename("plagiarism", "AI-PLAGIARISM-REPORT")}
                     />
                   </div>
 
@@ -904,7 +905,7 @@ export default function PlagiarismChecker() {
                     <ExportButtons
                       getHtml={() => buildCodeReportHtml(codeResult)}
                       getText={() => `Code Similarity Report\nAlgorithm: ${codeResult.algorithm}\nSubmission A matched: ${codeResult.similarity1}%\nSubmission B matched: ${codeResult.similarity2}%\nOverall Similarity: ${codeResult.overallSimilarity}%\nRisk: ${codeResult.riskLevel.toUpperCase()}`}
-                      filename={`code_similarity_report_${Date.now()}`}
+                      filename={makeLsgFilename("plagiarism", "CODE-SIMILARITY-REPORT")}
                     />
                   </div>
                 </div>

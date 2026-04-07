@@ -9,7 +9,7 @@ import {
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { detectPaperType, detectCitationStyle, extractTopic, extractSubject } from "@/lib/autofill";
 import { ExportButtons } from "@/components/ExportButtons";
-import { mdToBodyHtml, wrapDocHtml } from "@/lib/exportUtils";
+import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
@@ -516,7 +516,7 @@ export default function WritePaper() {
             <ExportButtons
               getHtml={() => wrapDocHtml(result.title, mdToBodyHtml(result.content) + `<div style="margin-top:32px;border-top:1px solid #ccc;padding-top:16px"><h2>References</h2><p>${result.bibliography.replace(/\n/g, "<br>")}</p></div>`)}
               getText={() => `${result.content}\n\nReferences:\n${result.bibliography}`}
-              filename={(result.title || "paper").replace(/[^a-z0-9]/gi, "_").toLowerCase()}
+              filename={makeLsgFilename("paper", result.title || "PAPER")}
             />
             <button
               onClick={() => { setPhase("config"); setResult(null); setStreamedContent(""); }}

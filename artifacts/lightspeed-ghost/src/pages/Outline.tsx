@@ -6,7 +6,7 @@ import {
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { ExportButtons } from "@/components/ExportButtons";
-import { wrapDocHtml } from "@/lib/exportUtils";
+import { wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { detectPaperType, extractTopic, extractSubject } from "@/lib/autofill";
@@ -134,7 +134,7 @@ export default function Outline() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `outline-${topic.slice(0, 40).replace(/\s+/g, "-").toLowerCase()}.md`;
+    a.download = `${makeLsgFilename("outline", "OUTLINE")}.md`;
     a.click();
     URL.revokeObjectURL(url);
     setCopied(true);
@@ -459,7 +459,7 @@ export default function Outline() {
                 ]),
               ].join("\n");
             }}
-            filename={`outline_${topic.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "outline"}`}
+            filename={makeLsgFilename("outline", "OUTLINE")}
           />
           <Link href={`/write?topic=${encodeURIComponent(topic)}&subject=${encodeURIComponent(subject)}&type=${paperType}`}>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:opacity-80 border border-primary/30 bg-primary/5 rounded-lg px-2.5 py-1.5 transition-all cursor-pointer">

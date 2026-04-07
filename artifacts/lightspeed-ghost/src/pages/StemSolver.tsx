@@ -15,7 +15,7 @@ import type { StemSolution } from "@workspace/api-client-react";
 import StemImageOcr from "@/components/StemImageOcr";
 import MathRenderer from "@/components/MathRenderer";
 import { ExportButtons } from "@/components/ExportButtons";
-import { wrapDocHtml } from "@/lib/exportUtils";
+import { wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -287,7 +287,7 @@ export default function StemSolver() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `stem-${result.subject}-${Date.now()}.txt`;
+    a.download = `${makeLsgFilename("stem", result.subject + "-SOLUTION")}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -597,7 +597,7 @@ export default function StemSolver() {
                       result.steps.length ? `<h2>Step-by-Step Solution</h2>${result.steps.map((s: { stepNumber: number; description: string; expression?: string; explanation: string }) => `<div style="margin-bottom:12px"><p><strong>Step ${s.stepNumber}: ${s.description}</strong></p>${s.expression ? `<p style="font-family:monospace">${s.expression}</p>` : ""}<p>${s.explanation}</p></div>`).join("")}` : "",
                     ].join(""))}
                     getText={() => buildSolutionText(result, solvedProblem)}
-                    filename={`stem_${result.subject.replace(/\s+/g, "_").toLowerCase()}`}
+                    filename={makeLsgFilename("stem", result.subject + "-SOLUTION")}
                   />
                 </div>
                 <div className="px-5 py-5">

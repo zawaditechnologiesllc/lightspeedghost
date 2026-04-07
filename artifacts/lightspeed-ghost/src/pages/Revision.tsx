@@ -11,7 +11,7 @@ import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { ExportButtons } from "@/components/ExportButtons";
-import { mdToBodyHtml, wrapDocHtml } from "@/lib/exportUtils";
+import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -759,7 +759,7 @@ export default function Revision() {
             <ExportButtons
               getHtml={() => wrapDocHtml("Revised Paper", mdToBodyHtml(result.revisedText))}
               getText={() => result.revisedText}
-              filename="revised_paper"
+              filename={makeLsgFilename("revision", "REVISED-PAPER")}
             />
             <button
               onClick={() => { setPhase("upload"); setResult(null); setAnalysis(null); setPaperText(""); setError(""); }}

@@ -16,7 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
 import { ExportButtons } from "@/components/ExportButtons";
-import { wrapDocHtml, mdToBodyHtml } from "@/lib/exportUtils";
+import { wrapDocHtml, mdToBodyHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 
@@ -716,7 +716,7 @@ export default function StudyAssistant() {
                       if (activeView === "slides" && slides) return slides.slides.map(s => `[Slide ${s.slideNum}] ${s.title}\n${s.bullets?.join("\n") ?? ""}`).join("\n\n");
                       return "";
                     }}
-                    filename={`study_${activeView}`}
+                    filename={makeLsgFilename("study", activeView?.toUpperCase() ?? "STUDY")}
                   />
                 </div>
               )}

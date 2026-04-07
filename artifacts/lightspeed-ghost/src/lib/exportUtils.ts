@@ -77,3 +77,30 @@ export function exportAsPDF(html: string): void {
 export async function copyText(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);
 }
+
+// ── LSG filename helper ────────────────────────────────────────────────────────
+// Generates a consistent LSG-prefixed filename for exported files.
+// No DB sequence needed — just encodes type + label cleanly.
+
+const LSG_TYPE_CODES: Record<string, string> = {
+  paper:      "WP",
+  outline:    "OT",
+  revision:   "RV",
+  humanizer:  "HN",
+  plagiarism: "AP",
+  stem:       "SS",
+  study:      "ASA",
+};
+
+export function makeLsgFilename(
+  type: "paper" | "outline" | "revision" | "humanizer" | "plagiarism" | "stem" | "study",
+  label?: string
+): string {
+  const code = LSG_TYPE_CODES[type] ?? type.toUpperCase();
+  const date = new Date();
+  const seq = String(date.getMonth() + 1).padStart(2, "0") + String(date.getDate()).padStart(2, "0");
+  const slug = label
+    ? label.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30)
+    : null;
+  return slug ? `LSG-${code}${seq}-${slug}` : `LSG-${code}${seq}`;
+}

@@ -10,7 +10,7 @@ import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { ExportButtons } from "@/components/ExportButtons";
-import { mdToBodyHtml, wrapDocHtml } from "@/lib/exportUtils";
+import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -545,7 +545,7 @@ export default function Humanizer() {
               <ExportButtons
                 getHtml={() => wrapDocHtml("Humanized Text", mdToBodyHtml(humanizedText))}
                 getText={() => humanizedText}
-                filename="humanized_text"
+                filename={makeLsgFilename("humanizer", "HUMANIZED")}
               />
               <button
                 onClick={handleReset}
