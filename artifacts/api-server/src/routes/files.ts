@@ -12,8 +12,11 @@ const upload = multer({
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "application/msword",
+      "application/rtf",
+      "text/rtf",
       "text/plain",
       "text/markdown",
+      "text/html",
       "image/png",
       "image/jpeg",
       "image/jpg",
@@ -46,6 +49,45 @@ async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; pageC
   };
 }
 
+/**
+ * Fallback text extractor for files that aren't true Word binary documents:
+ * - RTF files (strip control codes)
+ * - Plain text / HTML saved with a .doc extension
+ */
+function extractTextFallback(buffer: Buffer): string {
+  const raw = buffer.toString("utf-8");
+
+  // RTF: strip control words and groups, keep visible text
+  if (raw.trimStart().startsWith("{\\rtf")) {
+    return raw
+      .replace(/\{\\[^{}]*\}/g, " ")         // remove \{...\} groups
+      .replace(/\\[a-z]+[-]?\d* ?/g, " ")    // remove \controlword
+      .replace(/[{}\\]/g, " ")               // remove remaining { } \
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
+  // HTML saved as .doc: strip tags
+  if (/<html[\s>]/i.test(raw) || raw.trimStart().startsWith("<!DOCTYPE")) {
+    return raw
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
+  // Plain text: strip non-printable bytes (keep tabs, newlines, and printable Unicode)
+  const cleaned = raw.replace(/[^\x09\x0A\x0D\x20-\x7E\u00A0-\uFFFF]/g, "").trim();
+  if (cleaned.length < 20) {
+    throw new Error("File does not appear to contain readable text");
+  }
+  return cleaned;
+}
+
 router.post("/files/extract", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
@@ -64,8 +106,26 @@ router.post("/files/extract", upload.single("file"), async (req, res) => {
       mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       mimetype === "application/msword"
     ) {
-      const result = await mammoth.extractRawText({ buffer });
-      text = result.value;
+      try {
+        const result = await mammoth.extractRawText({ buffer });
+        text = result.value;
+      } catch {
+        // mammoth failed — the file may be RTF, HTML, or plain text with a .doc extension
+        text = extractTextFallback(buffer);
+      }
+    } else if (mimetype === "application/rtf" || mimetype === "text/rtf") {
+      text = extractTextFallback(buffer);
+    } else if (mimetype === "text/html") {
+      // Strip HTML tags
+      text = buffer.toString("utf-8")
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"');
     } else if (mimetype.startsWith("text/")) {
       text = buffer.toString("utf-8");
     } else if (mimetype.startsWith("image/")) {

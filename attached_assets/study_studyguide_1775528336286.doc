@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Study Guide: Proof that Poisson Distribution has Mean and Variance λ</title>
+<style>
+  body { font-family: "Times New Roman", serif; font-size: 12pt; line-height: 1.8;
+         max-width: 750px; margin: 60px auto; color: #111; padding: 0 40px; }
+  h1 { font-size: 16pt; text-align: center; margin-bottom: 6px; }
+  h2 { font-size: 13pt; margin-top: 28px; margin-bottom: 8px; }
+  h3 { font-size: 12pt; margin-top: 18px; margin-bottom: 6px; }
+  p  { margin-bottom: 12px; text-align: justify; }
+  ul, ol { margin: 0 0 12px 0; padding-left: 24px; }
+  li { margin-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 16px; font-size: 11pt; }
+  th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+  th { background: #f0f0f0; font-weight: bold; }
+  .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .score-card { border: 1px solid #ddd; border-radius: 8px; padding: 14px; text-align: center; }
+  .score-value { font-size: 28pt; font-weight: bold; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-weight: bold; font-size: 10pt; }
+  .safe   { background: #d1fae5; color: #065f46; }
+  .warn   { background: #fef3c7; color: #92400e; }
+  .danger { background: #fee2e2; color: #991b1b; }
+  .highlight { background: #fff8dc; border-left: 3px solid #e5a000; padding: 8px 12px; margin: 8px 0; }
+  .footer { margin-top: 48px; border-top: 1px solid #ddd; padding-top: 12px; font-size: 9pt; color: #888; }
+  @media print { body { margin: 0.5in; } }
+</style>
+</head>
+<body>
+<h1>Study Guide: Proof that Poisson Distribution has Mean and Variance λ</h1>
+
+<h2>What This Is About</h2><p>This proof demonstrates one of the most important properties of the Poisson distribution: both its mean (expected value) and variance equal the parameter λ. This characteristic makes the Poisson distribution unique and particularly useful in modeling count data. Understanding this proof requires knowledge of probability mass functions, expected value, variance, and series expansions (particularly the exponential series). The proof uses the definition E[X] = Σ x·P(X=x) for mean and Var(X) = E[X²] - (E[X])² for variance.</p><h2>Core Concepts</h2><p><strong>Poisson Distribution PMF:</strong> The probability mass function is P(X=k) = (e^(-λ) · λ^k) / k!, where k = 0,1,2,... and λ > 0 is the rate parameter. The e^(-λ) term normalizes the distribution so probabilities sum to 1. <em>(e.g. For λ=3, P(X=2) = (e^(-3) · 3²) / 2! = (e^(-3) · 9) / 2 ≈ 0.224)</em></p><p><strong>Expected Value (Mean):</strong> E[X] = Σ k·P(X=k) from k=0 to infinity. This represents the long-run average value of the random variable. For the Poisson distribution, clever algebraic manipulation and the exponential series e^λ = Σ λ^k/k! are key. <em>(e.g. E[X] = Σ k · (e^(-λ)λ^k)/k! = λ, showing the mean equals the parameter)</em></p><p><strong>Variance:</strong> Var(X) = E[X²] - (E[X])². Variance measures spread around the mean. Computing E[X²] requires finding Σ k²·P(X=k), which can be split as k² = k(k-1) + k to simplify the algebra. <em>(e.g. For Poisson: Var(X) = λ² + λ - λ² = λ, so variance also equals λ)</em></p><p><strong>Exponential Series:</strong> The fundamental series e^x = Σ(x^n/n!) for n=0 to infinity. This converges for all real x and is essential for manipulating Poisson sums. <em>(e.g. e^λ = 1 + λ + λ²/2! + λ³/3! + ... = Σ λ^k/k!)</em></p><h2>Step-by-Step Proof Process</h2><ol><li>Step 1 - MEAN: Write E[X] = Σ(k=0 to ∞) k · (e^(-λ)λ^k)/k!</li><li>Step 2 - MEAN: Note that when k=0, the term equals 0, so start sum at k=1: E[X] = Σ(k=1 to ∞) k · (e^(-λ)λ^k)/k!</li><li>Step 3 - MEAN: Cancel k with k! to get (k-1)!: E[X] = Σ(k=1 to ∞) (e^(-λ)λ^k)/(k-1)!</li><li>Step 4 - MEAN: Factor out e^(-λ)λ: E[X] = e^(-λ)λ · Σ(k=1 to ∞) λ^(k-1)/(k-1)!</li><li>Step 5 - MEAN: Substitute j=k-1, so sum becomes Σ(j=0 to ∞) λ^j/j! = e^λ: E[X] = e^(-λ)λ · e^λ = λ</li><li>Step 6 - VARIANCE: Write E[X²] = Σ(k=0 to ∞) k² · (e^(-λ)λ^k)/k!</li><li>Step 7 - VARIANCE: Use identity k² = k(k-1) + k to split: E[X²] = Σ k(k-1)·P(X=k) + Σ k·P(X=k)</li><li>Step 8 - VARIANCE: Recognize Σ k·P(X=k) = E[X] = λ, so E[X²] = Σ k(k-1)·(e^(-λ)λ^k)/k! + λ</li><li>Step 9 - VARIANCE: Simplify k(k-1)/k! = 1/(k-2)! for k≥2: E[X²] = Σ(k=2 to ∞) (e^(-λ)λ^k)/(k-2)! + λ</li><li>Step 10 - VARIANCE: Factor out e^(-λ)λ²: E[X²] = e^(-λ)λ² · Σ(k=2 to ∞) λ^(k-2)/(k-2)! + λ</li><li>Step 11 - VARIANCE: Substitute m=k-2, sum becomes e^λ: E[X²] = e^(-λ)λ² · e^λ + λ = λ² + λ</li><li>Step 12 - VARIANCE: Apply variance formula: Var(X) = E[X²] - (E[X])² = (λ² + λ) - λ² = λ</li></ol><h2>Exam Tips</h2><ul><li>Remember that the first term (k=0) in the mean calculation equals zero, so you can start from k=1 to simplify</li><li>Common mistake: Forgetting to factor out constants (e^(-λ) and powers of λ) before applying the exponential series</li><li>Key technique: Canceling k with k! gives (k-1)!, and k(k-1) with k! gives (k-2)! - master this algebraic manipulation</li><li>The exponential series Σ λ^k/k! = e^λ is crucial - memorize this and recognize when sums match this form</li><li>For variance, using k² = k(k-1) + k is much easier than computing E[X²] directly</li><li>Both proofs follow similar patterns: sum → cancel factorials → factor out constants → recognize exponential series → simplify</li><li>Understand WHY mean = variance = λ conceptually: λ represents both the average rate and the spread of events</li><li>Practice: Be able to prove this from scratch without notes, as it's a common exam question</li></ul><h2>Quick Reference</h2><table><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody><tr><td><strong>Poisson PMF</strong></td><td>P(X=k) = (e^(-λ) · λ^k) / k!</td></tr><tr><td><strong>Mean Result</strong></td><td>E[X] = λ</td></tr><tr><td><strong>Variance Result</strong></td><td>Var(X) = λ</td></tr><tr><td><strong>Exponential Series</strong></td><td>e^λ = Σ(k=0 to ∞) λ^k/k!</td></tr><tr><td><strong>Variance Formula</strong></td><td>Var(X) = E[X²] - (E[X])²</td></tr><tr><td><strong>Key Identity</strong></td><td>k² = k(k-1) + k</td></tr><tr><td><strong>Factorial Cancellation</strong></td><td>k/k! = 1/(k-1)! and k(k-1)/k! = 1/(k-2)!</td></tr></tbody></table>
+<div class="footer">LightSpeed Ghost &middot; lightspeedghost.com</div>
+</body>
+</html>
