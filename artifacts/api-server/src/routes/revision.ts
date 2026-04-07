@@ -7,6 +7,8 @@ import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage } from "../lib/usageTracker";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
+import { computeBurstiness, sampleTextSections } from "../lib/textAnalysis.js";
+import { buildGradeCriteria } from "../lib/gradeStandards.js";
 
 const router = Router();
 
@@ -19,6 +21,10 @@ router.post("/revision/analyse", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Paper text is too short to analyse" });
     }
 
+    // Compute burstiness (Turnitin's primary AI signal) and sample full text
+    const { score: burstiness, stdDev } = computeBurstiness(text);
+    const sample = sampleTextSections(text);
+
     const resp = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       max_tokens: 700,
@@ -26,29 +32,40 @@ router.post("/revision/analyse", requireAuth, async (req, res) => {
       messages: [
         {
           role: "system",
-          content: `You are a specialist academic integrity analyst. Carefully analyse the provided academic text and estimate two scores:
+          content: `You are a specialist academic integrity analyst replicating Turnitin and GPTZero methodology.
 
-1. AI CONTENT SCORE (0–100%): How much of this text was likely written by an AI language model?
-Look for: perfectly uniform sentence length, generic phrasing with no personal voice, repetitive transition words ("Furthermore", "Moreover", "In conclusion"), lack of genuine hedging language, absence of natural academic imperfections, overly balanced structure, clichés ("delve into", "pivotal", "crucial", "underscore"), zero colloquialisms, and text that sounds like a summary rather than original analysis.
+The text has been pre-measured for burstiness (sentence length variance):
+- Burstiness stdDev: ${stdDev} words (human writing: 8–15, AI writing: 3–6)
+- Burstiness score: ${burstiness}/100 (higher = more human-like variation)
 
-2. PLAGIARISM RISK (0–100%): How likely is it that parts of this text were copied or thinly paraphrased without attribution?
-Look for: dense technical sentences lacking citations, encyclopedia-style factual passages, well-known definitions stated without reference, text that reads identically to common academic sources.
-
-THRESHOLD: AI score > 30% = recommend new paper. Most institutions set 30% as the hard rejection threshold.
-
-Return ONLY valid JSON:
+Analyse the sampled text sections (beginning, middle, end) and return ONLY valid JSON:
 {
-  "aiScore": number,
-  "plagiarismScore": number,
-  "aiReason": "1-2 sentence explanation of the AI indicators found",
+  "aiScore": number (0-100, calibrated against burstiness above — low burstiness strongly suggests AI),
+  "plagiarismScore": number (0-100),
+  "aiReason": "1-2 sentence explanation of the specific AI indicators found",
   "plagiarismReason": "1-2 sentence explanation of the plagiarism indicators found",
   "recommendation": "revise" or "new_paper",
   "wordCount": number
-}`,
+}
+
+AI SIGNALS (raise aiScore):
+• Low burstiness already measured — weight this heavily
+• Uniform sentence lengths throughout
+• Transition clichés: "Furthermore", "Moreover", "In conclusion" as openers
+• AI vocabulary: "delve", "crucial", "pivotal", "underscore", "navigate complexities", "it is worth noting"
+• Encyclopaedic neutral tone with no personal analytical voice
+• Perfect paragraph symmetry (every paragraph same structure)
+
+PLAGIARISM SIGNALS (raise plagiarismScore):
+• Dense technical sentences with no citations
+• Well-known definitions stated without reference
+• Encyclopedia-style factual passages
+
+THRESHOLD: aiScore > 30 → "new_paper". Most institutions set 30% as the hard rejection threshold.`,
         },
         {
           role: "user",
-          content: `Analyse this paper (first 3500 characters):\n\n${text.slice(0, 3500)}`,
+          content: `Analyse these text sections:\n\n${sample}`,
         },
       ],
     });
@@ -61,7 +78,11 @@ Return ONLY valid JSON:
     try { raw = JSON.parse(resp.choices[0]?.message?.content ?? "{}"); } catch { /* use defaults */ }
 
     const wordCount = text.split(/\s+/).filter(Boolean).length;
-    const aiScore = Math.min(100, Math.max(0, Number(raw.aiScore) || 45));
+    const gptAiScore = Math.min(100, Math.max(0, Number(raw.aiScore) || 45));
+
+    // Blend GPT score with burstiness: low burstiness pushes score up
+    const burstinessPenalty = burstiness < 30 ? Math.round((30 - burstiness) * 0.5) : 0;
+    const aiScore = Math.min(98, gptAiScore + burstinessPenalty);
 
     res.json({
       aiScore,
@@ -101,6 +122,7 @@ router.post("/revision/submit-stream", requireAuth, async (req, res) => {
     const body = req.body as {
       originalText: string;
       targetGrade?: string;
+      academicLevel?: string;
       marksScored?: string;
       gradingCriteria?: string;
       referenceText?: string;
@@ -108,6 +130,10 @@ router.post("/revision/submit-stream", requireAuth, async (req, res) => {
     };
 
     const targetGradeNorm = body.targetGrade?.trim() || "A / 92%+";
+
+    // Use uploaded rubric or fall back to built-in A-grade criteria for this academic level
+    const effectiveGradingCriteria = body.gradingCriteria?.trim()
+      || buildGradeCriteria(body.academicLevel);
     const wordCount = body.originalText.split(/\s+/).filter(Boolean).length;
 
     // ── Step 1: Section-level analysis ───────────────────────────────────────
@@ -138,7 +164,9 @@ router.post("/revision/submit-stream", requireAuth, async (req, res) => {
           {
             role: "system",
             content: `You are an expert academic reviewer. Analyse this paper and identify every section that needs improvement to reach ${targetGradeNorm} (minimum floor: 92%).
-${body.gradingCriteria ? `\nMARKING RUBRIC:\n${body.gradingCriteria}` : ""}
+
+GRADING CRITERIA (these determine whether the paper earns ${targetGradeNorm}):
+${effectiveGradingCriteria}
 ${body.marksScored ? `\nCURRENT GRADE: ${body.marksScored}` : ""}
 Return ONLY valid JSON:
 {
@@ -178,9 +206,7 @@ Return ONLY valid JSON:
       status: "running",
     });
 
-    const gradingContext = body.gradingCriteria
-      ? `\nMARKING RUBRIC (optimise every criterion listed below — this is what determines the grade):\n${body.gradingCriteria}`
-      : "";
+    const gradingContext = `\nGRADING CRITERIA (optimise every criterion — this is what determines the grade):\n${effectiveGradingCriteria}`;
     const marksContext = body.marksScored
       ? `\nSTUDENT'S CURRENT SCORE: ${body.marksScored} — identify every reason the paper lost marks and fix them.`
       : "";

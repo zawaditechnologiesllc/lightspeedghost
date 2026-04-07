@@ -7,46 +7,11 @@ import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage } from "../lib/usageTracker";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
+import { computeBurstiness, sampleTextSections } from "../lib/textAnalysis.js";
 
 const router = Router();
 
 // ── AI detection helper (actual GPT-4o-mini scoring, not self-assessment) ─────
-
-// ── Burstiness helper (Turnitin's primary signal) ────────────────────────────
-// AI text has LOW burstiness — sentences are uniformly complex.
-// Human text has HIGH burstiness — mixes short punchy sentences with long complex ones.
-function computeBurstiness(text: string): { score: number; avgLen: number; stdDev: number } {
-  const sentences = text
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim().split(/\s+/).length)
-    .filter((n) => n >= 3);
-
-  if (sentences.length < 4) return { score: 0, avgLen: 0, stdDev: 0 };
-
-  const mean = sentences.reduce((a, b) => a + b, 0) / sentences.length;
-  const variance = sentences.reduce((sum, l) => sum + (l - mean) ** 2, 0) / sentences.length;
-  const stdDev = Math.sqrt(variance);
-
-  // Burstiness score: high stdDev = high burstiness = more human
-  // AI text: stdDev typically 3-6; human text: stdDev typically 8-15
-  const burstinessScore = Math.min(100, Math.round(stdDev * 6.5));
-  return { score: burstinessScore, avgLen: Math.round(mean), stdDev: Math.round(stdDev * 10) / 10 };
-}
-
-// ── Multi-section text sampler ────────────────────────────────────────────────
-// Turnitin analyses the full document. We sample beginning, middle, and end
-// so long papers aren't only scored on their opening paragraphs.
-function sampleTextSections(text: string, maxCharsPerSection = 1800): string {
-  const total = text.length;
-  if (total <= maxCharsPerSection * 2) return text.slice(0, maxCharsPerSection * 2);
-
-  const start = text.slice(0, maxCharsPerSection);
-  const midStart = Math.floor(total / 2) - Math.floor(maxCharsPerSection / 2);
-  const mid = text.slice(midStart, midStart + maxCharsPerSection);
-  const end = text.slice(total - maxCharsPerSection);
-
-  return `[BEGINNING]\n${start}\n\n[MIDDLE]\n${mid}\n\n[END]\n${end}`;
-}
 
 async function detectAIScore(text: string): Promise<{ score: number; indicators: string[] }> {
   try {
