@@ -462,6 +462,15 @@ export default function Revision() {
           </div>
         </div>
       </div>
+      <PaywallFlow
+        pickerState={pickerState}
+        checkoutState={checkoutState}
+        plan={plan}
+        closePicker={closePicker}
+        closeCheckout={closeCheckout}
+        chooseSubscription={chooseSubscription}
+        choosePayg={choosePayg}
+      />
     );
   }
 
