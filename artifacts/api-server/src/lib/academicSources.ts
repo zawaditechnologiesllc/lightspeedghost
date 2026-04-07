@@ -18,6 +18,7 @@
  */
 
 import { withCache } from "./cache.js";
+import { ssRateLimit } from "./ssRateLimit.js";
 
 export interface AcademicPaper {
   title: string;
@@ -457,6 +458,7 @@ async function searchArXiv(
 // ── Semantic Scholar ───────────────────────────────────────────────────────────
 // 200M+ papers — CS, AI, medicine, biology, physics, economics
 // AI-enhanced metadata: citation counts, open access PDFs, author disambiguation
+// Rate limit: 1 req/sec with API key — enforced via shared ssRateLimit()
 
 async function searchSemanticScholar(
   query: string,
@@ -468,6 +470,8 @@ async function searchSemanticScholar(
       limit: String(Math.min(limit, 6)),
       fields: "paperId,title,authors,year,abstract,openAccessPdf,citationCount,externalIds",
     });
+
+    await ssRateLimit();
 
     const ssHeaders: Record<string, string> = { "User-Agent": "LightSpeedGhost/1.0" };
     if (process.env.SEMANTIC_SCHOLAR_API_KEY) ssHeaders["x-api-key"] = process.env.SEMANTIC_SCHOLAR_API_KEY;

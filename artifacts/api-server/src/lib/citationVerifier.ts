@@ -7,6 +7,7 @@
  */
 
 import { withCache } from "./cache.js";
+import { ssRateLimit } from "./ssRateLimit.js";
 
 export interface VerifiedCitation {
   id: string;
@@ -30,6 +31,8 @@ export async function searchSemanticScholar(
       limit: String(limit),
       fields: "title,authors,year,externalIds,url,citationCount",
     });
+
+    await ssRateLimit();
 
     const ssHeaders: Record<string, string> = { "User-Agent": "LightSpeedGhost/1.0 Academic Tool" };
     if (process.env.SEMANTIC_SCHOLAR_API_KEY) ssHeaders["x-api-key"] = process.env.SEMANTIC_SCHOLAR_API_KEY;
