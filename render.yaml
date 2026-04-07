@@ -2,7 +2,7 @@ services:
   - type: web
     name: lightspeedghost-api
     runtime: node
-    buildCommand: apt-get install -y poppler-utils && pnpm install && pnpm --filter @workspace/api-server run build
+    buildCommand: DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends poppler-utils && pnpm install && pnpm --filter @workspace/api-server run build
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
     plan: free
     healthCheckPath: /api/healthz

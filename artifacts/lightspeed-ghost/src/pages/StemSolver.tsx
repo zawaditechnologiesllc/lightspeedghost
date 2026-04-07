@@ -130,8 +130,12 @@ const SUBJECT_META: Record<string, { label: string; icon: React.ReactNode; color
   statistics: { label: "Stats", icon: <BarChart2 size={13} />, color: "rose" },
 };
 
+const API = import.meta.env.VITE_API_URL ?? "";
+
 export default function StemSolver() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isFileExtracting, setIsFileExtracting] = useState(false);
+  const [fileExtractError, setFileExtractError] = useState<string | null>(null);
   const [result, setResult] = useState<StemSolution | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [papersLoading, setPapersLoading] = useState(false);
@@ -167,16 +171,32 @@ export default function StemSolver() {
   const showBioModels = selectedSubject === "biology" || selectedSubject === "chemistry";
   const showMolecule = selectedSubject === "chemistry";
 
-  const handleStemFileExtracted = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStemFileExtracted = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = (ev.target?.result as string) ?? "";
-      form.setValue("problem", text.slice(0, 1000));
-    };
-    reader.readAsText(file);
     e.target.value = "";
+    setIsFileExtracting(true);
+    setFileExtractError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${API}/api/files/extract`, { method: "POST", body: formData });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Server error ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.isImage) {
+        setFileExtractError("Image files are not supported here — use the camera/OCR button instead.");
+        return;
+      }
+      const extracted: string = data.text ?? "";
+      form.setValue("problem", extracted.slice(0, 2000));
+    } catch (err) {
+      setFileExtractError(err instanceof Error ? err.message : "Failed to extract file text");
+    } finally {
+      setIsFileExtracting(false);
+    }
   };
 
   const handleStemImageOcr = (text: string) => form.setValue("problem", text.slice(0, 1000));
@@ -393,14 +413,20 @@ export default function StemSolver() {
         {/* Upload tools row */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-0 flex-wrap">
           <StemImageOcr onExtracted={handleStemImageOcr} compact />
-          <input ref={fileInputRef} type="file" accept=".txt,.pdf,.docx,.doc" className="sr-only" onChange={handleStemFileExtracted} />
+          <input ref={fileInputRef} type="file" accept=".txt,.pdf,.docx,.doc,.md" className="sr-only" onChange={handleStemFileExtracted} />
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 bg-card transition-all"
+            disabled={isFileExtracting}
+            onClick={() => { setFileExtractError(null); fileInputRef.current?.click(); }}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 bg-card transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FileText size={12} /> Upload file
+            {isFileExtracting
+              ? <><Loader2 size={12} className="animate-spin" /> Extracting…</>
+              : <><FileText size={12} /> Upload file</>}
           </button>
+          {fileExtractError && (
+            <span className="text-xs text-destructive">{fileExtractError}</span>
+          )}
         </div>
         {/* Textarea */}
         <textarea
