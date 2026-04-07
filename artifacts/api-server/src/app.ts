@@ -28,6 +28,20 @@ pool.query(SESSION_TABLE_SQL).catch(() => {});
 
 const app: Express = express();
 
+// ── Trust Render's proxy — required for express-rate-limit to read real IPs ───
+// Render (and most PaaS) sits behind a load balancer that sets X-Forwarded-For.
+// Without this, express-rate-limit throws a validation error on every request.
+app.set("trust proxy", 1);
+
+// ── Health check — MUST be before CORS so monitoring tools (no Origin header) ─
+// don't get rejected. UptimeRobot, Render health checks, etc. send no Origin.
+app.get("/api/health", (_req: Request, res: Response) => {
+  res.json({ status: "ok" });
+});
+app.head("/api/health", (_req: Request, res: Response) => {
+  res.status(200).end();
+});
+
 // ── Security headers (helmet) ─────────────────────────────────────────────────
 app.use(
   helmet({
@@ -179,11 +193,6 @@ app.use(requestLoggerMiddleware);
 
 // ── Suppress noisy X-Powered-By header ───────────────────────────────────────
 app.disable("x-powered-by");
-
-// ── Health check (unauthenticated) ────────────────────────────────────────────
-app.get("/api/health", (_req: Request, res: Response) => {
-  res.json({ status: "ok" });
-});
 
 app.use("/api", router);
 
