@@ -11,6 +11,7 @@ import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { ExportButtons } from "@/components/ExportButtons";
 import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { apiFetch } from "@/lib/apiFetch";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -96,7 +97,6 @@ function RiskBadge({ score, label }: { score: number; label: string }) {
 
 export default function Humanizer() {
   const { user } = useAuth();
-  const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   // ── phase
@@ -147,7 +147,7 @@ export default function Humanizer() {
     guard("humanizer", async () => {
       setPhase("detecting");
       try {
-        const resp = await fetch(`${API_BASE}/humanizer/detect`, {
+        const resp = await apiFetch(`/humanizer/detect`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -176,7 +176,7 @@ export default function Humanizer() {
     abortRef.current = new AbortController();
 
     try {
-      const resp = await fetch(`${API_BASE}/humanizer/humanize-stream`, {
+      const resp = await apiFetch(`/humanizer/humanize-stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -221,7 +221,7 @@ export default function Humanizer() {
       if (err instanceof Error && err.name === "AbortError") return;
       setPhase("decision");
     }
-  }, [inputText, tone, instructions, API_BASE]);
+  }, [inputText, tone, instructions]);
 
   function handleCopy(text: string) {
     navigator.clipboard.writeText(text).then(() => {

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { ExportButtons } from "@/components/ExportButtons";
 import { wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiFetch } from "@/lib/apiFetch";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { detectPaperType, extractTopic, extractSubject } from "@/lib/autofill";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
@@ -66,7 +67,6 @@ function getProgressSteps(topic: string, subj: string): string[] {
 
 export default function Outline() {
   useAuth();
-  const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   const [topic, setTopic] = useState("");
@@ -156,7 +156,7 @@ export default function Outline() {
     }, 1000);
 
     try {
-      const resp = await fetch(`${API_BASE}/writing/outline`, {
+      const resp = await apiFetch(`/writing/outline`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

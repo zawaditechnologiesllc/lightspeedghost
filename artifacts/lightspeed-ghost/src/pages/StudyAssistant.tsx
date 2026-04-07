@@ -17,10 +17,10 @@ import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
 import { ExportButtons } from "@/components/ExportButtons";
 import { wrapDocHtml, mdToBodyHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { apiFetch } from "@/lib/apiFetch";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 
-const API = import.meta.env.VITE_API_URL ?? "";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -147,7 +147,7 @@ async function callGenerate(
   images: { base64: string; mimeType: string }[],
   weakTopics?: string[],
 ) {
-  const res = await fetch(`${API}/api/study/generate`, {
+  const res = await apiFetch(`/study/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content, type, subject, weakTopics, images }),
@@ -253,7 +253,7 @@ export default function StudyAssistant() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch(`${API}/api/files/extract`, { method: "POST", body: fd });
+      const res = await apiFetch(`/files/extract`, { method: "POST", body: fd });
       if (!res.ok) throw new Error("Failed to extract");
       const data = await res.json() as {
         text?: string; wordCount?: number; isImage?: boolean;

@@ -10,6 +10,7 @@ import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone"
 import { detectPaperType, detectCitationStyle, extractTopic, extractSubject } from "@/lib/autofill";
 import { ExportButtons } from "@/components/ExportButtons";
 import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { apiFetch } from "@/lib/apiFetch";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
@@ -142,7 +143,6 @@ ${content
 
 export default function WritePaper() {
   const { user } = useAuth();
-  const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   // ── phase
@@ -239,7 +239,7 @@ export default function WritePaper() {
 
     try {
       
-      const resp = await fetch(`${API_BASE}/writing/generate-stream`, {
+      const resp = await apiFetch(`/writing/generate-stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -332,7 +332,7 @@ export default function WritePaper() {
     setIsSaving(true);
     try {
       
-      const resp = await fetch(`${API_BASE}/writing/save/${result.documentId}`, {
+      const resp = await apiFetch(`/writing/save/${result.documentId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

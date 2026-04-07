@@ -12,6 +12,7 @@ import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { ExportButtons } from "@/components/ExportButtons";
 import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { apiFetch } from "@/lib/apiFetch";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -104,7 +105,6 @@ function ScoreBadge({ score, label, inverse = false }: { score: number; label: s
 
 export default function Revision() {
   const { user } = useAuth();
-  const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   // ── phase
@@ -183,7 +183,7 @@ export default function Revision() {
 
     try {
       
-      const resp = await fetch(`${API_BASE}/revision/analyse`, {
+      const resp = await apiFetch(`/revision/analyse`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -216,7 +216,7 @@ export default function Revision() {
 
     try {
       
-      const resp = await fetch(`${API_BASE}/revision/submit-stream`, {
+      const resp = await apiFetch(`/revision/submit-stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

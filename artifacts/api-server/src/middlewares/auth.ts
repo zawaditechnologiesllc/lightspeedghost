@@ -37,18 +37,32 @@ interface SupabaseJwtPayload {
 
 /**
  * Verifies a Supabase JWT using the project's JWT secret (HS256).
- * Returns null if the secret is not configured or the token is invalid/expired.
- * Never falls back to unverified decoding — forged tokens are always rejected.
+ *
+ * Production: requires SUPABASE_JWT_SECRET — returns null if unset or invalid.
+ * Development: falls back to jwt.decode() (no signature check) so the dev
+ *   environment works without the secret.  This fallback is never active
+ *   when NODE_ENV==="production".
  */
 function verifyJwt(token: string): SupabaseJwtPayload | null {
-  if (!SUPABASE_JWT_SECRET) {
-    return null;
+  if (SUPABASE_JWT_SECRET) {
+    try {
+      return jwt.verify(token, SUPABASE_JWT_SECRET) as SupabaseJwtPayload;
+    } catch {
+      return null;
+    }
   }
-  try {
-    return jwt.verify(token, SUPABASE_JWT_SECRET) as SupabaseJwtPayload;
-  } catch {
-    return null;
+
+  // Dev-only fallback: decode without signature verification
+  if (process.env.NODE_ENV !== "production") {
+    try {
+      const decoded = jwt.decode(token) as SupabaseJwtPayload | null;
+      if (decoded?.sub) return decoded;
+    } catch {
+      // ignore
+    }
   }
+
+  return null;
 }
 
 export function authMiddleware(req: Request, _res: Response, next: NextFunction) {
