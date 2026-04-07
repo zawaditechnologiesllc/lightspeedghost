@@ -6,12 +6,66 @@ settings:
 
 catalogs:
   default:
+    '@replit/vite-plugin-cartographer':
+      specifier: ^0.5.1
+      version: 0.5.1
+    '@replit/vite-plugin-dev-banner':
+      specifier: ^0.1.1
+      version: 0.1.2
+    '@replit/vite-plugin-runtime-error-modal':
+      specifier: ^0.0.6
+      version: 0.0.6
+    '@tailwindcss/vite':
+      specifier: ^4.1.14
+      version: 4.2.1
+    '@tanstack/react-query':
+      specifier: ^5.90.21
+      version: 5.90.21
     '@types/node':
       specifier: ^25.3.3
       version: 25.3.5
+    '@types/react':
+      specifier: ^19.2.0
+      version: 19.2.14
+    '@types/react-dom':
+      specifier: ^19.2.0
+      version: 19.2.3
+    '@vitejs/plugin-react':
+      specifier: ^5.0.4
+      version: 5.1.4
+    class-variance-authority:
+      specifier: ^0.7.1
+      version: 0.7.1
+    clsx:
+      specifier: ^2.1.1
+      version: 2.1.1
     drizzle-orm:
       specifier: ^0.45.1
       version: 0.45.1
+    framer-motion:
+      specifier: ^12.23.24
+      version: 12.35.1
+    lucide-react:
+      specifier: ^0.545.0
+      version: 0.545.0
+    react:
+      specifier: 19.1.0
+      version: 19.1.0
+    react-dom:
+      specifier: 19.1.0
+      version: 19.1.0
+    tailwind-merge:
+      specifier: ^3.3.1
+      version: 3.5.0
+    tailwindcss:
+      specifier: ^4.1.14
+      version: 4.2.1
+    tsx:
+      specifier: ^4.21.0
+      version: 4.21.0
+    vite:
+      specifier: ^7.3.0
+      version: 7.3.1
     zod:
       specifier: 3.25.76
       version: 3.25.76
@@ -117,7 +171,7 @@ importers:
         version: 0.82.0(zod@3.25.76)
       '@memvid/sdk':
         specifier: ^2.0.159
-        version: 2.0.159(@llamaindex/env@0.1.31)(@napi-rs/canvas@0.1.97)(@opentelemetry/api@1.9.0)(openai@6.33.0(zod@3.25.76))(zod@3.25.76)
+        version: 2.0.159(@llamaindex/env@0.1.31)(@napi-rs/canvas@0.1.97)(@opentelemetry/api@1.9.0)(openai@6.33.0(ws@8.20.0)(zod@3.25.76))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(ws@8.20.0)(zod@3.25.76)
       '@upstash/redis':
         specifier: ^1.37.0
         version: 1.37.0
@@ -159,7 +213,7 @@ importers:
         version: 2.1.1
       openai:
         specifier: ^6.33.0
-        version: 6.33.0(zod@3.25.76)
+        version: 6.33.0(ws@8.20.0)(zod@3.25.76)
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
@@ -4973,17 +5027,20 @@ snapshots:
     dependencies:
       uuid: 10.0.0
 
-  '@langchain/langgraph-sdk@1.8.7':
+  '@langchain/langgraph-sdk@1.8.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
       '@types/json-schema': 7.0.15
       p-queue: 9.1.1
       p-retry: 7.1.1
       uuid: 13.0.0
+    optionalDependencies:
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
 
-  '@langchain/langgraph@1.2.7(zod@3.25.76)':
+  '@langchain/langgraph@1.2.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(zod@3.25.76)':
     dependencies:
       '@langchain/langgraph-checkpoint': 1.0.1
-      '@langchain/langgraph-sdk': 1.8.7
+      '@langchain/langgraph-sdk': 1.8.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@standard-schema/spec': 1.1.0
       uuid: 10.0.0
       zod: 3.25.76
@@ -4993,10 +5050,10 @@ snapshots:
       - svelte
       - vue
 
-  '@langchain/langgraph@1.2.7(zod@4.3.6)':
+  '@langchain/langgraph@1.2.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(zod@4.3.6)':
     dependencies:
       '@langchain/langgraph-checkpoint': 1.0.1
-      '@langchain/langgraph-sdk': 1.8.7
+      '@langchain/langgraph-sdk': 1.8.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@standard-schema/spec': 1.1.0
       uuid: 10.0.0
       zod: 4.3.6
@@ -5006,10 +5063,10 @@ snapshots:
       - svelte
       - vue
 
-  '@langchain/openai@1.4.2':
+  '@langchain/openai@1.4.2(ws@8.20.0)':
     dependencies:
       js-tiktoken: 1.0.21
-      openai: 6.33.0(zod@4.3.6)
+      openai: 6.33.0(ws@8.20.0)(zod@4.3.6)
       zod: 4.3.6
     transitivePeerDependencies:
       - ws
@@ -5054,11 +5111,11 @@ snapshots:
       '@llamaindex/env': 0.1.30
       html-to-text: 9.0.5
 
-  '@llamaindex/openai@0.4.23(@llamaindex/core@0.6.23)(@llamaindex/env@0.1.31)(zod@3.25.76)':
+  '@llamaindex/openai@0.4.23(@llamaindex/core@0.6.23)(@llamaindex/env@0.1.31)(ws@8.20.0)(zod@3.25.76)':
     dependencies:
       '@llamaindex/core': 0.6.23
       '@llamaindex/env': 0.1.31
-      openai: 5.23.2(zod@3.25.76)
+      openai: 5.23.2(ws@8.20.0)(zod@3.25.76)
     transitivePeerDependencies:
       - ws
       - zod
@@ -5095,18 +5152,18 @@ snapshots:
   '@memvid/sdk-win32-x64-msvc@2.0.159':
     optional: true
 
-  '@memvid/sdk@2.0.159(@llamaindex/env@0.1.31)(@napi-rs/canvas@0.1.97)(@opentelemetry/api@1.9.0)(openai@6.33.0(zod@3.25.76))(zod@3.25.76)':
+  '@memvid/sdk@2.0.159(@llamaindex/env@0.1.31)(@napi-rs/canvas@0.1.97)(@opentelemetry/api@1.9.0)(openai@6.33.0(ws@8.20.0)(zod@3.25.76))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(ws@8.20.0)(zod@3.25.76)':
     dependencies:
       '@ai-sdk/openai': 1.3.24(zod@3.25.76)
       '@google/generative-ai': 0.24.1
       '@gutenye/ocr-node': 1.4.8
-      '@langchain/langgraph': 1.2.7(zod@3.25.76)
-      '@langchain/openai': 1.4.2
+      '@langchain/langgraph': 1.2.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(zod@3.25.76)
+      '@langchain/openai': 1.4.2(ws@8.20.0)
       '@llamaindex/core': 0.6.23
-      '@llamaindex/openai': 0.4.23(@llamaindex/core@0.6.23)(@llamaindex/env@0.1.31)(zod@3.25.76)
+      '@llamaindex/openai': 0.4.23(@llamaindex/core@0.6.23)(@llamaindex/env@0.1.31)(ws@8.20.0)(zod@3.25.76)
       ai: 6.0.146(zod@3.25.76)
       exceljs: 4.4.0
-      langchain: 1.3.0(@opentelemetry/api@1.9.0)(openai@6.33.0(zod@3.25.76))
+      langchain: 1.3.0(@opentelemetry/api@1.9.0)(openai@6.33.0(ws@8.20.0)(zod@3.25.76))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(ws@8.20.0)
       llamaindex: 0.12.1(zod@3.25.76)
       officeparser: 6.0.7
       unpdf: 1.4.0(@napi-rs/canvas@0.1.97)
@@ -5116,7 +5173,7 @@ snapshots:
       '@memvid/sdk-linux-arm64-gnu': 2.0.159
       '@memvid/sdk-linux-x64-gnu': 2.0.159
       '@memvid/sdk-win32-x64-msvc': 2.0.159
-      openai: 6.33.0(zod@3.25.76)
+      openai: 6.33.0(ws@8.20.0)(zod@3.25.76)
       zod: 3.25.76
     transitivePeerDependencies:
       - '@huggingface/transformers'
@@ -7374,11 +7431,11 @@ snapshots:
     dependencies:
       commander: 8.3.0
 
-  langchain@1.3.0(@opentelemetry/api@1.9.0)(openai@6.33.0(zod@3.25.76)):
+  langchain@1.3.0(@opentelemetry/api@1.9.0)(openai@6.33.0(ws@8.20.0)(zod@3.25.76))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(ws@8.20.0):
     dependencies:
-      '@langchain/langgraph': 1.2.7(zod@4.3.6)
+      '@langchain/langgraph': 1.2.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(zod@4.3.6)
       '@langchain/langgraph-checkpoint': 1.0.1
-      langsmith: 0.5.16(@opentelemetry/api@1.9.0)(openai@6.33.0(zod@3.25.76))
+      langsmith: 0.5.16(@opentelemetry/api@1.9.0)(openai@6.33.0(ws@8.20.0)(zod@3.25.76))(ws@8.20.0)
       uuid: 11.1.0
       zod: 4.3.6
     transitivePeerDependencies:
@@ -7393,7 +7450,7 @@ snapshots:
       - ws
       - zod-to-json-schema
 
-  langsmith@0.5.16(@opentelemetry/api@1.9.0)(openai@6.33.0(zod@3.25.76)):
+  langsmith@0.5.16(@opentelemetry/api@1.9.0)(openai@6.33.0(ws@8.20.0)(zod@3.25.76))(ws@8.20.0):
     dependencies:
       chalk: 5.6.2
       console-table-printer: 2.15.0
@@ -7402,7 +7459,8 @@ snapshots:
       uuid: 10.0.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
-      openai: 6.33.0(zod@3.25.76)
+      openai: 6.33.0(ws@8.20.0)(zod@3.25.76)
+      ws: 8.20.0
 
   lazystream@1.0.1:
     dependencies:
@@ -7678,16 +7736,19 @@ snapshots:
       global-agent: 3.0.0
       onnxruntime-common: 1.24.3
 
-  openai@5.23.2(zod@3.25.76):
+  openai@5.23.2(ws@8.20.0)(zod@3.25.76):
     optionalDependencies:
+      ws: 8.20.0
       zod: 3.25.76
 
-  openai@6.33.0(zod@3.25.76):
+  openai@6.33.0(ws@8.20.0)(zod@3.25.76):
     optionalDependencies:
+      ws: 8.20.0
       zod: 3.25.76
 
-  openai@6.33.0(zod@4.3.6):
+  openai@6.33.0(ws@8.20.0)(zod@4.3.6):
     optionalDependencies:
+      ws: 8.20.0
       zod: 4.3.6
 
   opencollective-postinstall@2.0.3: {}

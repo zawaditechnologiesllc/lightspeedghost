@@ -1,7 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
 import mammoth from "mammoth";
-import { spawn } from "child_process";
 
 const router = Router();
 
@@ -29,68 +28,22 @@ const upload = multer({
 });
 
 /**
- * Extract text from a PDF buffer.
+ * Extract text from a PDF buffer using pdf-parse v2 (pure JS, no system binaries).
+ * Works on any host including Render, Vercel, etc.
  *
- * Primary:  pdftotext (poppler-utils) — handles PDF 1.0–2.0 including
- *           cross-reference streams, scanned PDFs, encrypted PDFs.
- * Fallback: pdf2json — for environments where pdftotext is unavailable.
+ * v2 API: { PDFParse } is a class.
+ *   const parser = new PDFParse({ data: buffer });
+ *   const { text, totalPages } = await parser.getText();
  */
 async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; pageCount: number }> {
-  // --- Primary: system pdftotext -------------------------------------------
-  try {
-    const text = await new Promise<string>((resolve, reject) => {
-      // pdftotext -layout - -   reads from stdin, writes to stdout
-      const proc = spawn("pdftotext", ["-layout", "-enc", "UTF-8", "-", "-"]);
-      let out = "";
-      let err = "";
-
-      proc.stdout.on("data", (chunk: Buffer) => { out += chunk.toString("utf-8"); });
-      proc.stderr.on("data", (chunk: Buffer) => { err += chunk.toString("utf-8"); });
-
-      proc.on("close", (code) => {
-        // Exit 0 = success. pdftotext also exits 0 with warnings — those are fine.
-        // Consider it a success if we got any text, even on non-zero exit.
-        if (code === 0 || out.trim().length > 0) {
-          resolve(out);
-        } else {
-          reject(new Error(`pdftotext failed (exit ${code}): ${err.slice(0, 200)}`));
-        }
-      });
-
-      proc.on("error", (e) => reject(e)); // ENOENT if pdftotext not on PATH
-
-      proc.stdin.write(buffer);
-      proc.stdin.end();
-    });
-
-    // pdftotext uses form-feed \f as page separator
-    const pageCount = Math.max(1, (text.match(/\f/g) ?? []).length + 1);
-    return { text, pageCount };
-
-  } catch {
-    // pdftotext not on PATH or hard failure — fall through to pdf2json
-  }
-
-  // --- Fallback: pdf2json ---------------------------------------------------
-  const { default: PDFParser } = await import("pdf2json");
-  return new Promise((resolve, reject) => {
-    const parser = new PDFParser(null, true);
-
-    parser.on("pdfParser_dataError", (errData: { parserError: unknown }) => {
-      const msg = typeof errData.parserError === "string"
-        ? errData.parserError
-        : String(errData.parserError);
-      reject(new Error(msg));
-    });
-
-    parser.on("pdfParser_dataReady", () => {
-      const raw = (parser as any).getRawTextContent() as string;
-      const pageCount = (parser as any).data?.Pages?.length ?? 0;
-      resolve({ text: raw, pageCount });
-    });
-
-    parser.parseBuffer(buffer);
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { PDFParse } = await import("pdf-parse") as any;
+  const parser = new PDFParse({ data: buffer });
+  const result = await parser.getText();
+  return {
+    text: result.text ?? "",
+    pageCount: result.totalPages ?? result.numpages ?? 1,
+  };
 }
 
 router.post("/files/extract", upload.single("file"), async (req, res) => {
@@ -132,9 +85,7 @@ router.post("/files/extract", upload.single("file"), async (req, res) => {
     const cleaned = text
       .replace(/\r\n/g, "\n")
       .replace(/\r/g, "\n")
-      .replace(/\f/g, "\n\n---\n\n")          // page breaks (pdftotext)
       .replace(/\n{3,}/g, "\n\n")
-      .replace(/----------------Page \(\d+\) Break----------------/g, "\n\n---\n\n")
       .trim();
 
     const wordCount = cleaned.split(/\s+/).filter(Boolean).length;
