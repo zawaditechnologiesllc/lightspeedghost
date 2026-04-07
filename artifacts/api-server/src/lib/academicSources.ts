@@ -469,9 +469,12 @@ async function searchSemanticScholar(
       fields: "paperId,title,authors,year,abstract,openAccessPdf,citationCount,externalIds",
     });
 
+    const ssHeaders: Record<string, string> = { "User-Agent": "LightSpeedGhost/1.0" };
+    if (process.env.SEMANTIC_SCHOLAR_API_KEY) ssHeaders["x-api-key"] = process.env.SEMANTIC_SCHOLAR_API_KEY;
+
     const res = await fetch(
       `https://api.semanticscholar.org/graph/v1/paper/search?${params}`,
-      { headers: { "User-Agent": "LightSpeedGhost/1.0" }, signal: AbortSignal.timeout(8000) }
+      { headers: ssHeaders, signal: AbortSignal.timeout(8000) }
     );
 
     if (!res.ok) return [];

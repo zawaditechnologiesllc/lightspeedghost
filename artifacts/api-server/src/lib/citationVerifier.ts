@@ -1,7 +1,9 @@
 /**
- * Citation Verifier — AutoResearchClaw arXiv + Semantic Scholar pattern.
+ * Citation Verifier — multi-source grounded citation retrieval.
  * Prevents hallucinated references by fetching REAL papers from live APIs.
  * Implements VerifiedRegistry: only grounded, real citations appear in papers.
+ *
+ * Sources: Semantic Scholar (primary), arXiv (STEM supplement), CrossRef (fallback)
  */
 
 import { withCache } from "./cache.js";
@@ -29,10 +31,13 @@ export async function searchSemanticScholar(
       fields: "title,authors,year,externalIds,url,citationCount",
     });
 
+    const ssHeaders: Record<string, string> = { "User-Agent": "LightSpeedGhost/1.0 Academic Tool" };
+    if (process.env.SEMANTIC_SCHOLAR_API_KEY) ssHeaders["x-api-key"] = process.env.SEMANTIC_SCHOLAR_API_KEY;
+
     const response = await fetch(
       `https://api.semanticscholar.org/graph/v1/paper/search?${params}`,
       {
-        headers: { "User-Agent": "LightSpeedGhost/1.0 Academic Tool" },
+        headers: ssHeaders,
         signal: AbortSignal.timeout(8000),
       }
     );
@@ -137,6 +142,70 @@ export async function searchArxiv(
   }
 }
 
+// ── CrossRef fallback — DOI-verified citations, all disciplines ───────────────
+
+async function searchCrossRefCitations(
+  query: string,
+  limit: number
+): Promise<VerifiedCitation[]> {
+  try {
+    const params = new URLSearchParams({
+      query,
+      rows: String(Math.min(limit, 8)),
+      select: "DOI,title,author,published,container-title",
+      sort: "relevance",
+      mailto: "research@lightspeedghost.com",
+    });
+
+    const response = await fetch(
+      `https://api.crossref.org/works?${params}`,
+      { headers: { "User-Agent": "LightSpeedGhost/1.0 (mailto:research@lightspeedghost.com)" }, signal: AbortSignal.timeout(8000) }
+    );
+
+    if (!response.ok) return [];
+
+    const data = (await response.json()) as {
+      message?: {
+        items?: Array<{
+          DOI?: string;
+          title?: string[];
+          author?: Array<{ given?: string; family?: string }>;
+          published?: { "date-parts"?: number[][] };
+          "container-title"?: string[];
+        }>;
+      };
+    };
+
+    return (data.message?.items ?? [])
+      .map((item) => {
+        const doi = item.DOI;
+        const title = item.title?.[0] ?? "Unknown Title";
+        const authors = (item.author ?? [])
+          .slice(0, 3)
+          .map((a) => [a.given, a.family].filter(Boolean).join(" "))
+          .join(", ");
+        const year = item.published?.["date-parts"]?.[0]?.[0] ?? new Date().getFullYear();
+        const journal = item["container-title"]?.[0] ?? "CrossRef";
+        if (!doi || title === "Unknown Title") return null;
+        return {
+          id: `cr-${doi.replace(/\//g, "-")}`,
+          title,
+          authors: authors || "Unknown Authors",
+          year,
+          source: journal,
+          url: `https://doi.org/${doi}`,
+          doi,
+          verified: true,
+          formatted: "",
+        } as VerifiedCitation;
+      })
+      .filter((c): c is VerifiedCitation => c !== null)
+      .slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
 export async function getVerifiedCitations(
   topic: string,
   subject: string,
@@ -147,17 +216,43 @@ export async function getVerifiedCitations(
     "citations",
     async () => {
       const query = `${topic} ${subject}`;
-      const ssCount = Math.ceil(count * 0.6);
-      const arxivCount = Math.ceil(count * 0.4);
+      const combined = `${topic} ${subject}`.toLowerCase();
 
-      const [ssCites, arxivCites] = await Promise.all([
+      // arXiv is a STEM preprint server — useless for humanities, law, business, etc.
+      // Only use it when the subject is actually STEM-related.
+      const isSTEM =
+        /physics|math|engineer|comput|algorithm|statistic|mechanic|electr|thermody|chemi|biolog|quant|circuit|signal|neural|machine.?learn|data.?science/i.test(combined);
+
+      const ssCount = isSTEM ? Math.ceil(count * 0.6) : count + 2;  // over-fetch SS for non-STEM
+      const arxivCount = isSTEM ? Math.ceil(count * 0.4) : 0;
+
+      const fetchTasks: Promise<VerifiedCitation[]>[] = [
         searchSemanticScholar(query, ssCount),
-        searchArxiv(query, arxivCount),
-      ]);
+      ];
+      if (arxivCount > 0) fetchTasks.push(searchArxiv(query, arxivCount));
 
-      const merged = [...ssCites, ...arxivCites].slice(0, count);
+      const results = await Promise.all(fetchTasks);
+      const flat = results.flat();
 
-      return merged.map((c, i) => ({
+      // Deduplicate by DOI, then normalised title
+      const seen = new Set<string>();
+      const deduped: VerifiedCitation[] = [];
+      for (const c of flat) {
+        const key = c.doi ? c.doi.toLowerCase() : c.title.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+        if (!seen.has(key)) { seen.add(key); deduped.push(c); }
+      }
+
+      // If primary sources returned too few results, fill from CrossRef
+      if (deduped.length < count) {
+        const needed = count - deduped.length + 2; // over-fetch
+        const crossRefResults = await searchCrossRefCitations(query, needed);
+        for (const c of crossRefResults) {
+          const key = c.doi ? c.doi.toLowerCase() : c.title.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+          if (!seen.has(key)) { seen.add(key); deduped.push(c); }
+        }
+      }
+
+      return deduped.slice(0, count).map((c, i) => ({
         ...c,
         formatted: formatCitation(c, style, i),
       }));
