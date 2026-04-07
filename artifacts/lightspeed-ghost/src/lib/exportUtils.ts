@@ -53,18 +53,38 @@ ${bodyHtml}
 </html>`;
 }
 
-export function exportAsWord(html: string, filename: string): void {
-  const blob = new Blob([html], { type: "application/msword" });
+// ── Download helpers ───────────────────────────────────────────────────────────
+
+function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${filename}.doc`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
+/** Legacy .doc — HTML wrapped with Word MIME type */
+export function exportAsWord(html: string, filename: string): void {
+  triggerDownload(
+    new Blob([html], { type: "application/msword" }),
+    `${filename}.doc`
+  );
+}
+
+/** .docx — same HTML content, Office Open XML MIME type (Word opens both) */
+export function exportAsDocx(html: string, filename: string): void {
+  triggerDownload(
+    new Blob([html], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }),
+    `${filename}.docx`
+  );
+}
+
+/** PDF via browser print dialog — preserves all styling */
 export function exportAsPDF(html: string): void {
   const win = window.open("", "_blank");
   if (!win) return;
@@ -74,13 +94,27 @@ export function exportAsPDF(html: string): void {
   setTimeout(() => win.print(), 600);
 }
 
+/** Plain text file */
+export function exportAsTxt(text: string, filename: string): void {
+  triggerDownload(
+    new Blob([text], { type: "text/plain;charset=utf-8" }),
+    `${filename}.txt`
+  );
+}
+
+/** Markdown file */
+export function exportAsMd(text: string, filename: string): void {
+  triggerDownload(
+    new Blob([text], { type: "text/markdown;charset=utf-8" }),
+    `${filename}.md`
+  );
+}
+
 export async function copyText(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);
 }
 
 // ── LSG filename helper ────────────────────────────────────────────────────────
-// Generates a consistent LSG-prefixed filename for exported files.
-// No DB sequence needed — just encodes type + label cleanly.
 
 const LSG_TYPE_CODES: Record<string, string> = {
   paper:      "WP",

@@ -760,6 +760,7 @@ export default function Revision() {
               getHtml={() => wrapDocHtml("Revised Paper", mdToBodyHtml(result.revisedText))}
               getText={() => result.revisedText}
               filename={makeLsgFilename("revision", "REVISED-PAPER")}
+              formats={["docx", "doc", "pdf", "copy"]}
             />
             <button
               onClick={() => { setPhase("upload"); setResult(null); setAnalysis(null); setPaperText(""); setError(""); }}

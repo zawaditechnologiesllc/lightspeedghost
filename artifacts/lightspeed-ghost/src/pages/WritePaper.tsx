@@ -517,6 +517,7 @@ export default function WritePaper() {
               getHtml={() => wrapDocHtml(result.title, mdToBodyHtml(result.content) + `<div style="margin-top:32px;border-top:1px solid #ccc;padding-top:16px"><h2>References</h2><p>${result.bibliography.replace(/\n/g, "<br>")}</p></div>`)}
               getText={() => `${result.content}\n\nReferences:\n${result.bibliography}`}
               filename={makeLsgFilename("paper", result.title || "PAPER")}
+              formats={["docx", "doc", "pdf", "copy"]}
             />
             <button
               onClick={() => { setPhase("config"); setResult(null); setStreamedContent(""); }}

@@ -546,6 +546,7 @@ export default function Humanizer() {
                 getHtml={() => wrapDocHtml("Humanized Text", mdToBodyHtml(humanizedText))}
                 getText={() => humanizedText}
                 filename={makeLsgFilename("humanizer", "HUMANIZED")}
+                formats={["docx", "doc", "pdf", "copy"]}
               />
               <button
                 onClick={handleReset}

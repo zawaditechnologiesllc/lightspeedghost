@@ -717,6 +717,7 @@ export default function StudyAssistant() {
                       return "";
                     }}
                     filename={makeLsgFilename("study", activeView?.toUpperCase() ?? "STUDY")}
+                    formats={["docx", "doc", "pdf", "copy"]}
                   />
                 </div>
               )}

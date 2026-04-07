@@ -598,6 +598,7 @@ export default function StemSolver() {
                     ].join(""))}
                     getText={() => buildSolutionText(result, solvedProblem)}
                     filename={makeLsgFilename("stem", result.subject + "-SOLUTION")}
+                    formats={["docx", "doc", "pdf", "txt", "copy"]}
                   />
                 </div>
                 <div className="px-5 py-5">
