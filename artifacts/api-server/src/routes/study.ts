@@ -63,6 +63,8 @@ router.get("/study/sessions/:id/messages", async (req, res) => {
 });
 
 router.post("/study/ask", requireAuth, async (req, res) => {
+  // Disable socket idle timeout — Claude tutoring + RAG can take 30-60 s
+  req.socket?.setTimeout(0);
   try {
     if (req.userId) trackUsage(req.userId, "study").catch(() => {});
     const body = AskStudyAssistantBody.parse(req.body);
@@ -332,6 +334,7 @@ Return ONLY valid JSON, exactly this format:
 };
 
 router.post("/study/generate", requireAuth, async (req, res) => {
+  req.socket?.setTimeout(0);
   try {
     const body = GenerateBody.parse(req.body);
     const subject = body.subject ?? "General";

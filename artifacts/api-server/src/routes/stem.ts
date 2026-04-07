@@ -111,6 +111,113 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
   }
 });
 
+// ── SSE solve — same logic, streamed progress so long problems don't timeout ───
+
+router.post("/stem/solve-stream", requireAuth, async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+
+  req.socket?.setTimeout(0);
+
+  function send(event: string, data: object) {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  }
+
+  const heartbeat = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* ignore */ } }, 10_000);
+
+  try {
+    if (req.userId) trackUsage(req.userId, "stem").catch(() => {});
+    const body = SolveStemBody.parse(req.body);
+
+    // Step 1: ReAct reasoning loop
+    send("step", { id: "react", message: "Running reasoning loop — structuring the problem and computing step-by-step…", status: "running" });
+    const reactResult = await reactSolve(body.problem, body.subject);
+    send("step", { id: "react", message: `Reasoning complete — ${reactResult.steps.length} solution steps derived with ${reactResult.confidence}% confidence`, status: "done" });
+
+    // Step 2: Chain-of-Verification
+    send("step", { id: "cove", message: "Running verification pass — checking arithmetic, units, and logic…", status: "running" });
+    const coveResult = await chainOfVerification(body.problem, body.subject, reactResult);
+    send("step", {
+      id: "cove",
+      message: coveResult.passedVerification
+        ? "Verification passed — solution confirmed correct"
+        : `Verification applied ${coveResult.corrections.length} correction(s) — final answer updated`,
+      status: "done",
+    });
+
+    // Step 3: Build response
+    const steps = reactResult.steps.map((s, i) => ({
+      stepNumber: i + 1,
+      description: s.description,
+      expression: s.expression || "",
+      explanation: s.explanation,
+    }));
+
+    let graphData = null;
+    if (body.generateGraph) {
+      graphData = generateGraphForSubject(body.subject, body.problem);
+    }
+
+    const finalAnswer = coveResult.passedVerification ? reactResult.finalAnswer : coveResult.verified;
+    const latex = coveResult.verifiedLatex || reactResult.latex;
+
+    const content = [
+      `Problem: ${body.problem}`,
+      "",
+      `Answer: ${finalAnswer}`,
+      "",
+      coveResult.corrections.length > 0
+        ? `Corrections applied:\n${coveResult.corrections.map((c) => `• ${c}`).join("\n")}\n`
+        : "",
+      "Steps:",
+      ...steps.map((s) => `${s.stepNumber}. ${s.description}\n   ${s.explanation}`),
+    ].filter(Boolean).join("\n");
+
+    // Step 4: Save to DB
+    send("step", { id: "saving", message: "Saving solution to your documents…", status: "running" });
+    const userId = req.userId ?? null;
+    const docNum = await getNextDocNumber(userId, "stem");
+    const [doc] = await db
+      .insert(documentsTable)
+      .values({
+        userId,
+        title: formatDocTitle({ type: "stem", docNumber: docNum, subject: body.subject }),
+        content,
+        type: "stem",
+        subject: body.subject,
+        docNumber: docNum,
+        wordCount: content.split(/\s+/).filter(Boolean).length,
+      })
+      .returning();
+    send("step", { id: "saving", message: "Solution saved", status: "done" });
+
+    send("done", {
+      answer: finalAnswer,
+      steps,
+      graphData,
+      latex,
+      subject: body.subject,
+      confidence: reactResult.confidence,
+      corrections: coveResult.corrections,
+      passedVerification: coveResult.passedVerification,
+      documentId: doc.id,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Error in STEM solve stream");
+    const msg = err instanceof Error ? err.message : "";
+    const userMsg = (msg.includes("API_KEY") || msg.includes("not set"))
+      ? "AI service not configured — please contact support"
+      : "Failed to solve problem — please try again";
+    try { send("error", { message: userMsg }); } catch { /* ignore */ }
+  } finally {
+    clearInterval(heartbeat);
+    res.end();
+  }
+});
+
 // Semantic Scholar paper search (already real API — keeping and enhancing)
 router.get("/stem/papers", async (req, res) => {
   try {

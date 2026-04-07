@@ -188,9 +188,15 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
   res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
 
+  // Disable socket idle timeout — humanization with multiple passes can take minutes
+  req.socket?.setTimeout(0);
+
   function send(event: string, data: object) {
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   }
+
+  // Heartbeat every 10 s — keeps proxy alive during long AI calls
+  const heartbeat = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* ignore */ } }, 10_000);
 
   try {
     if (req.userId) trackUsage(req.userId, "humanizer").catch(() => {});
@@ -408,12 +414,11 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       passesApplied: currentScore > 10 ? 3 : currentScore > 5 ? 2 : 1,
     });
 
-    res.end();
   } catch (err) {
     req.log.error({ err }, "Error in humanizer stream");
-    res.write(
-      `event: error\ndata: ${JSON.stringify({ message: "Humanization failed — please try again" })}\n\n`,
-    );
+    try { res.write(`event: error\ndata: ${JSON.stringify({ message: "Humanization failed — please try again" })}\n\n`); } catch { /* ignore */ }
+  } finally {
+    clearInterval(heartbeat);
     res.end();
   }
 });

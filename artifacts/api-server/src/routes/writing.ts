@@ -62,9 +62,15 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
   res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
 
+  // Disable socket idle timeout — paper generation can take several minutes
+  req.socket?.setTimeout(0);
+
   function send(event: string, data: object) {
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   }
+
+  // Heartbeat every 10 s — prevents proxy/load-balancer from closing a silent SSE connection
+  const heartbeat = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* ignore */ } }, 10_000);
 
   try {
     if (req.userId) trackUsage(req.userId, "paper").catch(() => {});
@@ -591,8 +597,9 @@ Plagiarism guidance: properly cited academic work scores 2-8%.`,
       stats,
     });
   } catch (err) {
-    send("error", { message: err instanceof Error ? err.message : "Failed to generate paper" });
+    try { send("error", { message: err instanceof Error ? err.message : "Failed to generate paper" }); } catch { /* ignore */ }
   } finally {
+    clearInterval(heartbeat);
     res.end();
   }
 });

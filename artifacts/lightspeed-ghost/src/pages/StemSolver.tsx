@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSolveStem, useGetStemSubjects } from "@workspace/api-client-react";
+import { useGetStemSubjects } from "@workspace/api-client-react";
+import { apiFetch } from "@/lib/apiFetch";
 import {
   FlaskConical, CheckCircle, ExternalLink, Search,
   ChevronDown, ChevronUp, Dna, Sparkles, ShieldCheck,
@@ -132,6 +133,8 @@ const SUBJECT_META: Record<string, { label: string; icon: React.ReactNode; color
 
 const API = import.meta.env.VITE_API_URL ?? "";
 
+interface SolveStep { id: string; message: string; status: "running" | "done" | "pending" }
+
 export default function StemSolver() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isFileExtracting, setIsFileExtracting] = useState(false);
@@ -157,7 +160,10 @@ export default function StemSolver() {
   const [solveStep, setSolveStep] = useState(0);
   const solveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const solveStem = useSolveStem();
+  // SSE solve state (replaces React Query mutation)
+  const [isSolving, setIsSolving] = useState(false);
+  const [solveError, setSolveError] = useState<string | null>(null);
+  const [sseSteps, setSseSteps] = useState<SolveStep[]>([]);
   const { data: subjects } = useGetStemSubjects();
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
@@ -209,37 +215,95 @@ export default function StemSolver() {
     setSolvedProblem(data.problem);
     setExpandedSteps({});
     setSolveStep(0);
+    setSolveError(null);
+    setSseSteps([]);
+    setIsSolving(true);
 
+    // Fake progress interval for visual feedback while SSE connects
     const STEP_COUNT = 8;
     solveIntervalRef.current = setInterval(() => {
       setSolveStep(prev => (prev < STEP_COUNT - 1 ? prev + 1 : prev));
     }, 1100);
 
-    let res;
     try {
-      res = await solveStem.mutateAsync(data);
-    } catch {
-      // error is stored in solveStem.error by React Query — form will re-render with error shown
-      return;
+      const resp = await apiFetch(`/stem/solve-stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!resp.ok || !resp.body) {
+        throw new Error("Server error — please try again");
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let receivedDone = false;
+
+      const updateStep = (id: string, message: string, status: SolveStep["status"]) => {
+        setSseSteps(prev => {
+          const exists = prev.some(s => s.id === id);
+          if (exists) return prev.map(s => s.id === id ? { ...s, message, status } : s);
+          return [...prev, { id, message, status }];
+        });
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+
+        let event = "";
+        for (const line of lines) {
+          if (line.startsWith("event: ")) { event = line.slice(7).trim(); }
+          else if (line.startsWith("data: ")) {
+            try {
+              const payload = JSON.parse(line.slice(6));
+              if (event === "step") {
+                updateStep(payload.id, payload.message, payload.status);
+              } else if (event === "done") {
+                receivedDone = true;
+                setResult(payload as StemSolution);
+                setActiveTab("papers");
+                setShowInput(false);
+              } else if (event === "error") {
+                receivedDone = true;
+                setSolveError(payload.message ?? "Solve failed — please try again");
+              }
+            } catch { /* ignore parse errors */ }
+            event = "";
+          }
+        }
+      }
+
+      if (!receivedDone) {
+        setSolveError("Connection interrupted before the solution was completed — please try again.");
+      }
+    } catch (err) {
+      setSolveError(err instanceof Error ? err.message : "Network error — please try again");
     } finally {
       if (solveIntervalRef.current) { clearInterval(solveIntervalRef.current); solveIntervalRef.current = null; }
+      setIsSolving(false);
     }
-    if (!res) return;
-    setResult(res);
-    setActiveTab("papers");
-    setShowInput(false);
 
-    setPapersLoading(true);
-    const foundPapers = await searchPapers(data.problem.slice(0, 100), data.subject);
-    setPapers(foundPapers);
-    setPapersLoading(false);
+    // After solve completes, load related papers
+    if (!solveError) {
+      setPapersLoading(true);
+      const foundPapers = await searchPapers(data.problem.slice(0, 100), data.subject);
+      setPapers(foundPapers);
+      setPapersLoading(false);
 
-    if (showBioModels) {
-      setBioModelsLoading(true);
-      const bioResult = await searchBioModels(data.problem.slice(0, 80));
-      setBioModels(bioResult.models);
-      setBioModelsTotal(bioResult.total);
-      setBioModelsLoading(false);
+      if (showBioModels) {
+        setBioModelsLoading(true);
+        const bioResult = await searchBioModels(data.problem.slice(0, 80));
+        setBioModels(bioResult.models);
+        setBioModelsTotal(bioResult.total);
+        setBioModelsLoading(false);
+      }
     }
   };
 
@@ -307,7 +371,7 @@ export default function StemSolver() {
     "Building step-by-step explanation",
   ];
 
-  if (solveStem.isPending) {
+  if (isSolving) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-background px-6 gap-8">
         <div className="text-center space-y-3">
@@ -398,14 +462,12 @@ export default function StemSolver() {
   // ── Shared input form ─────────────────────────────────────────────────────
   const InputForm = (
     <form onSubmit={form.handleSubmit(onSubmit)}>
-      {solveStem.isError && (
+      {solveError && (
         <div className="mb-3 flex items-start gap-2 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/30 text-xs text-destructive">
           <AlertTriangle size={13} className="shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">Solve failed</p>
-            <p className="opacity-80 mt-0.5">
-              {solveStem.error instanceof Error ? solveStem.error.message : "Something went wrong — please check your problem and try again."}
-            </p>
+            <p className="opacity-80 mt-0.5">{solveError}</p>
           </div>
         </div>
       )}
