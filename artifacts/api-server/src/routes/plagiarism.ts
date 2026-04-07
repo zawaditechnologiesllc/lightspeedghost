@@ -6,6 +6,9 @@ import { anthropic, openai } from "../lib/ai";
 import { HUMANIZER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage } from "../lib/usageTracker";
+import { db } from "@workspace/db";
+import { documentsTable } from "@workspace/db";
+import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 
 const router = Router();
 
@@ -47,6 +50,23 @@ router.post("/plagiarism/check", async (req, res) => {
 
     const overallRisk: "low" | "medium" | "high" =
       aiScore > 65 || plagiarismScore > 35 ? "high" : aiScore > 35 || plagiarismScore > 15 ? "medium" : "low";
+
+    // Save report to documents history (non-fatal)
+    try {
+      const userId = req.userId ?? null;
+      const mode = body.checkAi && body.checkPlagiarism ? "both"
+        : body.checkAi ? "ai"
+        : "plagiarism";
+      const docNum = await getNextDocNumber(userId, "plagiarism");
+      await db.insert(documentsTable).values({
+        userId,
+        title: formatDocTitle({ type: "plagiarism", docNumber: docNum, plagiarismMode: mode }),
+        content: `AI Score: ${aiScore}% | Plagiarism Score: ${plagiarismScore}%\nRisk: ${overallRisk}\n\n${text.slice(0, 2000)}`,
+        type: "plagiarism",
+        docNumber: docNum,
+        wordCount: text.split(/\s+/).filter(Boolean).length,
+      });
+    } catch { /* non-fatal */ }
 
     res.json({
       aiScore,

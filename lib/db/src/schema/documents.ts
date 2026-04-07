@@ -7,8 +7,9 @@ export const documentsTable = pgTable("documents", {
   userId: text("user_id"),
   title: text("title").notNull(),
   content: text("content").notNull().default(""),
-  type: text("type").notNull(), // paper | revision | stem | study
+  type: text("type").notNull(), // paper | outline | revision | humanizer | plagiarism | stem | study
   subject: text("subject"),
+  docNumber: integer("doc_number").notNull().default(0),
   wordCount: integer("word_count").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

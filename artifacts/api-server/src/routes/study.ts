@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { studySessionsTable, studyMessagesTable, documentsTable } from "@workspace/db";
+import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { eq, desc } from "drizzle-orm";
 import { AskStudyAssistantBody, GetSessionMessagesParams } from "@workspace/api-zod";
 import { anthropic, openai } from "../lib/ai";
@@ -377,12 +378,14 @@ router.post("/study/generate", async (req, res) => {
       const userId = req.userId ?? null;
       const typeLabel = body.type.charAt(0).toUpperCase() + body.type.slice(1);
       const topicPreview = body.content.slice(0, 80).replace(/\s+/g, " ").trim();
+      const docNum = await getNextDocNumber(userId, "study");
       await db.insert(documentsTable).values({
         userId,
-        title: `${typeLabel}: ${subject} — ${topicPreview}${topicPreview.length >= 80 ? "…" : ""}`,
+        title: formatDocTitle({ type: "study", docNumber: docNum, studyType: body.type, subject }),
         content: raw.slice(0, 4000),
         type: "study",
         subject,
+        docNumber: docNum,
         wordCount: raw.split(/\s+/).filter(Boolean).length,
       });
     } catch { /* non-fatal */ }

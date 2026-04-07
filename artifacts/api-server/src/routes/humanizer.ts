@@ -5,6 +5,7 @@ import { anthropic, openai } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage } from "../lib/usageTracker";
+import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 
 const router = Router();
 
@@ -371,12 +372,16 @@ router.post("/humanizer/humanize-stream", async (req, res) => {
     // ── Save to DB ────────────────────────────────────────────────────────────
     let documentId: number | undefined;
     try {
+      const userId = req.userId ?? null;
+      const docNum = await getNextDocNumber(userId, "humanizer");
       const [doc] = await db
         .insert(documentsTable)
         .values({
-          title: "Humanized Text",
+          userId,
+          title: formatDocTitle({ type: "humanizer", docNumber: docNum }),
           content: currentText,
-          type: "revision",
+          type: "humanizer",
+          docNumber: docNum,
           wordCount: humanizedWordCount,
         })
         .returning();

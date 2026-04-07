@@ -5,6 +5,7 @@ import { anthropic, openai } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage } from "../lib/usageTracker";
+import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 
 const router = Router();
 
@@ -314,9 +315,18 @@ Return ONLY valid JSON:
 
     let documentId: number | undefined;
     try {
+      const userId = req.userId ?? null;
+      const docNum = await getNextDocNumber(userId, "revision");
       const [doc] = await db
         .insert(documentsTable)
-        .values({ title: "Revised Paper", content: revisedText, type: "revision", wordCount: revisedWordCount })
+        .values({
+          userId,
+          title: formatDocTitle({ type: "revision", docNumber: docNum }),
+          content: revisedText,
+          type: "revision",
+          docNumber: docNum,
+          wordCount: revisedWordCount,
+        })
         .returning();
       documentId = doc.id;
     } catch { /* non-fatal */ }

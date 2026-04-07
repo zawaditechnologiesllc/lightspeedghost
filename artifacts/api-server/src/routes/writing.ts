@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { GenerateOutlineBody } from "@workspace/api-zod";
+import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { anthropic, openai } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
 import { getVerifiedCitations } from "../lib/citationVerifier";
@@ -560,12 +561,14 @@ Plagiarism guidance: properly cited academic work scores 2-8%.`,
 
     // ── Save to DB ────────────────────────────────────────────────────────────
     const userId = req.userId ?? null;
+    const docNum = await getNextDocNumber(userId, "paper");
     const [doc] = await db.insert(documentsTable).values({
       userId,
-      title: `${body.topic} — ${body.paperType} (${body.subject})`,
+      title: formatDocTitle({ type: "paper", docNumber: docNum, paperType: body.paperType }),
       content: finalContent,
       type: "paper",
       subject: body.subject,
+      docNumber: docNum,
       wordCount: bodyWordCount,
     }).returning();
 
@@ -677,12 +680,14 @@ router.post("/writing/outline", async (req, res) => {
           ...s.subsections.map((sub: string, j: number) => `   ${i + 1}.${j + 1} ${sub}`),
         ]),
       ].join("\n");
+      const outlineDocNum = await getNextDocNumber(userId, "outline");
       await db.insert(documentsTable).values({
         userId,
-        title: outline.title || `Outline: ${body.topic} (${body.paperType}, ${body.subject})`,
+        title: formatDocTitle({ type: "outline", docNumber: outlineDocNum }),
         content: outlineText,
         type: "outline",
         subject: body.subject,
+        docNumber: outlineDocNum,
         wordCount: outlineText.split(/\s+/).filter(Boolean).length,
       });
     } catch { /* non-fatal — continue even if save fails */ }

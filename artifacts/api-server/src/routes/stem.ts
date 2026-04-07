@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { SolveStemBody } from "@workspace/api-zod";
+import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { reactSolve } from "../lib/reactLoop";
 import { chainOfVerification } from "../lib/cove";
 import { searchSemanticScholar } from "../lib/citationVerifier";
@@ -72,13 +73,17 @@ router.post("/stem/solve", async (req, res) => {
       .filter(Boolean)
       .join("\n");
 
+    const userId = req.userId ?? null;
+    const docNum = await getNextDocNumber(userId, "stem");
     const [doc] = await db
       .insert(documentsTable)
       .values({
-        title: `${body.subject} Problem`,
+        userId,
+        title: formatDocTitle({ type: "stem", docNumber: docNum, subject: body.subject }),
         content,
         type: "stem",
         subject: body.subject,
+        docNumber: docNum,
         wordCount: content.split(/\s+/).filter(Boolean).length,
       })
       .returning();
