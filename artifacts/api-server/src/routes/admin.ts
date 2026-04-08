@@ -206,7 +206,7 @@ router.get("/admin/tools", async (req: Request, res: Response) => {
           MAX(created_at)                                                   AS last_used
         FROM study_sessions
       `).catch(() => ({ rows: [] })),
-      pool.query<{ path_group: string; total: string; errors: string; avg_ms: string; last_used: string | null }>(`
+      pool.query<{ path_group: string; total: string; errors: string; total_7d: string; errors_7d: string; avg_ms: string; last_used: string | null }>(`
         SELECT
           CASE
             WHEN path LIKE '%/writing/outline%'    THEN 'outline'
@@ -217,10 +217,12 @@ router.get("/admin/tools", async (req: Request, res: Response) => {
             WHEN path LIKE '%/stem/%'              THEN 'stem'
             WHEN path LIKE '%/study/%'             THEN 'study'
           END AS path_group,
-          COUNT(*)                                        AS total,
-          COUNT(*) FILTER (WHERE status >= 500)          AS errors,
-          ROUND(AVG(duration_ms))::TEXT                  AS avg_ms,
-          MAX(created_at)                                AS last_used
+          COUNT(*)                                                          AS total,
+          COUNT(*) FILTER (WHERE status >= 500)                            AS errors,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')  AS total_7d,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days' AND status >= 500) AS errors_7d,
+          ROUND(AVG(duration_ms))::TEXT                                    AS avg_ms,
+          MAX(created_at)                                                   AS last_used
         FROM request_logs
         WHERE (path LIKE '%/writing/%' OR path LIKE '%/revision/%' OR path LIKE '%/humanizer/%'
             OR path LIKE '%/plagiarism/%' OR path LIKE '%/stem/%' OR path LIKE '%/study/%')
@@ -244,12 +246,18 @@ router.get("/admin/tools", async (req: Request, res: Response) => {
       const totalReqs   = Number(log?.total ?? 0);
       const errorCount  = Number(log?.errors ?? 0);
       const errorRate   = totalReqs > 0 ? Math.round((errorCount / totalReqs) * 100) : 0;
+      const totalReqs7d = Number(log?.total_7d ?? 0);
+      const errors7d    = Number(log?.errors_7d ?? 0);
+      const errorRate7d = totalReqs7d > 0 ? Math.round((errors7d / totalReqs7d) * 100) : 0;
       const avgMs       = Number(log?.avg_ms ?? 0);
+      const hasApiData  = totalReqs > 0;
       return {
         key, label,
         enabled: settings[settingKey] !== "false",
         total, thisMonth, thisWeek, lastUsed,
-        totalRequests: totalReqs, errorCount, errorRate, avgMs,
+        totalRequests: totalReqs, errorCount, errorRate,
+        totalRequests7d: totalReqs7d, errors7d, errorRate7d,
+        avgMs, hasApiData,
       };
     });
 
@@ -629,8 +637,14 @@ router.get("/admin/traffic", async (req: Request, res: Response) => {
       ).catch(() => ({ rows: [] })),
     ]);
 
-    const userCountRow = await pool.query<{ cnt: string }>("SELECT COUNT(*) as cnt FROM users").catch(() => ({ rows: [{ cnt: "0" }] }));
-    const totalRegisteredUsers = Number(userCountRow.rows[0]?.cnt ?? 0);
+    let totalRegisteredUsers = 0;
+    try {
+      const r = await pool.query<{ cnt: string }>("SELECT COUNT(*) as cnt FROM auth.users");
+      totalRegisteredUsers = Number(r.rows[0]?.cnt ?? 0);
+    } catch {
+      const r = await pool.query<{ cnt: string }>("SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs WHERE user_id IS NOT NULL").catch(() => ({ rows: [{ cnt: "0" }] }));
+      totalRegisteredUsers = Number(r.rows[0]?.cnt ?? 0);
+    }
 
     // Clean up logs older than 60 days (fire-and-forget)
     pool.query(`DELETE FROM request_logs WHERE created_at < NOW() - INTERVAL '60 days'`).catch(() => {});

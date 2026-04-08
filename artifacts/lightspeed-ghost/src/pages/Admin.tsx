@@ -41,7 +41,11 @@ interface AdminTool {
   totalRequests: number;
   errorCount: number;
   errorRate: number;
+  totalRequests7d: number;
+  errors7d: number;
+  errorRate7d: number;
   avgMs: number;
+  hasApiData: boolean;
 }
 
 interface Announcement {
@@ -511,7 +515,7 @@ export default function Admin() {
     if (activeTab === "credits") loadCredits();
     if (activeTab === "finance") loadRevenue();
     if (activeTab === "settings") loadSettings();
-    if (activeTab === "analytics") { loadTraffic(); loadFeedback(); }
+    if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); }
     if (activeTab === "logs") loadLogs();
     if (activeTab === "announcements") loadAnnouncements();
   }, [isAuthed, activeTab]);
@@ -607,7 +611,7 @@ export default function Admin() {
     else if (activeTab === "credits") loadCredits();
     else if (activeTab === "finance") loadRevenue();
     else if (activeTab === "settings") loadSettings();
-    else if (activeTab === "analytics") { loadTraffic(); loadFeedback(); }
+    else if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); }
     else if (activeTab === "logs") loadLogs();
     else if (activeTab === "announcements") loadAnnouncements();
     else loadStats();
@@ -983,15 +987,15 @@ export default function Admin() {
                 )}
                 {deleteError && <ErrorBanner text={deleteError} />}
                 <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                  <div className="grid grid-cols-[1fr_72px_72px_80px_90px_70px_90px_64px] gap-2 px-4 py-2.5 border-b border-white/6">
-                    {["User", "Docs", "Sessions", "Plan", "Credits", "Earned", "Joined", ""].map((h) => (
+                  <div className="grid grid-cols-[1fr_64px_68px_80px_90px_88px_88px_64px] gap-2 px-4 py-2.5 border-b border-white/6">
+                    {["User", "Docs", "Sessions", "Plan", "Credits", "Joined", "Last Active", ""].map((h) => (
                       <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
                     ))}
                   </div>
                   {loading ? <div className="py-12 flex justify-center"><Loader2 size={16} className="animate-spin text-white/30" /></div>
                     : filteredUsers.length === 0 ? <Empty text="No users found" />
                     : filteredUsers.map((user, i) => (
-                    <div key={user.id} className={`grid grid-cols-[1fr_72px_72px_80px_90px_70px_90px_64px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < filteredUsers.length - 1 ? "border-b border-white/6" : ""} ${user.banned ? "opacity-50" : ""}`}>
+                    <div key={user.id} className={`grid grid-cols-[1fr_64px_68px_80px_90px_88px_88px_64px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < filteredUsers.length - 1 ? "border-b border-white/6" : ""} ${user.banned ? "opacity-50" : ""}`}>
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center shrink-0 text-[11px] font-bold text-white">
                           {user.email ? user.email[0].toUpperCase() : "?"}
@@ -1006,8 +1010,8 @@ export default function Admin() {
                       <span className="text-sm font-semibold text-white/70 tabular-nums">{user.sessionCount}</span>
                       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border w-fit capitalize ${PLAN_COLORS[user.plan] ?? PLAN_COLORS.starter}`}>{user.plan}</span>
                       <span className="text-xs text-amber-300 font-mono tabular-nums">{user.creditBalance.toLocaleString()} cr</span>
-                      <span className="text-xs text-white/30 font-mono tabular-nums">${(user.lifetimeEarned / 100).toFixed(0)}</span>
                       <span className="text-xs text-white/30">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"}</span>
+                      <span className="text-xs text-white/40">{user.lastSignIn ? new Date(user.lastSignIn).toLocaleDateString() : <span className="text-white/20">—</span>}</span>
                       <div className="flex items-center gap-1 justify-end">
                         <button onClick={() => { setCreditAdjustUser(user); setCreditAdjustAmt(""); setCreditAdjustNote(""); }} title="Adjust credits"
                           className="p-1.5 rounded-md text-white/20 hover:text-amber-400 hover:bg-amber-500/10 transition-all">
@@ -1066,8 +1070,12 @@ export default function Admin() {
                         stem:       "from-amber-600/10 to-amber-500/5 border-amber-500/12",
                         study:      "from-emerald-600/10 to-emerald-500/5 border-emerald-500/12",
                       };
-                      const isError = tool.errorRate >= 20;
-                      const isWarning = tool.errorRate >= 5 && tool.errorRate < 20;
+                      const rate7d = tool.totalRequests7d > 0 ? tool.errorRate7d : null;
+                      const rate30d = tool.totalRequests > 0 ? tool.errorRate : null;
+                      const activeRate = rate7d !== null ? rate7d : (rate30d ?? 0);
+                      const isError = tool.hasApiData && activeRate >= 20 && (rate7d !== null ? tool.totalRequests7d > 0 : tool.totalRequests > 0);
+                      const isWarning = tool.hasApiData && activeRate >= 5 && activeRate < 20;
+                      const isClean = tool.hasApiData && tool.errorCount > 0 && tool.errors7d === 0;
                       return (
                         <div key={tool.key} className={`bg-gradient-to-br ${toolColors[tool.key] ?? "from-white/5 to-white/2 border-white/8"} border rounded-2xl p-5 space-y-4 ${!tool.enabled ? "opacity-50" : ""}`}>
                           {/* Header row */}
@@ -1088,14 +1096,19 @@ export default function Admin() {
                                       <XCircle size={9} /> Disabled
                                     </span>
                                   )}
-                                  {tool.enabled && isError && (
+                                  {isError && (
                                     <span className="flex items-center gap-1 text-[10px] font-semibold text-red-400">
                                       <AlertCircle size={9} /> High errors
                                     </span>
                                   )}
-                                  {tool.enabled && isWarning && (
+                                  {!isError && isWarning && (
                                     <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400">
                                       <AlertTriangle size={9} /> Elevated errors
+                                    </span>
+                                  )}
+                                  {isClean && (
+                                    <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400/70">
+                                      <CheckCircle2 size={9} /> Clean 7d
                                     </span>
                                   )}
                                 </div>
@@ -1139,9 +1152,17 @@ export default function Admin() {
                             <div className="flex items-center gap-3">
                               <span className="flex items-center gap-1 text-white/40">
                                 <BarChart2 size={10} />
-                                <span className={isError ? "text-red-400 font-semibold" : isWarning ? "text-amber-400 font-semibold" : "text-white/50"}>
-                                  {tool.errorRate}% errors
-                                </span>
+                                {!tool.hasApiData ? (
+                                  <span className="text-white/25">No API data</span>
+                                ) : rate7d !== null ? (
+                                  <span className={isError ? "text-red-400 font-semibold" : isWarning ? "text-amber-400 font-semibold" : "text-white/50"}>
+                                    {rate7d}% errors <span className="text-white/25 font-normal">(7d · {tool.errors7d}/{tool.totalRequests7d})</span>
+                                  </span>
+                                ) : (
+                                  <span className={isError ? "text-red-400 font-semibold" : isWarning ? "text-amber-400 font-semibold" : "text-white/50"}>
+                                    {tool.errorRate}% errors <span className="text-white/25 font-normal">(30d · {tool.errorCount}/{tool.totalRequests})</span>
+                                  </span>
+                                )}
                               </span>
                               {tool.avgMs > 0 && (
                                 <span className="flex items-center gap-1 text-white/40">
@@ -1557,6 +1578,51 @@ export default function Admin() {
                     </div>
                   </>
                 ) : <Empty text="Analytics unavailable" />}
+
+                {/* Tool Health Summary */}
+                {adminTools.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
+                      <BarChart2 size={13} className="text-indigo-400" /> Tool Health (30 day window)
+                    </h3>
+                    <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                      <div className="grid grid-cols-[1fr_80px_80px_80px_110px_100px] gap-2 px-4 py-2.5 border-b border-white/6">
+                        {["Tool", "Enabled", "Requests", "Errors", "Error Rate", "Last Used"].map((h) => (
+                          <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
+                        ))}
+                      </div>
+                      {adminTools.map((tool, i) => {
+                        const rate7d = tool.totalRequests7d > 0 ? tool.errorRate7d : null;
+                        const displayRate = rate7d !== null ? rate7d : (tool.hasApiData ? tool.errorRate : null);
+                        const periodLabel = rate7d !== null ? "7d" : "30d";
+                        const errCount = rate7d !== null ? tool.errors7d : tool.errorCount;
+                        const isHigh = displayRate !== null && displayRate >= 20;
+                        const isMed = displayRate !== null && displayRate >= 5 && displayRate < 20;
+                        return (
+                          <div key={tool.key} className={`grid grid-cols-[1fr_80px_80px_80px_110px_100px] gap-2 items-center px-4 py-3 ${i < adminTools.length - 1 ? "border-b border-white/5" : ""}`}>
+                            <span className="text-sm font-medium text-white/75">{tool.label}</span>
+                            <span className={`text-xs font-semibold ${tool.enabled ? "text-emerald-400" : "text-white/25"}`}>{tool.enabled ? "On" : "Off"}</span>
+                            <span className="text-sm text-white/50 tabular-nums">{tool.hasApiData ? tool.totalRequests.toLocaleString() : <span className="text-white/20">—</span>}</span>
+                            <span className={`text-sm tabular-nums font-semibold ${errCount > 0 ? "text-red-400" : "text-white/30"}`}>{tool.hasApiData ? errCount : <span className="text-white/20">—</span>}</span>
+                            <div className="flex items-center gap-1.5">
+                              {displayRate === null ? (
+                                <span className="text-[10px] text-white/20">No data</span>
+                              ) : tool.errorCount > 0 && tool.errors7d === 0 ? (
+                                <span className="text-[10px] text-emerald-400/70 font-semibold">Clean 7d</span>
+                              ) : (
+                                <>
+                                  <span className={`text-sm font-bold tabular-nums ${isHigh ? "text-red-400" : isMed ? "text-amber-400" : "text-emerald-400"}`}>{displayRate}%</span>
+                                  <span className="text-[10px] text-white/25">{periodLabel}</span>
+                                </>
+                              )}
+                            </div>
+                            <span className="text-xs text-white/30">{tool.lastUsed ? new Date(tool.lastUsed).toLocaleDateString() : <span className="text-white/20">—</span>}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Quality feedback */}
                 {feedbackStats.length > 0 && (
