@@ -19,9 +19,11 @@ const router = Router();
 
 router.get("/study/sessions", async (req, res) => {
   try {
+    const userId = req.userId;
     const sessions = await db
       .select()
       .from(studySessionsTable)
+      .where(userId ? eq(studySessionsTable.userId, userId) : undefined)
       .orderBy(desc(studySessionsTable.lastActivity))
       .limit(20);
 
@@ -72,8 +74,9 @@ router.post("/study/ask", requireAuth, async (req, res) => {
       const [session] = await db
         .insert(studySessionsTable)
         .values({
+          userId: req.userId ?? null,
           title: body.question.slice(0, 60) + (body.question.length > 60 ? "..." : ""),
-          subject: "General",
+          subject: body.subject ?? "General",
           messageCount: 0,
           lastActivity: new Date(),
         })
