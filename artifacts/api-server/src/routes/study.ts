@@ -5,7 +5,7 @@ import { studySessionsTable, studyMessagesTable, documentsTable } from "@workspa
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { eq, desc } from "drizzle-orm";
 import { AskStudyAssistantBody, GetSessionMessagesParams } from "@workspace/api-zod";
-import { anthropic, openai } from "../lib/ai";
+import { anthropic } from "../lib/ai";
 import { TUTOR_SOUL } from "../lib/soul";
 import { getStudentMemory, updateStudentMemory, buildMemoryContext, memoryFlush } from "../lib/memory";
 import { recordSearchResults, recordTopicSearch } from "../lib/learningEngine";
@@ -13,10 +13,7 @@ import { indexStudyExchange, recallStudyContext } from "../lib/memvidMemory";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage } from "../lib/usageTracker";
-import multer from "multer";
 import { z } from "zod";
-
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -398,30 +395,6 @@ router.post("/study/generate", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Error generating study material");
     res.status(500).json({ error: "Failed to generate study material" });
-  }
-});
-
-router.post("/study/transcribe", upload.single("audio"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "No audio file provided" });
-
-    const { Readable } = await import("stream");
-    const buffer = req.file.buffer;
-    const filename = req.file.originalname || "audio.webm";
-
-    const stream = Readable.from(buffer);
-    (stream as NodeJS.ReadableStream & { name?: string }).name = filename;
-
-    const transcription = await openai.audio.transcriptions.create({
-      file: new File([buffer], filename, { type: req.file.mimetype }),
-      model: "whisper-1",
-      response_format: "text",
-    });
-
-    res.json({ transcript: transcription, words: typeof transcription === "string" ? transcription.split(/\s+/).length : 0 });
-  } catch (err) {
-    req.log.error({ err }, "Error transcribing audio");
-    res.status(500).json({ error: "Failed to transcribe audio. Please try uploading a text file instead." });
   }
 });
 

@@ -1,4 +1,4 @@
-export type PlanId = "pro_monthly" | "pro_annual" | "campus_annual";
+export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "campus_annual";
 export type PaygTool = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline";
 export type DocumentTier = "discussion" | "essay" | "research" | "proposal" | "dissertation";
 
@@ -12,6 +12,14 @@ export interface SubscriptionPlan {
 }
 
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: "starter_monthly",
+    name: "Starter — Monthly",
+    amountCents: 150,
+    interval: "month",
+    displayPrice: "$1.50/mo",
+    description: "Essential access to LightSpeed Ghost tools",
+  },
   {
     id: "pro_monthly",
     name: "Pro — Monthly",
