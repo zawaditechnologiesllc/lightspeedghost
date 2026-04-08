@@ -246,6 +246,7 @@ export default function Admin() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [hasEmailData, setHasEmailData] = useState(false);
+  const [supabaseError, setSupabaseError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
@@ -333,8 +334,8 @@ export default function Admin() {
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/admin/users", password) as { users: AdminUser[]; hasEmailData: boolean };
-      setUsers(data.users); setHasEmailData(data.hasEmailData);
+      const data = await adminFetch("/admin/users", password) as { users: AdminUser[]; hasEmailData: boolean; supabaseError: string | null };
+      setUsers(data.users); setHasEmailData(data.hasEmailData); setSupabaseError(data.supabaseError ?? null);
     } catch { setUsers([]); }
     finally { setLoading(false); }
   }, [password]);
@@ -922,6 +923,11 @@ export default function Admin() {
                     className="w-64 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-white/25 transition-all"
                   />
                 </div>
+                {supabaseError && (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-xs text-amber-300">
+                    <span className="font-semibold">Note:</span> {supabaseError}
+                  </div>
+                )}
                 {deleteError && <ErrorBanner text={deleteError} />}
                 <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
                   <div className="grid grid-cols-[1fr_72px_72px_80px_90px_70px_90px_64px] gap-2 px-4 py-2.5 border-b border-white/6">

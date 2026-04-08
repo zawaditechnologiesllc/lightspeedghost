@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, pool } from "@workspace/db";
-import { documentsTable, studySessionsTable, usersTable } from "@workspace/db";
+import { documentsTable, studySessionsTable } from "@workspace/db";
 import { desc, sql, eq, ilike, and } from "drizzle-orm";
 import type { Request, Response } from "express";
 
@@ -209,30 +209,43 @@ router.get("/admin/users", async (req: Request, res: Response) => {
     const planMap = Object.fromEntries(subRows.rows.map((r) => [r.user_id, r]));
     const banMap = Object.fromEntries(banRows.rows.map((r) => [r.user_id, r]));
 
-    const dbUsers = await db.select({
-      uid: usersTable.uid,
-      email: usersTable.email,
-      createdAt: usersTable.createdAt,
-    }).from(usersTable).limit(500);
+    // Query Supabase auth.users (real user store — Supabase Auth lives here, not in a custom table)
+    type AuthUser = { id: string; email: string | null; created_at: string; last_sign_in_at: string | null };
+    let authUsers: AuthUser[] = [];
+    let hasEmailData = false;
+    let supabaseError: string | null = null;
+    try {
+      const result = await pool.query<AuthUser>(
+        `SELECT id::text, email, created_at, last_sign_in_at
+         FROM auth.users
+         ORDER BY created_at DESC
+         LIMIT 500`
+      );
+      authUsers = result.rows;
+      hasEmailData = true;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      supabaseError = `auth.users unavailable (${msg}). Showing users from activity data only.`;
+    }
 
-    const dbUserMap = Object.fromEntries(dbUsers.map((u) => [u.uid, u]));
+    const authUserMap = Object.fromEntries(authUsers.map((u) => [u.id, u]));
 
     const allUserIds = new Set([
+      ...authUsers.map((u) => u.id),
       ...Object.keys(userDocCounts),
       ...Object.keys(userSessionCounts),
       ...Object.keys(creditMap),
       ...Object.keys(planMap),
       ...logUserRows.rows.map((r) => r.user_id),
-      ...dbUsers.map((u) => u.uid),
     ]);
 
     const enrich = (id: string) => {
-      const dbUser = dbUserMap[id];
+      const authUser = authUserMap[id];
       return {
         id,
-        email: dbUser?.email ?? null,
-        createdAt: dbUser?.createdAt?.toISOString() ?? null,
-        lastSignIn: null,
+        email: authUser?.email ?? null,
+        createdAt: authUser?.created_at ?? null,
+        lastSignIn: authUser?.last_sign_in_at ?? null,
         documentCount: userDocCounts[id] ?? 0,
         sessionCount: userSessionCounts[id] ?? 0,
         plan: planMap[id]?.plan ?? "starter",
@@ -247,7 +260,7 @@ router.get("/admin/users", async (req: Request, res: Response) => {
 
     const users = Array.from(allUserIds).map((id) => enrich(id));
 
-    res.json({ users, hasEmailData: true, supabaseError: null });
+    res.json({ users, hasEmailData, supabaseError });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -259,7 +272,16 @@ router.delete("/admin/users/:id", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   try {
-    await db.delete(usersTable).where(eq(usersTable.uid, id));
+    // Remove user's activity data from public tables
+    await Promise.allSettled([
+      pool.query("DELETE FROM documents WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM study_sessions WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM user_usage WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM user_subscriptions WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM user_bans WHERE user_id = $1", [id]),
+    ]);
+    // Attempt hard delete from auth.users (works with direct DB connection; no-op if pooler restricts it)
+    await pool.query("DELETE FROM auth.users WHERE id = $1::uuid", [id]).catch(() => {});
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Internal server error" });
