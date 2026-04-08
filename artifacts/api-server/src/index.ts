@@ -79,6 +79,27 @@ async function runStartupTasks(): Promise<void> {
   } catch (err) {
     logger.error({ err }, "[startup] Failed to ensure user_sessions table");
   }
+
+  // 4. Ensure student_profiles table exists (study assistant personalised memory)
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS student_profiles (
+        id            SERIAL PRIMARY KEY,
+        user_id       TEXT,
+        session_count INTEGER     NOT NULL DEFAULT 0,
+        strengths     TEXT        NOT NULL DEFAULT '[]',
+        struggles     TEXT        NOT NULL DEFAULT '[]',
+        preferred_subjects TEXT   NOT NULL DEFAULT '[]',
+        recent_topics TEXT        NOT NULL DEFAULT '[]',
+        notes         TEXT        NOT NULL DEFAULT '',
+        created_at    TIMESTAMP   NOT NULL DEFAULT NOW(),
+        updated_at    TIMESTAMP   NOT NULL DEFAULT NOW()
+      )
+    `);
+    logger.info("[startup] student_profiles table ready");
+  } catch (err) {
+    logger.error({ err }, "[startup] Failed to ensure student_profiles table");
+  }
 }
 
 runStartupTasks().catch((err) => {
