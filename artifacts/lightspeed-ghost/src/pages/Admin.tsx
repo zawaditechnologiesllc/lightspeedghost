@@ -315,6 +315,12 @@ export default function Admin() {
   const [docTotal, setDocTotal] = useState(0);
   const [docSearch, setDocSearch] = useState("");
   const [docTypeFilter, setDocTypeFilter] = useState("all");
+  const [pwaStats, setPwaStats] = useState<{
+    totalInstalls: number; androidInstalls: number; iosInstalls: number;
+    installs7d: number; installs30d: number;
+    totalLaunches: number; launches7d: number; launches30d: number;
+    byPlatform: Array<{ platform: string; installs: string; launches: string }>;
+  } | null>(null);
 
   const isAuthed = !!password;
 
@@ -444,6 +450,10 @@ export default function Admin() {
     finally { setLoading(false); }
   }, [password]);
 
+  const loadPwaStats = useCallback(async () => {
+    try { setPwaStats(await adminFetch("/admin/pwa/stats", password) as typeof pwaStats); } catch { setPwaStats(null); }
+  }, [password]);
+
   const loadLogs = useCallback(async () => {
     setLoading(true);
     try {
@@ -515,7 +525,7 @@ export default function Admin() {
     if (activeTab === "credits") loadCredits();
     if (activeTab === "finance") loadRevenue();
     if (activeTab === "settings") loadSettings();
-    if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); }
+    if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); loadPwaStats(); }
     if (activeTab === "logs") loadLogs();
     if (activeTab === "announcements") loadAnnouncements();
   }, [isAuthed, activeTab]);
@@ -611,7 +621,7 @@ export default function Admin() {
     else if (activeTab === "credits") loadCredits();
     else if (activeTab === "finance") loadRevenue();
     else if (activeTab === "settings") loadSettings();
-    else if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); }
+    else if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); loadPwaStats(); }
     else if (activeTab === "logs") loadLogs();
     else if (activeTab === "announcements") loadAnnouncements();
     else loadStats();
@@ -1621,6 +1631,32 @@ export default function Admin() {
                         );
                       })}
                     </div>
+                  </div>
+                )}
+
+                {/* PWA Install Stats */}
+                {pwaStats !== null && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
+                      <span className="text-blue-400">⚡</span> PWA Installs
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                      {[
+                        { label: "Confirmed Installs", value: pwaStats.totalInstalls, sub: `+${pwaStats.installs7d} this week`, color: "text-blue-400" },
+                        { label: "Android", value: pwaStats.androidInstalls, sub: "via install prompt", color: "text-emerald-400" },
+                        { label: "iOS", value: pwaStats.iosInstalls, sub: "via Add to Home Screen", color: "text-sky-400" },
+                        { label: "Standalone Opens", value: pwaStats.totalLaunches, sub: `${pwaStats.launches7d} in last 7d`, color: "text-violet-400" },
+                      ].map(({ label, value, sub, color }) => (
+                        <div key={label} className="bg-white/[0.02] border border-white/8 rounded-xl p-4">
+                          <div className={`text-2xl font-bold tabular-nums mb-0.5 ${color}`}>{value}</div>
+                          <div className="text-xs text-white/50 font-medium">{label}</div>
+                          <div className="text-[10px] text-white/25 mt-0.5">{sub}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {pwaStats.totalInstalls === 0 && pwaStats.totalLaunches === 0 && (
+                      <p className="text-xs text-white/25 italic px-1">No installs tracked yet. Data appears here as users install the PWA on Android or iOS.</p>
+                    )}
                   </div>
                 )}
 

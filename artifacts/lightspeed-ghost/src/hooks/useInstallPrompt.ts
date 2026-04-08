@@ -19,6 +19,22 @@ function isInStandaloneMode(): boolean {
   );
 }
 
+function getPlatform(): "ios" | "android" | "unknown" {
+  if (isIOS()) return "ios";
+  if (/android/i.test(navigator.userAgent)) return "android";
+  return "unknown";
+}
+
+function trackPwaEvent(eventType: "installed" | "standalone_launch") {
+  const base = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+  fetch(`${base}/api/pwa/install`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ platform: getPlatform(), eventType }),
+    keepalive: true,
+  }).catch(() => {});
+}
+
 export type InstallState =
   | { type: "idle" }
   | { type: "android"; prompt: () => void }
@@ -34,6 +50,12 @@ export function useInstallPrompt() {
   useEffect(() => {
     if (isInStandaloneMode()) {
       setState({ type: "installed" });
+      try {
+        if (!sessionStorage.getItem("pwa-launch-tracked")) {
+          sessionStorage.setItem("pwa-launch-tracked", "1");
+          trackPwaEvent("standalone_launch");
+        }
+      } catch {}
       return;
     }
 
@@ -59,8 +81,16 @@ export function useInstallPrompt() {
       });
     };
 
+    const installedHandler = () => {
+      trackPwaEvent("installed");
+    };
+
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", installedHandler);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installedHandler);
+    };
   }, []);
 
   function dismiss() {

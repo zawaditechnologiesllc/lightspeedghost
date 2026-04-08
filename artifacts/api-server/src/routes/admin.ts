@@ -871,4 +871,64 @@ router.get("/admin/feedback", async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /admin/pwa/stats ──────────────────────────────────────────────────────
+
+router.get("/admin/pwa/stats", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [totals, byPlatform, byDay] = await Promise.all([
+      pool.query<{
+        total_installs: string; android_installs: string; ios_installs: string;
+        installs_7d: string; installs_30d: string;
+        total_launches: string; launches_7d: string; launches_30d: string;
+      }>(`
+        SELECT
+          COUNT(*) FILTER (WHERE event_type = 'installed')                                             AS total_installs,
+          COUNT(*) FILTER (WHERE event_type = 'installed'  AND platform = 'android')                   AS android_installs,
+          COUNT(*) FILTER (WHERE event_type = 'installed'  AND platform = 'ios')                       AS ios_installs,
+          COUNT(*) FILTER (WHERE event_type = 'installed'  AND created_at > NOW() - INTERVAL '7 days') AS installs_7d,
+          COUNT(*) FILTER (WHERE event_type = 'installed'  AND created_at > NOW() - INTERVAL '30 days') AS installs_30d,
+          COUNT(*) FILTER (WHERE event_type = 'standalone_launch')                                     AS total_launches,
+          COUNT(*) FILTER (WHERE event_type = 'standalone_launch' AND created_at > NOW() - INTERVAL '7 days') AS launches_7d,
+          COUNT(*) FILTER (WHERE event_type = 'standalone_launch' AND created_at > NOW() - INTERVAL '30 days') AS launches_30d
+        FROM pwa_installs
+      `).catch(() => ({ rows: [{ total_installs:"0", android_installs:"0", ios_installs:"0", installs_7d:"0", installs_30d:"0", total_launches:"0", launches_7d:"0", launches_30d:"0" }] })),
+
+      pool.query<{ platform: string; installs: string; launches: string }>(`
+        SELECT platform,
+               COUNT(*) FILTER (WHERE event_type = 'installed')        AS installs,
+               COUNT(*) FILTER (WHERE event_type = 'standalone_launch') AS launches
+        FROM pwa_installs
+        GROUP BY platform ORDER BY installs DESC
+      `).catch(() => ({ rows: [] })),
+
+      pool.query<{ day: string; installs: string; launches: string }>(`
+        SELECT TO_CHAR(DATE_TRUNC('day', created_at), 'Mon DD') AS day,
+               COUNT(*) FILTER (WHERE event_type = 'installed')         AS installs,
+               COUNT(*) FILTER (WHERE event_type = 'standalone_launch') AS launches
+        FROM pwa_installs
+        WHERE created_at > NOW() - INTERVAL '30 days'
+        GROUP BY DATE_TRUNC('day', created_at)
+        ORDER BY DATE_TRUNC('day', created_at) ASC
+      `).catch(() => ({ rows: [] })),
+    ]);
+
+    const t = totals.rows[0];
+    res.json({
+      totalInstalls:    Number(t?.total_installs   ?? 0),
+      androidInstalls:  Number(t?.android_installs ?? 0),
+      iosInstalls:      Number(t?.ios_installs     ?? 0),
+      installs7d:       Number(t?.installs_7d      ?? 0),
+      installs30d:      Number(t?.installs_30d     ?? 0),
+      totalLaunches:    Number(t?.total_launches    ?? 0),
+      launches7d:       Number(t?.launches_7d       ?? 0),
+      launches30d:      Number(t?.launches_30d      ?? 0),
+      byPlatform: byPlatform.rows,
+      byDay: byDay.rows,
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

@@ -11,6 +11,7 @@ import studyRouter from "./study";
 import filesRouter from "./files";
 import adminRouter from "./admin";
 import paymentsRouter from "./payments";
+import pwaRouter from "./pwa";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(studyRouter);
 router.use(filesRouter);
 router.use(adminRouter);
 router.use(paymentsRouter);
+router.use(pwaRouter);
 
 export default router;
