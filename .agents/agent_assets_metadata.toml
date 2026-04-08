@@ -6,3 +6,9 @@ id = "d-gZlXxv30Cuk7xZvR2ue"
 uri = "file://PAYMENT_ENV_VARS.md"
 type = "text"
 title = "Payment Gateway — Environment Variables Reference"
+
+[[outputs]]
+id = "ZRCbZgxpXtfufYQeUvdBK"
+uri = "file://artifacts/lightspeed-ghost/public/icon-512.png"
+type = "image"
+title = "LIGHTSPEED App Icon (512×512)"

@@ -1,6 +1,6 @@
 {
-  "name": "Light Speed Ghost",
-  "short_name": "LSGhost",
+  "name": "LIGHTSPEED",
+  "short_name": "LIGHTSPEED",
   "description": "AI academic writing, humanizer, STEM solver, and study assistant for students.",
   "start_url": "/dashboard",
   "scope": "/",
@@ -23,7 +23,7 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/favicon.svg",
+      "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
