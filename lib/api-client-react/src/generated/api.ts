@@ -1521,7 +1521,7 @@ export const useCompareCode = <
     const { data } = props ?? {};
     return compareCode(data, requestOptions);
   };
-  return import("@tanstack/react-query").useMutation({
+  return useMutation({
     mutationKey,
     mutationFn,
     ...mutationOptions,

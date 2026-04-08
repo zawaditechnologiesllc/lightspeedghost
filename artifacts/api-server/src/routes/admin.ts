@@ -1,14 +1,12 @@
 import { Router } from "express";
 import { db, pool } from "@workspace/db";
-import { documentsTable, studySessionsTable } from "@workspace/db";
+import { documentsTable, studySessionsTable, usersTable } from "@workspace/db";
 import { desc, sql, eq, ilike, and } from "drizzle-orm";
 import type { Request, Response } from "express";
 
 const router = Router();
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const SUPABASE_URL = (process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL)?.replace(/\/$/, "");
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 function verifyAdminToken(req: Request): boolean {
   if (!ADMIN_PASSWORD) return false;
@@ -211,65 +209,45 @@ router.get("/admin/users", async (req: Request, res: Response) => {
     const planMap = Object.fromEntries(subRows.rows.map((r) => [r.user_id, r]));
     const banMap = Object.fromEntries(banRows.rows.map((r) => [r.user_id, r]));
 
+    const dbUsers = await db.select({
+      uid: usersTable.uid,
+      email: usersTable.email,
+      createdAt: usersTable.createdAt,
+    }).from(usersTable).limit(500);
+
+    const dbUserMap = Object.fromEntries(dbUsers.map((u) => [u.uid, u]));
+
     const allUserIds = new Set([
       ...Object.keys(userDocCounts),
       ...Object.keys(userSessionCounts),
       ...Object.keys(creditMap),
       ...Object.keys(planMap),
       ...logUserRows.rows.map((r) => r.user_id),
+      ...dbUsers.map((u) => u.uid),
     ]);
 
-    let supabaseUsers: Array<{ id: string; email: string; created_at: string; last_sign_in_at?: string }> = [];
-    let supabaseError: string | null = null;
-    if (!SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_URL) {
-      supabaseError = "SUPABASE_SERVICE_ROLE_KEY or SUPABASE_URL not set on server";
-    } else {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10_000);
-        const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=500`, {
-          signal: controller.signal,
-          headers: {
-            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            apikey: SUPABASE_SERVICE_ROLE_KEY,
-          },
-        }).finally(() => clearTimeout(timeout));
-        if (r.ok) {
-          const data = await r.json() as { users?: typeof supabaseUsers };
-          supabaseUsers = data.users ?? [];
-          if (supabaseUsers.length === 0) {
-            supabaseError = "Supabase returned 0 users (check service role key and project URL)";
-          }
-        } else {
-          const errBody = await r.text().catch(() => "");
-          supabaseError = `Supabase API error ${r.status}: ${errBody.slice(0, 200)}`;
-        }
-      } catch (fetchErr) {
-        supabaseError = `Network error reaching Supabase: ${String(fetchErr).slice(0, 200)}`;
-      }
-    }
+    const enrich = (id: string) => {
+      const dbUser = dbUserMap[id];
+      return {
+        id,
+        email: dbUser?.email ?? null,
+        createdAt: dbUser?.createdAt?.toISOString() ?? null,
+        lastSignIn: null,
+        documentCount: userDocCounts[id] ?? 0,
+        sessionCount: userSessionCounts[id] ?? 0,
+        plan: planMap[id]?.plan ?? "starter",
+        billing: planMap[id]?.billing ?? null,
+        creditBalance: creditMap[id]?.balance_cents ?? 0,
+        lifetimeEarned: creditMap[id]?.lifetime_earned_cents ?? 0,
+        lifetimeSpent: creditMap[id]?.lifetime_spent_cents ?? 0,
+        banned: !!banMap[id],
+        banReason: banMap[id]?.reason ?? null,
+      };
+    };
 
-    const enrich = (id: string, email: string | null, createdAt: string | null, lastSignIn: string | null) => ({
-      id,
-      email,
-      createdAt,
-      lastSignIn,
-      documentCount: userDocCounts[id] ?? 0,
-      sessionCount: userSessionCounts[id] ?? 0,
-      plan: planMap[id]?.plan ?? "starter",
-      billing: planMap[id]?.billing ?? null,
-      creditBalance: creditMap[id]?.balance_cents ?? 0,
-      lifetimeEarned: creditMap[id]?.lifetime_earned_cents ?? 0,
-      lifetimeSpent: creditMap[id]?.lifetime_spent_cents ?? 0,
-      banned: !!banMap[id],
-      banReason: banMap[id]?.reason ?? null,
-    });
+    const users = Array.from(allUserIds).map((id) => enrich(id));
 
-    const users = supabaseUsers.length > 0
-      ? supabaseUsers.map((u) => enrich(u.id, u.email, u.created_at, u.last_sign_in_at ?? null))
-      : Array.from(allUserIds).map((id) => enrich(id, null, null, null));
-
-    res.json({ users, hasEmailData: supabaseUsers.length > 0, supabaseError });
+    res.json({ users, hasEmailData: true, supabaseError: null });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -279,24 +257,10 @@ router.get("/admin/users", async (req: Request, res: Response) => {
 
 router.delete("/admin/users/:id", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
-  if (!SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_URL) {
-    res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY not configured" }); return;
-  }
   const { id } = req.params;
   try {
-    const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
-      },
-    });
-    if (response.ok) {
-      res.json({ ok: true });
-    } else {
-      const err = await response.json().catch(() => ({}));
-      res.status(response.status).json({ error: "Failed to delete user", details: err });
-    }
+    await db.delete(usersTable).where(eq(usersTable.uid, id));
+    res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -540,18 +504,8 @@ router.get("/admin/traffic", async (req: Request, res: Response) => {
       ).catch(() => ({ rows: [] })),
     ]);
 
-    let totalRegisteredUsers = 0;
-    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=500`, {
-          headers: { Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, apikey: SUPABASE_SERVICE_ROLE_KEY },
-        });
-        if (r.ok) {
-          const data = await r.json() as { users?: unknown[] };
-          totalRegisteredUsers = data.users?.length ?? 0;
-        }
-      } catch {}
-    }
+    const userCountRow = await pool.query<{ cnt: string }>("SELECT COUNT(*) as cnt FROM users").catch(() => ({ rows: [{ cnt: "0" }] }));
+    const totalRegisteredUsers = Number(userCountRow.rows[0]?.cnt ?? 0);
 
     // Clean up logs older than 60 days (fire-and-forget)
     pool.query(`DELETE FROM request_logs WHERE created_at < NOW() - INTERVAL '60 days'`).catch(() => {});
