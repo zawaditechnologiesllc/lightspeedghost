@@ -8,9 +8,10 @@ import {
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, ChevronUp, Sparkles, Upload, BarChart3,
   Users, Award, Clock, Quote, MapPin, Mail, Twitter, Linkedin, Wand2,
-  Lock, Building2,
+  Lock, Building2, Download, Smartphone, Share,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 function useScrolled(threshold = 20) {
   const [scrolled, setScrolled] = useState(false);
@@ -285,6 +286,7 @@ export default function Landing() {
   const [checkoutPlan, setCheckoutPlan] = useState<PlanId | null>(null);
   const [paygCheckout, setPaygCheckout] = useState<{ tool: PaygTool; tier?: DocumentTier } | null>(null);
   const [, setLocation] = useLocation();
+  const { state: installState, visible: installVisible, dismiss: dismissInstall } = useInstallPrompt();
 
   function handleBuyPayg(tool: PaygTool, tier?: DocumentTier) {
     if (!user) { setLocation("/auth"); return; }
@@ -311,6 +313,55 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-[#04080f] text-white antialiased overflow-x-hidden">
+
+      {/* ── PWA Install Banner ─────────────────────────────────────────── */}
+      {installVisible && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-[200] px-4 pb-safe"
+          style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
+        >
+          <div className="max-w-lg mx-auto bg-[#0d1426] border border-white/12 rounded-2xl shadow-2xl shadow-black/60 p-4">
+            <div className="flex items-center gap-3">
+              <img src="/icon-192.png" alt="Light Speed Ghost" className="w-12 h-12 rounded-xl shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white leading-tight">Light Speed Ghost</p>
+                {installState.type === "ios" ? (
+                  <p className="text-xs text-white/50 mt-0.5 leading-snug">
+                    Tap <Share size={10} className="inline -mt-0.5 mx-0.5" /> <strong className="text-white/70">Share</strong> → <strong className="text-white/70">Add to Home Screen</strong> to install
+                  </p>
+                ) : (
+                  <p className="text-xs text-white/50 mt-0.5">Add to your home screen for quick access</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {installState.type === "android" && (
+                  <button
+                    onClick={installState.prompt}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-colors"
+                  >
+                    <Download size={13} />
+                    Install
+                  </button>
+                )}
+                {installState.type === "ios" && (
+                  <span className="flex items-center gap-1 px-3 py-2 bg-white/6 border border-white/10 rounded-xl text-xs text-white/60">
+                    <Smartphone size={12} />
+                    iOS
+                  </span>
+                )}
+                <button
+                  onClick={dismissInstall}
+                  className="p-2 text-white/30 hover:text-white/60 transition-colors rounded-xl hover:bg-white/5"
+                  aria-label="Dismiss"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* ─── NAV ─── */}
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#04080f]/95 backdrop-blur-md border-b border-white/5 shadow-lg" : ""}`}>
@@ -422,6 +473,15 @@ export default function Landing() {
               <Zap size={15} className="text-orange-400" />
               No subscription — pay once
             </a>
+            {installState.type === "android" && (
+              <button
+                onClick={installState.prompt}
+                className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 border border-white/15 hover:border-white/30 text-white/60 hover:text-white/90 rounded-xl transition-all hover:bg-white/5 text-sm sm:text-base"
+              >
+                <Download size={15} />
+                Install App
+              </button>
+            )}
           </div>
 
           <p className="mt-4 text-xs text-white/30">Starter at $1.50/mo · Or pay per use · No expiry on PAYG charges</p>
