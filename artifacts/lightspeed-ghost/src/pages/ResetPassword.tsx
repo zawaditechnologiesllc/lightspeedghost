@@ -1,16 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
 
 export default function ResetPassword() {
-  const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [error, setError] = useState("");
+  const [hasSession, setHasSession] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setHasSession(!!data.session);
+    });
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,20 +32,12 @@ export default function ResetPassword() {
     }
 
     setStatus("loading");
-
-    try {
-      const res = await fetch((import.meta.env.VITE_API_URL ?? "") + "/api/auth/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ currentPassword, newPassword: password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to change password");
-      setStatus("done");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to change password");
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    if (updateError) {
+      setError(updateError.message);
       setStatus("error");
+    } else {
+      setStatus("done");
     }
   }
 
@@ -57,34 +55,34 @@ export default function ResetPassword() {
                 <CheckCircle size={28} className="text-green-400" />
               </div>
               <h2 className="text-xl font-bold text-white mb-2">Password updated</h2>
-              <p className="text-white/50 text-sm mb-6">Your password has been changed successfully.</p>
+              <p className="text-white/50 text-sm mb-6">You can now sign in with your new password.</p>
               <Link href="/app">
                 <span className="inline-block px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-xl transition-colors cursor-pointer">
-                  Back to app
+                  Go to the app
+                </span>
+              </Link>
+            </div>
+          ) : hasSession === false ? (
+            <div className="text-center py-4">
+              <div className="w-14 h-14 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
+                <AlertCircle size={28} className="text-red-400" />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">Link expired</h2>
+              <p className="text-white/50 text-sm mb-6">This reset link has expired or already been used. Request a new one.</p>
+              <Link href="/app">
+                <span className="inline-block px-6 py-2.5 border border-white/15 hover:border-white/30 text-white/70 hover:text-white text-sm font-medium rounded-xl transition-colors cursor-pointer">
+                  Back to sign in
                 </span>
               </Link>
             </div>
           ) : (
             <>
-              <h2 className="text-xl font-bold text-white mb-1">Change password</h2>
-              <p className="text-white/50 text-sm mb-6">Enter your current password and choose a new one.</p>
+              <div className="mb-7">
+                <h1 className="text-2xl font-bold text-white mb-1.5">Set a new password</h1>
+                <p className="text-white/45 text-sm">Must be at least 8 characters.</p>
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm text-white/60 mb-1.5">Current password</label>
-                  <div className="relative">
-                    <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
-                    <input
-                      type={showPw ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="w-full pl-10 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50 transition-colors"
-                    />
-                  </div>
-                </div>
-
                 <div>
                   <label className="block text-sm text-white/60 mb-1.5">New password</label>
                   <div className="relative">
@@ -95,8 +93,7 @@ export default function ResetPassword() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      minLength={8}
-                      className="w-full pl-10 pr-10 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50 transition-colors"
+                      className="w-full pl-10 pr-10 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/8 transition-colors"
                     />
                     <button
                       type="button"
@@ -109,7 +106,7 @@ export default function ResetPassword() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-white/60 mb-1.5">Confirm new password</label>
+                  <label className="block text-sm text-white/60 mb-1.5">Confirm password</label>
                   <div className="relative">
                     <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
                     <input
@@ -118,12 +115,12 @@ export default function ResetPassword() {
                       onChange={(e) => setConfirm(e.target.value)}
                       placeholder="••••••••"
                       required
-                      className="w-full pl-10 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50 transition-colors"
+                      className="w-full pl-10 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/8 transition-colors"
                     />
                   </div>
                 </div>
 
-                {error && (
+                {(status === "error" || error) && (
                   <div className="flex items-center gap-2 px-3 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
                     <AlertCircle size={14} className="shrink-0" />
                     {error}
@@ -133,7 +130,7 @@ export default function ResetPassword() {
                 <button
                   type="submit"
                   disabled={status === "loading"}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
                 >
                   {status === "loading" && <Loader2 size={15} className="animate-spin" />}
                   {status === "loading" ? "Updating…" : "Update password"}
