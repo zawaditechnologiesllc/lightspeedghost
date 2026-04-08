@@ -8,7 +8,7 @@ import {
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, ChevronUp, Sparkles, Upload, BarChart3,
   Users, Award, Clock, Quote, MapPin, Mail, Twitter, Linkedin, Wand2,
-  Lock, Building2, Download, Smartphone, Share,
+  Lock, Building2, Share,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
@@ -286,7 +286,18 @@ export default function Landing() {
   const [checkoutPlan, setCheckoutPlan] = useState<PlanId | null>(null);
   const [paygCheckout, setPaygCheckout] = useState<{ tool: PaygTool; tier?: DocumentTier } | null>(null);
   const [, setLocation] = useLocation();
-  const { state: installState, visible: installVisible, dismiss: dismissInstall } = useInstallPrompt();
+  const { state: installState } = useInstallPrompt();
+  const [showIOSModal, setShowIOSModal] = useState(false);
+  const [showAndroidModal, setShowAndroidModal] = useState(false);
+
+  function handleIOSInstall() { setShowIOSModal(true); }
+  function handleAndroidInstall() {
+    if (installState.type === "android") {
+      installState.prompt();
+    } else {
+      setShowAndroidModal(true);
+    }
+  }
 
   function handleBuyPayg(tool: PaygTool, tier?: DocumentTier) {
     if (!user) { setLocation("/auth"); return; }
@@ -314,50 +325,66 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-[#04080f] text-white antialiased overflow-x-hidden">
 
-      {/* ── PWA Install Banner ─────────────────────────────────────────── */}
-      {installVisible && (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-[200] px-4 pb-safe"
-          style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
-        >
-          <div className="max-w-lg mx-auto bg-[#0d1426] border border-white/12 rounded-2xl shadow-2xl shadow-black/60 p-4">
-            <div className="flex items-center gap-3">
-              <img src="/icon-192.png" alt="Light Speed" className="w-12 h-12 rounded-xl shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white leading-tight">Light Speed</p>
-                {installState.type === "ios" ? (
-                  <p className="text-xs text-white/50 mt-0.5 leading-snug">
-                    Tap <Share size={10} className="inline -mt-0.5 mx-0.5" /> <strong className="text-white/70">Share</strong> → <strong className="text-white/70">Add to Home Screen</strong> to install
-                  </p>
-                ) : (
-                  <p className="text-xs text-white/50 mt-0.5">Add to your home screen for quick access</p>
-                )}
+      {/* ── iOS Install Modal ──────────────────────────────────────────── */}
+      {showIOSModal && (
+        <div className="fixed inset-0 z-[300] flex items-end justify-center px-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowIOSModal(false)}>
+          <div className="bg-[#0d1426] border border-white/12 rounded-2xl p-5 max-w-sm w-full shadow-2xl mb-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <img src="/icon-192.png" alt="Light Speed" className="w-9 h-9 rounded-xl" />
+                <div>
+                  <p className="text-sm font-bold text-white">Light Speed</p>
+                  <p className="text-[10px] text-white/40">Install on iPhone / iPad</p>
+                </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {installState.type === "android" && (
-                  <button
-                    onClick={installState.prompt}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-colors"
-                  >
-                    <Download size={13} />
-                    Install
-                  </button>
-                )}
-                {installState.type === "ios" && (
-                  <span className="flex items-center gap-1 px-3 py-2 bg-white/6 border border-white/10 rounded-xl text-xs text-white/60">
-                    <Smartphone size={12} />
-                    iOS
-                  </span>
-                )}
-                <button
-                  onClick={dismissInstall}
-                  className="p-2 text-white/30 hover:text-white/60 transition-colors rounded-xl hover:bg-white/5"
-                  aria-label="Dismiss"
-                >
-                  <X size={15} />
-                </button>
-              </div>
+              <button onClick={() => setShowIOSModal(false)} className="p-1.5 text-white/30 hover:text-white/60 rounded-lg hover:bg-white/5">
+                <X size={16} />
+              </button>
             </div>
+            <ol className="space-y-3">
+              {[
+                <>Open this page in <strong className="text-white/85">Safari</strong> (not Chrome)</>,
+                <>Tap the <Share size={13} className="inline mx-1 -mt-0.5 text-blue-400" /> <strong className="text-white/85">Share</strong> button at the bottom of the screen</>,
+                <>Scroll down and tap <strong className="text-white/85">Add to Home Screen</strong></>,
+              ].map((step, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm text-white/55">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      )}
+
+      {/* ── Android Install Modal (shown when native prompt not ready) ─── */}
+      {showAndroidModal && (
+        <div className="fixed inset-0 z-[300] flex items-end justify-center px-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowAndroidModal(false)}>
+          <div className="bg-[#0d1426] border border-white/12 rounded-2xl p-5 max-w-sm w-full shadow-2xl mb-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <img src="/icon-192.png" alt="Light Speed" className="w-9 h-9 rounded-xl" />
+                <div>
+                  <p className="text-sm font-bold text-white">Light Speed</p>
+                  <p className="text-[10px] text-white/40">Install on Android</p>
+                </div>
+              </div>
+              <button onClick={() => setShowAndroidModal(false)} className="p-1.5 text-white/30 hover:text-white/60 rounded-lg hover:bg-white/5">
+                <X size={16} />
+              </button>
+            </div>
+            <ol className="space-y-3">
+              {[
+                <>Open this page in <strong className="text-white/85">Chrome</strong> on your Android device</>,
+                <>Tap the <strong className="text-white/85">⋮ menu</strong> in the top right corner</>,
+                <>Tap <strong className="text-white/85">Add to Home Screen</strong> or <strong className="text-white/85">Install App</strong></>,
+              ].map((step, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm text-white/55">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
       )}
@@ -473,18 +500,49 @@ export default function Landing() {
               <Zap size={15} className="text-orange-400" />
               No subscription — pay once
             </a>
-            {installState.type === "android" && (
-              <button
-                onClick={installState.prompt}
-                className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 border border-white/15 hover:border-white/30 text-white/60 hover:text-white/90 rounded-xl transition-all hover:bg-white/5 text-sm sm:text-base"
-              >
-                <Download size={15} />
-                Install App
-              </button>
-            )}
           </div>
 
           <p className="mt-4 text-xs text-white/30">Starter at $1.50/mo · Or pay per use · No expiry on PAYG charges</p>
+
+          {/* ── App Store Badges ── */}
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <p className="text-[10px] text-white/25 uppercase tracking-[0.18em] font-medium">Also available as an app</p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+
+              {/* iOS – App Store */}
+              <button
+                onClick={handleIOSInstall}
+                className="flex items-center gap-3 pl-4 pr-5 py-2.5 bg-white/[0.04] border border-white/10 hover:border-white/25 hover:bg-white/[0.07] rounded-2xl transition-all group"
+              >
+                <svg viewBox="0 0 24 24" className="w-7 h-7 fill-white shrink-0" aria-hidden="true">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                </svg>
+                <div className="text-left leading-tight">
+                  <div className="text-[9px] text-white/40 uppercase tracking-wider font-medium group-hover:text-white/60 transition-colors">Download on the</div>
+                  <div className="text-sm font-bold text-white">App Store</div>
+                </div>
+              </button>
+
+              {/* Android – Google Play */}
+              <button
+                onClick={handleAndroidInstall}
+                className="flex items-center gap-3 pl-4 pr-5 py-2.5 bg-white/[0.04] border border-white/10 hover:border-white/25 hover:bg-white/[0.07] rounded-2xl transition-all group"
+              >
+                <svg viewBox="0 0 24 24" className="w-7 h-7 shrink-0" aria-hidden="true">
+                  <path d="M3.18 23.76c.33.18.71.24 1.08.15L16.5 12 4.26.09C3.89 0 3.51.06 3.18.24 2.65.54 2.29 1.1 2.29 1.8v20.4c0 .7.36 1.26.89 1.56z" fill="#4285F4"/>
+                  <path d="M20.94 10.78 18.5 9.38 16.5 12l2 2.62 2.44-1.4c.83-.45.83-1.99 0-2.44z" fill="#FBBC04"/>
+                  <path d="M4.26.09l12.24 11.9L4.26 23.91c-.33-.18-.69-.27-1.08-.15V.24c.39.12.75.03 1.08-.15z" fill="#34A853" opacity=".01"/>
+                  <path d="M16.5 9.38 4.26.09c-.33-.18-.69-.27-1.08-.15l13.32 11.44L16.5 9.38z" fill="#34A853"/>
+                  <path d="M16.5 14.62l-13.32 9.14c.39.12.75.21 1.08.15L16.5 14.62z" fill="#EA4335"/>
+                </svg>
+                <div className="text-left leading-tight">
+                  <div className="text-[9px] text-white/40 uppercase tracking-wider font-medium group-hover:text-white/60 transition-colors">Get it on</div>
+                  <div className="text-sm font-bold text-white">Google Play</div>
+                </div>
+              </button>
+
+            </div>
+          </div>
         </div>
 
         {/* ── Animated product preview ── */}
