@@ -8,6 +8,7 @@ import {
   ArrowUp, ArrowDown, ReceiptText, UserX, UserCheck, Edit2, Check,
   Radio, ServerCrash, Database, Clock, CheckCheck, XCircle, Signal,
   Megaphone, Link2, Eye, EyeOff, ThumbsUp, ThumbsDown,
+  Wrench, ToggleLeft, ToggleRight, Timer, BarChart2,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
@@ -27,7 +28,21 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "settings";
+type Tab = "overview" | "users" | "tools" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "settings";
+
+interface AdminTool {
+  key: string;
+  label: string;
+  enabled: boolean;
+  total: number;
+  thisMonth: number;
+  thisWeek: number;
+  lastUsed: string | null;
+  totalRequests: number;
+  errorCount: number;
+  errorRate: number;
+  avgMs: number;
+}
 
 interface Announcement {
   id: number;
@@ -247,6 +262,9 @@ export default function Admin() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [hasEmailData, setHasEmailData] = useState(false);
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [adminTools, setAdminTools] = useState<AdminTool[]>([]);
+  const [togglingTool, setTogglingTool] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
@@ -327,9 +345,30 @@ export default function Admin() {
 
   const loadStats = useCallback(async () => {
     setLoading(true);
-    try { setStats(await adminFetch("/admin/stats", password) as AdminStats); } catch { setStats(null); }
+    setStatsError(null);
+    try { setStats(await adminFetch("/admin/stats", password) as AdminStats); }
+    catch (e) { setStats(null); setStatsError(e instanceof Error ? e.message : "Failed to load stats"); }
     finally { setLoading(false); }
   }, [password]);
+
+  const loadTools = useCallback(async () => {
+    setLoading(true);
+    try { setAdminTools((await adminFetch("/admin/tools", password) as { tools: AdminTool[] }).tools); }
+    catch { setAdminTools([]); }
+    finally { setLoading(false); }
+  }, [password]);
+
+  async function toggleTool(key: string, enabled: boolean) {
+    setTogglingTool(key);
+    try {
+      await adminFetch(`/admin/tools/${key}/toggle`, password, {
+        method: "PATCH",
+        body: JSON.stringify({ enabled }),
+      });
+      setAdminTools((prev) => prev.map((t) => t.key === key ? { ...t, enabled } : t));
+    } catch { /* ignore */ }
+    finally { setTogglingTool(null); }
+  }
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -464,6 +503,7 @@ export default function Admin() {
   useEffect(() => {
     if (!isAuthed) return;
     if (activeTab === "overview") loadStats();
+    if (activeTab === "tools") loadTools();
     if (activeTab === "documents") loadDocuments();
     if (activeTab === "users") { loadUsers(); loadSubscriptions(); }
     if (activeTab === "gateways") loadGateways();
@@ -701,6 +741,7 @@ export default function Admin() {
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "overview",       label: "Overview",       icon: Activity },
     { id: "users",          label: "Users",          icon: Users },
+    { id: "tools",          label: "Tools",          icon: Wrench },
     { id: "documents",      label: "Documents",      icon: FileText },
     { id: "analytics",      label: "Analytics",      icon: TrendingUp },
     { id: "logs",           label: "Logs",           icon: Radio },
@@ -793,7 +834,18 @@ export default function Admin() {
             {activeTab === "overview" && (
               <div className="space-y-6 max-w-5xl">
                 <SectionHeader title="Platform Overview" sub="Live metrics across all users and tools" />
-                {!stats && loading ? <Spinner /> : stats ? (
+                {!stats && loading ? <Spinner /> : !stats && statsError ? (
+                  <div className="bg-red-500/8 border border-red-500/15 rounded-xl px-5 py-6 flex flex-col items-center gap-3 text-center">
+                    <AlertCircle size={22} className="text-red-400" />
+                    <div>
+                      <p className="text-sm font-semibold text-white/80">Could not load overview stats</p>
+                      <p className="text-xs text-white/35 mt-1 font-mono">{statsError}</p>
+                    </div>
+                    <button onClick={loadStats} className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors">
+                      <RefreshCw size={11} /> Retry
+                    </button>
+                  </div>
+                ) : stats ? (
                   <>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                       <OverviewCard icon={<Users size={18} />} label="Users" value={stats.totalUsers} color="from-blue-600/20 to-blue-500/10" border="border-blue-500/15" iconColor="text-blue-400" />
@@ -881,6 +933,7 @@ export default function Admin() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
                         {([
                           { id: "users",         label: "Users",          sub: "Accounts & bans",           icon: Users,        color: "text-blue-400",    bg: "bg-blue-500/8",    border: "border-blue-500/12" },
+                          { id: "tools",         label: "Tools",          sub: "Enable, monitor & stats",   icon: Wrench,       color: "text-rose-400",    bg: "bg-rose-500/8",    border: "border-rose-500/12" },
                           { id: "documents",     label: "Documents",      sub: "All generated content",     icon: FileText,     color: "text-indigo-400",  bg: "bg-indigo-500/8",  border: "border-indigo-500/12" },
                           { id: "analytics",     label: "Analytics",      sub: "Traffic & usage",           icon: TrendingUp,   color: "text-violet-400",  bg: "bg-violet-500/8",  border: "border-violet-500/12" },
                           { id: "logs",          label: "Logs",           sub: "API request logs",          icon: Radio,        color: "text-cyan-400",    bg: "bg-cyan-500/8",    border: "border-cyan-500/12" },
@@ -980,6 +1033,135 @@ export default function Admin() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* ── Tools ────────────────────────────────────────────────── */}
+            {activeTab === "tools" && (
+              <div className="space-y-6 max-w-5xl">
+                <div className="flex items-start justify-between flex-wrap gap-3">
+                  <SectionHeader title="AI Tools" sub="Monitor usage, error rates, and enable or disable each tool" />
+                  <button onClick={loadTools} className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors">
+                    <RefreshCw size={11} /> Refresh
+                  </button>
+                </div>
+                {loading && adminTools.length === 0 ? <Spinner /> : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {adminTools.map((tool) => {
+                      const toolIcons: Record<string, React.ReactNode> = {
+                        write:      <PenLine size={16} className="text-blue-400" />,
+                        outline:    <FileText size={16} className="text-indigo-400" />,
+                        revision:   <Files size={16} className="text-violet-400" />,
+                        humanizer:  <Zap size={16} className="text-pink-400" />,
+                        plagiarism: <Shield size={16} className="text-cyan-400" />,
+                        stem:       <FlaskConical size={16} className="text-amber-400" />,
+                        study:      <GraduationCap size={16} className="text-emerald-400" />,
+                      };
+                      const toolColors: Record<string, string> = {
+                        write:      "from-blue-600/10 to-blue-500/5 border-blue-500/12",
+                        outline:    "from-indigo-600/10 to-indigo-500/5 border-indigo-500/12",
+                        revision:   "from-violet-600/10 to-violet-500/5 border-violet-500/12",
+                        humanizer:  "from-pink-600/10 to-pink-500/5 border-pink-500/12",
+                        plagiarism: "from-cyan-600/10 to-cyan-500/5 border-cyan-500/12",
+                        stem:       "from-amber-600/10 to-amber-500/5 border-amber-500/12",
+                        study:      "from-emerald-600/10 to-emerald-500/5 border-emerald-500/12",
+                      };
+                      const isError = tool.errorRate >= 20;
+                      const isWarning = tool.errorRate >= 5 && tool.errorRate < 20;
+                      return (
+                        <div key={tool.key} className={`bg-gradient-to-br ${toolColors[tool.key] ?? "from-white/5 to-white/2 border-white/8"} border rounded-2xl p-5 space-y-4 ${!tool.enabled ? "opacity-50" : ""}`}>
+                          {/* Header row */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center">
+                                {toolIcons[tool.key]}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-white/90">{tool.label}</p>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  {tool.enabled ? (
+                                    <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
+                                      <CheckCircle2 size={9} /> Active
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-1 text-[10px] font-semibold text-white/30">
+                                      <XCircle size={9} /> Disabled
+                                    </span>
+                                  )}
+                                  {tool.enabled && isError && (
+                                    <span className="flex items-center gap-1 text-[10px] font-semibold text-red-400">
+                                      <AlertCircle size={9} /> High errors
+                                    </span>
+                                  )}
+                                  {tool.enabled && isWarning && (
+                                    <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400">
+                                      <AlertTriangle size={9} /> Elevated errors
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            {/* Toggle */}
+                            <button
+                              onClick={() => toggleTool(tool.key, !tool.enabled)}
+                              disabled={togglingTool === tool.key}
+                              className="shrink-0 transition-opacity disabled:opacity-40"
+                              title={tool.enabled ? "Disable tool" : "Enable tool"}
+                            >
+                              {togglingTool === tool.key ? (
+                                <Loader2 size={20} className="animate-spin text-white/30" />
+                              ) : tool.enabled ? (
+                                <ToggleRight size={28} className="text-emerald-400" />
+                              ) : (
+                                <ToggleLeft size={28} className="text-white/20" />
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Stats grid */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-black/20 rounded-xl px-3 py-2.5 text-center">
+                              <p className="text-base font-bold text-white tabular-nums">{tool.total.toLocaleString()}</p>
+                              <p className="text-[10px] text-white/30 mt-0.5">All time</p>
+                            </div>
+                            <div className="bg-black/20 rounded-xl px-3 py-2.5 text-center">
+                              <p className="text-base font-bold text-white tabular-nums">{tool.thisMonth.toLocaleString()}</p>
+                              <p className="text-[10px] text-white/30 mt-0.5">This month</p>
+                            </div>
+                            <div className="bg-black/20 rounded-xl px-3 py-2.5 text-center">
+                              <p className="text-base font-bold text-white tabular-nums">{tool.thisWeek.toLocaleString()}</p>
+                              <p className="text-[10px] text-white/30 mt-0.5">This week</p>
+                            </div>
+                          </div>
+
+                          {/* Error rate + response time row */}
+                          <div className="flex items-center justify-between text-xs border-t border-white/6 pt-3">
+                            <div className="flex items-center gap-3">
+                              <span className="flex items-center gap-1 text-white/40">
+                                <BarChart2 size={10} />
+                                <span className={isError ? "text-red-400 font-semibold" : isWarning ? "text-amber-400 font-semibold" : "text-white/50"}>
+                                  {tool.errorRate}% errors
+                                </span>
+                              </span>
+                              {tool.avgMs > 0 && (
+                                <span className="flex items-center gap-1 text-white/40">
+                                  <Timer size={10} />
+                                  <span className="text-white/50">{tool.avgMs}ms avg</span>
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-white/25 text-[10px]">
+                              {tool.lastUsed ? `Last used ${new Date(tool.lastUsed).toLocaleDateString()}` : "Never used"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {!loading && adminTools.length === 0 && (
+                  <Empty text="No tool data — push to Render to seed system settings" />
+                )}
               </div>
             )}
 

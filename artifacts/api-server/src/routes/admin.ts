@@ -49,16 +49,23 @@ async function initAdminTables() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     INSERT INTO system_settings (key, value) VALUES
-      ('maintenance_mode',   'false'),
-      ('allow_signups',      'true'),
-      ('payg_enabled',       'true'),
-      ('starter_paper',      '3'),
-      ('starter_revision',   '1'),
-      ('starter_humanizer',  '1'),
-      ('starter_stem',       '10'),
-      ('starter_study',      '10'),
-      ('starter_plagiarism', '5'),
-      ('starter_outline',    '5')
+      ('maintenance_mode',        'false'),
+      ('allow_signups',           'true'),
+      ('payg_enabled',            'true'),
+      ('starter_paper',           '3'),
+      ('starter_revision',        '1'),
+      ('starter_humanizer',       '1'),
+      ('starter_stem',            '10'),
+      ('starter_study',           '10'),
+      ('starter_plagiarism',      '5'),
+      ('starter_outline',         '5'),
+      ('tool_write_enabled',      'true'),
+      ('tool_outline_enabled',    'true'),
+      ('tool_revision_enabled',   'true'),
+      ('tool_humanizer_enabled',  'true'),
+      ('tool_plagiarism_enabled', 'true'),
+      ('tool_stem_enabled',       'true'),
+      ('tool_study_enabled',      'true')
     ON CONFLICT (key) DO NOTHING;
   `);
 }
@@ -95,82 +102,178 @@ router.post("/admin/verify", (req, res) => {
 
 router.get("/admin/stats", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const q = <T>(sql: string, fallback: T) =>
+    pool.query<T extends Array<infer R> ? R : T>(sql).then((r) => r.rows).catch(() => (Array.isArray(fallback) ? fallback : [fallback]) as (T extends Array<infer R> ? R : T)[]);
+
+  const [
+    docTypeRows, docUserRow, sessionCountRow, sessionUserRow,
+    revenueRows, creditsRow, activeSubsRow, planDistRows,
+    newUsersWeekRow, mrrRow, authUserRow, recentDocRows,
+  ] = await Promise.all([
+    q<{ type: string; cnt: string }[]>("SELECT type, COUNT(*) as cnt FROM documents GROUP BY type", []),
+    q<{ cnt: string }[]>("SELECT COUNT(DISTINCT user_id) as cnt FROM documents WHERE user_id IS NOT NULL", [{ cnt: "0" }]),
+    q<{ cnt: string }[]>("SELECT COUNT(*) as cnt FROM study_sessions", [{ cnt: "0" }]),
+    q<{ cnt: string }[]>("SELECT COUNT(DISTINCT user_id) as cnt FROM study_sessions WHERE user_id IS NOT NULL", [{ cnt: "0" }]),
+    q<{ gateway: string; total: string; cnt: string }[]>("SELECT gateway, SUM(amount_cents) as total, COUNT(*) as cnt FROM payments WHERE status = 'completed' GROUP BY gateway", []),
+    q<{ total: string }[]>("SELECT COALESCE(SUM(lifetime_earned_cents), 0) as total FROM user_credits", [{ total: "0" }]),
+    q<{ cnt: string }[]>("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE plan != 'starter'", [{ cnt: "0" }]),
+    q<{ plan: string; cnt: string }[]>("SELECT plan, COUNT(*) as cnt FROM user_subscriptions GROUP BY plan", []),
+    q<{ cnt: string }[]>("SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs WHERE user_id IS NOT NULL AND created_at > NOW() - INTERVAL '7 days'", [{ cnt: "0" }]),
+    q<{ mrr: string }[]>("SELECT COALESCE(SUM(amount_cents), 0) as mrr FROM payments WHERE status = 'completed' AND type = 'subscription' AND created_at > NOW() - INTERVAL '30 days'", [{ mrr: "0" }]),
+    pool.query<{ cnt: string }>("SELECT COUNT(*) as cnt FROM auth.users").then((r) => r.rows).catch(() => null),
+    pool.query<{ id: number; user_id: string | null; title: string; type: string; word_count: number; updated_at: Date; created_at: Date }>(
+      "SELECT id, user_id, title, type, word_count, updated_at, created_at FROM documents ORDER BY updated_at DESC LIMIT 10"
+    ).then((r) => r.rows).catch(() => []),
+  ]);
+
+  const docsByType = Object.fromEntries(docTypeRows.map((r) => [r.type, Number(r.cnt)]));
+  const totalDocsFromTypes = Object.values(docsByType).reduce((s, v) => s + v, 0);
+
+  // Prefer auth.users count, fall back to distinct user_ids across tables
+  const docUsers = Number((docUserRow[0] as { cnt: string } | undefined)?.cnt ?? 0);
+  const sessUsers = Number((sessionUserRow[0] as { cnt: string } | undefined)?.cnt ?? 0);
+  const totalUsers = authUserRow
+    ? Number(authUserRow[0]?.cnt ?? 0)
+    : Math.max(docUsers, sessUsers);
+
+  const totalRevenue = revenueRows.reduce((s, r) => s + Number(r.total), 0);
+  const planDistribution: Record<string, number> = {};
+  for (const r of planDistRows) planDistribution[r.plan] = Number(r.cnt);
+
+  res.json({
+    totalUsers,
+    totalDocuments: totalDocsFromTypes,
+    papersWritten:       docsByType["paper"]      ?? 0,
+    revisionsCompleted:  docsByType["revision"]   ?? 0,
+    stemSolved:          docsByType["stem"]        ?? 0,
+    studySessions:       Number((sessionCountRow[0] as { cnt: string } | undefined)?.cnt ?? 0),
+    humanizerCompleted:  docsByType["humanizer"]  ?? 0,
+    plagiarismChecks:    docsByType["plagiarism"] ?? 0,
+    outlineCount:        docsByType["outline"]    ?? 0,
+    totalRevenueCents:   totalRevenue,
+    activeSubscriptions: Number((activeSubsRow[0] as { cnt: string } | undefined)?.cnt ?? 0),
+    totalCreditsIssuedCents: Number((creditsRow[0] as { total: string } | undefined)?.total ?? 0),
+    planDistribution,
+    newUsersThisWeek:    Number((newUsersWeekRow[0] as { cnt: string } | undefined)?.cnt ?? 0),
+    mrrCents:            Number((mrrRow[0] as { mrr: string } | undefined)?.mrr ?? 0),
+    revenueByGateway: Object.fromEntries(
+      revenueRows.map((r) => [r.gateway, { revenue: Number(r.total), count: Number(r.cnt) }])
+    ),
+    recentDocuments: recentDocRows.map((d) => ({
+      id: d.id,
+      userId: d.user_id,
+      title: d.title,
+      type: d.type,
+      wordCount: d.word_count,
+      createdAt: d.created_at instanceof Date ? d.created_at.toISOString() : String(d.created_at),
+      updatedAt: d.updated_at instanceof Date ? d.updated_at.toISOString() : String(d.updated_at),
+    })),
+  });
+});
+
+// ── GET /admin/tools ─────────────────────────────────────────────────────────
+
+const TOOL_DEFS = [
+  { key: "write",      label: "Write Paper",      settingKey: "tool_write_enabled",      docType: "paper",      path: "/writing/" },
+  { key: "outline",    label: "Outline",           settingKey: "tool_outline_enabled",    docType: "outline",    path: "/writing/outline" },
+  { key: "revision",   label: "Revision",          settingKey: "tool_revision_enabled",   docType: "revision",   path: "/revision/" },
+  { key: "humanizer",  label: "AI Humanizer",      settingKey: "tool_humanizer_enabled",  docType: "humanizer",  path: "/humanizer/" },
+  { key: "plagiarism", label: "Plagiarism Check",  settingKey: "tool_plagiarism_enabled", docType: "plagiarism", path: "/plagiarism/" },
+  { key: "stem",       label: "STEM Solver",       settingKey: "tool_stem_enabled",       docType: "stem",       path: "/stem/" },
+  { key: "study",      label: "Study Assistant",   settingKey: "tool_study_enabled",      docType: null,         path: "/study/" },
+];
+
+router.get("/admin/tools", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    const [allDocs, allSessions, revenueRows, creditsRow, activeSubsRow, planDistRows, newUsersWeekRow, mrrRow] = await Promise.all([
-      db.select().from(documentsTable),
-      db.select().from(studySessionsTable),
-      pool.query<{ gateway: string; total: string; cnt: string }>(`
-        SELECT gateway, SUM(amount_cents) as total, COUNT(*) as cnt
-        FROM payments WHERE status = 'completed'
-        GROUP BY gateway
+    const settings = await getSettings();
+
+    const [docTypeCounts, studyCount, logRows] = await Promise.all([
+      pool.query<{ type: string; total: string; this_month: string; this_week: string; last_used: string | null }>(`
+        SELECT type,
+          COUNT(*)                                                          AS total,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') AS this_month,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')  AS this_week,
+          MAX(created_at)                                                   AS last_used
+        FROM documents GROUP BY type
       `).catch(() => ({ rows: [] })),
-      pool.query<{ total: string }>(`
-        SELECT COALESCE(SUM(lifetime_earned_cents), 0) as total FROM user_credits
-      `).catch(() => ({ rows: [{ total: "0" }] })),
-      pool.query<{ cnt: string }>(`
-        SELECT COUNT(*) as cnt FROM user_subscriptions WHERE plan != 'starter'
-      `).catch(() => ({ rows: [{ cnt: "0" }] })),
-      pool.query<{ plan: string; cnt: string }>(`
-        SELECT plan, COUNT(*) as cnt FROM user_subscriptions GROUP BY plan
+      pool.query<{ total: string; this_month: string; this_week: string; last_used: string | null }>(`
+        SELECT
+          COUNT(*)                                                          AS total,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') AS this_month,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')  AS this_week,
+          MAX(created_at)                                                   AS last_used
+        FROM study_sessions
       `).catch(() => ({ rows: [] })),
-      pool.query<{ cnt: string }>(`
-        SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs
-        WHERE user_id IS NOT NULL AND created_at > NOW() - INTERVAL '7 days'
-      `).catch(() => ({ rows: [{ cnt: "0" }] })),
-      pool.query<{ mrr: string }>(`
-        SELECT COALESCE(SUM(amount_cents), 0) as mrr FROM payments
-        WHERE status = 'completed' AND type = 'subscription'
-        AND created_at > NOW() - INTERVAL '30 days'
-      `).catch(() => ({ rows: [{ mrr: "0" }] })),
+      pool.query<{ path_group: string; total: string; errors: string; avg_ms: string; last_used: string | null }>(`
+        SELECT
+          CASE
+            WHEN path LIKE '%/writing/outline%'    THEN 'outline'
+            WHEN path LIKE '%/writing/%'           THEN 'write'
+            WHEN path LIKE '%/revision/%'          THEN 'revision'
+            WHEN path LIKE '%/humanizer/%'         THEN 'humanizer'
+            WHEN path LIKE '%/plagiarism/%'        THEN 'plagiarism'
+            WHEN path LIKE '%/stem/%'              THEN 'stem'
+            WHEN path LIKE '%/study/%'             THEN 'study'
+          END AS path_group,
+          COUNT(*)                                        AS total,
+          COUNT(*) FILTER (WHERE status >= 500)          AS errors,
+          ROUND(AVG(duration_ms))::TEXT                  AS avg_ms,
+          MAX(created_at)                                AS last_used
+        FROM request_logs
+        WHERE (path LIKE '%/writing/%' OR path LIKE '%/revision/%' OR path LIKE '%/humanizer/%'
+            OR path LIKE '%/plagiarism/%' OR path LIKE '%/stem/%' OR path LIKE '%/study/%')
+          AND created_at > NOW() - INTERVAL '30 days'
+        GROUP BY 1
+      `).catch(() => ({ rows: [] })),
     ]);
 
-    const uniqueUsers = new Set([
-      ...allDocs.map((d) => d.userId).filter(Boolean),
-      ...allSessions.map((s) => s.userId).filter(Boolean),
-    ]);
+    const docMap = Object.fromEntries(docTypeCounts.rows.map((r) => [r.type, r]));
+    const logMap = Object.fromEntries(logRows.rows.filter((r) => r.path_group).map((r) => [r.path_group, r]));
+    const studyRow = studyCount.rows[0];
 
-    const docsByType = allDocs.reduce((acc, d) => {
-      acc[d.type] = (acc[d.type] ?? 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const recentDocs = await db
-      .select()
-      .from(documentsTable)
-      .orderBy(desc(documentsTable.updatedAt))
-      .limit(10);
-
-    const totalRevenue = revenueRows.rows.reduce((s, r) => s + Number(r.total), 0);
-    const revenueByGateway = Object.fromEntries(
-      revenueRows.rows.map((r) => [r.gateway, { revenue: Number(r.total), count: Number(r.cnt) }])
-    );
-    const planDistribution: Record<string, number> = {};
-    for (const r of planDistRows.rows) planDistribution[r.plan] = Number(r.cnt);
-
-    res.json({
-      totalUsers: uniqueUsers.size,
-      totalDocuments: allDocs.length,
-      papersWritten: docsByType["paper"] ?? 0,
-      revisionsCompleted: docsByType["revision"] ?? 0,
-      stemSolved: docsByType["stem"] ?? 0,
-      studySessions: allSessions.length,
-      humanizerCompleted: docsByType["humanizer"] ?? 0,
-      plagiarismChecks: docsByType["plagiarism"] ?? 0,
-      outlineCount: docsByType["outline"] ?? 0,
-      totalRevenueCents: totalRevenue,
-      activeSubscriptions: Number(activeSubsRow.rows[0]?.cnt ?? 0),
-      totalCreditsIssuedCents: Number(creditsRow.rows[0]?.total ?? 0),
-      planDistribution,
-      newUsersThisWeek: Number(newUsersWeekRow.rows[0]?.cnt ?? 0),
-      mrrCents: Number(mrrRow.rows[0]?.mrr ?? 0),
-      revenueByGateway,
-      recentDocuments: recentDocs.map((d) => ({
-        ...d,
-        createdAt: d.createdAt.toISOString(),
-        updatedAt: d.updatedAt.toISOString(),
-      })),
+    const tools = TOOL_DEFS.map(({ key, label, settingKey, docType }) => {
+      const doc = docType ? docMap[docType] : null;
+      const study = key === "study" ? studyRow : null;
+      const log = logMap[key];
+      const total       = Number(doc?.total ?? study?.total ?? 0);
+      const thisMonth   = Number(doc?.this_month ?? study?.this_month ?? 0);
+      const thisWeek    = Number(doc?.this_week ?? study?.this_week ?? 0);
+      const lastUsed    = doc?.last_used ?? study?.last_used ?? null;
+      const totalReqs   = Number(log?.total ?? 0);
+      const errorCount  = Number(log?.errors ?? 0);
+      const errorRate   = totalReqs > 0 ? Math.round((errorCount / totalReqs) * 100) : 0;
+      const avgMs       = Number(log?.avg_ms ?? 0);
+      return {
+        key, label,
+        enabled: settings[settingKey] !== "false",
+        total, thisMonth, thisWeek, lastUsed,
+        totalRequests: totalReqs, errorCount, errorRate, avgMs,
+      };
     });
+
+    res.json({ tools });
   } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── PATCH /admin/tools/:key/toggle ───────────────────────────────────────────
+
+router.patch("/admin/tools/:key/toggle", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { key } = req.params;
+  const tool = TOOL_DEFS.find((t) => t.key === key);
+  if (!tool) { res.status(404).json({ error: "Unknown tool" }); return; }
+  try {
+    const { enabled } = req.body as { enabled: boolean };
+    await pool.query(
+      "UPDATE system_settings SET value = $1, updated_at = NOW() WHERE key = $2",
+      [enabled ? "true" : "false", tool.settingKey]
+    );
+    res.json({ ok: true, key, enabled });
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });
