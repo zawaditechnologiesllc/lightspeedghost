@@ -26,47 +26,137 @@ type CodePhase = "idle" | "comparing" | "results";
 
 // ── Report generator ──────────────────────────────────────────────────────────
 
+// ── Export helpers ─────────────────────────────────────────────────────────────
+
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/**
+ * Builds an inline-highlighted version of the text, Turnitin-style.
+ * aiSections carry { startIndex, endIndex, score } — we walk through the text
+ * and wrap each flagged region in a <mark> with colour intensity matching the score.
+ */
+function buildInlineHighlightedText(
+  text: string,
+  aiSections: Array<{ text: string; score: number; startIndex: number; endIndex: number }>,
+): string {
+  const sorted = [...aiSections]
+    .filter(s => s.startIndex >= 0 && s.endIndex > s.startIndex)
+    .sort((a, b) => a.startIndex - b.startIndex);
+
+  let html = "";
+  let cursor = 0;
+
+  for (const section of sorted) {
+    const start = Math.max(cursor, section.startIndex);
+    const end = Math.min(text.length, section.endIndex);
+    if (start >= end) continue;
+
+    if (start > cursor) {
+      html += esc(text.slice(cursor, start)).replace(/\n/g, "<br>");
+    }
+
+    const intensity = section.score >= 75 ? "high" : section.score >= 55 ? "med" : "low";
+    html += `<mark class="ai-hl ai-hl-${intensity}" title="AI probability: ${section.score}%">${esc(text.slice(start, end)).replace(/\n/g, "<br>")}</mark>`;
+    cursor = end;
+  }
+
+  if (cursor < text.length) {
+    html += esc(text.slice(cursor)).replace(/\n/g, "<br>");
+  }
+
+  return html;
+}
+
+/** Parses [[HL]]...[[/HL]] markers into HTML-escaped highlighted code blocks. */
+function renderHighlightedCode(raw: string): string {
+  const parts = raw.split(/(\[\[HL\]\][\s\S]*?\[\[\/HL\]\])/);
+  return parts
+    .map(part => {
+      if (part.startsWith("[[HL]]")) {
+        const content = part.replace("[[HL]]", "").replace("[[/HL]]", "");
+        return `<mark class="code-hl">${esc(content)}</mark>`;
+      }
+      return esc(part);
+    })
+    .join("");
+}
+
 function buildReportHtml(result: PlagiarismResult, text: string): string {
   const date = new Date().toLocaleString();
   const wordCount = text.split(/\s+/).filter(Boolean).length;
+  const hasHighlights = result.aiSections.length > 0;
+  const highlightedBody = hasHighlights
+    ? buildInlineHighlightedText(text, result.aiSections as Array<{ text: string; score: number; startIndex: number; endIndex: number }>)
+    : esc(text).replace(/\n/g, "<br>");
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AI & Plagiarism Report — LightSpeed Ghost</title>
+<title>AI &amp; Plagiarism Report — LightSpeed Ghost</title>
 <style>
-  body { font-family: Arial, sans-serif; font-size: 12pt; max-width: 800px; margin: 40px auto; color: #111; padding: 0 30px; }
-  h1 { font-size: 20pt; color: #1a1a2e; border-bottom: 2px solid #4f46e5; padding-bottom: 8px; }
-  h2 { font-size: 14pt; color: #1a1a2e; margin-top: 28px; }
-  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 11pt; }
+  body { font-family: Arial, sans-serif; font-size: 12pt; max-width: 860px; margin: 40px auto; color: #111; padding: 0 30px; }
+  h1 { font-size: 20pt; color: #1a1a2e; border-bottom: 2px solid #4f46e5; padding-bottom: 8px; margin-bottom: 4px; }
+  h2 { font-size: 13pt; color: #1a1a2e; margin-top: 30px; margin-bottom: 10px; }
+  .meta { font-size: 10pt; color: #6b7280; margin-bottom: 4px; }
+  .threshold { font-size: 10pt; color: #6b7280; margin-bottom: 20px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-weight: bold; font-size: 10pt; }
   .safe { background: #d1fae5; color: #065f46; }
   .warn { background: #fef3c7; color: #92400e; }
   .danger { background: #fee2e2; color: #991b1b; }
   .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
   .score-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; text-align: center; }
   .score-value { font-size: 32pt; font-weight: bold; }
-  .section { background: #f9fafb; border-left: 4px solid #4f46e5; padding: 10px 14px; margin: 8px 0; border-radius: 4px; font-size: 10pt; }
+  .score-label { font-size: 10pt; color: #374151; margin: 4px 0; }
+
+  /* ── Turnitin-style colour legend ── */
+  .legend { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; font-size: 10pt; margin-bottom: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 18px; height: 14px; border-radius: 3px; display: inline-block; }
+  .ls-ai-high { background: #f97316; }
+  .ls-ai-med  { background: #fbbf24; }
+  .ls-ai-low  { background: #fde68a; }
+  .ls-clean   { background: #e5e7eb; }
+
+  /* ── Inline text highlights (AI) ── */
+  mark.ai-hl { border-radius: 2px; padding: 0 1px; cursor: default; }
+  mark.ai-hl-high { background: #fed7aa; border-bottom: 2px solid #f97316; } /* strong orange */
+  mark.ai-hl-med  { background: #fef3c7; border-bottom: 2px solid #f59e0b; } /* amber */
+  mark.ai-hl-low  { background: #fef9c3; border-bottom: 2px solid #eab308; } /* yellow */
+
+  /* ── Full document area ── */
+  .doc-body { background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 20px 24px; font-size: 11pt; line-height: 1.8; white-space: pre-wrap; word-break: break-word; margin-bottom: 8px; }
+
+  /* ── Flagged sections list ── */
+  .ai-section { background: #fff7ed; border-left: 4px solid #f97316; padding: 10px 14px; margin: 8px 0; border-radius: 4px; font-size: 10pt; }
+  .ai-section .score-tag { font-size: 9pt; font-weight: bold; color: #ea580c; margin-bottom: 4px; }
+
+  /* ── Plagiarism sources ── */
   .source { background: #fff1f2; border: 1px solid #fecaca; padding: 10px 14px; margin: 8px 0; border-radius: 8px; font-size: 10pt; }
+
   .footer { margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 12px; font-size: 9pt; color: #6b7280; }
-  .threshold { font-size: 10pt; color: #6b7280; margin-top: 8px; }
+  @media print { body { margin: 0.5in; } }
 </style>
 </head>
 <body>
-<h1>AI & Plagiarism Check Report</h1>
-<p><strong>Generated:</strong> ${date} &nbsp;|&nbsp; <strong>Words analysed:</strong> ${wordCount.toLocaleString()}</p>
-<p class="threshold">Institutional thresholds: AI ≤ 30% · Plagiarism ≤ 30%</p>
 
-<h2>Summary</h2>
+<h1>AI &amp; Plagiarism Check Report</h1>
+<p class="meta"><strong>Generated:</strong> ${date} &nbsp;|&nbsp; <strong>Words analysed:</strong> ${wordCount.toLocaleString()}</p>
+<p class="threshold">Institutional thresholds: AI ≤ 30% &nbsp;·&nbsp; Plagiarism ≤ 30%</p>
+
+<h2>Scores</h2>
 <div class="score-grid">
   <div class="score-card">
     <div class="score-value" style="color:${result.aiScore < 30 ? "#059669" : "#dc2626"}">${result.aiScore.toFixed(0)}%</div>
-    <div>AI Detection</div>
-    <div><span class="badge ${result.aiScore < 20 ? "safe" : result.aiScore < 30 ? "warn" : "danger"}">${result.aiScore < 20 ? "Safe" : result.aiScore < 30 ? "Borderline" : "Above Threshold"}</span></div>
+    <div class="score-label">AI Detection</div>
+    <span class="badge ${result.aiScore < 20 ? "safe" : result.aiScore < 30 ? "warn" : "danger"}">${result.aiScore < 20 ? "Safe" : result.aiScore < 30 ? "Borderline" : "Above Threshold"}</span>
   </div>
   <div class="score-card">
     <div class="score-value" style="color:${result.plagiarismScore < 30 ? "#059669" : "#dc2626"}">${result.plagiarismScore.toFixed(0)}%</div>
-    <div>Plagiarism Risk</div>
-    <div><span class="badge ${result.plagiarismScore < 15 ? "safe" : result.plagiarismScore < 30 ? "warn" : "danger"}">${result.plagiarismScore < 15 ? "Original" : result.plagiarismScore < 30 ? "Acceptable" : "High Risk"}</span></div>
+    <div class="score-label">Plagiarism Risk</div>
+    <span class="badge ${result.plagiarismScore < 15 ? "safe" : result.plagiarismScore < 30 ? "warn" : "danger"}">${result.plagiarismScore < 15 ? "Original" : result.plagiarismScore < 30 ? "Acceptable" : "High Risk"}</span>
   </div>
 </div>
 
@@ -77,22 +167,40 @@ ${result.lexicalDiversity !== undefined ? `
 
 ${result.aiFlags && result.aiFlags.length > 0 ? `
 <h2>AI Indicators Detected</h2>
-${result.aiFlags.map((f: string) => `<div class="section">⚠ ${f}</div>`).join("")}
+${result.aiFlags.map((f: string) => `<p style="margin:4px 0; font-size:10pt;">⚠ ${esc(f)}</p>`).join("")}
 ` : ""}
 
-${result.aiSections.length > 0 ? `
-<h2>AI-Suspected Sections (${result.aiSections.length})</h2>
-${result.aiSections.map((s: { text: string; score: number }) => `<div class="section"><strong>Score: ${s.score.toFixed(0)}%</strong><br>${s.text}</div>`).join("")}
-` : ""}
+<h2>Full Text — Highlighted</h2>
+<div class="legend">
+  <strong>Colour key:</strong>
+  <span class="legend-item"><span class="legend-swatch ls-ai-high"></span> High AI probability (≥75%)</span>
+  <span class="legend-item"><span class="legend-swatch ls-ai-med"></span> Medium AI probability (55–74%)</span>
+  <span class="legend-item"><span class="legend-swatch ls-ai-low"></span> Lower AI probability (&lt;55%)</span>
+  <span class="legend-item"><span class="legend-swatch ls-clean"></span> No flag (human-like)</span>
+</div>
+<div class="doc-body">${highlightedBody}</div>
+
+${hasHighlights ? `
+<h2>Flagged AI Sections (${result.aiSections.length})</h2>
+${(result.aiSections as Array<{ text: string; score: number }>).map((s, i) => `
+<div class="ai-section">
+  <div class="score-tag">Section ${i + 1} &nbsp;·&nbsp; AI probability: ${s.score.toFixed(0)}%</div>
+  ${esc(s.text)}
+</div>`).join("")}
+` : "<p style='font-size:10pt; color:#059669;'>✓ No AI-suspected sections identified.</p>"}
 
 ${result.plagiarismSources.length > 0 ? `
 <h2>Plagiarism Source Matches (${result.plagiarismSources.length})</h2>
-${result.plagiarismSources.map((s: { url: string; similarity: number; matchedText: string }) => `<div class="source"><strong>${s.similarity}% match</strong> — <a href="${s.url}">${s.url}</a><br>Shared terms: ${s.matchedText}</div>`).join("")}
+${(result.plagiarismSources as Array<{ url: string; similarity: number; matchedText: string }>).map(s => `
+<div class="source">
+  <strong>${s.similarity}% similarity</strong> — <a href="${esc(s.url)}">${esc(s.url)}</a><br>
+  <span style="font-size:9pt; color:#6b7280;">Shared terms: ${esc(s.matchedText)}</span>
+</div>`).join("")}
 ` : ""}
 
 <div class="footer">
-  <strong>LightSpeed Ghost</strong> · AI & Plagiarism Checker · lightspeedghost.com<br>
-  These are AI-estimated scores. For authoritative results run through Turnitin or Copyleaks.
+  <strong>LightSpeed Ghost</strong> &middot; AI &amp; Plagiarism Checker &middot; lightspeedghost.com<br>
+  These are AI-estimated scores. Highlights indicate suspected AI-generated passages. For authoritative institutional results, submit through Turnitin or Copyleaks.
 </div>
 </body>
 </html>`;
@@ -100,32 +208,101 @@ ${result.plagiarismSources.map((s: { url: string; similarity: number; matchedTex
 
 function buildCodeReportHtml(result: CodeCompareResult): string {
   const date = new Date().toLocaleString();
+  const renderedA = renderHighlightedCode(result.highlightedDoc1 ?? "");
+  const renderedB = renderHighlightedCode(result.highlightedDoc2 ?? "");
+  const matchCountA = (result.slices1 ?? []).length;
+  const matchCountB = (result.slices2 ?? []).length;
+
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Code Similarity Report — LightSpeed Ghost</title>
+<head>
+<meta charset="UTF-8">
+<title>Code Similarity Report — LightSpeed Ghost</title>
 <style>
-  body { font-family: Arial, sans-serif; font-size: 12pt; max-width: 800px; margin: 40px auto; color: #111; padding: 0 30px; }
+  body { font-family: Arial, sans-serif; font-size: 12pt; max-width: 920px; margin: 40px auto; color: #111; padding: 0 30px; }
   h1 { font-size: 20pt; border-bottom: 2px solid #4f46e5; padding-bottom: 8px; }
+  h2 { font-size: 13pt; color: #1a1a2e; margin-top: 28px; margin-bottom: 10px; }
+  .meta { font-size: 10pt; color: #6b7280; }
   .score-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; }
   .score-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; text-align: center; }
   .score-value { font-size: 28pt; font-weight: bold; }
-  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 10pt; }
+  .score-label { font-size: 10pt; color: #374151; margin: 4px 0; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-weight: bold; font-size: 10pt; }
   .safe { background: #d1fae5; color: #065f46; }
   .warn { background: #fef3c7; color: #92400e; }
   .danger { background: #fee2e2; color: #991b1b; }
+
+  /* ── Colour legend ── */
+  .legend { display: flex; align-items: center; gap: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; font-size: 10pt; margin-bottom: 10px; }
+  .legend-swatch { width: 18px; height: 14px; border-radius: 3px; display: inline-block; }
+
+  /* ── Code panels ── */
+  .code-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .code-panel { border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; }
+  .code-header { background: #1e293b; color: #e2e8f0; padding: 8px 14px; font-size: 10pt; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+  .match-badge { background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 9pt; font-weight: normal; }
+  .code-body { background: #f8fafc; padding: 14px; overflow-x: auto; max-height: 500px; overflow-y: auto; }
+  pre { margin: 0; font-family: "Courier New", monospace; font-size: 10pt; line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+
+  /* ── Match highlights ── */
+  mark.code-hl { background: #fecaca; border-bottom: 2px solid #ef4444; border-radius: 2px; padding: 0 1px; }
+
   .footer { margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 12px; font-size: 9pt; color: #6b7280; }
+  @media print { body { margin: 0.5in; } .code-body { max-height: none; } }
 </style>
 </head>
 <body>
+
 <h1>Code Similarity Report</h1>
-<p><strong>Generated:</strong> ${date} &nbsp;|&nbsp; <strong>Algorithm:</strong> ${result.algorithm}</p>
+<p class="meta"><strong>Generated:</strong> ${date} &nbsp;|&nbsp; <strong>Algorithm:</strong> ${esc(result.algorithm ?? "Winnowing (MOSS)")}</p>
+
+<h2>Scores</h2>
 <div class="score-grid">
-  <div class="score-card"><div class="score-value">${result.similarity1}%</div><div>of Submission A matched</div></div>
-  <div class="score-card"><div class="score-value" style="color:${result.overallSimilarity >= 40 ? "#dc2626" : result.overallSimilarity >= 20 ? "#d97706" : "#059669"}">${result.overallSimilarity}%</div><div>Overall Similarity</div><div><span class="badge ${result.riskLevel === "low" ? "safe" : result.riskLevel === "medium" ? "warn" : "danger"}">${result.riskLevel.toUpperCase()} RISK</span></div></div>
-  <div class="score-card"><div class="score-value">${result.similarity2}%</div><div>of Submission B matched</div></div>
+  <div class="score-card">
+    <div class="score-value" style="color:${result.similarity1 >= 40 ? "#dc2626" : result.similarity1 >= 20 ? "#d97706" : "#059669"}">${result.similarity1}%</div>
+    <div class="score-label">of Submission A matched</div>
+  </div>
+  <div class="score-card">
+    <div class="score-value" style="color:${result.overallSimilarity >= 40 ? "#dc2626" : result.overallSimilarity >= 20 ? "#d97706" : "#059669"}">${result.overallSimilarity}%</div>
+    <div class="score-label">Overall Similarity</div>
+    <span class="badge ${result.riskLevel === "low" ? "safe" : result.riskLevel === "medium" ? "warn" : "danger"}">${result.riskLevel.toUpperCase()} RISK</span>
+  </div>
+  <div class="score-card">
+    <div class="score-value" style="color:${result.similarity2 >= 40 ? "#dc2626" : result.similarity2 >= 20 ? "#d97706" : "#059669"}">${result.similarity2}%</div>
+    <div class="score-label">of Submission B matched</div>
+  </div>
 </div>
-<div class="footer"><strong>LightSpeed Ghost</strong> · Code Similarity Checker · Winnowing (MOSS) algorithm</div>
-</body></html>`;
+
+<h2>Side-by-Side Comparison — Matched Regions Highlighted</h2>
+<div class="legend">
+  <strong>Colour key:</strong>
+  <span style="display:flex;align-items:center;gap:6px;"><span class="legend-swatch" style="background:#fecaca;border-bottom:2px solid #ef4444;"></span> Matching code region</span>
+  <span style="font-size:10pt; color:#6b7280;">Highlighted sections share identical or near-identical token sequences between both submissions.</span>
+</div>
+
+<div class="code-panels">
+  <div class="code-panel">
+    <div class="code-header">
+      Submission A
+      ${matchCountA > 0 ? `<span class="match-badge">${matchCountA} matched region${matchCountA !== 1 ? "s" : ""}</span>` : ""}
+    </div>
+    <div class="code-body"><pre>${renderedA || "<em style='color:#9ca3af'>No content</em>"}</pre></div>
+  </div>
+  <div class="code-panel">
+    <div class="code-header">
+      Submission B
+      ${matchCountB > 0 ? `<span class="match-badge">${matchCountB} matched region${matchCountB !== 1 ? "s" : ""}</span>` : ""}
+    </div>
+    <div class="code-body"><pre>${renderedB || "<em style='color:#9ca3af'>No content</em>"}</pre></div>
+  </div>
+</div>
+
+<div class="footer">
+  <strong>LightSpeed Ghost</strong> &middot; Code Similarity Checker &middot; Winnowing / MOSS algorithm (Aiken et al., SIGMOD 2003)<br>
+  Highlighted regions indicate character-level token sequences found in both submissions.
+</div>
+</body>
+</html>`;
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────

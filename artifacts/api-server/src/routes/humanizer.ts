@@ -148,6 +148,7 @@ PRESERVE (non-negotiable):
 • All in-text citations exactly: (Author, Year), [1], etc.
 • All LaTeX equations and markdown formatting
 • Academic register appropriate to the tone
+• The text's original PURPOSE — it must continue to answer the same question, address the same thesis, and argue the same position it did before humanization. Do NOT restructure the argument in a way that loses focus on the topic or weakens how directly the paper responds to its original prompt. Every section must still serve its original function (introduction introduces, methodology explains methods, conclusion synthesises). The reader must be able to identify the same central argument after humanization as before.
 
 Return ONLY the humanized text. No commentary, no JSON wrapper, no preamble.`;
 
