@@ -322,9 +322,9 @@ export default function Landing() {
         >
           <div className="max-w-lg mx-auto bg-[#0d1426] border border-white/12 rounded-2xl shadow-2xl shadow-black/60 p-4">
             <div className="flex items-center gap-3">
-              <img src="/icon-192.png" alt="LIGHTSPEED" className="w-12 h-12 rounded-xl shrink-0" />
+              <img src="/icon-192.png" alt="Light Speed" className="w-12 h-12 rounded-xl shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white leading-tight tracking-wide">LIGHTSPEED</p>
+                <p className="text-sm font-semibold text-white leading-tight">Light Speed</p>
                 {installState.type === "ios" ? (
                   <p className="text-xs text-white/50 mt-0.5 leading-snug">
                     Tap <Share size={10} className="inline -mt-0.5 mx-0.5" /> <strong className="text-white/70">Share</strong> → <strong className="text-white/70">Add to Home Screen</strong> to install

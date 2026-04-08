@@ -1,6 +1,6 @@
 {
-  "name": "LIGHTSPEED",
-  "short_name": "LIGHTSPEED",
+  "name": "Light Speed",
+  "short_name": "Light Speed",
   "description": "AI academic writing, humanizer, STEM solver, and study assistant for students.",
   "start_url": "/dashboard",
   "scope": "/",

@@ -4,53 +4,26 @@
       <stop stop-color="#0d1f5c"/>
       <stop offset="1" stop-color="#1a3a9f"/>
     </linearGradient>
+    <linearGradient id="bolt" x1="256" y1="72" x2="256" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#60a5fa"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
-  <!-- Background -->
+  <!-- Background with rounded corners -->
   <rect width="512" height="512" rx="108" fill="url(#bg)"/>
 
-  <!-- Feather quill — white body -->
+  <!-- Lightning bolt — classic zigzag -->
   <path
-    d="M348 100
-       C400 132 408 220 384 290
-       C364 348 316 392 256 400
-       L276 360
-       C316 340 358 304 366 256
-       C374 208 352 172 324 162 Z"
-    fill="white"
-    opacity="0.95"
-  />
-
-  <!-- Quill highlight — blue-400 -->
-  <path
-    d="M348 100
-       C324 93 296 101 274 116
-       C302 120 336 140 336 172 Z"
-    fill="#60a5fa"
-    opacity="0.9"
-  />
-
-  <!-- Quill spine line — white translucent -->
-  <line
-    x1="330" y1="140"
-    x2="150" y2="418"
-    stroke="white"
-    stroke-width="8"
-    stroke-linecap="round"
-    opacity="0.35"
-  />
-  <line
-    x1="342" y1="196"
-    x2="252" y2="344"
-    stroke="white"
-    stroke-width="5"
-    stroke-linecap="round"
-    opacity="0.2"
-  />
-
-  <!-- Pen nib / tip — #60a5fa -->
-  <path
-    d="M150 418 L120 444 L158 432 Z"
-    fill="#60a5fa"
+    d="M296 72 L168 284 L232 284 L216 440 L344 228 L280 228 Z"
+    fill="url(#bolt)"
+    filter="url(#glow)"
   />
 </svg>
