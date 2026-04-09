@@ -102,6 +102,7 @@ export default function Humanizer() {
   // ── phase
   const [phase, setPhase] = useState<Phase>("input");
   const [steps, setSteps] = useState<Step[]>([]);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // ── input
   const [inputText, setInputText] = useState("");
@@ -145,6 +146,7 @@ export default function Humanizer() {
     const text = (overrideText ?? inputText).trim();
     if (!text) return;
     guard("humanizer", async () => {
+      setApiError(null);
       setPhase("detecting");
       try {
         const resp = await apiFetch(`/humanizer/detect`, {
@@ -155,11 +157,15 @@ export default function Humanizer() {
           },
           body: JSON.stringify({ text }),
         });
-        if (!resp.ok) throw new Error("Detection failed");
+        if (!resp.ok) {
+          const body = await resp.json().catch(() => ({})) as { error?: string };
+          throw new Error(body.error ?? `Detection failed (${resp.status})`);
+        }
         const data = await resp.json() as DetectionResult;
         setDetectionResult(data);
         setPhase("decision");
-      } catch {
+      } catch (err) {
+        setApiError(err instanceof Error ? err.message : "Detection failed — please try again");
         setPhase("input");
       }
     });
@@ -173,6 +179,7 @@ export default function Humanizer() {
 
     setPhase("humanizing");
     setSteps([]);
+    setApiError(null);
     abortRef.current = new AbortController();
 
     try {
@@ -186,7 +193,10 @@ export default function Humanizer() {
         signal: abortRef.current.signal,
       });
 
-      if (!resp.ok || !resp.body) throw new Error("Stream failed");
+      if (!resp.ok || !resp.body) {
+        const body = await resp.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? `Server error (${resp.status}) — please try again`);
+      }
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -213,12 +223,14 @@ export default function Humanizer() {
             setResultTab("humanized");
             setPhase("results");
           } else if (event === "error") {
+            setApiError(data.message ?? "Humanization failed — please try again");
             setPhase("decision");
           }
         }
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
+      setApiError(err instanceof Error ? err.message : "Humanization failed — please try again");
       setPhase("decision");
     }
   }, [inputText, tone, instructions]);
@@ -331,6 +343,11 @@ export default function Humanizer() {
 
           {/* CTA — inside scroll area so it flows naturally with the form */}
           <div className="px-4 sm:px-6 pt-2 pb-8 max-w-3xl mx-auto w-full">
+            {apiError && (
+              <div className="mb-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-500">
+                {apiError}
+              </div>
+            )}
             <button
               onClick={() => handleDetect()}
               disabled={!inputText.trim()}
@@ -455,6 +472,13 @@ export default function Humanizer() {
                 ))}
               </div>
             </div>
+
+            {/* Error from humanize attempt */}
+            {apiError && (
+              <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-500">
+                {apiError}
+              </div>
+            )}
 
             {/* CTAs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

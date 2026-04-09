@@ -563,6 +563,7 @@ export default function PlagiarismChecker() {
   // ── Text check state
   const [text, setText] = useState("");
   const [textPhase, setTextPhase] = useState<TextPhase>("idle");
+  const [checkError, setCheckError] = useState<string | null>(null);
   const [result, setResult] = useState<PlagiarismResult | null>(null);
   const [humanizedText, setHumanizedText] = useState<string | null>(null);
   const [intensityValue, setIntensityValue] = useState(50);
@@ -587,6 +588,7 @@ export default function PlagiarismChecker() {
   const handleCheck = async () => {
     if (!text.trim()) return;
     if (isAtLimit("plagiarism")) { guard("plagiarism", () => {}); return; }
+    setCheckError(null);
     setTextPhase("checking");
     setResult(null);
     setHumanizedText(null);
@@ -594,7 +596,9 @@ export default function PlagiarismChecker() {
       const res = await checkPlagiarism.mutateAsync({ text, checkAi: true, checkPlagiarism: true });
       setResult(res);
       setTextPhase("results");
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Analysis failed — please try again";
+      setCheckError(msg.startsWith("{") ? "Analysis failed — please try again" : msg);
       setTextPhase("idle");
     }
   };
@@ -733,6 +737,11 @@ export default function PlagiarismChecker() {
                   className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none leading-relaxed font-mono"
                 />
 
+                {checkError && (
+                  <div className="mb-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-500">
+                    {checkError}
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground tabular-nums">{wordCount.toLocaleString()} words</span>
                   <div className="flex items-center gap-2">

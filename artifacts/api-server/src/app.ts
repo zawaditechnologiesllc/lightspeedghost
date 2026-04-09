@@ -59,15 +59,31 @@ app.use(
 );
 
 // ── CORS — strict allowlist, never open wildcard ───────────────────────────────
-const ENV_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : [];
+// Build the origin set from ALLOWED_ORIGINS and automatically include
+// both the www and non-www variant of every listed domain so the user
+// only needs to set one form (e.g. https://example.com is enough to
+// also allow https://www.example.com and vice-versa).
+const ENV_ORIGINS = new Set<string>();
+if (process.env.ALLOWED_ORIGINS) {
+  for (const raw of process.env.ALLOWED_ORIGINS.split(",")) {
+    const o = raw.trim();
+    if (!o) continue;
+    ENV_ORIGINS.add(o);
+    try {
+      const url = new URL(o);
+      const host = url.hostname;
+      const alt = host.startsWith("www.") ? host.slice(4) : `www.${host}`;
+      ENV_ORIGINS.add(`${url.protocol}//${alt}${url.port ? `:${url.port}` : ""}`);
+    } catch { /* ignore malformed entries */ }
+  }
+}
 
 const KNOWN_DEV_ORIGINS = [
   /^https?:\/\/localhost(:\d+)?$/,
   /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
   /\.replit\.dev$/,
   /\.repl\.co$/,
+  /\.vercel\.app$/,
 ];
 
 app.use(
@@ -78,9 +94,9 @@ app.use(
         if (process.env.NODE_ENV !== "production") return cb(null, true);
         return cb(new Error("CORS: origin required in production"), false);
       }
-      // Explicit allowlist from env var always wins
-      if (ENV_ORIGINS.includes(origin)) return cb(null, true);
-      // Dev/Replit pattern match
+      // Explicit allowlist from env var always wins (includes auto-added www variant)
+      if (ENV_ORIGINS.has(origin)) return cb(null, true);
+      // Dev/Replit/Vercel preview pattern match
       if (KNOWN_DEV_ORIGINS.some((pat) => pat.test(origin))) return cb(null, true);
       cb(new Error(`CORS: origin '${origin}' is not allowed`), false);
     },
@@ -182,6 +198,22 @@ app.use(authMiddleware);
 app.get("/api/status", async (_req: Request, res: Response) => {
   const settings = await getSystemSettings();
   res.json({ maintenance: settings.maintenance_mode, allow_signups: settings.allow_signups });
+});
+
+// ── Diagnostic endpoint — env vars check (no secret values exposed) ───────────
+app.get("/api/health/config", (_req: Request, res: Response) => {
+  const check = (key: string) => !!process.env[key];
+  res.json({
+    env: process.env.NODE_ENV,
+    keys: {
+      ANTHROPIC_API_KEY: check("ANTHROPIC_API_KEY"),
+      OPENAI_API_KEY: check("OPENAI_API_KEY"),
+      SUPABASE_JWT_SECRET: check("SUPABASE_JWT_SECRET"),
+      DATABASE_URL: check("DATABASE_URL"),
+      SESSION_SECRET: check("SESSION_SECRET"),
+      ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ?? "(not set)",
+    },
+  });
 });
 
 // ── Maintenance mode middleware ────────────────────────────────────────────────
