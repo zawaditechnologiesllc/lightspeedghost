@@ -460,7 +460,7 @@ export default function Outline() {
               ].join("\n");
             }}
             filename={makeLsgFilename("outline", "OUTLINE")}
-            formats={["docx", "doc", "pdf", "md", "copy"]}
+            formats={["docx", "pdf", "md", "copy"]}
           />
           <Link href={`/write?topic=${encodeURIComponent(topic)}&subject=${encodeURIComponent(subject)}&type=${paperType}`}>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:opacity-80 border border-primary/30 bg-primary/5 rounded-lg px-2.5 py-1.5 transition-all cursor-pointer">

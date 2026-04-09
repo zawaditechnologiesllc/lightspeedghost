@@ -74,13 +74,11 @@ export function exportAsWord(html: string, filename: string): void {
   );
 }
 
-/** .docx — same HTML content, Office Open XML MIME type (Word opens both) */
+/** .doc — HTML content with Word MIME type (opens correctly in Microsoft Word and Google Docs) */
 export function exportAsDocx(html: string, filename: string): void {
   triggerDownload(
-    new Blob([html], {
-      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    }),
-    `${filename}.docx`
+    new Blob([html], { type: "application/msword" }),
+    `${filename}.doc`
   );
 }
 

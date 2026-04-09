@@ -19,7 +19,7 @@ interface ExportButtonsProps {
 
 const FORMAT_LABELS: Record<ExportFormat, string> = {
   copy:  "Copy",
-  docx:  ".docx",
+  docx:  "Word",
   doc:   ".doc",
   pdf:   "PDF",
   txt:   ".txt",
@@ -35,7 +35,7 @@ const FORMAT_ICONS: Record<ExportFormat, React.ReactNode> = {
   md:    <FileCode2 size={12} />,
 };
 
-const DEFAULT_FORMATS: ExportFormat[] = ["docx", "doc", "pdf", "copy"];
+const DEFAULT_FORMATS: ExportFormat[] = ["docx", "pdf", "copy"];
 
 export function ExportButtons({
   getHtml,

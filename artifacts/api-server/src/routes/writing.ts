@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { GenerateOutlineBody } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
@@ -89,7 +89,8 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       referenceText?: string;
     };
 
-    const targetWords = body.wordCount ?? 1500;
+    const requestedWords = body.wordCount ?? 1500;
+    const targetWords = Math.ceil(requestedWords * 1.1); // Always write ≥10% over the requested count
     const citationCount = targetWords >= 3000 ? 12 : targetWords >= 2000 ? 9 : targetWords >= 1000 ? 6 : 4;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
     const maxTokens = Math.min(12000, Math.max(3000, Math.ceil(targetWords * 2.8)));
@@ -273,6 +274,37 @@ ${stemSections.introduction ? `• INTRODUCTION — technical background to embe
 Do NOT move equations to the introduction, do NOT put results in the methodology. Each block belongs exactly where labelled above.`
       : "";
 
+    // Paper-type-specific structure guidance
+    const PAPER_TYPE_STRUCTURES: Record<string, string> = {
+      essay:           "Introduction (clear thesis) → Body Paragraphs (3–5 developed arguments, each: topic sentence + evidence + analysis) → Conclusion (synthesis, no new ideas) → References",
+      argumentative:   "Introduction (hook + context + thesis) → Argument 1 (claim + evidence + analysis) → Argument 2 → Argument 3 → Counter-argument & Rebuttal → Conclusion → References",
+      expository:      "Introduction → Body Sections (explain each aspect clearly with examples) → Conclusion → References",
+      analytical:      "Introduction (analytical question + thesis) → Analysis Section 1 → Analysis Section 2 → Analysis Section 3 → Synthesis → Conclusion → References",
+      persuasive:      "Introduction (hook + strong thesis) → Supporting Argument 1 → Supporting Argument 2 → Supporting Argument 3 → Counter-argument & Rebuttal → Call to Action / Conclusion → References",
+      narrative:       "Introduction (scene/hook) → Rising Action → Climax → Falling Action → Resolution / Reflection → References (if academic)",
+      reflective:      "Introduction (context & experience) → Description → Feelings & Reactions → Evaluation → Analysis → Conclusion → Action Plan → References",
+      report:          "Title Page → Executive Summary / Abstract → Table of Contents → Introduction → Methodology → Findings / Results → Discussion → Conclusions → Recommendations → References → Appendices",
+      "lab report":    "Title → Abstract → Introduction → Materials & Methods → Results (tables/figures) → Discussion → Conclusion → References",
+      "case study":    "Introduction → Background & Context → Problem Identification → Theoretical Framework / Analysis → Solutions & Recommendations → Conclusion → References",
+      "literature review": "Introduction (scope + research question) → Thematic or Chronological Body Sections → Synthesis of Findings → Gaps & Future Research → Conclusion → References",
+      "research paper": "Abstract → Introduction → Literature Review → Theoretical Framework → Methodology → Results → Discussion → Conclusion → References",
+      research:        "Abstract → Introduction → Literature Review → Theoretical Framework → Methodology → Results → Discussion → Conclusion → References",
+      thesis:          "Abstract → Introduction → Literature Review → Theoretical Framework → Methodology → Results & Analysis → Discussion → Conclusion → Limitations → Recommendations → References",
+      dissertation:    "Abstract → Introduction → Literature Review → Theoretical Framework → Methodology → Results & Analysis → Discussion → Conclusion → Limitations → Recommendations → References",
+      "term paper":    "Abstract → Introduction → Literature Review → Analysis / Discussion → Conclusion → References",
+      "critical analysis": "Introduction (text + critical question) → Context & Background → Textual / Thematic Analysis (multiple perspectives) → Evaluation of Strengths & Weaknesses → Conclusion → References",
+      "annotated bibliography": "Introduction (scope & purpose) → Annotated Entries (full citation + 150–200 word annotation each: summary, evaluation, relevance) → Conclusion",
+    };
+    function getPaperTypeStructure(type: string): string {
+      const key = type.toLowerCase().trim();
+      return PAPER_TYPE_STRUCTURES[key]
+        ?? (key.includes("essay")    ? PAPER_TYPE_STRUCTURES.essay
+          : key.includes("report")  ? PAPER_TYPE_STRUCTURES.report
+          : key.includes("review")  ? PAPER_TYPE_STRUCTURES["literature review"]
+          : key.includes("thesis")  ? PAPER_TYPE_STRUCTURES.thesis
+          : "Abstract → Introduction → Literature Review / Background → Methodology / Theory → Results / Analysis → Discussion → Conclusion → References");
+    }
+
     // Format standards: read from instructions first, then fall back to latest institutional formats
     const formatStandards = rubricFormatReqs
       ? `PAPER FORMAT: Follow the format requirements from the student's rubric: ${rubricFormatReqs}`
@@ -280,10 +312,10 @@ Do NOT move equations to the introduction, do NOT put results in the methodology
 - APA: 7th edition (2020) — APA Publication Manual, American Psychological Association
 - MLA: 9th edition (2021) — MLA Handbook, Modern Language Association
 - Chicago: 17th edition (2017) — The Chicago Manual of Style
-- Harvard: Use the most recent version of your institution's Harvard Referencing Guide (2023)
+- Harvard: Most recent institutional Harvard Referencing Guide (2023)
 - IEEE: IEEE Author's Guide (2023) — Institute of Electrical and Electronics Engineers
-Default paper structure (unless rubric or instructions specify otherwise):
-Abstract → Introduction → Literature Review / Background → Methodology / Theory → Results / Analysis → Discussion → Conclusion → References`;
+REQUIRED STRUCTURE for a ${body.paperType}: ${getPaperTypeStructure(body.paperType)}
+Follow this structure exactly — every section must be present and properly developed.`;
 
     const systemPrompt = `${WRITER_SOUL}
 
@@ -300,7 +332,7 @@ PAPER REQUIREMENTS:
 - Paper Type: ${body.paperType}
 - Subject: ${body.subject}
 - Citation Style: ${body.citationStyle.toUpperCase()}
-- Target body word count: exactly ${targetWords} words (EXCLUDING abstract, table of contents, references section, in-text citation parentheses, and figure/table captions)
+- Target body word count: MINIMUM ${targetWords} words (you requested ${requestedWords} — always write at least 10% more; EXCLUDING abstract, table of contents, references section, in-text citation parentheses, and figure/table captions)
 - CITATION FREQUENCY: Insert at least one in-text citation every 200 words throughout the body — citations must be distributed evenly, not clustered at the end
 - CITATION SOURCE: Reference ONLY the numbered verified citations above (e.g. [1], [2]). Do NOT cite anything from the Background Reading section. Do NOT add any source not listed in the VERIFIED CITATIONS block.
 - Write in full markdown: # Title, ## sections, ### subsections
@@ -308,7 +340,7 @@ PAPER REQUIREMENTS:
 ${includeToC ? "- INCLUDE a Table of Contents after the Abstract" : "- Do NOT include a Table of Contents"}
 - End with a References section listing ONLY the verified citations numbered above — exactly as formatted there
 - Write 0% AI-detectable prose — vary sentence length, use discipline-specific vocabulary, active/passive voice mix, avoid AI clichés like "delve", "crucial", "pivotal", "underscore"
-- Grade target: the paper must meet or exceed 92% quality against academic standards
+- MANDATORY GRADE TARGET: The paper MUST score 92% or higher against academic standards — this is NON-NEGOTIABLE. Every section must demonstrate critical analysis, strong argumentation, precise evidence use, and discipline-specific depth that earns distinction-level marks
 - CRITICAL: Do NOT cite Wikipedia, open web sources, or any source not in the Verified Citations block above
 ${body.additionalInstructions ? `\nADDITIONAL INSTRUCTIONS: ${body.additionalInstructions}` : ""}`;
 
@@ -598,19 +630,20 @@ Plagiarism guidance: properly cited academic work scores 2-8%.`,
     });
 
     // ── Save to DB in background — failure does NOT affect what the user sees ─
-    getNextDocNumber(userId, "paper").then(async (docNum) => {
-      await db.insert(documentsTable).values({
-        userId,
-        title: formatDocTitle({ type: "paper", docNumber: docNum, paperType: body.paperType }),
-        content: finalContent,
-        type: "paper",
-        subject: body.subject,
-        docNumber: docNum,
-        wordCount: bodyWordCount,
-      });
-    }).catch((err) => {
-      console.error("[writing] DB save failed (paper still delivered to user):", err?.message ?? err);
-    });
+    (async () => {
+      try {
+        const docTitle = formatDocTitle({ type: "paper", docNumber: 0, paperType: body.paperType });
+        await pool.query(
+          `INSERT INTO documents (user_id, title, content, type, subject, doc_number, word_count)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [userId, docTitle, finalContent, "paper", body.subject ?? null, 0, bodyWordCount]
+        );
+        console.log(`[writing] Document saved to DB for user ${userId ?? "anonymous"}`);
+      } catch (err: unknown) {
+        const e = err as { message?: string };
+        console.error("[writing] DB save failed (paper still delivered):", e?.message ?? err);
+      }
+    })();
   } catch (err) {
     try { send("error", { message: err instanceof Error ? err.message : "Failed to generate paper" }); } catch { /* ignore */ }
   } finally {
