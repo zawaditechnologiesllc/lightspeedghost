@@ -47,7 +47,10 @@ function verifyJwt(token: string): SupabaseJwtPayload | null {
   if (SUPABASE_JWT_SECRET) {
     try {
       return jwt.verify(token, SUPABASE_JWT_SECRET) as SupabaseJwtPayload;
-    } catch {
+    } catch (err) {
+      // Log the failure reason so it's visible in Render logs
+      const reason = err instanceof Error ? err.message : String(err);
+      console.error(`[auth] JWT verification failed: ${reason}. Check that SUPABASE_JWT_SECRET matches your Supabase project's JWT Secret (Settings → API → JWT Settings → JWT Secret).`);
       return null;
     }
   }
