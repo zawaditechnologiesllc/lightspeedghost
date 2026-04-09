@@ -251,37 +251,59 @@ export default function StemSolver() {
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
 
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split("\n");
-        buf = lines.pop() ?? "";
+        // Always decode whatever arrived — the final frame (done=true) often
+        // carries the last SSE event (done/error). Breaking before decoding
+        // it causes the "connection interrupted" false-positive.
+        if (value?.length) {
+          buf += decoder.decode(value, { stream: !done });
+          const lines = buf.split("\n");
+          buf = lines.pop() ?? "";
 
-        let event = "";
-        for (const line of lines) {
-          if (line.startsWith("event: ")) { event = line.slice(7).trim(); }
-          else if (line.startsWith("data: ")) {
-            try {
-              const payload = JSON.parse(line.slice(6));
-              if (event === "step") {
-                updateStep(payload.id, payload.message, payload.status);
-              } else if (event === "done") {
-                receivedDone = true;
-                setResult(payload as StemSolution);
-                setActiveTab("papers");
-                setShowInput(false);
-              } else if (event === "error") {
-                receivedDone = true;
-                setSolveError(payload.message ?? "Solve failed — please try again");
-              }
-            } catch { /* ignore parse errors */ }
-            event = "";
+          let event = "";
+          for (const line of lines) {
+            if (line.startsWith("event: ")) { event = line.slice(7).trim(); }
+            else if (line.startsWith("data: ")) {
+              try {
+                const payload = JSON.parse(line.slice(6));
+                if (event === "step") {
+                  updateStep(payload.id, payload.message, payload.status);
+                } else if (event === "done") {
+                  receivedDone = true;
+                  setResult(payload as StemSolution);
+                  setActiveTab("papers");
+                  setShowInput(false);
+                } else if (event === "error") {
+                  receivedDone = true;
+                  setSolveError(payload.message ?? "Solve failed — please try again");
+                }
+              } catch { /* ignore parse errors */ }
+              event = "";
+            }
           }
         }
+
+        if (done) break;
+      }
+
+      // Flush any remaining data in the buffer (e.g. a partial line at EOF)
+      if (buf.trim()) {
+        try {
+          const payload = JSON.parse(buf.replace(/^data:\s*/, ""));
+          if (payload?.answer !== undefined) {
+            receivedDone = true;
+            setResult(payload as StemSolution);
+            setActiveTab("papers");
+            setShowInput(false);
+          } else if (payload?.message) {
+            receivedDone = true;
+            setSolveError(payload.message);
+          }
+        } catch { /* not valid JSON — ignore */ }
       }
 
       if (!receivedDone) {
-        setSolveError("Connection interrupted before the solution was completed — please try again.");
+        setSolveError("The solve timed out or was interrupted — please try again. Complex problems may need to be broken into smaller steps.");
       }
     } catch (err) {
       setSolveError(err instanceof Error ? err.message : "Network error — please try again");

@@ -43,17 +43,20 @@ export async function reactSolve(
   problem: string,
   subject: string
 ): Promise<ReActResult> {
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 4000,
-    system: REACT_SYSTEM,
-    messages: [
-      {
-        role: "user",
-        content: `Solve this ${subject} problem using the ReAct framework:\n\n${problem}`,
-      },
-    ],
-  });
+  const response = await anthropic.messages.create(
+    {
+      model: "claude-sonnet-4-5",
+      max_tokens: 3000,
+      system: REACT_SYSTEM,
+      messages: [
+        {
+          role: "user",
+          content: `Solve this ${subject} problem using the ReAct framework:\n\n${problem}`,
+        },
+      ],
+    },
+    { timeout: 90_000 },   // hard 90-second ceiling; surfaces as a real error, not a silent hang
+  );
 
   const usage = response.usage;
   recordUsage("claude-sonnet-4-5", usage.input_tokens, usage.output_tokens, `react-stem-${subject}`);
