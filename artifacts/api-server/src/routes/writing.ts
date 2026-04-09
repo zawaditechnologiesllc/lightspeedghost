@@ -574,22 +574,14 @@ Plagiarism guidance: properly cited academic work scores 2-8%.`,
 
     send("step", { id: "stats", message: `Quality assessment complete — estimated grade ${stats.grade}%, AI score ${stats.aiScore}%, plagiarism ${stats.plagiarismScore}% (verified)`, status: "done" });
 
-    // ── Save to DB ────────────────────────────────────────────────────────────
+    // ── Send "done" to the client FIRST — the paper is ready regardless of DB ─
+    // DB save is best-effort: if it fails the user still sees their paper.
     const userId = req.userId ?? null;
-    const docNum = await getNextDocNumber(userId, "paper");
-    const [doc] = await db.insert(documentsTable).values({
-      userId,
-      title: formatDocTitle({ type: "paper", docNumber: docNum, paperType: body.paperType }),
-      content: finalContent,
-      type: "paper",
-      subject: body.subject,
-      docNumber: docNum,
-      wordCount: bodyWordCount,
-    }).returning();
+    const paperTitle = formatDocTitle({ type: "paper", docNumber: 0, paperType: body.paperType });
 
     send("done", {
-      documentId: doc.id,
-      title: doc.title,
+      documentId: null, // will be updated after DB save if successful
+      title: paperTitle,
       content: finalContent,
       citations: citations.map((c, i) => ({
         id: c.id,
@@ -603,6 +595,21 @@ Plagiarism guidance: properly cited academic work scores 2-8%.`,
       })),
       bibliography,
       stats,
+    });
+
+    // ── Save to DB in background — failure does NOT affect what the user sees ─
+    getNextDocNumber(userId, "paper").then(async (docNum) => {
+      await db.insert(documentsTable).values({
+        userId,
+        title: formatDocTitle({ type: "paper", docNumber: docNum, paperType: body.paperType }),
+        content: finalContent,
+        type: "paper",
+        subject: body.subject,
+        docNumber: docNum,
+        wordCount: bodyWordCount,
+      });
+    }).catch((err) => {
+      console.error("[writing] DB save failed (paper still delivered to user):", err?.message ?? err);
     });
   } catch (err) {
     try { send("error", { message: err instanceof Error ? err.message : "Failed to generate paper" }); } catch { /* ignore */ }
