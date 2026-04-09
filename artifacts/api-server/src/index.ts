@@ -80,7 +80,53 @@ async function runStartupTasks(): Promise<void> {
     logger.error({ err }, "[startup] Failed to ensure user_sessions table");
   }
 
-  // 4. Ensure student_profiles table exists (study assistant personalised memory)
+  // 4. Ensure documents table exists (stores all generated papers, outlines, etc.)
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS documents (
+        id          SERIAL PRIMARY KEY,
+        user_id     TEXT,
+        title       TEXT NOT NULL,
+        content     TEXT NOT NULL DEFAULT '',
+        type        TEXT NOT NULL,
+        subject     TEXT,
+        doc_number  INTEGER NOT NULL DEFAULT 0,
+        word_count  INTEGER NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    logger.info("[startup] documents table ready");
+  } catch (err) {
+    logger.error({ err }, "[startup] Failed to ensure documents table — paper saving will fail");
+  }
+
+  // 5. Ensure study_sessions and study_messages tables exist (AI Tutor tool)
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS study_sessions (
+        id             SERIAL PRIMARY KEY,
+        user_id        TEXT,
+        title          TEXT NOT NULL DEFAULT 'New Session',
+        subject        TEXT,
+        message_count  INTEGER NOT NULL DEFAULT 0,
+        last_activity  TIMESTAMP NOT NULL DEFAULT NOW(),
+        created_at     TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS study_messages (
+        id          SERIAL PRIMARY KEY,
+        session_id  INTEGER NOT NULL REFERENCES study_sessions(id),
+        role        TEXT NOT NULL,
+        content     TEXT NOT NULL,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    logger.info("[startup] study_sessions and study_messages tables ready");
+  } catch (err) {
+    logger.error({ err }, "[startup] Failed to ensure study tables — AI Tutor may fail");
+  }
+
+  // 6. Ensure student_profiles table exists (study assistant personalised memory)
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS student_profiles (
