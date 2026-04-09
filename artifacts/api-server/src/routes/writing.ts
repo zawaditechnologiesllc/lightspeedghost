@@ -184,8 +184,8 @@ Return JSON:
     send("step", {
       id: "citations",
       message: isAnnotatedBib
-        ? `Annotated bibliography mode — fetching ${citationCount} verified academic sources from OpenAlex, CrossRef, Semantic Scholar, PubMed, arXiv, CORE, DOAJ, ERIC, Zenodo, Europe PMC for "${body.topic}"…`
-        : `Searching 10 live academic databases (1B+ papers: OpenAlex, CrossRef, Semantic Scholar, PubMed, arXiv, CORE, DOAJ, ERIC, Zenodo, Europe PMC) for "${body.topic}"…`,
+        ? `Annotated bibliography mode — fetching ${citationCount} verified academic sources from 13 live databases (OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE) for "${body.topic}"…`
+        : `Searching 13 live academic databases (1B+ papers: OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE) for "${body.topic}"…`,
       status: "running",
     });
 

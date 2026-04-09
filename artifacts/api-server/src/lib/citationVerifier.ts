@@ -3,7 +3,13 @@
  * Prevents hallucinated references by fetching REAL papers from live APIs.
  * Implements VerifiedRegistry: only grounded, real citations appear in papers.
  *
- * Sources: Semantic Scholar (primary), arXiv (STEM supplement), CrossRef (fallback)
+ * Sources:
+ *  • Semantic Scholar — 200M+ papers, citation-ranked (primary for most subjects)
+ *  • OpenAlex        — 250M+ papers, DOI-verified, all disciplines (primary broad coverage)
+ *  • arXiv           — 2.4M+ preprints (STEM supplement)
+ *  • Europe PMC      — 40M+ biomedical papers (medical/life science supplement)
+ *  • PubMed NCBI     — 36M+ biomedical papers (medical gold standard)
+ *  • CrossRef        — 145M+ DOI records (fallback, all disciplines)
  */
 
 import { withCache } from "./cache.js";
@@ -145,6 +151,204 @@ export async function searchArxiv(
   }
 }
 
+// ── OpenAlex — 250M+ papers, DOI-verified, all disciplines ───────────────────
+
+async function searchOpenAlexCitations(
+  query: string,
+  limit: number
+): Promise<VerifiedCitation[]> {
+  try {
+    const params = new URLSearchParams({
+      search: query,
+      per_page: String(Math.min(limit, 20)),
+      select: "id,title,authorships,publication_year,doi,primary_location,cited_by_count",
+      filter: "has_doi:true",
+      sort: "cited_by_count:desc",
+    });
+
+    const res = await fetch(`https://api.openalex.org/works?${params}`, {
+      headers: { "User-Agent": "LightSpeedGhost/1.0 (mailto:research@lightspeedghost.com)" },
+      signal: AbortSignal.timeout(9000),
+    });
+
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as {
+      results?: Array<{
+        id?: string;
+        title?: string;
+        authorships?: Array<{ author?: { display_name?: string } }>;
+        publication_year?: number;
+        doi?: string;
+        primary_location?: { source?: { display_name?: string } };
+        cited_by_count?: number;
+      }>;
+    };
+
+    return (data.results ?? [])
+      .map((paper): VerifiedCitation | null => {
+        if (!paper.doi || !paper.title) return null;
+        const doi = paper.doi.replace("https://doi.org/", "");
+        const authors = (paper.authorships ?? [])
+          .slice(0, 3)
+          .map((a) => a.author?.display_name ?? "")
+          .filter(Boolean)
+          .join(", ");
+        const journal = paper.primary_location?.source?.display_name ?? "OpenAlex";
+        return {
+          id: `oa-${doi.replace(/\//g, "-")}`,
+          title: paper.title,
+          authors: authors || "Unknown Authors",
+          year: paper.publication_year ?? new Date().getFullYear(),
+          source: journal,
+          url: `https://doi.org/${doi}`,
+          doi,
+          verified: true,
+          formatted: "",
+        };
+      })
+      .filter((c): c is VerifiedCitation => c !== null)
+      .slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
+// ── Europe PMC — 40M+ biomedical papers ──────────────────────────────────────
+
+async function searchEuropePMCCitations(
+  query: string,
+  limit: number
+): Promise<VerifiedCitation[]> {
+  try {
+    const params = new URLSearchParams({
+      query,
+      format: "json",
+      resultType: "lite",
+      pageSize: String(Math.min(limit, 15)),
+      sort: "CITED desc",
+    });
+
+    const res = await fetch(
+      `https://www.ebi.ac.uk/europepmc/webservices/rest/search?${params}`,
+      { headers: { "User-Agent": "LightSpeedGhost/1.0" }, signal: AbortSignal.timeout(9000) }
+    );
+
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as {
+      resultList?: {
+        result?: Array<{
+          id?: string;
+          title?: string;
+          authorString?: string;
+          pubYear?: string;
+          doi?: string;
+          journalTitle?: string;
+        }>;
+      };
+    };
+
+    return (data.resultList?.result ?? [])
+      .map((item): VerifiedCitation | null => {
+        if (!item.title) return null;
+        const doi = item.doi;
+        const url = doi
+          ? `https://doi.org/${doi}`
+          : item.id ? `https://europepmc.org/article/med/${item.id}` : null;
+        if (!url) return null;
+        return {
+          id: `epmc-${item.id ?? doi}`,
+          title: item.title,
+          authors: item.authorString ?? "Unknown Authors",
+          year: parseInt(item.pubYear ?? String(new Date().getFullYear())),
+          source: item.journalTitle ?? "Europe PMC",
+          url,
+          doi,
+          verified: true,
+          formatted: "",
+        };
+      })
+      .filter((c): c is VerifiedCitation => c !== null)
+      .slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
+// ── PubMed NCBI — 36M+ biomedical papers (medical gold standard) ─────────────
+
+async function searchPubMedCitations(
+  query: string,
+  limit: number
+): Promise<VerifiedCitation[]> {
+  try {
+    const searchParams = new URLSearchParams({
+      db: "pubmed",
+      term: query,
+      retmax: String(Math.min(limit, 10)),
+      retmode: "json",
+      sort: "relevance",
+    });
+
+    const searchRes = await fetch(
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?${searchParams}`,
+      { headers: { "User-Agent": "LightSpeedGhost/1.0" }, signal: AbortSignal.timeout(8000) }
+    );
+    if (!searchRes.ok) return [];
+
+    const searchData = (await searchRes.json()) as { esearchresult?: { idlist?: string[] } };
+    const ids = searchData.esearchresult?.idlist ?? [];
+    if (ids.length === 0) return [];
+
+    const summaryParams = new URLSearchParams({
+      db: "pubmed",
+      id: ids.join(","),
+      retmode: "json",
+    });
+
+    const summaryRes = await fetch(
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?${summaryParams}`,
+      { headers: { "User-Agent": "LightSpeedGhost/1.0" }, signal: AbortSignal.timeout(9000) }
+    );
+    if (!summaryRes.ok) return [];
+
+    const summaryData = (await summaryRes.json()) as {
+      result?: Record<string, {
+        title?: string;
+        authors?: Array<{ name?: string }>;
+        pubdate?: string;
+        fulljournalname?: string;
+        elocationid?: string;
+      }>;
+    };
+
+    const result = summaryData.result ?? {};
+    return ids
+      .map((id): VerifiedCitation | null => {
+        const paper = result[id];
+        if (!paper?.title) return null;
+        const authors = (paper.authors ?? []).slice(0, 3).map((a) => a.name ?? "").filter(Boolean).join(", ");
+        const year = parseInt((paper.pubdate ?? "").slice(0, 4)) || new Date().getFullYear();
+        const doi = paper.elocationid?.replace("doi: ", "");
+        return {
+          id: `pmid-${id}`,
+          title: paper.title,
+          authors: authors || "Unknown Authors",
+          year,
+          source: paper.fulljournalname ?? "PubMed",
+          url: doi ? `https://doi.org/${doi}` : `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
+          doi,
+          verified: true,
+          formatted: "",
+        };
+      })
+      .filter((c): c is VerifiedCitation => c !== null);
+  } catch {
+    return [];
+  }
+}
+
 // ── CrossRef fallback — DOI-verified citations, all disciplines ───────────────
 
 async function searchCrossRefCitations(
@@ -221,23 +425,33 @@ export async function getVerifiedCitations(
       const query = `${topic} ${subject}`;
       const combined = `${topic} ${subject}`.toLowerCase();
 
-      // arXiv is a STEM preprint server — useless for humanities, law, business, etc.
-      // Only use it when the subject is actually STEM-related.
       const isSTEM =
-        /physics|math|engineer|comput|algorithm|statistic|mechanic|electr|thermody|chemi|biolog|quant|circuit|signal|neural|machine.?learn|data.?science/i.test(combined);
+        /physics|math|engineer|comput|algorithm|statistic|mechanic|electr|thermody|chemi|quant|circuit|signal|neural|machine.?learn|data.?science/i.test(combined);
 
-      const ssCount = isSTEM ? Math.ceil(count * 0.6) : count + 2;  // over-fetch SS for non-STEM
-      const arxivCount = isSTEM ? Math.ceil(count * 0.4) : 0;
+      const isBiomedical =
+        /biolog|medicine|medic|health|pharma|clinical|disease|cell|protein|gene|drug|anatomy|physiol|immuno|neuro|oncol|psychiatr|epidemiol/i.test(combined);
 
-      const fetchTasks: Promise<VerifiedCitation[]>[] = [
+      // ── Parallel fetch from all 6 sources with subject-aware allocation ──────
+      const overFetch = Math.ceil(count * 1.6);   // over-fetch so dedup still hits `count`
+
+      const ssCount      = Math.ceil(overFetch * 0.30);   // Semantic Scholar — always on
+      const oaCount      = Math.ceil(overFetch * 0.30);   // OpenAlex — always on, best DOI coverage
+      const arxivCount   = isSTEM       ? Math.ceil(overFetch * 0.20) : 0;
+      const pmcCount     = isBiomedical ? Math.ceil(overFetch * 0.20) : 0;
+      const pubmedCount  = isBiomedical ? Math.ceil(overFetch * 0.15) : 0;
+
+      const [ssResults, oaResults, arxivResults, pmcResults, pubmedResults] = await Promise.all([
         searchSemanticScholar(query, ssCount),
-      ];
-      if (arxivCount > 0) fetchTasks.push(searchArxiv(query, arxivCount));
+        searchOpenAlexCitations(query, oaCount),
+        arxivCount > 0  ? searchArxiv(query, arxivCount)              : Promise.resolve([] as VerifiedCitation[]),
+        pmcCount > 0    ? searchEuropePMCCitations(query, pmcCount)   : Promise.resolve([] as VerifiedCitation[]),
+        pubmedCount > 0 ? searchPubMedCitations(query, pubmedCount)   : Promise.resolve([] as VerifiedCitation[]),
+      ]);
 
-      const results = await Promise.all(fetchTasks);
-      const flat = results.flat();
+      // Merge with priority: SS (citation-ranked) → OA (DOI-verified) → arXiv/PMC/PubMed
+      const flat = [...ssResults, ...oaResults, ...arxivResults, ...pmcResults, ...pubmedResults];
 
-      // Deduplicate by DOI, then normalised title
+      // Deduplicate by DOI first, then normalised title prefix
       const seen = new Set<string>();
       const deduped: VerifiedCitation[] = [];
       for (const c of flat) {
@@ -245,11 +459,11 @@ export async function getVerifiedCitations(
         if (!seen.has(key)) { seen.add(key); deduped.push(c); }
       }
 
-      // If primary sources returned too few results, fill from CrossRef
+      // CrossRef fallback if still short — broadest DOI-verified coverage
       if (deduped.length < count) {
-        const needed = count - deduped.length + 2; // over-fetch
-        const crossRefResults = await searchCrossRefCitations(query, needed);
-        for (const c of crossRefResults) {
+        const needed = count - deduped.length + 3;
+        const crResults = await searchCrossRefCitations(query, needed);
+        for (const c of crResults) {
           const key = c.doi ? c.doi.toLowerCase() : c.title.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
           if (!seen.has(key)) { seen.add(key); deduped.push(c); }
         }

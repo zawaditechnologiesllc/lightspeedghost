@@ -3,14 +3,24 @@
  * Aggregates from 50,000+ peer-reviewed sources via free public APIs.
  * No Wikipedia, no blogs — only DOI-verifiable academic content.
  *
- * Sources:
+ * Sources (13 databases, 1B+ papers):
  *  • OpenAlex     — 250M+ papers from 50,000+ publishers (openalex.org)
  *  • CrossRef     — 145M+ DOI records (crossref.org)
  *  • Europe PMC   — 40M+ biomedical papers with full abstracts (europepmc.org)
+ *  • CORE         — 200M+ open access outputs (humanities, social sciences, STEM)
+ *  • DOAJ         — 20,000+ peer-reviewed open access journals
+ *  • arXiv        — 2.4M+ STEM and CS preprints
+ *  • Semantic Scholar — 200M+ papers with citation intelligence
+ *  • PubMed NCBI  — 36M+ biomedical papers (gold standard for medicine)
+ *  • ERIC         — 2M+ education research papers
+ *  • Zenodo       — 3M+ CERN open research records
+ *  • BASE         — 340M+ documents from 10,000+ repositories (broad coverage)
+ *  • DataCite     — 48M+ research objects with DOIs (datasets, preprints, papers)
+ *  • OpenAIRE     — 100M+ EU-funded research outputs (European academic coverage)
  *
- * These three APIs together give access to virtually every major academic
- * publisher: Elsevier, Springer, Wiley, Nature, Science, IEEE, ACM, JSTOR,
- * PubMed/MEDLINE, and thousands of open-access repositories worldwide.
+ * These APIs together cover virtually every major academic publisher:
+ * Elsevier, Springer, Wiley, Nature, Science, IEEE, ACM, JSTOR, PubMed,
+ * and thousands of open-access repositories worldwide.
  *
  * The abstracts are injected as RAG (Retrieval-Augmented Generation) context
  * into AI prompts, grounding responses in real peer-reviewed content and
@@ -777,12 +787,280 @@ async function searchZenodo(
   }
 }
 
+// ── BASE (Bielefeld Academic Search Engine) ───────────────────────────────────
+// 340M+ documents from 10,000+ academic repositories worldwide.
+// Excellent broad coverage — humanities, social sciences, natural sciences, medicine.
+// Free API, no key required.
+
+async function searchBASE(
+  query: string,
+  limit: number
+): Promise<AcademicPaper[]> {
+  try {
+    const params = new URLSearchParams({
+      func: "PerformSearch",
+      query: `dctitle:${query} OR dcterms_abstract:${query}`,
+      hits: String(Math.min(limit, 10)),
+      offset: "0",
+      format: "json",
+    });
+
+    const res = await fetch(
+      `https://api.base-search.net/cgi-bin/BaseHttpSearchInterface.fcgi?${params}`,
+      {
+        headers: { "User-Agent": "LightSpeedGhost/1.0 (mailto:research@lightspeedghost.com)" },
+        signal: AbortSignal.timeout(9000),
+      }
+    );
+
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as {
+      response?: {
+        docs?: Array<{
+          dc_title?: string | string[];
+          dc_creator?: string | string[];
+          dc_date?: string | number;
+          dcterms_abstract?: string | string[];
+          dc_identifier?: string | string[];
+          dc_source?: string | string[];
+          dc_type?: string | string[];
+        }>;
+      };
+    };
+
+    return (data.response?.docs ?? [])
+      .map((item): AcademicPaper | null => {
+        const title = Array.isArray(item.dc_title) ? item.dc_title[0] : (item.dc_title ?? "");
+        const abstract = Array.isArray(item.dcterms_abstract)
+          ? item.dcterms_abstract[0]
+          : (item.dcterms_abstract ?? "");
+        if (!title || abstract.length < 50) return null;
+
+        const creators = Array.isArray(item.dc_creator) ? item.dc_creator : (item.dc_creator ? [item.dc_creator] : []);
+        const authors = creators.slice(0, 3).join(", ") || "Unknown Authors";
+
+        const dateRaw = String(item.dc_date ?? "");
+        const year = parseInt(dateRaw.slice(0, 4)) || new Date().getFullYear();
+
+        // Find DOI in identifier array
+        const identifiers = Array.isArray(item.dc_identifier) ? item.dc_identifier : (item.dc_identifier ? [item.dc_identifier] : []);
+        const doi = identifiers.find((id) => id.startsWith("10."))?.replace("https://doi.org/", "");
+        const url = doi
+          ? `https://doi.org/${doi}`
+          : identifiers.find((id) => id.startsWith("http")) ?? "";
+
+        if (!url) return null;
+
+        const journal = Array.isArray(item.dc_source) ? item.dc_source[0] : (item.dc_source ?? undefined);
+
+        return {
+          title,
+          authors,
+          year,
+          abstract: abstract.slice(0, 700),
+          doi,
+          url,
+          source: "BASE (340M+ academic docs)",
+          journal,
+        };
+      })
+      .filter((p): p is AcademicPaper => p !== null);
+  } catch {
+    return [];
+  }
+}
+
+// ── DataCite ──────────────────────────────────────────────────────────────────
+// 48M+ research objects (datasets, papers, preprints, software) with DOIs.
+// Operated by DataCite consortium — highly credible, DOI-assigned.
+// Free REST API, no key required.
+
+async function searchDataCite(
+  query: string,
+  limit: number
+): Promise<AcademicPaper[]> {
+  try {
+    const params = new URLSearchParams({
+      query,
+      "page[size]": String(Math.min(limit, 10)),
+      sort: "-relevance",
+      "fields[dois]": "titles,creators,publicationYear,descriptions,doi,container,types",
+    });
+
+    const res = await fetch(`https://api.datacite.org/dois?${params}`, {
+      headers: {
+        "User-Agent": "LightSpeedGhost/1.0 (mailto:research@lightspeedghost.com)",
+        "Accept": "application/json",
+      },
+      signal: AbortSignal.timeout(9000),
+    });
+
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as {
+      data?: Array<{
+        attributes?: {
+          titles?: Array<{ title?: string }>;
+          creators?: Array<{ name?: string; givenName?: string; familyName?: string }>;
+          publicationYear?: number;
+          descriptions?: Array<{ description?: string; descriptionType?: string }>;
+          doi?: string;
+          container?: { title?: string };
+          types?: { resourceTypeGeneral?: string };
+        };
+      }>;
+    };
+
+    return (data.data ?? [])
+      .map((item): AcademicPaper | null => {
+        const attr = item.attributes;
+        if (!attr) return null;
+
+        const title = attr.titles?.[0]?.title ?? "";
+        if (!title) return null;
+
+        // Prefer abstract description
+        const desc = (attr.descriptions ?? []).find((d) => d.descriptionType === "Abstract") ?? attr.descriptions?.[0];
+        const abstract = (desc?.description ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        if (abstract.length < 50) return null;
+
+        const creators = attr.creators ?? [];
+        const authors = creators
+          .slice(0, 3)
+          .map((c) => c.name ?? [c.familyName, c.givenName?.charAt(0)].filter(Boolean).join(", "))
+          .filter(Boolean)
+          .join("; ") || "Unknown Authors";
+
+        const doi = attr.doi;
+        const year = attr.publicationYear ?? new Date().getFullYear();
+        const journal = attr.container?.title;
+
+        return {
+          title,
+          authors,
+          year,
+          abstract: abstract.slice(0, 700),
+          doi,
+          url: doi ? `https://doi.org/${doi}` : "",
+          source: "DataCite (48M+ research objects)",
+          journal,
+        };
+      })
+      .filter((p): p is AcademicPaper => p !== null && p.url !== "");
+  } catch {
+    return [];
+  }
+}
+
+// ── OpenAIRE ──────────────────────────────────────────────────────────────────
+// 100M+ research outputs from EU-funded projects, with full open-access coverage.
+// Aggregates from 100,000+ data sources including CORDIS, Zenodo, institutional repos.
+// Free API, no key required.
+
+async function searchOpenAIRE(
+  query: string,
+  limit: number
+): Promise<AcademicPaper[]> {
+  try {
+    const params = new URLSearchParams({
+      keywords: query,
+      format: "json",
+      size: String(Math.min(limit, 10)),
+      type: "publications",
+    });
+
+    const res = await fetch(
+      `https://api.openaire.eu/search/publications?${params}`,
+      {
+        headers: { "User-Agent": "LightSpeedGhost/1.0" },
+        signal: AbortSignal.timeout(9000),
+      }
+    );
+
+    if (!res.ok) return [];
+
+    const text = await res.text();
+
+    // OpenAIRE returns JSON but sometimes with XML wrapper — parse JSON
+    let data: {
+      response?: {
+        results?: {
+          result?: Array<{
+            metadata?: {
+              "oaf:entity"?: {
+                "oaf:result"?: {
+                  title?: { $?: string } | Array<{ $?: string }>;
+                  creator?: { $?: string } | Array<{ $?: string }>;
+                  dateofacceptance?: { $?: string };
+                  description?: { $?: string } | Array<{ $?: string }>;
+                  pid?: Array<{ "@classid"?: string; $?: string }>;
+                  journal?: { $?: string };
+                };
+              };
+            };
+          }>;
+        };
+      };
+    };
+
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return [];
+    }
+
+    const results = data.response?.results?.result ?? [];
+
+    return results
+      .map((item): AcademicPaper | null => {
+        const entity = item.metadata?.["oaf:entity"]?.["oaf:result"];
+        if (!entity) return null;
+
+        const titleRaw = entity.title;
+        const title = Array.isArray(titleRaw) ? (titleRaw[0]?.$ ?? "") : (titleRaw?.$ ?? "");
+        if (!title) return null;
+
+        const descRaw = entity.description;
+        const abstract = (Array.isArray(descRaw) ? (descRaw[0]?.$ ?? "") : (descRaw?.$ ?? "")).trim();
+        if (abstract.length < 50) return null;
+
+        const creatorRaw = entity.creator;
+        const creatorList = Array.isArray(creatorRaw) ? creatorRaw : (creatorRaw ? [creatorRaw] : []);
+        const authors = creatorList.slice(0, 3).map((c) => c.$ ?? "").filter(Boolean).join(", ") || "Unknown Authors";
+
+        const dateRaw = entity.dateofacceptance?.$?.slice(0, 4);
+        const year = parseInt(dateRaw ?? String(new Date().getFullYear()));
+
+        const pids = entity.pid ?? [];
+        const doiEntry = pids.find((p) => p["@classid"] === "doi");
+        const doi = doiEntry?.$ ?? undefined;
+
+        const journal = entity.journal?.$ ?? undefined;
+
+        return {
+          title,
+          authors,
+          year,
+          abstract: abstract.slice(0, 700),
+          doi,
+          url: doi ? `https://doi.org/${doi}` : `https://explore.openaire.eu/search/publication?keywords=${encodeURIComponent(title)}`,
+          source: "OpenAIRE (100M+ EU research outputs)",
+          journal,
+        };
+      })
+      .filter((p): p is AcademicPaper => p !== null);
+  } catch {
+    return [];
+  }
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
  * Search all academic databases in parallel and return deduplicated results.
  *
- * Database coverage (10 sources, 1B+ papers):
+ * Database coverage (13 sources, 1B+ papers):
  *  • OpenAlex          — 250M+ works, all disciplines (primary source, highest quality)
  *  • CrossRef          — 145M+ DOI records (citation backbone of academic publishing)
  *  • Europe PMC        — 40M+ biomedical papers (MEDLINE, PubMed Central, life sciences)
@@ -793,6 +1071,9 @@ async function searchZenodo(
  *  • PubMed NCBI       — 36M+ biomedical papers, gold standard for medical research
  *  • ERIC (US Dept Ed) — 2M+ education research papers
  *  • Zenodo (CERN)     — 3M+ open research records (datasets, preprints, theses)
+ *  • BASE              — 340M+ documents from 10,000+ repos (broadest OA coverage)
+ *  • DataCite          — 48M+ research objects with DOIs (datasets, preprints, papers)
+ *  • OpenAIRE          — 100M+ EU-funded research outputs across all disciplines
  *
  * Results are ranked by citation count (highest first) after deduplication.
  *
@@ -821,18 +1102,21 @@ async function _fetchAllAcademicSources(
 
   // ── Budget allocation (over-request, then de-dup to `limit`) ─────────────────
   // Over-fetch per source so after deduplication we still hit the target limit.
-  const budget = Math.ceil(limit * 1.8);   // fetch ~80% more than needed
+  const budget = Math.ceil(limit * 2.0);   // fetch ~100% more than needed across 13 sources
 
-  const openAlexLimit    = Math.ceil(budget * 0.30);  // backbone — broadest coverage
-  const crossRefLimit    = Math.ceil(budget * 0.15);  // DOI verification layer
-  const ssLimit          = Math.ceil(budget * 0.15);  // citation-ranked quality signal
-  const pmcLimit         = isBiomedical ? Math.ceil(budget * 0.15) : 0;
-  const pubmedLimit      = isBiomedical ? Math.ceil(budget * 0.12) : Math.ceil(budget * 0.05);
-  const arxivLimit       = isSTEM       ? Math.ceil(budget * 0.15) : Math.ceil(budget * 0.03);
-  const ericLimit        = isEducation  ? Math.ceil(budget * 0.15) : Math.ceil(budget * 0.03);
-  const coreLimit        = isHumanities ? Math.ceil(budget * 0.12) : Math.ceil(budget * 0.05);
-  const doajLimit        = isHumanities ? Math.ceil(budget * 0.10) : Math.ceil(budget * 0.03);
-  const zenodoLimit      = Math.ceil(budget * 0.05);  // general supplement
+  const openAlexLimit    = Math.ceil(budget * 0.20);  // backbone — broadest DOI-verified coverage
+  const crossRefLimit    = Math.ceil(budget * 0.12);  // DOI verification layer
+  const ssLimit          = Math.ceil(budget * 0.12);  // citation-ranked quality signal
+  const pmcLimit         = isBiomedical ? Math.ceil(budget * 0.12) : 0;
+  const pubmedLimit      = isBiomedical ? Math.ceil(budget * 0.10) : Math.ceil(budget * 0.04);
+  const arxivLimit       = isSTEM       ? Math.ceil(budget * 0.12) : Math.ceil(budget * 0.03);
+  const ericLimit        = isEducation  ? Math.ceil(budget * 0.12) : Math.ceil(budget * 0.03);
+  const coreLimit        = isHumanities ? Math.ceil(budget * 0.10) : Math.ceil(budget * 0.04);
+  const doajLimit        = isHumanities ? Math.ceil(budget * 0.08) : Math.ceil(budget * 0.03);
+  const zenodoLimit      = Math.ceil(budget * 0.04);  // general supplement
+  const baseLimit        = Math.ceil(budget * 0.08);  // broad humanities/social science coverage
+  const dataCiteLimit    = Math.ceil(budget * 0.05);  // datasets and interdisciplinary research
+  const openAIRELimit    = Math.ceil(budget * 0.06);  // European academic coverage
 
   const [
     openAlexResults,
@@ -845,17 +1129,23 @@ async function _fetchAllAcademicSources(
     coreResults,
     doajResults,
     zenodoResults,
+    baseResults,
+    dataCiteResults,
+    openAIREResults,
   ] = await Promise.all([
     searchOpenAlex(query, openAlexLimit),
     searchCrossRef(query, crossRefLimit),
     searchSemanticScholar(query, ssLimit),
-    pmcLimit > 0   ? searchEuropePMC(query, pmcLimit)  : Promise.resolve([] as AcademicPaper[]),
-    pubmedLimit > 0 ? searchPubMed(query, pubmedLimit) : Promise.resolve([] as AcademicPaper[]),
-    arxivLimit > 0 ? searchArXiv(query, arxivLimit)    : Promise.resolve([] as AcademicPaper[]),
-    ericLimit > 0  ? searchERIC(query, ericLimit)      : Promise.resolve([] as AcademicPaper[]),
-    coreLimit > 0  ? searchCORE(query, coreLimit)      : Promise.resolve([] as AcademicPaper[]),
-    doajLimit > 0  ? searchDOAJ(query, doajLimit)      : Promise.resolve([] as AcademicPaper[]),
-    zenodoLimit > 0 ? searchZenodo(query, zenodoLimit) : Promise.resolve([] as AcademicPaper[]),
+    pmcLimit > 0    ? searchEuropePMC(query, pmcLimit)    : Promise.resolve([] as AcademicPaper[]),
+    pubmedLimit > 0 ? searchPubMed(query, pubmedLimit)    : Promise.resolve([] as AcademicPaper[]),
+    arxivLimit > 0  ? searchArXiv(query, arxivLimit)      : Promise.resolve([] as AcademicPaper[]),
+    ericLimit > 0   ? searchERIC(query, ericLimit)        : Promise.resolve([] as AcademicPaper[]),
+    coreLimit > 0   ? searchCORE(query, coreLimit)        : Promise.resolve([] as AcademicPaper[]),
+    doajLimit > 0   ? searchDOAJ(query, doajLimit)        : Promise.resolve([] as AcademicPaper[]),
+    zenodoLimit > 0 ? searchZenodo(query, zenodoLimit)    : Promise.resolve([] as AcademicPaper[]),
+    baseLimit > 0   ? searchBASE(query, baseLimit)        : Promise.resolve([] as AcademicPaper[]),
+    dataCiteLimit > 0 ? searchDataCite(query, dataCiteLimit) : Promise.resolve([] as AcademicPaper[]),
+    openAIRELimit > 0 ? searchOpenAIRE(query, openAIRELimit) : Promise.resolve([] as AcademicPaper[]),
   ]);
 
   // ── Deduplicate by DOI (primary), then normalised title prefix (fallback) ───
@@ -873,6 +1163,9 @@ async function _fetchAllAcademicSources(
     ...coreResults,
     ...doajResults,
     ...zenodoResults,
+    ...baseResults,
+    ...dataCiteResults,
+    ...openAIREResults,
   ];
 
   for (const paper of allResults) {
@@ -940,8 +1233,9 @@ APA Reference: ${p.authors} (${p.year}). ${p.title}.${journal} ${p.source}. ${p.
 
   return `════════════════════════════════════════════════════════════
 VERIFIED ACADEMIC KNOWLEDGE BASE — ${papers.length} PEER-REVIEWED SOURCES
-Retrieved from 10 live academic databases (1B+ papers): OpenAlex, CrossRef,
-Semantic Scholar, PubMed NCBI, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo.
+Retrieved from 13 live academic databases (1B+ papers): OpenAlex, CrossRef,
+Semantic Scholar, PubMed NCBI, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo,
+BASE (340M+ docs), DataCite (48M+ items), OpenAIRE (100M+ EU research outputs).
 Results ranked by citation count. Wikipedia and non-peer-reviewed sources excluded.
 
 GROUNDING RULES (non-negotiable):
