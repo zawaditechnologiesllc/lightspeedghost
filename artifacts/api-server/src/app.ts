@@ -6,6 +6,7 @@ import pinoHttp from "pino-http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
+import { createRemoteJWKSet, jwtVerify, decodeProtectedHeader, decodeJwt } from "jose";
 import router from "./routes";
 import { authMiddleware } from "./middlewares/auth";
 import { requestLoggerMiddleware } from "./lib/requestLogger";
@@ -95,10 +96,11 @@ app.get("/api/auth/test", async (req: Request, res: Response) => {
     },
   };
 
-  // 2. Try HS256 verification
+  // 2. Try HS256 verification (Legacy JWT Secret)
   if (process.env.SUPABASE_JWT_SECRET) {
     try {
-      jwt.verify(token, process.env.SUPABASE_JWT_SECRET, { algorithms: ["HS256"] });
+      const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET);
+      await jwtVerify(token, secret, { algorithms: ["HS256"] });
       result.hs256_verify = "✓ passed";
     } catch (e) {
       result.hs256_verify = `✗ failed: ${e instanceof Error ? e.message : String(e)}`;
@@ -107,30 +109,22 @@ app.get("/api/auth/test", async (req: Request, res: Response) => {
     result.hs256_verify = "skipped — SUPABASE_JWT_SECRET not set";
   }
 
-  // 3. Try RS256 via JWKS
+  // 3. Try asymmetric verification via JWKS (RS256, ES256, etc.)
   const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   if (supabaseUrl && kid) {
     try {
-      const jwksUrl = `${supabaseUrl}/auth/v1/.well-known/jwks.json`;
-      const jwksResp = await fetch(jwksUrl);
-      if (!jwksResp.ok) {
-        result.rs256_verify = `✗ failed: JWKS fetch returned HTTP ${jwksResp.status} from ${jwksUrl}`;
-      } else {
-        const jwks = await jwksResp.json() as { keys: Array<Record<string, unknown>> };
-        const matchingKey = jwks.keys?.find((k) => k.kid === kid);
-        if (!matchingKey) {
-          result.rs256_verify = `✗ failed: no key with kid="${kid}" in JWKS. Keys available: ${jwks.keys?.map((k) => k.kid).join(", ")}`;
-        } else {
-          result.rs256_verify = `key found (kid="${kid}", kty=${matchingKey.kty}) — live verification requires jwks-rsa client`;
-        }
-      }
+      const JWKS = createRemoteJWKSet(
+        new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`),
+      );
+      await jwtVerify(token, JWKS);
+      result.jwks_verify = "✓ passed";
     } catch (e) {
-      result.rs256_verify = `✗ failed: ${e instanceof Error ? e.message : String(e)}`;
+      result.jwks_verify = `✗ failed: ${e instanceof Error ? e.message : String(e)}`;
     }
   } else if (!kid) {
-    result.rs256_verify = "skipped — token has no kid header field (not an RS256 token)";
+    result.jwks_verify = "skipped — token has no kid header (not using JWT Signing Keys)";
   } else {
-    result.rs256_verify = "skipped — SUPABASE_URL not set";
+    result.jwks_verify = "skipped — SUPABASE_URL not set";
   }
 
   res.json(result);

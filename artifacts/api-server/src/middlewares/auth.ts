@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import jwksRsa from "jwks-rsa";
+import { createRemoteJWKSet, jwtVerify, decodeJwt, decodeProtectedHeader } from "jose";
 
 declare global {
   namespace Express {
@@ -19,14 +18,29 @@ declare module "express-session" {
 }
 
 const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_URL =
+  process.env.SUPABASE_URL ??
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??
+  process.env.VITE_SUPABASE_URL;
 
-if (!SUPABASE_JWT_SECRET) {
+if (!SUPABASE_JWT_SECRET && !SUPABASE_URL) {
   console.error(
-    "[auth] FATAL: SUPABASE_JWT_SECRET env var is not set. " +
-    "Bearer JWT authentication will be disabled until this is configured. " +
-    "Set it in your Render environment variables (Supabase → Project Settings → API → JWT Secret).",
+    "[auth] WARNING: Neither SUPABASE_JWT_SECRET nor SUPABASE_URL is set. " +
+    "JWT authentication will not work until at least one is configured on Render.",
   );
+}
+
+// ── JWKS client — handles ES256, RS256, and any other asymmetric algorithm ───
+// jose's createRemoteJWKSet caches keys and works with all JWK key types (EC, RSA).
+let remoteJWKS: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+function getRemoteJWKS() {
+  if (remoteJWKS) return remoteJWKS;
+  if (!SUPABASE_URL) return null;
+  remoteJWKS = createRemoteJWKSet(
+    new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`),
+  );
+  return remoteJWKS;
 }
 
 interface SupabaseJwtPayload {
@@ -37,81 +51,62 @@ interface SupabaseJwtPayload {
   role?: string;
 }
 
-// ── JWKS client for RS256 tokens (Supabase's new JWT Signing Keys) ─────────────
-let jwksClient: jwksRsa.JwksClient | null = null;
-
-function getJwksClient(): jwksRsa.JwksClient | null {
-  if (jwksClient) return jwksClient;
-  const url = SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  if (!url) return null;
-  jwksClient = jwksRsa({
-    jwksUri: `${url}/auth/v1/.well-known/jwks.json`,
-    cache: true,
-    cacheMaxAge: 10 * 60 * 1000, // 10 minutes
-    rateLimit: true,
-  });
-  return jwksClient;
-}
-
-function getSigningKey(kid: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const client = getJwksClient();
-    if (!client) return reject(new Error("JWKS client unavailable — SUPABASE_URL not set"));
-    client.getSigningKey(kid, (err, key) => {
-      if (err || !key) return reject(err ?? new Error("Signing key not found"));
-      resolve(key.getPublicKey());
-    });
-  });
-}
-
 /**
- * Verifies a Supabase JWT.
+ * Verifies a Supabase JWT using jose.
  *
- * Supports both:
+ * Supports all Supabase signing modes:
  *   - HS256 (Legacy JWT Secret) — verified with SUPABASE_JWT_SECRET
- *   - RS256 (JWT Signing Keys)  — verified via Supabase's JWKS endpoint
+ *   - RS256 / ES256 (JWT Signing Keys) — verified via Supabase JWKS endpoint
  *
- * Development: falls back to jwt.decode() (no signature check) when
- *   SUPABASE_JWT_SECRET is missing and NODE_ENV !== "production".
+ * Algorithm is detected automatically from the token header.
  */
 async function verifyJwt(token: string): Promise<SupabaseJwtPayload | null> {
-  // Peek at the header to determine algorithm without verifying yet
-  let header: { alg?: string; kid?: string } = {};
+  // Peek at the token header to choose verification path
+  let alg = "HS256";
+  let hasKid = false;
   try {
-    const decoded = jwt.decode(token, { complete: true });
-    if (decoded && typeof decoded === "object") {
-      header = decoded.header as { alg?: string; kid?: string };
-    }
+    const header = decodeProtectedHeader(token);
+    alg = header.alg ?? "HS256";
+    hasKid = !!header.kid;
   } catch {
-    // ignore — invalid token
+    console.error("[auth] Cannot decode JWT header — token is malformed.");
+    return null;
   }
 
-  const alg = header.alg ?? "HS256";
-
-  // ── RS256: use Supabase's JWKS endpoint ──────────────────────────────────
-  if (alg === "RS256") {
-    const kid = header.kid;
-    if (!kid) {
-      console.error("[auth] RS256 token missing 'kid' header — cannot fetch signing key");
+  // ── Asymmetric (ES256, RS256, etc.): use JWKS endpoint ───────────────────
+  if (hasKid || alg !== "HS256") {
+    const jwks = getRemoteJWKS();
+    if (!jwks) {
+      console.error(
+        `[auth] Token uses ${alg} but SUPABASE_URL is not set on Render. ` +
+        "Add SUPABASE_URL = your Supabase project URL (e.g. https://xxxx.supabase.co) " +
+        "in Render → Environment Variables.",
+      );
       return null;
     }
     try {
-      const publicKey = await getSigningKey(kid);
-      return jwt.verify(token, publicKey, { algorithms: ["RS256"] }) as SupabaseJwtPayload;
+      const { payload } = await jwtVerify(token, jwks);
+      return payload as SupabaseJwtPayload;
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
-      console.error(`[auth] RS256 JWT verification failed: ${reason}. Ensure SUPABASE_URL is set on Render (Supabase → Settings → API → URL).`);
+      console.error(`[auth] ${alg} JWT verification failed: ${reason}`);
       return null;
     }
   }
 
-  // ── HS256: use Legacy JWT Secret ─────────────────────────────────────────
+  // ── Symmetric (HS256): use Legacy JWT Secret ─────────────────────────────
   if (SUPABASE_JWT_SECRET) {
     try {
-      return jwt.verify(token, SUPABASE_JWT_SECRET, { algorithms: ["HS256"] }) as SupabaseJwtPayload;
+      const secret = new TextEncoder().encode(SUPABASE_JWT_SECRET);
+      const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
+      return payload as SupabaseJwtPayload;
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
-      console.error(`[auth] HS256 JWT verification failed: ${reason}. Check that SUPABASE_JWT_SECRET matches your Supabase project's JWT Secret (Settings → API → JWT Settings → JWT Secret).`);
+      console.error(
+        `[auth] HS256 JWT verification failed: ${reason}. ` +
+        "Check that SUPABASE_JWT_SECRET on Render matches your Supabase project's " +
+        "JWT Secret (Supabase → Settings → API → JWT Settings → JWT Secret).",
+      );
       return null;
     }
   }
@@ -119,8 +114,8 @@ async function verifyJwt(token: string): Promise<SupabaseJwtPayload | null> {
   // ── Dev-only fallback: decode without signature verification ─────────────
   if (process.env.NODE_ENV !== "production") {
     try {
-      const decoded = jwt.decode(token) as SupabaseJwtPayload | null;
-      if (decoded?.sub) return decoded;
+      const payload = decodeJwt(token);
+      if (payload?.sub) return payload as SupabaseJwtPayload;
     } catch {
       // ignore
     }
@@ -130,7 +125,7 @@ async function verifyJwt(token: string): Promise<SupabaseJwtPayload | null> {
 }
 
 export function authMiddleware(req: Request, _res: Response, next: NextFunction) {
-  // 1. Session-based auth (legacy — kept for backward-compat with any existing sessions)
+  // 1. Session-based auth (legacy — kept for backward-compat)
   if (req.session?.userId) {
     req.userId = req.session.userId;
     req.userEmail = req.session.userEmail;
@@ -141,15 +136,15 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.slice(7);
-    verifyJwt(token).then((payload) => {
-      if (payload) {
-        req.userId = payload.sub;
-        req.userEmail = payload.email;
-      }
-      next();
-    }).catch(() => {
-      next();
-    });
+    verifyJwt(token)
+      .then((payload) => {
+        if (payload) {
+          req.userId = payload.sub;
+          req.userEmail = payload.email;
+        }
+        next();
+      })
+      .catch(() => next());
     return;
   }
 
