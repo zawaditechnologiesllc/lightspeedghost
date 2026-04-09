@@ -191,8 +191,7 @@ function AppRedirect() {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={AppRedirect} />
-      <Route path="/landing" component={Landing} />
+      <Route path="/" component={Landing} />
       <Route path="/auth" component={Auth} />
       <Route path="/admin" component={Admin} />
       <Route path="/reset-password" component={ResetPassword} />
