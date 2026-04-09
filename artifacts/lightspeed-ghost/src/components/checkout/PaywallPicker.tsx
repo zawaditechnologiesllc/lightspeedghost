@@ -77,7 +77,7 @@ export function PaywallPicker({
       <div className="relative w-full max-w-sm bg-[#0a0f1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+        <div className="relative flex items-center justify-center px-5 py-4 border-b border-white/8">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-orange-500/20 flex items-center justify-center">
               {mode === "buy" ? <CreditCard size={13} className="text-orange-400" /> : <Lock size={13} className="text-orange-400" />}
@@ -88,7 +88,7 @@ export function PaywallPicker({
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-white/30 hover:text-white hover:bg-white/8 transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg text-white/30 hover:text-white hover:bg-white/8 transition-colors"
           >
             <X size={14} />
           </button>

@@ -269,6 +269,7 @@ export default function Admin() {
   const [statsError, setStatsError] = useState<string | null>(null);
   const [adminTools, setAdminTools] = useState<AdminTool[]>([]);
   const [togglingTool, setTogglingTool] = useState<string | null>(null);
+  const [toggleError, setToggleError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
@@ -370,14 +371,27 @@ export default function Admin() {
 
   async function toggleTool(key: string, enabled: boolean) {
     setTogglingTool(key);
+    setToggleError(null);
     try {
       await adminFetch(`/admin/tools/${key}/toggle`, password, {
         method: "PATCH",
         body: JSON.stringify({ enabled }),
       });
       setAdminTools((prev) => prev.map((t) => t.key === key ? { ...t, enabled } : t));
-    } catch { /* ignore */ }
+    } catch {
+      setToggleError(`Failed to ${enabled ? "enable" : "disable"} tool — check CORS/auth`);
+      setTimeout(() => setToggleError(null), 4000);
+    }
     finally { setTogglingTool(null); }
+  }
+
+  async function quickSaveSetting(key: string, value: string) {
+    try {
+      await adminFetch("/admin/settings", password, {
+        method: "POST",
+        body: JSON.stringify({ settings: { [key]: value } }),
+      });
+    } catch { /* settings auto-save failure is non-blocking */ }
   }
 
   const loadUsers = useCallback(async () => {
@@ -1059,6 +1073,11 @@ export default function Admin() {
                     <RefreshCw size={11} /> Refresh
                   </button>
                 </div>
+                {toggleError && (
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
+                    <span>{toggleError}</span>
+                  </div>
+                )}
                 {loading && adminTools.length === 0 ? <Spinner /> : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {adminTools.map((tool) => {
@@ -1930,9 +1949,9 @@ export default function Admin() {
                   <div className="space-y-4">
                     {/* Toggles */}
                     <SettingsCard title="Platform Controls">
-                      <SettingsToggle label="Maintenance Mode" sub="Block all user access while you deploy" value={settings.maintenance_mode === "true"} onChange={(v) => { setSettings((s) => s ? { ...s, maintenance_mode: String(v) } : s); setSettingsDirty(true); }} />
-                      <SettingsToggle label="Allow New Signups" sub="Let new users create accounts" value={settings.allow_signups === "true"} onChange={(v) => { setSettings((s) => s ? { ...s, allow_signups: String(v) } : s); setSettingsDirty(true); }} />
-                      <SettingsToggle label="PAYG Enabled" sub="Allow pay-per-use purchases (all tools)" value={settings.payg_enabled === "true"} onChange={(v) => { setSettings((s) => s ? { ...s, payg_enabled: String(v) } : s); setSettingsDirty(true); }} />
+                      <SettingsToggle label="Maintenance Mode" sub="Block all user access while you deploy" value={settings.maintenance_mode === "true"} onChange={(v) => { const val = String(v); setSettings((s) => s ? { ...s, maintenance_mode: val } : s); setSettingsDirty(true); quickSaveSetting("maintenance_mode", val); }} />
+                      <SettingsToggle label="Allow New Signups" sub="Let new users create accounts" value={settings.allow_signups === "true"} onChange={(v) => { const val = String(v); setSettings((s) => s ? { ...s, allow_signups: val } : s); setSettingsDirty(true); quickSaveSetting("allow_signups", val); }} />
+                      <SettingsToggle label="PAYG Enabled" sub="Allow pay-per-use purchases (all tools)" value={settings.payg_enabled === "true"} onChange={(v) => { const val = String(v); setSettings((s) => s ? { ...s, payg_enabled: val } : s); setSettingsDirty(true); quickSaveSetting("payg_enabled", val); }} />
                     </SettingsCard>
 
                     {/* Starter limits */}

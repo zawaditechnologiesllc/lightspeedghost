@@ -93,10 +93,28 @@ function AppRoutes() {
   );
 }
 
+function AppRedirect() {
+  const { user, loading } = useAuth();
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (!loading) {
+      navigate(user ? "/app" : "/auth");
+    }
+  }, [user, loading, navigate]);
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 size={24} className="animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Landing} />
+      <Route path="/" component={AppRedirect} />
+      <Route path="/landing" component={Landing} />
       <Route path="/auth" component={Auth} />
       <Route path="/admin" component={Admin} />
       <Route path="/reset-password" component={ResetPassword} />
