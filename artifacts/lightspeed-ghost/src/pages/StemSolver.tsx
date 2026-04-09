@@ -220,10 +220,10 @@ export default function StemSolver() {
     setIsSolving(true);
 
     // Fake progress interval for visual feedback while SSE connects
-    const STEP_COUNT = 8;
+    const STEP_COUNT = 10;
     solveIntervalRef.current = setInterval(() => {
       setSolveStep(prev => (prev < STEP_COUNT - 1 ? prev + 1 : prev));
-    }, 1100);
+    }, 1200);
 
     try {
       const resp = await apiFetch(`/stem/solve-stream`, {
@@ -360,31 +360,50 @@ export default function StemSolver() {
   const toggleGroup = (label: string) => setExpandedGroups(p => ({ ...p, [label]: !p[label] }));
 
   // ── Solving progress panel ─────────────────────────────────────────────────
-  const SOLVE_STEPS = [
-    "Parsing problem — identifying knowns and unknowns",
-    "THOUGHT — understanding domain scope and constraints",
-    "ACTION — selecting strategy, theorem, or formula",
-    "OBSERVATION — setting up equations and expressions",
-    "THOUGHT 2 — executing calculation with full working",
-    "Chain-of-Verification — checking solution for errors",
-    "Applying critic corrections if needed",
-    "Building step-by-step explanation",
+  const SOLVE_STEPS: { label: string; detail: string; icon: React.ReactNode }[] = [
+    { label: "Problem parsing", detail: "Identifying knowns, unknowns, and constraints", icon: <Search size={11} /> },
+    { label: "ReAct Engine — THOUGHT 1", detail: "Understanding domain scope and selecting approach", icon: <Sparkles size={11} /> },
+    { label: "ReAct Engine — ACTION 1", detail: "Choosing formula, theorem, or algorithm", icon: <Calculator size={11} /> },
+    { label: "ReAct Engine — OBSERVATION 1", detail: "Setting up equations and initial expressions", icon: <BookOpen size={11} /> },
+    { label: "ReAct Engine — THOUGHT 2", detail: "Executing full calculation with LaTeX notation", icon: <Sparkles size={11} /> },
+    { label: "Chain-of-Verification", detail: "Critic agent checking arithmetic, units, and logic", icon: <ShieldCheck size={11} /> },
+    { label: "Applying corrections", detail: "Updating answer based on critic findings", icon: <CheckCircle size={11} /> },
+    { label: "LaTeX & step formatting", detail: "Rendering math notation and building explanation", icon: <Layers size={11} /> },
+    { label: "Academic paper search", detail: "Fetching related research from Semantic Scholar", icon: <Database size={11} /> },
+    { label: "Saving to Documents", detail: "Storing solution for later retrieval", icon: <FileText size={11} /> },
   ];
+
+  const currentSolveStageName = (() => {
+    if (sseSteps.length > 0) {
+      const running = sseSteps.find(s => s.status === "running");
+      if (running) {
+        if (running.id === "react") return "ReAct Engine running";
+        if (running.id === "cove") return "Chain-of-Verification";
+        if (running.id === "build") return "Formatting solution";
+        if (running.id === "saving") return "Saving to Documents";
+      }
+      const done = sseSteps.filter(s => s.status === "done");
+      if (done.length > 0) return `${done.length} stage${done.length > 1 ? "s" : ""} complete`;
+    }
+    if (solveStep < 5) return "ReAct Engine running";
+    if (solveStep < 7) return "Chain-of-Verification";
+    return "Finalising solution";
+  })();
 
   if (isSolving) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-background px-6 gap-8">
-        <div className="text-center space-y-3">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Zap size={16} className="text-primary" />
+      <div className="h-full flex flex-col items-center justify-center bg-background px-4 gap-6 py-8 overflow-y-auto">
+        <div className="text-center space-y-2">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <Zap size={14} className="text-primary" />
             <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-            <FlaskConical size={24} className="text-primary" />
+          <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <FlaskConical size={22} className="text-primary" />
           </div>
-          <h2 className="text-xl font-bold">Solving your problem…</h2>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            Multi-agent reasoning with step-by-step verification
+          <h2 className="text-lg font-bold">Solving your problem…</h2>
+          <p className="text-xs text-muted-foreground max-w-xs">
+            Multi-engine AI solver: ReAct reasoning loop + Chain-of-Verification critic + academic paper search
           </p>
         </div>
 
@@ -396,36 +415,67 @@ export default function StemSolver() {
             />
           </div>
           <div className="flex justify-between mt-1.5">
-            <span className="text-[10px] text-muted-foreground/60">ReAct loop running</span>
+            <span className="text-[10px] text-muted-foreground/60">{currentSolveStageName}</span>
             <span className="text-[10px] text-muted-foreground/60 tabular-nums">
               {Math.round(((solveStep + 1) / SOLVE_STEPS.length) * 100)}%
             </span>
           </div>
         </div>
 
-        <div className="w-full max-w-sm space-y-2">
-          {SOLVE_STEPS.map((step, i) => (
-            <div
-              key={i}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border transition-all duration-500 ${
-                i < solveStep
-                  ? "bg-primary/5 border-primary/20 text-foreground"
-                  : i === solveStep
-                    ? "bg-card border-border text-foreground shadow-sm"
-                    : "bg-muted/30 border-transparent text-muted-foreground/40"
-              }`}
-            >
-              {i < solveStep ? (
-                <CheckCircle size={13} className="text-primary shrink-0" />
-              ) : i === solveStep ? (
-                <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shrink-0" />
-              ) : (
-                <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20 shrink-0" />
-              )}
-              <span className="text-xs">{step}</span>
-            </div>
-          ))}
-        </div>
+        {/* Live SSE step feed — shown when server is sending events */}
+        {sseSteps.length > 0 && (
+          <div className="w-full max-w-sm space-y-1.5">
+            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-semibold px-1">Live progress</p>
+            {sseSteps.map((step) => (
+              <div
+                key={step.id}
+                className={`flex items-start gap-2.5 px-3.5 py-2 rounded-lg border text-xs transition-all duration-300 ${
+                  step.status === "done"
+                    ? "bg-primary/5 border-primary/20 text-foreground"
+                    : "bg-card border-border text-foreground shadow-sm"
+                }`}
+              >
+                {step.status === "done" ? (
+                  <CheckCircle size={12} className="text-primary shrink-0 mt-0.5" />
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0 mt-1" />
+                )}
+                <span className="leading-snug">{step.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Capability checklist — shown while waiting for first SSE event */}
+        {sseSteps.length === 0 && (
+          <div className="w-full max-w-sm space-y-1.5">
+            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-semibold px-1">Engine stages</p>
+            {SOLVE_STEPS.map((step, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-2.5 px-3.5 py-2 rounded-lg border transition-all duration-500 ${
+                  i < solveStep
+                    ? "bg-primary/5 border-primary/20 text-foreground"
+                    : i === solveStep
+                      ? "bg-card border-border text-foreground shadow-sm"
+                      : "bg-muted/20 border-transparent text-muted-foreground/35"
+                }`}
+              >
+                <div className={`shrink-0 ${i <= solveStep ? "text-primary" : "text-muted-foreground/30"}`}>
+                  {i < solveStep ? <CheckCircle size={12} /> : i === solveStep ? (
+                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  ) : step.icon}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium leading-tight truncate">{step.label}</p>
+                  {i === solveStep && (
+                    <p className="text-[10px] text-muted-foreground/60 leading-tight mt-0.5">{step.detail}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

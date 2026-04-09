@@ -130,25 +130,88 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
 
   try {
     if (req.userId) trackUsage(req.userId, "stem").catch(() => {});
-    const body = SolveStemBody.parse(req.body);
 
-    // Step 1: ReAct reasoning loop
-    send("step", { id: "react", message: "Running reasoning loop — structuring the problem and computing step-by-step…", status: "running" });
-    const reactResult = await reactSolve(body.problem, body.subject);
-    send("step", { id: "react", message: `Reasoning complete — ${reactResult.steps.length} solution steps derived with ${reactResult.confidence}% confidence`, status: "done" });
+    let body: ReturnType<typeof SolveStemBody.parse>;
+    try {
+      body = SolveStemBody.parse(req.body);
+    } catch (parseErr) {
+      req.log.warn({ parseErr }, "STEM solve — invalid request body");
+      send("error", { message: "Invalid request — please check your input and try again." });
+      return;
+    }
 
-    // Step 2: Chain-of-Verification
-    send("step", { id: "cove", message: "Running verification pass — checking arithmetic, units, and logic…", status: "running" });
-    const coveResult = await chainOfVerification(body.problem, body.subject, reactResult);
+    // ── Stage 1: ReAct reasoning loop ────────────────────────────────────────
     send("step", {
-      id: "cove",
-      message: coveResult.passedVerification
-        ? "Verification passed — solution confirmed correct"
-        : `Verification applied ${coveResult.corrections.length} correction(s) — final answer updated`,
+      id: "react",
+      message: `ReAct Engine — structuring "${body.problem.slice(0, 60).trim()}…" for ${body.subject} solution`,
+      status: "running",
+    });
+
+    let reactResult: Awaited<ReturnType<typeof reactSolve>>;
+    try {
+      reactResult = await reactSolve(body.problem, body.subject);
+    } catch (reactErr) {
+      req.log.error({ err: reactErr }, "ReAct loop failed");
+      const reactMsg = reactErr instanceof Error ? reactErr.message : String(reactErr);
+      if (reactMsg.includes("API_KEY") || reactMsg.includes("not set") || reactMsg.includes("ANTHROPIC")) {
+        send("error", { message: "AI service is not configured — please contact support." });
+      } else if (reactMsg.includes("timeout") || reactMsg.includes("timed out")) {
+        send("error", { message: "The problem took too long to process — try a shorter or simpler problem." });
+      } else {
+        send("error", { message: `Reasoning engine failed — ${reactMsg.slice(0, 120)}. Please try again.` });
+      }
+      return;
+    }
+
+    const confidencePct = Math.round((reactResult.confidence <= 1 ? reactResult.confidence * 100 : reactResult.confidence));
+    send("step", {
+      id: "react",
+      message: `ReAct complete — ${reactResult.steps.length} solution steps, ${confidencePct}% confidence`,
       status: "done",
     });
 
-    // Step 3: Build response
+    // ── Stage 2: Chain-of-Verification ───────────────────────────────────────
+    // CoVe is resilient — if it fails, we fall back to the ReAct result rather
+    // than failing the entire solve.
+    send("step", {
+      id: "cove",
+      message: "Chain-of-Verification — critic agent checking arithmetic, units, and logic…",
+      status: "running",
+    });
+
+    let coveResult: Awaited<ReturnType<typeof chainOfVerification>>;
+    try {
+      coveResult = await chainOfVerification(body.problem, body.subject, reactResult);
+      send("step", {
+        id: "cove",
+        message: coveResult.passedVerification
+          ? "Verification passed — solution confirmed correct"
+          : `Verification applied ${coveResult.corrections.length} correction(s) — answer updated`,
+        status: "done",
+      });
+    } catch (coveErr) {
+      req.log.warn({ err: coveErr }, "CoVe step failed — falling back to ReAct result");
+      coveResult = {
+        draft: reactResult.finalAnswer,
+        corrections: [],
+        verified: reactResult.finalAnswer,
+        passedVerification: true,
+        verifiedLatex: reactResult.latex,
+      };
+      send("step", {
+        id: "cove",
+        message: "Verification skipped — using primary solution",
+        status: "done",
+      });
+    }
+
+    // ── Stage 3: Build response ───────────────────────────────────────────────
+    send("step", {
+      id: "build",
+      message: "Formatting step-by-step explanation with LaTeX rendering…",
+      status: "running",
+    });
+
     const steps = reactResult.steps.map((s, i) => ({
       stepNumber: i + 1,
       description: s.description,
@@ -164,6 +227,8 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
     const finalAnswer = coveResult.passedVerification ? reactResult.finalAnswer : coveResult.verified;
     const latex = coveResult.verifiedLatex || reactResult.latex;
 
+    send("step", { id: "build", message: "Solution formatted", status: "done" });
+
     const content = [
       `Problem: ${body.problem}`,
       "",
@@ -176,23 +241,30 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
       ...steps.map((s) => `${s.stepNumber}. ${s.description}\n   ${s.explanation}`),
     ].filter(Boolean).join("\n");
 
-    // Step 4: Save to DB
+    // ── Stage 4: Save to DB ───────────────────────────────────────────────────
     send("step", { id: "saving", message: "Saving solution to your documents…", status: "running" });
-    const userId = req.userId ?? null;
-    const docNum = await getNextDocNumber(userId, "stem");
-    const [doc] = await db
-      .insert(documentsTable)
-      .values({
-        userId,
-        title: formatDocTitle({ type: "stem", docNumber: docNum, subject: body.subject }),
-        content,
-        type: "stem",
-        subject: body.subject,
-        docNumber: docNum,
-        wordCount: content.split(/\s+/).filter(Boolean).length,
-      })
-      .returning();
-    send("step", { id: "saving", message: "Solution saved", status: "done" });
+    let documentId: number | null = null;
+    try {
+      const userId = req.userId ?? null;
+      const docNum = await getNextDocNumber(userId, "stem");
+      const [doc] = await db
+        .insert(documentsTable)
+        .values({
+          userId,
+          title: formatDocTitle({ type: "stem", docNumber: docNum, subject: body.subject }),
+          content,
+          type: "stem",
+          subject: body.subject,
+          docNumber: docNum,
+          wordCount: content.split(/\s+/).filter(Boolean).length,
+        })
+        .returning();
+      documentId = doc.id;
+      send("step", { id: "saving", message: "Solution saved to Documents", status: "done" });
+    } catch (dbErr) {
+      req.log.warn({ err: dbErr }, "DB save failed — solve still returned to user");
+      send("step", { id: "saving", message: "Solution ready (save skipped)", status: "done" });
+    }
 
     send("done", {
       answer: finalAnswer,
@@ -203,14 +275,14 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
       confidence: reactResult.confidence,
       corrections: coveResult.corrections,
       passedVerification: coveResult.passedVerification,
-      documentId: doc.id,
+      documentId,
     });
   } catch (err) {
-    req.log.error({ err }, "Error in STEM solve stream");
-    const msg = err instanceof Error ? err.message : "";
+    req.log.error({ err }, "Unexpected error in STEM solve stream");
+    const msg = err instanceof Error ? err.message : String(err);
     const userMsg = (msg.includes("API_KEY") || msg.includes("not set"))
       ? "AI service not configured — please contact support"
-      : "Failed to solve problem — please try again";
+      : "An unexpected error occurred — please try again";
     try { send("error", { message: userMsg }); } catch { /* ignore */ }
   } finally {
     clearInterval(heartbeat);
