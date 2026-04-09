@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
 import {
-  ListTree, ChevronRight, Download, CheckCheck, PenLine, ChevronDown,
+  ListTree, ChevronRight, PenLine, ChevronDown,
   BookOpen, FileText, Zap, CheckCircle, AlertTriangle, RotateCcw,
 } from "lucide-react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { ExportButtons } from "@/components/ExportButtons";
 import { wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
@@ -39,6 +39,8 @@ const PAPER_TYPES: { value: PaperType; label: string }[] = [
   { value: "report",            label: "Report" },
 ];
 
+const WORD_PRESETS = [500, 800, 1000, 1200, 1500, 2000, 2500, 3000, 4000, 5000];
+
 const SECTION_COLORS = [
   "border-l-blue-500 bg-blue-500/5",
   "border-l-indigo-500 bg-indigo-500/5",
@@ -67,11 +69,14 @@ function getProgressSteps(topic: string, subj: string): string[] {
 
 export default function Outline() {
   useAuth();
+  const [, navigate] = useLocation();
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   const [topic, setTopic] = useState("");
   const [subject, setSubject] = useState("");
   const [paperType, setPaperType] = useState<PaperType>("research");
+  const [wordCount, setWordCount] = useState(1500);
+  const [customWordCount, setCustomWordCount] = useState("");
   const [instructionsText, setInstructionsText] = useState("");
   const [referenceText, setReferenceText] = useState("");
   const [instructionsLoaded, setInstructionsLoaded] = useState(false);
@@ -195,6 +200,35 @@ export default function Outline() {
     setReferenceText("");
     setInstructionsLoaded(false);
     setReferenceWordCount(0);
+  };
+
+  const formatOutlineAsText = (r: OutlineResult): string => {
+    const lines = [
+      `OUTLINE: ${r.title}`,
+      "",
+      "Use the following outline structure to write the paper. Each section heading and sub-point below must be addressed in the corresponding section of the paper:",
+      "",
+      ...r.sections.flatMap((s, i) => [
+        `## ${i + 1}. ${s.heading}`,
+        ...s.subsections.map((sub, j) => `   ${i + 1}.${j + 1} ${sub}`),
+        "",
+      ]),
+    ];
+    return lines.join("\n");
+  };
+
+  const handleWritePaper = () => {
+    if (!result) return;
+    const effectiveWordCount = customWordCount ? parseInt(customWordCount, 10) || wordCount : wordCount;
+    const outlineText = formatOutlineAsText(result);
+    sessionStorage.setItem("outline_prefill", JSON.stringify({
+      topic,
+      subject,
+      paperType,
+      wordCount: effectiveWordCount,
+      additionalInstructions: outlineText,
+    }));
+    navigate("/write");
   };
 
   // ── PHASE: GENERATING ─────────────────────────────────────────────────────
@@ -377,6 +411,48 @@ export default function Outline() {
               </div>
             </div>
 
+            {/* Word count */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">
+                Word Count
+                <span className="ml-2 text-[10px] font-semibold text-orange-500 uppercase tracking-wider">Non-negotiable</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {WORD_PRESETS.map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => { setWordCount(n); setCustomWordCount(""); }}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg border text-xs font-medium transition-all",
+                      wordCount === n && !customWordCount
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    )}
+                  >
+                    {n >= 1000 ? `${n / 1000}k` : n}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={100}
+                  max={15000}
+                  value={customWordCount}
+                  onChange={e => setCustomWordCount(e.target.value)}
+                  placeholder="Custom word count…"
+                  className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                {customWordCount && (
+                  <span className="text-xs text-muted-foreground">Using {parseInt(customWordCount).toLocaleString()} words</span>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1.5">
+                Paper will be written to at least this count (+10% buffer guaranteed). Currently set to <strong>{(customWordCount ? parseInt(customWordCount) || wordCount : wordCount).toLocaleString()}</strong> words.
+              </p>
+            </div>
+
             {/* Quality badge */}
             <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-green-500/5 border border-green-500/20 text-[11px] text-green-700 dark:text-green-400">
               <CheckCircle size={13} className="shrink-0" />
@@ -462,12 +538,13 @@ export default function Outline() {
             filename={makeLsgFilename("outline", "OUTLINE")}
             formats={["docx", "pdf", "md", "copy"]}
           />
-          <Link href={`/write?topic=${encodeURIComponent(topic)}&subject=${encodeURIComponent(subject)}&type=${paperType}`}>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:opacity-80 border border-primary/30 bg-primary/5 rounded-lg px-2.5 py-1.5 transition-all cursor-pointer">
-              <PenLine size={12} />
-              Write paper
-            </div>
-          </Link>
+          <button
+            onClick={handleWritePaper}
+            className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:opacity-80 border border-primary/30 bg-primary/5 rounded-lg px-2.5 py-1.5 transition-all cursor-pointer"
+          >
+            <PenLine size={12} />
+            Write paper
+          </button>
           <button
             onClick={handleReset}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2.5 py-1.5 transition-colors"
@@ -551,18 +628,19 @@ export default function Outline() {
 
         {/* Write paper CTA */}
         <div className="p-5 max-w-2xl mx-auto">
-          <Link href={`/write?topic=${encodeURIComponent(topic)}&subject=${encodeURIComponent(subject)}&type=${paperType}`}>
-            <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-5 py-4 hover:bg-primary/10 transition-colors cursor-pointer group">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <PenLine size={15} className="text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-primary">Write the full paper</div>
-                <div className="text-xs text-muted-foreground">Generate the complete paper using this outline — topic and subject will be pre-filled</div>
-              </div>
-              <ChevronRight size={16} className="text-primary group-hover:translate-x-0.5 transition-transform shrink-0" />
+          <button
+            onClick={handleWritePaper}
+            className="w-full flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-5 py-4 hover:bg-primary/10 transition-colors cursor-pointer group text-left"
+          >
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <PenLine size={15} className="text-primary" />
             </div>
-          </Link>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-primary">Write the full paper using this outline</div>
+              <div className="text-xs text-muted-foreground">Topic, subject, paper type, word count, and outline structure will all be auto-filled in Write Paper</div>
+            </div>
+            <ChevronRight size={16} className="text-primary group-hover:translate-x-0.5 transition-transform shrink-0" />
+          </button>
         </div>
       </div>
     </div>

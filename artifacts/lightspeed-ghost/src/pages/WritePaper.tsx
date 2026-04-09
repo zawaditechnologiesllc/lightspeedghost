@@ -199,8 +199,33 @@ export default function WritePaper() {
     }
   }, [topic, subject]);
 
-  // ── pre-fill from AI & Plagiarism checker redirect
+  // ── pre-fill from AI & Plagiarism checker redirect, or from Outline
   useEffect(() => {
+    // 1. Check for outline prefill stored in sessionStorage
+    const outlinePrefill = sessionStorage.getItem("outline_prefill");
+    if (outlinePrefill) {
+      try {
+        const data = JSON.parse(outlinePrefill) as {
+          topic?: string;
+          subject?: string;
+          paperType?: string;
+          wordCount?: number;
+          additionalInstructions?: string;
+        };
+        sessionStorage.removeItem("outline_prefill");
+        if (data.topic)    setTopic(data.topic);
+        if (data.subject)  setSubject(data.subject);
+        if (data.paperType) setPaperType(data.paperType);
+        if (data.wordCount) {
+          setWordCount(data.wordCount);
+          setCustomWordCount(String(data.wordCount));
+        }
+        if (data.additionalInstructions) setAdditionalInstructions(data.additionalInstructions);
+        return; // skip URL params if outline prefill was used
+      } catch { /* ignore parse errors */ }
+    }
+
+    // 2. Fallback: URL params (from plagiarism checker or other tools)
     const params = new URLSearchParams(window.location.search);
     const t = params.get("topic");
     const s = params.get("subject");
