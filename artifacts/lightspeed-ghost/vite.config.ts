@@ -69,6 +69,17 @@ export default defineConfig({
       "/api": {
         target: `http://localhost:${process.env.API_PORT ?? 8080}`,
         changeOrigin: true,
+        // Required for SSE (text/event-stream) — prevents the proxy from
+        // buffering the response body before forwarding it to the browser.
+        selfHandleResponse: false,
+        configure: (proxy) => {
+          proxy.on("proxyRes", (proxyRes) => {
+            if (proxyRes.headers["content-type"]?.includes("text/event-stream")) {
+              proxyRes.headers["cache-control"] = "no-cache";
+              proxyRes.headers["x-accel-buffering"] = "no";
+            }
+          });
+        },
       },
     },
   },

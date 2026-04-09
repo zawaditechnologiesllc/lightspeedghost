@@ -53,8 +53,12 @@ export async function reactSolve(
   subject: string,
   onToken?: (chunk: string) => void,
 ): Promise<ReActResult> {
-  const stream = anthropic.messages.stream({
-    model: "claude-sonnet-4-5",
+  let fullText = "";
+  let inputTokens = 0;
+  let outputTokens = 0;
+
+  await anthropic.messages.stream({
+    model: "claude-3-5-sonnet-20241022",
     max_tokens: 4000,
     system: REACT_SYSTEM,
     messages: [
@@ -63,24 +67,21 @@ export async function reactSolve(
         content: `Solve this ${subject} problem using the ReAct framework:\n\n${problem}`,
       },
     ],
-  });
+  })
+    .on("text", (text) => {
+      fullText += text;
+      onToken?.(text);
+    })
+    .on("message", (msg) => {
+      inputTokens = msg.usage.input_tokens;
+      outputTokens = msg.usage.output_tokens;
+    })
+    .finalMessage();
 
-  let fullText = "";
-  for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
-      fullText += event.delta.text;
-      onToken?.(event.delta.text);
-    }
-  }
-
-  const finalMsg = await stream.finalMessage();
   recordUsage(
-    "claude-sonnet-4-5",
-    finalMsg.usage.input_tokens,
-    finalMsg.usage.output_tokens,
+    "claude-3-5-sonnet-20241022",
+    inputTokens,
+    outputTokens,
     `react-stem-${subject}`,
   );
 

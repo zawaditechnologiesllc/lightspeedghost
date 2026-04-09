@@ -57,29 +57,30 @@ ${draft.rawText.slice(0, 2000)}
 
 Critically verify this ${subject} solution for any errors.`;
 
-  const stream = anthropic.messages.stream({
+  let fullText = "";
+  let inputTokens = 0;
+  let outputTokens = 0;
+
+  await anthropic.messages.stream({
     model: "claude-3-5-haiku-20241022",
     max_tokens: 1500,
     system: CRITIC_SYSTEM,
     messages: [{ role: "user", content: critiquePrompt }],
-  });
+  })
+    .on("text", (text) => {
+      fullText += text;
+      onToken?.(text);
+    })
+    .on("message", (msg) => {
+      inputTokens = msg.usage.input_tokens;
+      outputTokens = msg.usage.output_tokens;
+    })
+    .finalMessage();
 
-  let fullText = "";
-  for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
-      fullText += event.delta.text;
-      onToken?.(event.delta.text);
-    }
-  }
-
-  const finalMsg = await stream.finalMessage();
   recordUsage(
     "claude-3-5-haiku-20241022",
-    finalMsg.usage.input_tokens,
-    finalMsg.usage.output_tokens,
+    inputTokens,
+    outputTokens,
     `cove-critique-${subject}`,
   );
 
