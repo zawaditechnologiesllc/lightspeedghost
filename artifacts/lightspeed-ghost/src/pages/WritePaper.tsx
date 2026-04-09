@@ -276,6 +276,7 @@ export default function WritePaper() {
       };
 
       let receivedFinalEvent = false;
+      let event = ""; // persists across chunks — event: and data: lines may arrive in different chunks
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -283,8 +284,6 @@ export default function WritePaper() {
         buf += decoder.decode(value, { stream: true });
         const lines = buf.split("\n");
         buf = lines.pop() ?? "";
-
-        let event = "";
         for (const line of lines) {
           if (line.startsWith("event: ")) { event = line.slice(7).trim(); }
           else if (line.startsWith("data: ")) {
