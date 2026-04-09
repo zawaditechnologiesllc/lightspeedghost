@@ -7,6 +7,7 @@ import {
   GraduationCap, FlaskConical,
 } from "lucide-react";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
+import MathRenderer from "@/components/MathRenderer";
 import { detectPaperType, detectCitationStyle, extractTopic, extractSubject } from "@/lib/autofill";
 import { ExportButtons } from "@/components/ExportButtons";
 import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
@@ -70,27 +71,85 @@ const STEP_ORDER = ["citations", "stem", "writing", "bibliography", "stats"];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function renderInlineText(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = pattern.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    if (m[2] !== undefined) parts.push(<strong key={m.index}>{m[2]}</strong>);
+    else if (m[3] !== undefined) parts.push(<em key={m.index}>{m[3]}</em>);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+function lineHasMath(line: string): boolean {
+  return /\$\$[\s\S]+?\$\$|\$[^$\n]+?\$/.test(line);
+}
+
 function renderMarkdown(text: string): React.ReactNode[] {
-  return text.split("\n").map((line, i) => {
-    if (line.startsWith("# "))   return <h1 key={i} className="text-xl font-bold mt-6 mb-2 text-foreground">{line.slice(2)}</h1>;
-    if (line.startsWith("## "))  return <h2 key={i} className="text-base font-bold mt-5 mb-2 text-foreground border-b border-border pb-1">{line.slice(3)}</h2>;
-    if (line.startsWith("### ")) return <h3 key={i} className="text-sm font-semibold mt-4 mb-1.5 text-foreground">{line.slice(4)}</h3>;
-    if (line.trim() === "")  return <div key={i} className="h-2" />;
-    const boldPattern = "**";
-    const parts = line.split(boldPattern).reduce<string[]>((acc, part, idx) => {
-      if (idx % 2 === 0) { acc.push(part); } else { acc.push("**" + part + "**"); }
-      return acc;
-    }, []);
-    return (
+  const nodes: React.ReactNode[] = [];
+  const lines = text.split("\n");
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (line.startsWith("# "))   { nodes.push(<h1 key={i} className="text-xl font-bold mt-6 mb-2 text-foreground">{line.slice(2)}</h1>); i++; continue; }
+    if (line.startsWith("## "))  { nodes.push(<h2 key={i} className="text-base font-bold mt-5 mb-2 text-foreground border-b border-border pb-1">{line.slice(3)}</h2>); i++; continue; }
+    if (line.startsWith("### ")) { nodes.push(<h3 key={i} className="text-sm font-semibold mt-4 mb-1.5 text-foreground">{line.slice(4)}</h3>); i++; continue; }
+    if (line.trim() === "")      { nodes.push(<div key={i} className="h-2" />); i++; continue; }
+
+    if (line.startsWith("$$") && line.trim() !== "$$") {
+      nodes.push(<MathRenderer key={i} text={line.trim()} displayMode className="my-4 text-center" />);
+      i++; continue;
+    }
+
+    if (line.trim().startsWith("- ") || line.trim().startsWith("* ")) {
+      const items: string[] = [];
+      while (i < lines.length && (lines[i].trim().startsWith("- ") || lines[i].trim().startsWith("* "))) {
+        items.push(lines[i].trim().slice(2));
+        i++;
+      }
+      nodes.push(
+        <ul key={`ul-${i}`} className="list-disc list-inside text-sm text-foreground leading-relaxed mb-2 space-y-0.5 pl-2">
+          {items.map((it, j) => <li key={j}>{lineHasMath(it) ? <MathRenderer text={it} className="inline" /> : renderInlineText(it)}</li>)}
+        </ul>
+      );
+      continue;
+    }
+
+    if (/^\d+\.\s/.test(line.trim())) {
+      const items: string[] = [];
+      while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) {
+        items.push(lines[i].trim().replace(/^\d+\.\s/, ""));
+        i++;
+      }
+      nodes.push(
+        <ol key={`ol-${i}`} className="list-decimal list-inside text-sm text-foreground leading-relaxed mb-2 space-y-0.5 pl-2">
+          {items.map((it, j) => <li key={j}>{lineHasMath(it) ? <MathRenderer text={it} className="inline" /> : renderInlineText(it)}</li>)}
+        </ol>
+      );
+      continue;
+    }
+
+    if (lineHasMath(line)) {
+      nodes.push(<MathRenderer key={i} text={line} className="text-sm text-foreground leading-relaxed mb-1" />);
+      i++; continue;
+    }
+
+    nodes.push(
       <p key={i} className="text-sm text-foreground leading-relaxed mb-1">
-        {parts.map((p, j) =>
-          p.startsWith("**") && p.endsWith("**")
-            ? <strong key={j}>{p.slice(2, -2)}</strong>
-            : p
-        )}
+        {renderInlineText(line)}
       </p>
     );
-  });
+    i++;
+  }
+
+  return nodes;
 }
 
 function StatCard({ label, value, color, sublabel }: { label: string; value: string; color: string; sublabel?: string }) {
