@@ -29,11 +29,14 @@ Be ruthlessly precise. Check:
 4. Logical reasoning gaps
 5. Conceptual misunderstandings
 
-Respond in EXACTLY this format:
+Respond in EXACTLY this format with NO extra text, headers, commentary, or sections outside these four fields:
+
 ERRORS_FOUND: [yes/no]
-CORRECTIONS: [list each error with its fix, one per line — or write "none" if perfect]
-VERIFIED_ANSWER: [Complete corrected solution with LaTeX, or repeat original if correct]
-VERIFIED_LATEX: [Single-line LaTeX of the final result]`;
+CORRECTIONS: [list each error with its fix, one per line — or write "none" if no errors]
+VERIFIED_ANSWER: [The complete final solution text with LaTeX math. This field must contain ONLY the solution — no critic notes, no verification commentary, no "Critic Agent" text, no section headers, no explanations about what you checked.]
+VERIFIED_LATEX: [Single-line LaTeX of the final result only]
+
+IMPORTANT: Do NOT add any text after VERIFIED_LATEX. Do NOT add "DETAILED VERIFICATION", "Critic Agent fixed", or any other sections. The four fields above are the complete response.`;
 
 /**
  * Run Chain-of-Verification on a ReAct solution draft.
@@ -105,7 +108,14 @@ Critically verify this ${subject} solution for any errors.`;
   const verifiedMatch = text.match(
     /VERIFIED_ANSWER:\s*([\s\S]*?)(?=VERIFIED_LATEX:|$)/,
   );
-  const verified = verifiedMatch ? verifiedMatch[1].trim() : draft.finalAnswer;
+  const rawVerified = verifiedMatch ? verifiedMatch[1].trim() : draft.finalAnswer;
+
+  // Strip critic commentary that sometimes leaks into the VERIFIED_ANSWER block.
+  // Cut everything from the first "critic agent", "detailed verification",
+  // or standalone "---" separator line onward.
+  const criticNoisePattern = /\n(?:---+|Critic Agent|##\s*DETAILED VERIFICATION|\*{0,3}Critic Agent)/i;
+  const noiseIdx = rawVerified.search(criticNoisePattern);
+  const verified = noiseIdx !== -1 ? rawVerified.slice(0, noiseIdx).trim() : rawVerified;
 
   const latexMatch = text.match(/VERIFIED_LATEX:\s*([\s\S]+?)$/);
   const verifiedLatex = latexMatch ? latexMatch[1].trim() : draft.latex;
