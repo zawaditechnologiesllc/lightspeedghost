@@ -3,6 +3,7 @@ import { db, pool } from "@workspace/db";
 import { documentsTable, studySessionsTable } from "@workspace/db";
 import { desc, sql, eq, ilike, and } from "drizzle-orm";
 import type { Request, Response } from "express";
+import { invalidateSettingsCache } from "../lib/systemSettings";
 
 const router = Router();
 
@@ -595,6 +596,7 @@ router.post("/admin/settings", async (req: Request, res: Response) => {
     } finally {
       client.release();
     }
+    invalidateSettingsCache();
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Failed to save settings" });

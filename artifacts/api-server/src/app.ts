@@ -10,6 +10,7 @@ import { authMiddleware } from "./middlewares/auth";
 import { requestLoggerMiddleware } from "./lib/requestLogger";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
+import { getSystemSettings } from "./lib/systemSettings";
 
 const PgSession = connectPgSimple(session);
 
@@ -174,6 +175,41 @@ app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 // ── Auth — resolve userId from session or Bearer JWT ─────────────────────────
 app.use(authMiddleware);
+
+// ── Public status endpoint — returns maintenance + signup state ───────────────
+// Must be AFTER CORS (so browsers can call it) but BEFORE maintenance middleware
+// so the frontend can always reach it regardless of maintenance state.
+app.get("/api/status", async (_req: Request, res: Response) => {
+  const settings = await getSystemSettings();
+  res.json({ maintenance: settings.maintenance_mode, allow_signups: settings.allow_signups });
+});
+
+// ── Maintenance mode middleware ────────────────────────────────────────────────
+// When maintenance_mode is 'true' in system_settings, block all routes except:
+//   /api/health, /api/status, /api/admin/*, /api/payments/webhook/*
+const MAINTENANCE_EXEMPT = [
+  /^\/api\/health/,
+  /^\/api\/status/,
+  /^\/api\/admin\//,
+  /^\/api\/payments\/webhook\//,
+];
+
+app.use(async (req: Request, res: Response, next: NextFunction) => {
+  if (MAINTENANCE_EXEMPT.some((pat) => pat.test(req.path))) return next();
+  try {
+    const { maintenance_mode } = await getSystemSettings();
+    if (maintenance_mode) {
+      res.status(503).json({
+        error: "maintenance",
+        message: "The platform is currently undergoing maintenance. Please check back soon.",
+      });
+      return;
+    }
+  } catch {
+    // If we can't reach the DB, fail open (don't block users)
+  }
+  next();
+});
 
 // ── Request logging ───────────────────────────────────────────────────────────
 app.use(requestLoggerMiddleware);

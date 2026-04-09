@@ -32,8 +32,9 @@ import BlogPost from "@/pages/BlogPost";
 import RefundPolicy from "@/pages/RefundPolicy";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import NotFound from "@/pages/not-found";
-import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { Loader2, Wrench } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Logo } from "@/components/Logo";
 
 function TidioChat() {
   useEffect(() => {
@@ -48,6 +49,83 @@ function TidioChat() {
 }
 
 const queryClient = new QueryClient();
+
+const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
+
+function MaintenanceScreen({ onRetry }: { onRetry: () => void }) {
+  const [countdown, setCountdown] = useState(30);
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) { onRetry(); return 30; }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [onRetry]);
+
+  return (
+    <div className="min-h-screen bg-[#050913] flex flex-col items-center justify-center p-6">
+      <div className="flex flex-col items-center gap-6 max-w-sm text-center">
+        <div className="w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+          <Wrench size={28} className="text-orange-400" />
+        </div>
+        <Logo size={36} />
+        <div className="space-y-2">
+          <h1 className="text-xl font-bold text-white">Down for Maintenance</h1>
+          <p className="text-sm text-white/45 leading-relaxed">
+            We're performing scheduled maintenance to improve your experience. We'll be back shortly.
+          </p>
+        </div>
+        <div className="w-full h-px bg-white/8" />
+        <p className="text-xs text-white/30">
+          Checking again in <span className="text-white/60 tabular-nums font-medium">{countdown}s</span>
+        </p>
+        <button
+          onClick={onRetry}
+          className="text-xs text-blue-400 hover:text-blue-300 transition-colors underline underline-offset-2"
+        >
+          Check now
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MaintenanceGate({ children }: { children: React.ReactNode }) {
+  const [status, setStatus] = useState<"loading" | "ok" | "maintenance">("loading");
+  const [path] = useLocation();
+
+  const check = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/status`, { credentials: "include" });
+      if (!res.ok) { setStatus("ok"); return; }
+      const data = await res.json() as { maintenance?: boolean };
+      setStatus(data.maintenance ? "maintenance" : "ok");
+    } catch {
+      setStatus("ok");
+    }
+  }, []);
+
+  useEffect(() => { check(); }, [check]);
+
+  if (path.startsWith("/admin")) return <>{children}</>;
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 size={24} className="animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (status === "maintenance") {
+    return <MaintenanceScreen onRetry={check} />;
+  }
+
+  return <>{children}</>;
+}
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -142,9 +220,11 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <AuthProvider>
-              <Router />
-            </AuthProvider>
+            <MaintenanceGate>
+              <AuthProvider>
+                <Router />
+              </AuthProvider>
+            </MaintenanceGate>
           </WouterRouter>
           <Toaster />
           <TidioChat />
