@@ -30,6 +30,23 @@ app.head("/api/health", (_req: Request, res: Response) => {
   res.status(200).end();
 });
 
+// ── Diagnostic config — before CORS so direct browser access works ─────────
+// Shows which env vars are present (as booleans) — no secret values exposed.
+app.get("/api/health/config", (_req: Request, res: Response) => {
+  const check = (key: string) => !!process.env[key];
+  res.json({
+    env: process.env.NODE_ENV,
+    keys: {
+      ANTHROPIC_API_KEY: check("ANTHROPIC_API_KEY"),
+      OPENAI_API_KEY: check("OPENAI_API_KEY"),
+      SUPABASE_JWT_SECRET: check("SUPABASE_JWT_SECRET"),
+      DATABASE_URL: check("DATABASE_URL"),
+      SESSION_SECRET: check("SESSION_SECRET"),
+      ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ?? "(not set)",
+    },
+  });
+});
+
 // ── Security headers (helmet) ─────────────────────────────────────────────────
 app.use(
   helmet({
@@ -198,22 +215,6 @@ app.use(authMiddleware);
 app.get("/api/status", async (_req: Request, res: Response) => {
   const settings = await getSystemSettings();
   res.json({ maintenance: settings.maintenance_mode, allow_signups: settings.allow_signups });
-});
-
-// ── Diagnostic endpoint — env vars check (no secret values exposed) ───────────
-app.get("/api/health/config", (_req: Request, res: Response) => {
-  const check = (key: string) => !!process.env[key];
-  res.json({
-    env: process.env.NODE_ENV,
-    keys: {
-      ANTHROPIC_API_KEY: check("ANTHROPIC_API_KEY"),
-      OPENAI_API_KEY: check("OPENAI_API_KEY"),
-      SUPABASE_JWT_SECRET: check("SUPABASE_JWT_SECRET"),
-      DATABASE_URL: check("DATABASE_URL"),
-      SESSION_SECRET: check("SESSION_SECRET"),
-      ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ?? "(not set)",
-    },
-  });
 });
 
 // ── Maintenance mode middleware ────────────────────────────────────────────────
