@@ -501,29 +501,33 @@ export default function StemSolver() {
           <p className="text-destructive text-xs px-4 pb-1">{form.formState.errors.problem.message}</p>
         )}
         {/* Bottom action row */}
-        <div className="flex items-center gap-4 px-4 py-3 border-t border-border bg-muted/20">
-          <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
-            <input type="checkbox" {...form.register("showSteps")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
-            <span className="text-xs text-muted-foreground">Show steps</span>
-          </label>
-          <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
-            <input type="checkbox" {...form.register("generateGraph")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
-            <span className="text-xs text-muted-foreground">Generate graph</span>
-          </label>
-          <div className="ml-auto flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => openBuy("stem")}
-              className="text-[11px] text-orange-400 hover:text-orange-300 transition-colors font-medium"
-            >
-              Buy one solve →
-            </button>
-            <button
-              type="submit"
-              className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/25"
-            >
-              <Zap size={14} /> Solve
-            </button>
+        <div className="px-4 py-3 border-t border-border bg-muted/20">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" {...form.register("showSteps")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
+                <span className="text-xs text-muted-foreground">Show steps</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" {...form.register("generateGraph")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
+                <span className="text-xs text-muted-foreground">Generate graph</span>
+              </label>
+            </div>
+            <div className="flex items-center gap-3 ml-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => openBuy("stem")}
+                className="text-[11px] text-orange-400 hover:text-orange-300 transition-colors font-medium whitespace-nowrap"
+              >
+                Buy one solve →
+              </button>
+              <button
+                type="submit"
+                className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/25"
+              >
+                <Zap size={14} /> Solve
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -569,7 +573,7 @@ export default function StemSolver() {
               <p className="text-sm text-muted-foreground">
                 Solve any problem instantly — Math · Physics · Chemistry · Biology · Engineering · CS · Statistics
               </p>
-              <div className="flex items-center justify-center gap-2 pt-1">
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                 <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary">
                   <Zap size={9} /> ReAct Loop
                 </span>
