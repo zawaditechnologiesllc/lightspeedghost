@@ -40,6 +40,7 @@ app.get("/api/health/config", (_req: Request, res: Response) => {
       ANTHROPIC_API_KEY: check("ANTHROPIC_API_KEY"),
       OPENAI_API_KEY: check("OPENAI_API_KEY"),
       SUPABASE_JWT_SECRET: check("SUPABASE_JWT_SECRET"),
+      SUPABASE_URL: check("SUPABASE_URL"),
       DATABASE_URL: check("DATABASE_URL"),
       SESSION_SECRET: check("SESSION_SECRET"),
       ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ?? "(not set)",
