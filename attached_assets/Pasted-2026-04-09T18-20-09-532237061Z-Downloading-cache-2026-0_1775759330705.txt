@@ -1,0 +1,51 @@
+2026-04-09T18:20:09.532237061Z ==> Downloading cache...
+2026-04-09T18:20:09.591615578Z ==> It looks like we don't have access to your repo, but we'll try to clone it anyway.
+2026-04-09T18:20:09.5916863Z ==> Cloning from https://github.com/zawaditechnologiesllc/lightspeedghost
+2026-04-09T18:20:10.22241427Z ==> Checking out commit cca822ef11bd80933983f4a13e53c72e3be5327e in branch main
+2026-04-09T18:20:35.405284768Z ==> Downloaded 435MB in 5s. Extraction took 21s.
+2026-04-09T18:20:36.274207041Z ==> Using Node.js version 22.22.0 (default)
+2026-04-09T18:20:36.300545851Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2026-04-09T18:20:36.429963504Z ==> Running build command 'pnpm install && pnpm --filter @workspace/api-server run build'...
+2026-04-09T18:20:38.846310671Z 
+2026-04-09T18:20:38.846373352Z > @workspace/api-server@0.0.0 build /opt/render/project/src/artifacts/api-server
+2026-04-09T18:20:38.846383513Z > node ./build.mjs
+2026-04-09T18:20:38.846387693Z 
+2026-04-09T18:20:39.804687799Z 
+2026-04-09T18:20:39.804710599Z   dist/index.mjs                       4.6mb ⚠️
+2026-04-09T18:20:39.804715869Z   dist/pino-worker.mjs               153.4kb
+2026-04-09T18:20:39.804719139Z   dist/pino-file.mjs                 142.1kb
+2026-04-09T18:20:39.804722449Z   dist/pino-pretty.mjs               114.6kb
+2026-04-09T18:20:39.804725669Z   dist/thread-stream-worker.mjs        7.3kb
+2026-04-09T18:20:39.804729069Z   dist/index.mjs.map                   8.6mb
+2026-04-09T18:20:39.804732219Z   dist/pino-worker.mjs.map           256.9kb
+2026-04-09T18:20:39.80473534Z   dist/pino-file.mjs.map             229.0kb
+2026-04-09T18:20:39.804738489Z   dist/pino-pretty.mjs.map           203.9kb
+2026-04-09T18:20:39.80474166Z   dist/thread-stream-worker.mjs.map   12.0kb
+2026-04-09T18:20:39.80474472Z 
+2026-04-09T18:20:39.80474873Z ⚡ Done in 884ms
+2026-04-09T18:20:43.874515194Z ==> Uploading build...
+2026-04-09T18:21:07.087889156Z ==> Uploaded in 10.0s. Compression took 13.2s
+2026-04-09T18:21:07.2460958Z ==> Build successful 🎉
+2026-04-09T18:21:15.246355568Z ==> Deploying...
+2026-04-09T18:21:15.337854529Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-04-09T18:21:55.109186869Z ==> Running 'node --enable-source-maps artifacts/api-server/dist/index.mjs'
+2026-04-09T18:22:01.090698462Z {"level":30,"time":1775758920997,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","msg":"[startup] env var OK: DATABASE_URL"}
+2026-04-09T18:22:01.293989085Z {"level":30,"time":1775758921090,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","msg":"[startup] env var OK: SUPABASE_JWT_SECRET"}
+2026-04-09T18:22:01.294051777Z {"level":30,"time":1775758921090,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","msg":"[startup] env var OK: OPENAI_API_KEY"}
+2026-04-09T18:22:01.294056027Z {"level":30,"time":1775758921090,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","msg":"[startup] env var OK: ANTHROPIC_API_KEY"}
+2026-04-09T18:22:01.294059357Z {"level":30,"time":1775758921090,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","msg":"[startup] env var OK: SESSION_SECRET"}
+2026-04-09T18:22:01.294063147Z {"level":30,"time":1775758921291,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","port":10000,"msg":"Server listening"}
+2026-04-09T18:22:01.598470379Z {"level":30,"time":1775758921598,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","msg":"[startup] Database connection OK"}
+2026-04-09T18:22:01.658280484Z {"level":30,"time":1775758921657,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","msg":"[startup] user_usage table ready"}
+2026-04-09T18:22:01.716779485Z {"level":30,"time":1775758921716,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","msg":"[startup] user_sessions table ready"}
+2026-04-09T18:22:01.774602298Z {"level":30,"time":1775758921774,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","msg":"[startup] student_profiles table ready"}
+2026-04-09T18:22:02.096466735Z {"level":30,"time":1775758922095,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","req":{"id":1,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":6,"msg":"request completed"}
+2026-04-09T18:22:07.13019266Z ==> Your service is live 🎉
+2026-04-09T18:22:07.168795338Z {"level":30,"time":1775758927168,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","req":{"id":2,"method":"GET","url":"/"},"res":{"statusCode":403},"responseTime":2,"msg":"request completed"}
+2026-04-09T18:22:07.283627486Z ==> 
+2026-04-09T18:22:07.288306827Z ==> ///////////////////////////////////////////////////////////
+2026-04-09T18:22:07.291265172Z ==> 
+2026-04-09T18:22:07.293801807Z ==> Available at your primary URL https://lightspeedghost-5szz.onrender.com
+2026-04-09T18:22:07.296226439Z ==> 
+2026-04-09T18:22:07.298751864Z ==> ///////////////////////////////////////////////////////////
+2026-04-09T18:22:37.485476394Z {"level":30,"time":1775758957485,"pid":67,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-c64d55766-6665s","req":{"id":3,"method":"GET","url":"/api/status"},"res":{"statusCode":304},"responseTime":307,"msg":"request completed"}

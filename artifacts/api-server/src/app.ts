@@ -5,6 +5,7 @@ import connectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import jwt from "jsonwebtoken";
 import router from "./routes";
 import { authMiddleware } from "./middlewares/auth";
 import { requestLoggerMiddleware } from "./lib/requestLogger";
@@ -46,6 +47,90 @@ app.get("/api/health/config", (_req: Request, res: Response) => {
       ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ?? "(not set)",
     },
   });
+});
+
+// ── Auth diagnostic — before CORS, dev+prod safe (no secrets exposed) ────────
+// Call with: fetch("https://lightspeedghost-5szz.onrender.com/api/auth/test",
+//   { headers: { Authorization: "Bearer <your-supabase-token>" } })
+app.get("/api/auth/test", async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization ?? "";
+  if (!authHeader.startsWith("Bearer ")) {
+    res.json({ error: "No Bearer token supplied. Add Authorization: Bearer <token> header." });
+    return;
+  }
+  const token = authHeader.slice(7);
+
+  // 1. Decode header without verification
+  let header: Record<string, unknown> = {};
+  let payload: Record<string, unknown> = {};
+  try {
+    const decoded = jwt.decode(token, { complete: true });
+    if (decoded && typeof decoded === "object") {
+      header = decoded.header as Record<string, unknown>;
+      payload = decoded.payload as Record<string, unknown>;
+    }
+  } catch (e) {
+    res.json({ error: "Cannot decode token — likely malformed JWT." });
+    return;
+  }
+
+  const alg = header.alg as string ?? "unknown";
+  const kid = header.kid as string | undefined;
+  const sub = payload.sub as string | undefined;
+  const exp = payload.exp as number | undefined;
+  const expired = exp ? Date.now() / 1000 > exp : null;
+
+  const result: Record<string, unknown> = {
+    token_header: { alg, kid, typ: header.typ },
+    token_sub: sub ?? "(missing)",
+    token_expired: expired,
+    env: {
+      SUPABASE_JWT_SECRET: !!process.env.SUPABASE_JWT_SECRET,
+      SUPABASE_URL: process.env.SUPABASE_URL
+        ? process.env.SUPABASE_URL.replace(/\/\/[^.]+/, "//***") // mask project ref
+        : "(not set)",
+    },
+  };
+
+  // 2. Try HS256 verification
+  if (process.env.SUPABASE_JWT_SECRET) {
+    try {
+      jwt.verify(token, process.env.SUPABASE_JWT_SECRET, { algorithms: ["HS256"] });
+      result.hs256_verify = "✓ passed";
+    } catch (e) {
+      result.hs256_verify = `✗ failed: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  } else {
+    result.hs256_verify = "skipped — SUPABASE_JWT_SECRET not set";
+  }
+
+  // 3. Try RS256 via JWKS
+  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+  if (supabaseUrl && kid) {
+    try {
+      const jwksUrl = `${supabaseUrl}/auth/v1/.well-known/jwks.json`;
+      const jwksResp = await fetch(jwksUrl);
+      if (!jwksResp.ok) {
+        result.rs256_verify = `✗ failed: JWKS fetch returned HTTP ${jwksResp.status} from ${jwksUrl}`;
+      } else {
+        const jwks = await jwksResp.json() as { keys: Array<Record<string, unknown>> };
+        const matchingKey = jwks.keys?.find((k) => k.kid === kid);
+        if (!matchingKey) {
+          result.rs256_verify = `✗ failed: no key with kid="${kid}" in JWKS. Keys available: ${jwks.keys?.map((k) => k.kid).join(", ")}`;
+        } else {
+          result.rs256_verify = `key found (kid="${kid}", kty=${matchingKey.kty}) — live verification requires jwks-rsa client`;
+        }
+      }
+    } catch (e) {
+      result.rs256_verify = `✗ failed: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  } else if (!kid) {
+    result.rs256_verify = "skipped — token has no kid header field (not an RS256 token)";
+  } else {
+    result.rs256_verify = "skipped — SUPABASE_URL not set";
+  }
+
+  res.json(result);
 });
 
 // ── Security headers (helmet) ─────────────────────────────────────────────────
