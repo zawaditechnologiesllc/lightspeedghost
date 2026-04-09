@@ -71,9 +71,8 @@ channel = "stable-25_05"
 [userenv.shared]
 VITE_SUPABASE_URL = "https://mfobinrxhxbntblqjpdr.supabase.co"
 VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mb2JpbnJ4aHhibnRibHFqcGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTk2MDAsImV4cCI6MjA5MDgzNTYwMH0.ar0mQks9gvlJwQqewEzPzAtyTVN7hismpz89o1d6EaQ"
+VITE_API_URL = "https://lightspeedghost-5szz.onrender.com"
 
 [userenv.development]
-VITE_API_URL = ""
 
 [userenv.production]
-VITE_API_URL = "https://lightspeedghost-5szz.onrender.com"
