@@ -253,6 +253,10 @@ export default function StemSolver() {
         });
       };
 
+      // event must live OUTSIDE the while loop — SSE headers and data can
+      // arrive in separate network chunks; resetting per-iteration drops events.
+      let event = "";
+
       while (true) {
         const { done, value } = await reader.read();
 
@@ -264,7 +268,6 @@ export default function StemSolver() {
           const lines = buf.split("\n");
           buf = lines.pop() ?? "";
 
-          let event = "";
           for (const line of lines) {
             if (line.startsWith("event: ")) { event = line.slice(7).trim(); }
             else if (line.startsWith("data: ")) {
@@ -430,117 +433,6 @@ export default function StemSolver() {
   const activeThinkingText = activeThinkingId ? thinkingContent[activeThinkingId] : "";
   const isThinking = activeThinkingText.length > 0;
 
-  if (isSolving) {
-    return (
-      <div className="h-full flex flex-col bg-background overflow-hidden">
-        {/* ── Header bar ─────────────────────────────────────────────────── */}
-        <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border bg-card">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-              <FlaskConical size={15} className="text-primary" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold leading-tight">LightSpeed AI — STEM Solver</p>
-              <p className="text-[10px] text-muted-foreground leading-tight">{currentSolveStageName}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="text-[10px] text-muted-foreground">Solving…</span>
-          </div>
-        </div>
-
-        {/* ── Progress bar ────────────────────────────────────────────────── */}
-        <div className="shrink-0 px-4 pt-2.5 pb-1">
-          <div className="h-1 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-700"
-              style={{ width: `${Math.round(((solveStep + 1) / SOLVE_STEPS.length) * 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* ── Live AI thinking stream — takes full remaining height ────────── */}
-        {isThinking ? (
-          <div className="flex-1 flex flex-col min-h-0 px-4 pb-4 pt-2 gap-2">
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1.5">
-                <Sparkles size={11} className="text-primary" />
-                <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
-                  {activeThinkingId === "react" ? "ReAct Engine — Live Reasoning" : "Chain-of-Verification — Live"}
-                </span>
-              </div>
-              <div className="flex gap-0.5 ml-1">
-                {[0, 1, 2].map(i => (
-                  <div
-                    key={i}
-                    className="w-1 h-1 rounded-full bg-primary animate-bounce"
-                    style={{ animationDelay: `${i * 0.15}s` }}
-                  />
-                ))}
-              </div>
-            </div>
-            <div
-              ref={thinkingRef}
-              className="flex-1 min-h-0 overflow-y-auto rounded-xl bg-muted/30 border border-border px-3.5 py-3 font-mono text-[11px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words"
-            >
-              {activeThinkingText}
-              <span className="inline-block w-1.5 h-3.5 bg-primary/70 animate-pulse ml-0.5 translate-y-0.5" />
-            </div>
-            {/* Stage pills */}
-            {sseSteps.length > 0 && (
-              <div className="shrink-0 flex flex-wrap gap-1.5">
-                {sseSteps.map(step => (
-                  <div
-                    key={step.id}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium border ${
-                      step.status === "done"
-                        ? "bg-primary/10 border-primary/30 text-primary"
-                        : "bg-card border-border text-muted-foreground"
-                    }`}
-                  >
-                    {step.status === "done"
-                      ? <CheckCircle size={9} className="shrink-0" />
-                      : <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />}
-                    <span className="truncate max-w-[180px]">{step.message}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* ── Pre-stream capability list ──────────────────────────────────── */
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5">
-            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-semibold mb-2">Engine stages</p>
-            {SOLVE_STEPS.map((step, i) => (
-              <div
-                key={i}
-                className={`flex items-center gap-2.5 px-3.5 py-2 rounded-lg border transition-all duration-500 ${
-                  i < solveStep
-                    ? "bg-primary/5 border-primary/20 text-foreground"
-                    : i === solveStep
-                      ? "bg-card border-border text-foreground shadow-sm"
-                      : "bg-muted/20 border-transparent text-muted-foreground/35"
-                }`}
-              >
-                <div className={`shrink-0 ${i <= solveStep ? "text-primary" : "text-muted-foreground/30"}`}>
-                  {i < solveStep ? <CheckCircle size={12} /> : i === solveStep
-                    ? <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                    : step.icon}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium leading-tight truncate">{step.label}</p>
-                  {i === solveStep && (
-                    <p className="text-[10px] text-muted-foreground/60 leading-tight mt-0.5">{step.detail}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
 
   // ── Shared subject pills ──────────────────────────────────────────────────
   const SubjectPills = (
@@ -670,39 +562,112 @@ export default function StemSolver() {
         </div>
       )}
 
-      {/* ── Input state (no result) ───────────────────────────────────────── */}
+      {/* ── Input / loading state (no result) ───────────────────────────── */}
       {!result && (
         <div className="flex-1 overflow-y-auto">
-        <div className="w-full max-w-2xl mx-auto px-4 py-6 sm:py-10 space-y-5">
+          <div className="w-full max-w-2xl mx-auto px-4 py-6 sm:py-10 space-y-5">
 
-            {/* LightSpeed AI brand */}
-            <div className="text-center space-y-2">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Zap size={18} className="text-primary" />
-                <span className="text-xs font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+            {isSolving ? (
+              /* ── Inline loading view ──────────────────────────────────────── */
+              <div className="space-y-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <FlaskConical size={15} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold leading-tight">Solving your problem…</p>
+                      <p className="text-[10px] text-muted-foreground leading-tight">{currentSolveStageName}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[10px] text-muted-foreground">AI working</span>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-700"
+                    style={{ width: `${Math.round(((solveStep + 1) / SOLVE_STEPS.length) * 100)}%` }}
+                  />
+                </div>
+
+                {/* Stage pills */}
+                {sseSteps.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {sseSteps.map(step => (
+                      <div
+                        key={step.id}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium border ${
+                          step.status === "done"
+                            ? "bg-primary/10 border-primary/30 text-primary"
+                            : "bg-card border-border text-muted-foreground"
+                        }`}
+                      >
+                        {step.status === "done"
+                          ? <CheckCircle size={9} className="shrink-0" />
+                          : <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />}
+                        <span className="truncate max-w-[200px]">{step.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Live thinking stream */}
+                {isThinking && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={10} className="text-primary" />
+                      <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+                        {activeThinkingId === "react" ? "ReAct Engine — Live" : "Chain-of-Verification — Live"}
+                      </span>
+                      <div className="flex gap-0.5">
+                        {[0, 1, 2].map(i => (
+                          <div key={i} className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                        ))}
+                      </div>
+                    </div>
+                    <div
+                      ref={thinkingRef}
+                      className="h-64 overflow-y-auto rounded-xl bg-muted/30 border border-border px-3.5 py-3 font-mono text-[11px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words"
+                    >
+                      {activeThinkingText}
+                      <span className="inline-block w-1.5 h-3.5 bg-primary/70 animate-pulse ml-0.5 translate-y-0.5" />
+                    </div>
+                  </div>
+                )}
               </div>
-              <h1 className="text-2xl font-bold tracking-tight">STEM Solver</h1>
-              <p className="text-sm text-muted-foreground">
-                Solve any problem instantly — Math · Physics · Chemistry · Biology · Engineering · CS · Statistics
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary">
-                  <Zap size={9} /> ReAct Loop
-                </span>
-                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400">
-                  <ShieldCheck size={9} /> Chain-of-Verification
-                </span>
-                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-border bg-muted text-muted-foreground">
-                  <Database size={9} /> Research-backed
-                </span>
-              </div>
-            </div>
-
-            {/* Subject pills */}
-            {SubjectPills}
-
-            {/* Input form */}
-            {InputForm}
+            ) : (
+              /* ── Normal input view ────────────────────────────────────────── */
+              <>
+                <div className="text-center space-y-2">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Zap size={18} className="text-primary" />
+                    <span className="text-xs font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+                  </div>
+                  <h1 className="text-2xl font-bold tracking-tight">STEM Solver</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Solve any problem instantly — Math · Physics · Chemistry · Biology · Engineering · CS · Statistics
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                    <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary">
+                      <Zap size={9} /> ReAct Loop
+                    </span>
+                    <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400">
+                      <ShieldCheck size={9} /> Chain-of-Verification
+                    </span>
+                    <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-border bg-muted text-muted-foreground">
+                      <Database size={9} /> Research-backed
+                    </span>
+                  </div>
+                </div>
+                {SubjectPills}
+                {InputForm}
+              </>
+            )}
 
           </div>
         </div>
