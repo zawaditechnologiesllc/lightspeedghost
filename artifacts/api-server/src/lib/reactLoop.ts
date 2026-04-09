@@ -44,18 +44,25 @@ LATEX_SUMMARY: [Single-line LaTeX of the key result only, e.g. $$v = 9.8 \\text{
 /**
  * Solve a STEM problem using the ReAct reasoning framework.
  *
- * @param onToken  Optional callback invoked for every streaming token — use
- *                 this to forward tokens through an SSE connection so the
- *                 connection is never idle during long AI calls.
+ * @param onToken        Optional callback invoked for every streaming token — use
+ *                       this to forward tokens through an SSE connection so the
+ *                       connection is never idle during long AI calls.
+ * @param academicContext Pre-fetched paper abstracts to inject as RAG context,
+ *                       grounding the model in real peer-reviewed material.
  */
 export async function reactSolve(
   problem: string,
   subject: string,
   onToken?: (chunk: string) => void,
+  academicContext?: string,
 ): Promise<ReActResult> {
   let fullText = "";
   let inputTokens = 0;
   let outputTokens = 0;
+
+  const userContent = academicContext
+    ? `ACADEMIC REFERENCE CONTEXT (peer-reviewed abstracts — use these to ground your reasoning):\n\n${academicContext}\n\n---\n\nNow solve this ${subject} problem using the ReAct framework, referencing the above context where relevant:\n\n${problem}`
+    : `Solve this ${subject} problem using the ReAct framework:\n\n${problem}`;
 
   await anthropic.messages.stream({
     model: "claude-sonnet-4-5",
@@ -64,7 +71,7 @@ export async function reactSolve(
     messages: [
       {
         role: "user",
-        content: `Solve this ${subject} problem using the ReAct framework:\n\n${problem}`,
+        content: userContent,
       },
     ],
   })

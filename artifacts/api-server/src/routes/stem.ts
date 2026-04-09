@@ -140,6 +140,56 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
       return;
     }
 
+    // ── Stage 0: Academic source prefetch (RAG grounding) ────────────────────
+    // Fetch real paper abstracts BEFORE the ReAct loop so the model reasons
+    // against peer-reviewed material rather than pure training memory.
+    send("step", {
+      id: "sources",
+      message: "Fetching peer-reviewed sources to ground the solution…",
+      status: "running",
+    });
+
+    let academicContext: string | undefined;
+    try {
+      const query = `${body.problem.slice(0, 120)} ${body.subject}`.trim();
+      const params = new URLSearchParams({
+        query,
+        limit: "5",
+        fields: "title,authors,year,abstract",
+      });
+      const ssResp = await fetch(
+        `https://api.semanticscholar.org/graph/v1/paper/search?${params}`,
+        { headers: { "User-Agent": "LightSpeedGhost/1.0" }, signal: AbortSignal.timeout(5000) },
+      );
+      if (ssResp.ok) {
+        const ssData = (await ssResp.json()) as {
+          data?: Array<{ title?: string; authors?: Array<{ name: string }>; year?: number; abstract?: string }>;
+        };
+        const abstracts = (ssData.data ?? [])
+          .filter((p) => p.abstract && p.abstract.length > 50)
+          .slice(0, 4)
+          .map((p, i) => {
+            const authors = (p.authors ?? []).map((a) => a.name).slice(0, 2).join(", ");
+            return `[${i + 1}] "${p.title ?? "Untitled"}" (${authors}, ${p.year ?? "n.d."})\nAbstract: ${p.abstract!.slice(0, 400)}`;
+          });
+        if (abstracts.length > 0) {
+          academicContext = abstracts.join("\n\n");
+          send("step", {
+            id: "sources",
+            message: `${abstracts.length} peer-reviewed paper${abstracts.length > 1 ? "s" : ""} loaded as reference context`,
+            status: "done",
+          });
+        } else {
+          send("step", { id: "sources", message: "No matching papers found — solving from model knowledge", status: "done" });
+        }
+      } else {
+        send("step", { id: "sources", message: "Source lookup unavailable — proceeding without RAG", status: "done" });
+      }
+    } catch {
+      // Non-fatal — proceed without academic context
+      send("step", { id: "sources", message: "Source lookup timed out — proceeding without RAG", status: "done" });
+    }
+
     // ── Stage 1: ReAct reasoning loop (streamed) ─────────────────────────────
     // Tokens are streamed directly through SSE so the connection is never idle.
     send("step", {
@@ -158,6 +208,7 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
           // lets the frontend show live AI thinking content.
           try { res.write(`event: token\ndata: ${JSON.stringify({ id: "react", text: chunk })}\n\n`); } catch { /* ignore */ }
         },
+        academicContext,
       );
     } catch (reactErr) {
       req.log.error({ err: reactErr }, "ReAct loop failed");
