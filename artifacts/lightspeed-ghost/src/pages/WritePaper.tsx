@@ -58,11 +58,19 @@ const ACADEMIC_LEVELS = [
 ];
 
 const PAPER_TYPES = [
-  { value: "research",          label: "Research Paper" },
-  { value: "essay",             label: "Essay" },
-  { value: "thesis",            label: "Thesis" },
-  { value: "literature_review", label: "Lit. Review" },
-  { value: "report",            label: "Report" },
+  { value: "research",               label: "Research Paper" },
+  { value: "essay",                  label: "Essay" },
+  { value: "argumentative",          label: "Argumentative Essay" },
+  { value: "thesis",                 label: "Thesis" },
+  { value: "dissertation",           label: "Dissertation" },
+  { value: "literature_review",      label: "Lit. Review" },
+  { value: "annotated bibliography", label: "Annotated Bibliography" },
+  { value: "report",                 label: "Report" },
+  { value: "lab report",             label: "Lab Report" },
+  { value: "case study",             label: "Case Study" },
+  { value: "term paper",             label: "Term Paper" },
+  { value: "critical analysis",      label: "Critical Analysis" },
+  { value: "reflective",             label: "Reflective Essay" },
 ];
 
 const CITATION_STYLES = ["apa", "mla", "chicago", "harvard", "ieee"] as const;

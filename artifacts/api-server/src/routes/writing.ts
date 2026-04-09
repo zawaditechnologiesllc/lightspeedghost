@@ -91,7 +91,11 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
 
     const requestedWords = body.wordCount ?? 1500;
     const targetWords = Math.ceil(requestedWords * 1.1); // Always write ≥10% over the requested count
-    const citationCount = targetWords >= 3000 ? 12 : targetWords >= 2000 ? 9 : targetWords >= 1000 ? 6 : 4;
+    const isAnnotatedBib = body.paperType.toLowerCase().includes("annotated");
+    // Annotated bibliography: each entry ≈ 175 words — need 1 citation per entry
+    const citationCount = isAnnotatedBib
+      ? Math.max(8, Math.ceil(targetWords / 175))
+      : targetWords >= 3000 ? 12 : targetWords >= 2000 ? 9 : targetWords >= 1000 ? 6 : 4;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
     const maxTokens = Math.min(12000, Math.max(3000, Math.ceil(targetWords * 2.8)));
 
@@ -179,7 +183,9 @@ Return JSON:
     // ── Step 1: Citations + Academic RAG ────────────────────────────────────
     send("step", {
       id: "citations",
-      message: `Searching 10 live academic databases (1B+ papers: OpenAlex, CrossRef, Semantic Scholar, PubMed, arXiv, CORE, DOAJ, ERIC, Zenodo, Europe PMC) for "${body.topic}"…`,
+      message: isAnnotatedBib
+        ? `Annotated bibliography mode — fetching ${citationCount} verified academic sources from OpenAlex, CrossRef, Semantic Scholar, PubMed, arXiv, CORE, DOAJ, ERIC, Zenodo, Europe PMC for "${body.topic}"…`
+        : `Searching 10 live academic databases (1B+ papers: OpenAlex, CrossRef, Semantic Scholar, PubMed, arXiv, CORE, DOAJ, ERIC, Zenodo, Europe PMC) for "${body.topic}"…`,
       status: "running",
     });
 
@@ -259,7 +265,9 @@ Each section should contain only content appropriate for that section of an acad
     // ── Step 3: Write paper (streaming) ──────────────────────────────────────
     send("step", {
       id: "writing",
-      message: `LightSpeed AI is writing your ${targetWords.toLocaleString()}-word ${body.paperType} on "${body.topic}" — structuring arguments and weaving in-text citations every 150–200 words…`,
+      message: isAnnotatedBib
+        ? `LightSpeed AI is composing your ${targetWords.toLocaleString()}-word annotated bibliography on "${body.topic}" — writing ${citations.length} entries with summary, critical evaluation, and relevance annotations for each source…`
+        : `LightSpeed AI is writing your ${targetWords.toLocaleString()}-word ${body.paperType} on "${body.topic}" — structuring arguments, following your instructions exactly, and weaving in-text citations every 150–200 words…`,
       status: "running",
     });
 
@@ -286,14 +294,21 @@ Do NOT move equations to the introduction, do NOT put results in the methodology
       report:          "Title Page → Executive Summary / Abstract → Table of Contents → Introduction → Methodology → Findings / Results → Discussion → Conclusions → Recommendations → References → Appendices",
       "lab report":    "Title → Abstract → Introduction → Materials & Methods → Results (tables/figures) → Discussion → Conclusion → References",
       "case study":    "Introduction → Background & Context → Problem Identification → Theoretical Framework / Analysis → Solutions & Recommendations → Conclusion → References",
-      "literature review": "Introduction (scope + research question) → Thematic or Chronological Body Sections → Synthesis of Findings → Gaps & Future Research → Conclusion → References",
+      "literature review":  "Introduction (scope + research question) → Thematic or Chronological Body Sections → Synthesis of Findings → Gaps & Future Research → Conclusion → References",
+      "literature_review": "Introduction (scope + research question) → Thematic or Chronological Body Sections → Synthesis of Findings → Gaps & Future Research → Conclusion → References",
       "research paper": "Abstract → Introduction → Literature Review → Theoretical Framework → Methodology → Results → Discussion → Conclusion → References",
       research:        "Abstract → Introduction → Literature Review → Theoretical Framework → Methodology → Results → Discussion → Conclusion → References",
       thesis:          "Abstract → Introduction → Literature Review → Theoretical Framework → Methodology → Results & Analysis → Discussion → Conclusion → Limitations → Recommendations → References",
       dissertation:    "Abstract → Introduction → Literature Review → Theoretical Framework → Methodology → Results & Analysis → Discussion → Conclusion → Limitations → Recommendations → References",
       "term paper":    "Abstract → Introduction → Literature Review → Analysis / Discussion → Conclusion → References",
       "critical analysis": "Introduction (text + critical question) → Context & Background → Textual / Thematic Analysis (multiple perspectives) → Evaluation of Strengths & Weaknesses → Conclusion → References",
-      "annotated bibliography": "Introduction (scope & purpose) → Annotated Entries (full citation + 150–200 word annotation each: summary, evaluation, relevance) → Conclusion",
+      "annotated bibliography": `Introduction (2 paragraphs: state the research question/scope, explain the selection criteria and databases searched, summarise the overall landscape of the literature) → Annotated Entries sorted alphabetically by first author's surname (each entry = full formatted citation using the chosen citation style + immediately below it an indented 150–200 word annotation structured as: [Part 1 — Summary: 3–4 sentences on the source's main argument, methodology, and key findings] [Part 2 — Critical Evaluation: 2–3 sentences on the author's credentials, peer-review status, potential bias, methodological limitations] [Part 3 — Relevance: 2–3 sentences on exactly how this source contributes to the research question and fills gaps in the literature]) → Conclusion (1–2 paragraphs: synthesise the body of literature, identify the most significant gaps revealed, suggest directions for future research).
+LATEST FORMAT STANDARDS FOR ANNOTATED BIBLIOGRAPHY:
+• APA 7th (2020): Hanging-indent citation block, then standard paragraph indentation for annotation text. Double-spaced throughout.
+• MLA 9th (2021): Full MLA citation with hanging indent, annotation in a separate indented paragraph. Use present tense for annotation verbs.
+• Chicago 17th Author-Date: Bibliographic entry in Author-Date format, annotation in indented paragraph immediately below.
+• Harvard: Full reference list entry, annotation indented below as a separate paragraph.
+• IEEE: Numbered entry [N], annotation paragraph immediately below each entry.`,
     };
     function getPaperTypeStructure(type: string): string {
       const key = type.toLowerCase().trim();
@@ -317,32 +332,85 @@ Do NOT move equations to the introduction, do NOT put results in the methodology
 REQUIRED STRUCTURE for a ${body.paperType}: ${getPaperTypeStructure(body.paperType)}
 Follow this structure exactly — every section must be present and properly developed.`;
 
+    // Annotated bibliography uses its own specialized writing prompt
+    const annotatedBibPrompt = isAnnotatedBib ? `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANNOTATED BIBLIOGRAPHY — SPECIAL FORMAT RULES (mandatory)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+For EVERY source in the verified citations list, you must write one annotated entry.
+Each entry has this exact format:
+
+[FULL CITATION formatted in ${body.citationStyle.toUpperCase()} style — hanging indent in the bibliography]
+
+   [ANNOTATION — 150-200 words, indented, structured in exactly 3 parts:]
+   [Part 1 — SUMMARY (3-4 sentences): State the source's central argument, research methodology (e.g. systematic review, RCT, ethnography, meta-analysis), and primary findings or conclusions.]
+   [Part 2 — CRITICAL EVALUATION (2-3 sentences): Assess the source's strengths and limitations — consider the author's expertise, publication venue (peer-reviewed or not), recency, sample size, potential bias, and methodological rigour.]
+   [Part 3 — RELEVANCE (2-3 sentences): Explain precisely how this source advances the research question stated in the introduction, fills a gap in the literature, or challenges a dominant view. Be specific — not "this is useful" but why and how it is useful.]
+
+Sort all entries alphabetically by the first author's surname.
+After all entries, write a 1-2 paragraph Conclusion synthesising what the literature collectively reveals and identifying key gaps.
+DO NOT write a generic paper body — the entire body IS the annotated entries.
+` : "";
+
     const systemPrompt = `${WRITER_SOUL}
 
-${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${ragContext ? `BACKGROUND READING (context only — DO NOT cite these in the paper or add them to the References section; they inform the arguments but are NOT verified citations):\n${ragContext}\n\n` : ""}${citationContext}
+${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${citationContext}
 
 ${stemBlock ? `${stemBlock}\n` : ""}${aGradeCriteria ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GRADING TARGET — ${aGradeCriteria}
 Every section of this paper must satisfy these criteria. Cross-check before completing each section.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` : ""}
 ${formatStandards}
+${annotatedBibPrompt}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PAPER REQUIREMENTS (all mandatory — zero exceptions)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACADEMIC LEVEL: ${academicLevelPrompt(body.academicLevel)}
+PAPER TYPE: ${body.paperType}
+SUBJECT: ${body.subject}
+CITATION STYLE: ${body.citationStyle.toUpperCase()}
 
-PAPER REQUIREMENTS:
-- Academic Level: ${academicLevelPrompt(body.academicLevel)}
-- Paper Type: ${body.paperType}
-- Subject: ${body.subject}
-- Citation Style: ${body.citationStyle.toUpperCase()}
-- Target body word count: MINIMUM ${targetWords} words (you requested ${requestedWords} — always write at least 10% more; EXCLUDING abstract, table of contents, references section, in-text citation parentheses, and figure/table captions)
-- CITATION FREQUENCY: Insert at least one in-text citation every 200 words throughout the body — citations must be distributed evenly, not clustered at the end
-- CITATION SOURCE: Reference ONLY the numbered verified citations above (e.g. [1], [2]). Do NOT cite anything from the Background Reading section. Do NOT add any source not listed in the VERIFIED CITATIONS block.
-- Write in full markdown: # Title, ## sections, ### subsections
-- All math in LaTeX: inline $...$ and block $$...$$
-${includeToC ? "- INCLUDE a Table of Contents after the Abstract" : "- Do NOT include a Table of Contents"}
-- End with a References section listing ONLY the verified citations numbered above — exactly as formatted there
-- Write 0% AI-detectable prose — vary sentence length, use discipline-specific vocabulary, active/passive voice mix, avoid AI clichés like "delve", "crucial", "pivotal", "underscore"
-- MANDATORY GRADE TARGET: The paper MUST score 92% or higher against academic standards — this is NON-NEGOTIABLE. Every section must demonstrate critical analysis, strong argumentation, precise evidence use, and discipline-specific depth that earns distinction-level marks
-- CRITICAL: Do NOT cite Wikipedia, open web sources, or any source not in the Verified Citations block above
-${body.additionalInstructions ? `\nADDITIONAL INSTRUCTIONS: ${body.additionalInstructions}` : ""}`;
+WORD COUNT: MINIMUM ${targetWords} words of body content — MANDATORY, non-negotiable.
+(Word count EXCLUDES: abstract, table of contents, reference list, in-text citation parentheses, figure/table captions)
+Always write MORE than the minimum, never less.
+
+SOURCE INTEGRITY (CRITICAL — violations mean the paper is useless):
+• Use ONLY the ${citations.length} verified academic citations listed in the VERIFIED CITATIONS block above
+• Do NOT add Wikipedia, open web, blog, or any other source not in that list
+• Do NOT fabricate any paper, journal, author, or DOI
+• Every in-text citation must match a numbered verified citation exactly
+• Distribute citations evenly — at least one every 200 words throughout the body
+
+CITATION FORMAT: Use the chosen style (${body.citationStyle.toUpperCase()}) correctly for every in-text citation and the references section. References section lists ONLY the verified citations.
+
+STRUCTURE: Follow the required structure for ${body.paperType} exactly — every section must be fully developed, not abbreviated or skipped.
+
+MARKDOWN: Write in full markdown — # Title, ## sections, ### subsections
+MATH: All equations in LaTeX: inline $...$ and block $$...$$
+${includeToC ? "TABLE OF CONTENTS: Include a Table of Contents after the Abstract" : ""}
+
+HUMANIZATION — MANDATORY (papers that read as AI-written are worthless to the student):
+• Vary sentence length aggressively throughout every section
+• Avoid ALL AI-detectable clichés: "delve", "crucial", "pivotal", "underscore", "tapestry", "multifaceted", "it is worth noting", "in today's world"
+• Use em dashes, parenthetical asides, rhetorical questions naturally
+• Include 2-3 moments of genuine analytical uncertainty per paper
+• No two consecutive paragraphs may open with the same grammatical structure
+• Write with 0% AI detectability — a professor must believe a skilled human student wrote this
+
+PLAGIARISM PREVENTION:
+• Every sentence must be original prose — synthesise and interpret sources, never copy
+• Paraphrase with genuine transformation, not surface synonym substitution
+• Run a mental originality check on every paragraph — would this pass Turnitin? If not, rewrite.
+
+GRADE TARGET: This paper MUST score 92% or higher. Every section must demonstrate critical analysis, strong argumentation, precise evidence handling, and discipline-specific depth that earns distinction-level marks.
+${body.additionalInstructions ? `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STUDENT'S ADDITIONAL INSTRUCTIONS — MANDATORY COMPLIANCE
+(These override any default behaviour. Follow every instruction below exactly.)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${body.additionalInstructions}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+(Re-read these instructions before writing each section to ensure full compliance)` : ""}`;
 
     const stream = anthropic.messages.stream({
       model: "claude-sonnet-4-5",
@@ -350,7 +418,9 @@ ${body.additionalInstructions ? `\nADDITIONAL INSTRUCTIONS: ${body.additionalIns
       system: systemPrompt,
       messages: [{
         role: "user",
-        content: `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. The body content must be exactly ${targetWords} words.`,
+        content: isAnnotatedBib
+          ? `Write a complete annotated bibliography on: "${body.topic}"\n\nYou have ${citations.length} verified sources listed above. Write one annotated entry for EACH source — full citation then a 150-200 word annotation (Summary → Critical Evaluation → Relevance). Sort entries alphabetically by first author's surname. Include an Introduction and Conclusion. Total annotation content must reach at least ${targetWords} words.${body.additionalInstructions ? `\n\nADDITIONAL STUDENT INSTRUCTIONS (follow exactly): ${body.additionalInstructions}` : ""}`
+          : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. The body content must be at minimum ${targetWords} words.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
       }],
     });
 
