@@ -140,39 +140,47 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
       return;
     }
 
-    // ── Stage 1: ReAct reasoning loop ────────────────────────────────────────
+    // ── Stage 1: ReAct reasoning loop (streamed) ─────────────────────────────
+    // Tokens are streamed directly through SSE so the connection is never idle.
     send("step", {
       id: "react",
-      message: `ReAct Engine — structuring "${body.problem.slice(0, 60).trim()}…" for ${body.subject} solution`,
+      message: `ReAct Engine — reasoning through "${body.problem.slice(0, 60).trim()}…"`,
       status: "running",
     });
 
     let reactResult: Awaited<ReturnType<typeof reactSolve>>;
     try {
-      reactResult = await reactSolve(body.problem, body.subject);
+      reactResult = await reactSolve(
+        body.problem,
+        body.subject,
+        (chunk) => {
+          // Forward each token through SSE — keeps the connection alive and
+          // lets the frontend show live AI thinking content.
+          try { res.write(`event: token\ndata: ${JSON.stringify({ id: "react", text: chunk })}\n\n`); } catch { /* ignore */ }
+        },
+      );
     } catch (reactErr) {
       req.log.error({ err: reactErr }, "ReAct loop failed");
       const reactMsg = reactErr instanceof Error ? reactErr.message : String(reactErr);
       if (reactMsg.includes("API_KEY") || reactMsg.includes("not set") || reactMsg.includes("ANTHROPIC")) {
         send("error", { message: "AI service is not configured — please contact support." });
-      } else if (reactMsg.includes("timeout") || reactMsg.includes("timed out")) {
-        send("error", { message: "The problem took too long to process — try a shorter or simpler problem." });
+      } else if (reactMsg.includes("overloaded") || reactMsg.includes("529")) {
+        send("error", { message: "The AI service is temporarily overloaded — please try again in a few seconds." });
       } else {
-        send("error", { message: `Reasoning engine failed — ${reactMsg.slice(0, 120)}. Please try again.` });
+        send("error", { message: `Reasoning engine failed: ${reactMsg.slice(0, 200)}` });
       }
       return;
     }
 
-    const confidencePct = Math.round((reactResult.confidence <= 1 ? reactResult.confidence * 100 : reactResult.confidence));
+    const confidencePct = Math.round(reactResult.confidence <= 1 ? reactResult.confidence * 100 : reactResult.confidence);
     send("step", {
       id: "react",
-      message: `ReAct complete — ${reactResult.steps.length} solution steps, ${confidencePct}% confidence`,
+      message: `ReAct complete — ${reactResult.steps.length} solution steps · ${confidencePct}% confidence`,
       status: "done",
     });
 
-    // ── Stage 2: Chain-of-Verification ───────────────────────────────────────
-    // CoVe is resilient — if it fails, we fall back to the ReAct result rather
-    // than failing the entire solve.
+    // ── Stage 2: Chain-of-Verification (streamed) ────────────────────────────
+    // CoVe is resilient — if Haiku fails, fall back to the ReAct result.
     send("step", {
       id: "cove",
       message: "Chain-of-Verification — critic agent checking arithmetic, units, and logic…",
@@ -181,7 +189,14 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
 
     let coveResult: Awaited<ReturnType<typeof chainOfVerification>>;
     try {
-      coveResult = await chainOfVerification(body.problem, body.subject, reactResult);
+      coveResult = await chainOfVerification(
+        body.problem,
+        body.subject,
+        reactResult,
+        (chunk) => {
+          try { res.write(`event: token\ndata: ${JSON.stringify({ id: "cove", text: chunk })}\n\n`); } catch { /* ignore */ }
+        },
+      );
       send("step", {
         id: "cove",
         message: coveResult.passedVerification

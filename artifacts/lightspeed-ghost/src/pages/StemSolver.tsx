@@ -160,10 +160,13 @@ export default function StemSolver() {
   const [solveStep, setSolveStep] = useState(0);
   const solveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // SSE solve state (replaces React Query mutation)
+  // SSE solve state
   const [isSolving, setIsSolving] = useState(false);
   const [solveError, setSolveError] = useState<string | null>(null);
   const [sseSteps, setSseSteps] = useState<SolveStep[]>([]);
+  // Live streaming thinking content — keyed by stage id ("react" | "cove")
+  const [thinkingContent, setThinkingContent] = useState<Record<string, string>>({});
+  const thinkingRef = useRef<HTMLDivElement>(null);
   const { data: subjects } = useGetStemSubjects();
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
@@ -217,6 +220,7 @@ export default function StemSolver() {
     setSolveStep(0);
     setSolveError(null);
     setSseSteps([]);
+    setThinkingContent({});
     setIsSolving(true);
 
     // Fake progress interval for visual feedback while SSE connects
@@ -266,7 +270,17 @@ export default function StemSolver() {
             else if (line.startsWith("data: ")) {
               try {
                 const payload = JSON.parse(line.slice(6));
-                if (event === "step") {
+                if (event === "token") {
+                  setThinkingContent(prev => ({
+                    ...prev,
+                    [payload.id]: (prev[payload.id] ?? "") + payload.text,
+                  }));
+                  requestAnimationFrame(() => {
+                    if (thinkingRef.current) {
+                      thinkingRef.current.scrollTop = thinkingRef.current.scrollHeight;
+                    }
+                  });
+                } else if (event === "step") {
                   updateStep(payload.id, payload.message, payload.status);
                 } else if (event === "done") {
                   receivedDone = true;
@@ -412,66 +426,92 @@ export default function StemSolver() {
     return "Finalising solution";
   })();
 
+  const activeThinkingId = Object.keys(thinkingContent).at(-1) ?? null;
+  const activeThinkingText = activeThinkingId ? thinkingContent[activeThinkingId] : "";
+  const isThinking = activeThinkingText.length > 0;
+
   if (isSolving) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-background px-4 gap-6 py-8 overflow-y-auto">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <Zap size={14} className="text-primary" />
-            <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+      <div className="h-full flex flex-col bg-background overflow-hidden">
+        {/* ── Header bar ─────────────────────────────────────────────────── */}
+        <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <FlaskConical size={15} className="text-primary" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold leading-tight">LightSpeed AI — STEM Solver</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">{currentSolveStageName}</p>
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-            <FlaskConical size={22} className="text-primary" />
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="text-[10px] text-muted-foreground">Solving…</span>
           </div>
-          <h2 className="text-lg font-bold">Solving your problem…</h2>
-          <p className="text-xs text-muted-foreground max-w-xs">
-            Multi-engine AI solver: ReAct reasoning loop + Chain-of-Verification critic + academic paper search
-          </p>
         </div>
 
-        <div className="w-full max-w-sm">
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+        {/* ── Progress bar ────────────────────────────────────────────────── */}
+        <div className="shrink-0 px-4 pt-2.5 pb-1">
+          <div className="h-1 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-primary rounded-full transition-all duration-700"
               style={{ width: `${Math.round(((solveStep + 1) / SOLVE_STEPS.length) * 100)}%` }}
             />
           </div>
-          <div className="flex justify-between mt-1.5">
-            <span className="text-[10px] text-muted-foreground/60">{currentSolveStageName}</span>
-            <span className="text-[10px] text-muted-foreground/60 tabular-nums">
-              {Math.round(((solveStep + 1) / SOLVE_STEPS.length) * 100)}%
-            </span>
-          </div>
         </div>
 
-        {/* Live SSE step feed — shown when server is sending events */}
-        {sseSteps.length > 0 && (
-          <div className="w-full max-w-sm space-y-1.5">
-            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-semibold px-1">Live progress</p>
-            {sseSteps.map((step) => (
-              <div
-                key={step.id}
-                className={`flex items-start gap-2.5 px-3.5 py-2 rounded-lg border text-xs transition-all duration-300 ${
-                  step.status === "done"
-                    ? "bg-primary/5 border-primary/20 text-foreground"
-                    : "bg-card border-border text-foreground shadow-sm"
-                }`}
-              >
-                {step.status === "done" ? (
-                  <CheckCircle size={12} className="text-primary shrink-0 mt-0.5" />
-                ) : (
-                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0 mt-1" />
-                )}
-                <span className="leading-snug">{step.message}</span>
+        {/* ── Live AI thinking stream — takes full remaining height ────────── */}
+        {isThinking ? (
+          <div className="flex-1 flex flex-col min-h-0 px-4 pb-4 pt-2 gap-2">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5">
+                <Sparkles size={11} className="text-primary" />
+                <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+                  {activeThinkingId === "react" ? "ReAct Engine — Live Reasoning" : "Chain-of-Verification — Live"}
+                </span>
               </div>
-            ))}
+              <div className="flex gap-0.5 ml-1">
+                {[0, 1, 2].map(i => (
+                  <div
+                    key={i}
+                    className="w-1 h-1 rounded-full bg-primary animate-bounce"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div
+              ref={thinkingRef}
+              className="flex-1 min-h-0 overflow-y-auto rounded-xl bg-muted/30 border border-border px-3.5 py-3 font-mono text-[11px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words"
+            >
+              {activeThinkingText}
+              <span className="inline-block w-1.5 h-3.5 bg-primary/70 animate-pulse ml-0.5 translate-y-0.5" />
+            </div>
+            {/* Stage pills */}
+            {sseSteps.length > 0 && (
+              <div className="shrink-0 flex flex-wrap gap-1.5">
+                {sseSteps.map(step => (
+                  <div
+                    key={step.id}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium border ${
+                      step.status === "done"
+                        ? "bg-primary/10 border-primary/30 text-primary"
+                        : "bg-card border-border text-muted-foreground"
+                    }`}
+                  >
+                    {step.status === "done"
+                      ? <CheckCircle size={9} className="shrink-0" />
+                      : <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />}
+                    <span className="truncate max-w-[180px]">{step.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Capability checklist — shown while waiting for first SSE event */}
-        {sseSteps.length === 0 && (
-          <div className="w-full max-w-sm space-y-1.5">
-            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-semibold px-1">Engine stages</p>
+        ) : (
+          /* ── Pre-stream capability list ──────────────────────────────────── */
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5">
+            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-semibold mb-2">Engine stages</p>
             {SOLVE_STEPS.map((step, i) => (
               <div
                 key={i}
@@ -484,9 +524,9 @@ export default function StemSolver() {
                 }`}
               >
                 <div className={`shrink-0 ${i <= solveStep ? "text-primary" : "text-muted-foreground/30"}`}>
-                  {i < solveStep ? <CheckCircle size={12} /> : i === solveStep ? (
-                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  ) : step.icon}
+                  {i < solveStep ? <CheckCircle size={12} /> : i === solveStep
+                    ? <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    : step.icon}
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-medium leading-tight truncate">{step.label}</p>

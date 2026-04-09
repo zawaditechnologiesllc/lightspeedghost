@@ -1,7 +1,9 @@
 /**
  * ReAct (Reasoning and Acting) Loop — OpenClaw Pi Engine pattern.
  * Implements: Think → Act → Observe → Reflect → Final Answer
- * Used for STEM problem solving to eliminate one-shot math errors.
+ *
+ * Uses Claude streaming API so tokens flow continuously through the SSE
+ * connection — prevents proxy timeouts on long/hard problems.
  */
 
 import { anthropic } from "./ai";
@@ -39,36 +41,62 @@ FINAL ANSWER: [Complete solution with the numerical/symbolic result in LaTeX]
 CONFIDENCE: [0-100 integer, honest assessment of solution correctness]
 LATEX_SUMMARY: [Single-line LaTeX of the key result only, e.g. $$v = 9.8 \\text{ m/s}$$]`;
 
+/**
+ * Solve a STEM problem using the ReAct reasoning framework.
+ *
+ * @param onToken  Optional callback invoked for every streaming token — use
+ *                 this to forward tokens through an SSE connection so the
+ *                 connection is never idle during long AI calls.
+ */
 export async function reactSolve(
   problem: string,
-  subject: string
+  subject: string,
+  onToken?: (chunk: string) => void,
 ): Promise<ReActResult> {
-  const response = await anthropic.messages.create(
-    {
-      model: "claude-sonnet-4-5",
-      max_tokens: 3000,
-      system: REACT_SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: `Solve this ${subject} problem using the ReAct framework:\n\n${problem}`,
-        },
-      ],
-    },
-    { timeout: 90_000 },   // hard 90-second ceiling; surfaces as a real error, not a silent hang
+  const stream = anthropic.messages.stream({
+    model: "claude-sonnet-4-5",
+    max_tokens: 4000,
+    system: REACT_SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: `Solve this ${subject} problem using the ReAct framework:\n\n${problem}`,
+      },
+    ],
+  });
+
+  let fullText = "";
+  for await (const event of stream) {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
+      fullText += event.delta.text;
+      onToken?.(event.delta.text);
+    }
+  }
+
+  const finalMsg = await stream.finalMessage();
+  recordUsage(
+    "claude-sonnet-4-5",
+    finalMsg.usage.input_tokens,
+    finalMsg.usage.output_tokens,
+    `react-stem-${subject}`,
   );
 
-  const usage = response.usage;
-  recordUsage("claude-sonnet-4-5", usage.input_tokens, usage.output_tokens, `react-stem-${subject}`);
+  return parseReActText(fullText);
+}
 
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
-
+function parseReActText(text: string): ReActResult {
   const steps: ReActStep[] = [];
   let stepNum = 0;
 
-  const thoughtRe = /THOUGHT \d+:\s*([\s\S]*?)(?=ACTION \d+:|OBSERVATION \d+:|THOUGHT \d+:|FINAL ANSWER:|$)/g;
-  const actionRe = /ACTION \d+:\s*([\s\S]*?)(?=OBSERVATION \d+:|THOUGHT \d+:|ACTION \d+:|FINAL ANSWER:|$)/g;
-  const observationRe = /OBSERVATION \d+:\s*([\s\S]*?)(?=THOUGHT \d+:|ACTION \d+:|OBSERVATION \d+:|FINAL ANSWER:|$)/g;
+  const thoughtRe =
+    /THOUGHT \d+:\s*([\s\S]*?)(?=ACTION \d+:|OBSERVATION \d+:|THOUGHT \d+:|FINAL ANSWER:|$)/g;
+  const actionRe =
+    /ACTION \d+:\s*([\s\S]*?)(?=OBSERVATION \d+:|THOUGHT \d+:|ACTION \d+:|FINAL ANSWER:|$)/g;
+  const observationRe =
+    /OBSERVATION \d+:\s*([\s\S]*?)(?=THOUGHT \d+:|ACTION \d+:|OBSERVATION \d+:|FINAL ANSWER:|$)/g;
 
   for (const m of text.matchAll(thoughtRe)) {
     steps.push({
@@ -98,21 +126,24 @@ export async function reactSolve(
     });
   }
 
-  // Sort steps roughly in order they appear in the text
   steps.sort((a, b) => {
     const posA = text.indexOf(a.explanation.slice(0, 30));
     const posB = text.indexOf(b.explanation.slice(0, 30));
     return posA - posB;
   });
+  steps.forEach((s, i) => {
+    s.stepNumber = i + 1;
+  });
 
-  // Re-number sequentially
-  steps.forEach((s, i) => { s.stepNumber = i + 1; });
-
-  const finalMatch = text.match(/FINAL ANSWER:\s*([\s\S]*?)(?=CONFIDENCE:|LATEX_SUMMARY:|$)/);
+  const finalMatch = text.match(
+    /FINAL ANSWER:\s*([\s\S]*?)(?=CONFIDENCE:|LATEX_SUMMARY:|$)/,
+  );
   const finalAnswer = finalMatch ? finalMatch[1].trim() : text;
 
   const confidenceMatch = text.match(/CONFIDENCE:\s*(\d+)/);
-  const confidence = confidenceMatch ? Math.min(parseInt(confidenceMatch[1]) / 100, 1.0) : 0.9;
+  const confidence = confidenceMatch
+    ? Math.min(parseInt(confidenceMatch[1]) / 100, 1.0)
+    : 0.9;
 
   const latexMatch = text.match(/LATEX_SUMMARY:\s*([\s\S]+?)$/);
   const latex = latexMatch ? latexMatch[1].trim() : `\\text{See solution above}`;

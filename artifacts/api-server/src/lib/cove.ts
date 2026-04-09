@@ -1,7 +1,9 @@
 /**
  * Chain-of-Verification (CoVe) — OpenClaw Self-Correction Loop.
  * Pattern: Draft → Critic Agent → Verified Final Answer
- * Eliminates ~80% of AI math/logic errors before showing results to user.
+ *
+ * Uses Claude Haiku with streaming so tokens flow continuously through the
+ * SSE connection — prevents proxy timeouts and gives faster CoVe results.
  */
 
 import { anthropic } from "./ai";
@@ -33,10 +35,17 @@ CORRECTIONS: [list each error with its fix, one per line — or write "none" if 
 VERIFIED_ANSWER: [Complete corrected solution with LaTeX, or repeat original if correct]
 VERIFIED_LATEX: [Single-line LaTeX of the final result]`;
 
+/**
+ * Run Chain-of-Verification on a ReAct solution draft.
+ *
+ * @param onToken  Optional callback invoked for every streaming token — use
+ *                 to forward tokens through an SSE connection so it stays alive.
+ */
 export async function chainOfVerification(
   problem: string,
   subject: string,
-  draft: ReActResult
+  draft: ReActResult,
+  onToken?: (chunk: string) => void,
 ): Promise<CoveResult> {
   const critiquePrompt = `Problem: ${problem}
 
@@ -48,25 +57,42 @@ ${draft.rawText.slice(0, 2000)}
 
 Critically verify this ${subject} solution for any errors.`;
 
-  const response = await anthropic.messages.create(
-    {
-      model: "claude-3-5-haiku-20241022",   // Haiku: faster, cheaper — ideal for critic/verification tasks
-      max_tokens: 1500,
-      system: CRITIC_SYSTEM,
-      messages: [{ role: "user", content: critiquePrompt }],
-    },
-    { timeout: 45_000 },   // 45-second ceiling for CoVe (it's a short task)
+  const stream = anthropic.messages.stream({
+    model: "claude-3-5-haiku-20241022",
+    max_tokens: 1500,
+    system: CRITIC_SYSTEM,
+    messages: [{ role: "user", content: critiquePrompt }],
+  });
+
+  let fullText = "";
+  for await (const event of stream) {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
+      fullText += event.delta.text;
+      onToken?.(event.delta.text);
+    }
+  }
+
+  const finalMsg = await stream.finalMessage();
+  recordUsage(
+    "claude-3-5-haiku-20241022",
+    finalMsg.usage.input_tokens,
+    finalMsg.usage.output_tokens,
+    `cove-critique-${subject}`,
   );
 
-  const usage = response.usage;
-  recordUsage("claude-3-5-haiku-20241022", usage.input_tokens, usage.output_tokens, `cove-critique-${subject}`);
-
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const text = fullText;
 
   const errorsFound = /ERRORS_FOUND:\s*yes/i.test(text);
 
-  const correctionsMatch = text.match(/CORRECTIONS:\s*([\s\S]*?)(?=VERIFIED_ANSWER:|$)/);
-  const correctionsRaw = correctionsMatch ? correctionsMatch[1].trim() : "none";
+  const correctionsMatch = text.match(
+    /CORRECTIONS:\s*([\s\S]*?)(?=VERIFIED_ANSWER:|$)/,
+  );
+  const correctionsRaw = correctionsMatch
+    ? correctionsMatch[1].trim()
+    : "none";
   const corrections =
     correctionsRaw.toLowerCase() === "none"
       ? []
@@ -75,7 +101,9 @@ Critically verify this ${subject} solution for any errors.`;
           .map((l) => l.replace(/^[-•*]\s*/, "").trim())
           .filter((l) => l.length > 0);
 
-  const verifiedMatch = text.match(/VERIFIED_ANSWER:\s*([\s\S]*?)(?=VERIFIED_LATEX:|$)/);
+  const verifiedMatch = text.match(
+    /VERIFIED_ANSWER:\s*([\s\S]*?)(?=VERIFIED_LATEX:|$)/,
+  );
   const verified = verifiedMatch ? verifiedMatch[1].trim() : draft.finalAnswer;
 
   const latexMatch = text.match(/VERIFIED_LATEX:\s*([\s\S]+?)$/);
