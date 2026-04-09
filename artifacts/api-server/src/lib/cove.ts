@@ -62,7 +62,7 @@ Critically verify this ${subject} solution for any errors.`;
   let outputTokens = 0;
 
   await anthropic.messages.stream({
-    model: "claude-3-5-haiku-20241022",
+    model: "claude-haiku-4-5",
     max_tokens: 1500,
     system: CRITIC_SYSTEM,
     messages: [{ role: "user", content: critiquePrompt }],
@@ -78,7 +78,7 @@ Critically verify this ${subject} solution for any errors.`;
     .finalMessage();
 
   recordUsage(
-    "claude-3-5-haiku-20241022",
+    "claude-haiku-4-5",
     inputTokens,
     outputTokens,
     `cove-critique-${subject}`,

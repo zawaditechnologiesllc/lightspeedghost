@@ -1,11 +1,26 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 
+/**
+ * Returns an Anthropic client configured for the current environment:
+ *
+ *  • Replit dev  — uses AI_INTEGRATIONS_ANTHROPIC_BASE_URL + AI_INTEGRATIONS_ANTHROPIC_API_KEY
+ *                  (Replit-managed proxy; supports claude-sonnet-4-5, claude-haiku-4-5, etc.)
+ *  • Production  — uses ANTHROPIC_API_KEY directly against api.anthropic.com
+ */
 export function getAnthropic(): Anthropic {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const proxyBaseUrl = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+  const proxyApiKey  = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+
+  if (proxyBaseUrl && proxyApiKey) {
+    return new Anthropic({ baseURL: proxyBaseUrl, apiKey: proxyApiKey });
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY is not set. Please add it as a secret.");
   }
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return new Anthropic({ apiKey });
 }
 
 export function getOpenAI(): OpenAI {

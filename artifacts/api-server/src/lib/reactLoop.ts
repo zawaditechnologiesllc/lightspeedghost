@@ -58,7 +58,7 @@ export async function reactSolve(
   let outputTokens = 0;
 
   await anthropic.messages.stream({
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-5",
     max_tokens: 4000,
     system: REACT_SYSTEM,
     messages: [
@@ -79,7 +79,7 @@ export async function reactSolve(
     .finalMessage();
 
   recordUsage(
-    "claude-3-5-sonnet-20241022",
+    "claude-sonnet-4-5",
     inputTokens,
     outputTokens,
     `react-stem-${subject}`,
