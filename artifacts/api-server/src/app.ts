@@ -54,11 +54,14 @@ app.get("/api/health/config", (_req: Request, res: Response) => {
 //   { headers: { Authorization: "Bearer <your-supabase-token>" } })
 app.get("/api/auth/test", async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization ?? "";
-  if (!authHeader.startsWith("Bearer ")) {
-    res.json({ error: "No Bearer token supplied. Add Authorization: Bearer <token> header." });
+  // Accept token from Authorization header OR ?token= query param (for easy browser testing)
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : (req.query.token as string | undefined) ?? "";
+  if (!token) {
+    res.json({ error: "No token supplied. Either add Authorization: Bearer <token> header, or use ?token=<value> in the URL." });
     return;
   }
-  const token = authHeader.slice(7);
 
   // 1. Decode header without verification
   let header: Record<string, unknown> = {};
