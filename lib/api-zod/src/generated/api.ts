@@ -317,6 +317,8 @@ export const SolveStemResponse = zod.object({
   subject: zod.string(),
   confidence: zod.number(),
   documentId: zod.number().optional(),
+  corrections: zod.array(zod.string()).optional(),
+  passedVerification: zod.boolean().optional(),
 });
 
 /**

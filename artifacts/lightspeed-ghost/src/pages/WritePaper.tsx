@@ -605,7 +605,7 @@ export default function WritePaper() {
               </button>
             )}
             <ExportButtons
-              getHtml={() => wrapDocHtml(result.title, mdToBodyHtml(result.content) + `<div style="margin-top:32px;border-top:1px solid #ccc;padding-top:16px"><h2>References</h2><p>${result.bibliography.replace(/\n/g, "<br>")}</p></div>`)}
+              getHtml={() => wrapDocHtml(result.title, mdToBodyHtml(result.content) + (result.bibliography ? `<hr class="section-rule"><h2>References</h2><p>${result.bibliography.replace(/\n/g, "<br>")}</p>` : ""))}
               getText={() => `${result.content}\n\nReferences:\n${result.bibliography}`}
               filename={makeLsgFilename("paper", result.title || "PAPER")}
               formats={["docx", "pdf", "copy"]}

@@ -690,6 +690,12 @@ components:
           type: number
         documentId:
           type: integer
+        corrections:
+          type: array
+          items:
+            type: string
+        passedVerification:
+          type: boolean
       required: [answer, steps, subject, confidence]
 
     StemSubjectList:

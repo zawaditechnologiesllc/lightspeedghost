@@ -16,4 +16,6 @@ export interface StemSolution {
   subject: string;
   confidence: number;
   documentId?: number;
+  corrections?: string[];
+  passedVerification?: boolean;
 }

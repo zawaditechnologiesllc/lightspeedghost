@@ -212,14 +212,6 @@ export interface PlagiarismResult {
   aiSections: PlagiarismResultAiSectionsItem[];
   plagiarismSources: PlagiarismResultPlagiarismSourcesItem[];
   overallRisk: PlagiarismResultOverallRisk;
-  /** Words matched against academic corpus */
-  matchedWords?: string[];
-  /** Lexical diversity percentage (higher = more unique vocabulary) */
-  lexicalDiversity?: number;
-  /** Average sentence length in words */
-  avgSentenceLength?: number;
-  /** Detected AI writing pattern flags */
-  aiFlags?: string[];
 }
 
 export type HumanizeBodyIntensity =
@@ -310,6 +302,8 @@ export interface StemSolution {
   subject: string;
   confidence: number;
   documentId?: number;
+  corrections?: string[];
+  passedVerification?: boolean;
 }
 
 export type StemSubjectListSubjectsItem = {
@@ -396,26 +390,3 @@ export const ListDocumentsType = {
   stem: "stem",
   study: "study",
 } as const;
-
-export interface CodeCompareBody {
-  doc1: string;
-  doc2: string;
-  language?: string;
-  kgramSize?: number;
-  windowSize?: number;
-}
-
-export interface CodeCompareResult {
-  similarity1: number;
-  similarity2: number;
-  overallSimilarity: number;
-  tokenOverlap: number;
-  slices1: Array<[number, number]>;
-  slices2: Array<[number, number]>;
-  highlightedDoc1: string;
-  highlightedDoc2: string;
-  riskLevel: "low" | "medium" | "high";
-  algorithm: string;
-  kgramSize: number;
-  windowSize: number;
-}

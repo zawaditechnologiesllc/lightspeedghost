@@ -16,7 +16,7 @@ import type { StemSolution } from "@workspace/api-client-react";
 import StemImageOcr from "@/components/StemImageOcr";
 import MathRenderer from "@/components/MathRenderer";
 import { ExportButtons } from "@/components/ExportButtons";
-import { wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { buildStemExportHtml, makeLsgFilename } from "@/lib/exportUtils";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -733,12 +733,16 @@ export default function StemSolver() {
                     <span className="text-sm font-bold text-green-800 dark:text-green-200">Answer</span>
                   </div>
                   <ExportButtons
-                    getHtml={() => wrapDocHtml(`STEM Solution — ${result.subject}`, [
-                      `<p><strong>Problem:</strong> ${solvedProblem}</p>`,
-                      `<p><strong>Answer:</strong></p><p>${result.answer.replace(/\n/g, "<br>")}</p>`,
-                      result.corrections?.length ? `<h2>Corrections</h2><ul>${result.corrections.map((c: string) => `<li>${c}</li>`).join("")}</ul>` : "",
-                      result.steps.length ? `<h2>Step-by-Step Solution</h2>${result.steps.map((s: { stepNumber: number; description: string; expression?: string; explanation: string }) => `<div style="margin-bottom:12px"><p><strong>Step ${s.stepNumber}: ${s.description}</strong></p>${s.expression ? `<p style="font-family:monospace">${s.expression}</p>` : ""}<p>${s.explanation}</p></div>`).join("")}` : "",
-                    ].join(""))}
+                    getHtml={() => buildStemExportHtml({
+                      problem: solvedProblem,
+                      subject: result.subject,
+                      answer: result.answer,
+                      steps: result.steps,
+                      corrections: result.corrections,
+                      confidence: result.confidence,
+                      passedVerification: result.passedVerification,
+                      latex: result.latex ?? undefined,
+                    })}
                     getText={() => buildSolutionText(result, solvedProblem)}
                     filename={makeLsgFilename("stem", result.subject + "-SOLUTION")}
                     formats={["docx", "pdf", "txt", "copy"]}
