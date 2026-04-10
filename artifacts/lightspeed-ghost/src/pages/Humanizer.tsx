@@ -11,6 +11,7 @@ import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { ExportButtons } from "@/components/ExportButtons";
 import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { renderInlineMd } from "@/lib/renderInline";
 import { apiFetch } from "@/lib/apiFetch";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -630,7 +631,7 @@ export default function Humanizer() {
                     para.startsWith("# ") ? <h1 key={i} className="text-xl font-bold mt-6 mb-3">{para.slice(2)}</h1>
                     : para.startsWith("## ") ? <h2 key={i} className="text-lg font-bold mt-5 mb-2">{para.slice(3)}</h2>
                     : para.startsWith("### ") ? <h3 key={i} className="text-base font-semibold mt-4 mb-2">{para.slice(4)}</h3>
-                    : <p key={i} className="text-sm leading-relaxed mb-4 text-foreground">{para}</p>
+                    : <p key={i} className="text-sm leading-relaxed mb-4 text-foreground">{renderInlineMd(para)}</p>
                   ) : <div key={i} className="mb-2" />
                 )}
               </div>

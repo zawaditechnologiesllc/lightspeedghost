@@ -12,6 +12,7 @@ import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { ExportButtons } from "@/components/ExportButtons";
 import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { renderInlineMd } from "@/lib/renderInline";
 import { apiFetch } from "@/lib/apiFetch";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -818,14 +819,9 @@ export default function Revision() {
                   if (/^## /.test(line)) return <h2 key={i} className="text-base font-bold mt-5 mb-2 border-b border-border pb-1">{line.slice(3)}</h2>;
                   if (/^### /.test(line)) return <h3 key={i} className="text-sm font-semibold mt-4 mb-1.5">{line.slice(4)}</h3>;
                   if (line.trim() === "") return <div key={i} className="h-2" />;
-                  const parts = line.split(/(\*\*.*?\*\*)/g);
                   return (
                     <p key={i} className="text-sm text-foreground leading-relaxed mb-1">
-                      {parts.map((p, j) =>
-                        p.startsWith("**") && p.endsWith("**")
-                          ? <strong key={j}>{p.slice(2, -2)}</strong>
-                          : p
-                      )}
+                      {renderInlineMd(line)}
                     </p>
                   );
                 })}

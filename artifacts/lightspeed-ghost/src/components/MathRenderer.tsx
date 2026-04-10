@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { stripMd } from "@/lib/renderInline";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 
@@ -66,10 +67,11 @@ export default function MathRenderer({ text, className = "", displayMode = false
         }
         container.appendChild(span);
       } else {
-        // Plain text — preserve newlines
+        // Plain text — strip markdown symbols, then preserve newlines
         const lines = seg.content.split("\n");
         lines.forEach((line, i) => {
-          if (line) container.appendChild(document.createTextNode(line));
+          const clean = stripMd(line);
+          if (clean) container.appendChild(document.createTextNode(clean));
           if (i < lines.length - 1) container.appendChild(document.createElement("br"));
         });
       }

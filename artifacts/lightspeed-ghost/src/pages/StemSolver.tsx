@@ -846,6 +846,18 @@ export default function StemSolver() {
                 </div>
               )}
 
+              {/* Repo attribution */}
+              <div className="px-1 pb-1">
+                <p className="text-[10px] text-muted-foreground/50 text-center leading-relaxed">
+                  Tool index from{" "}
+                  <a href="https://github.com/zawaditechnologiesllc/awesome-ai-for-science" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">awesome-ai-for-science</a>
+                  {" · "}
+                  <a href="https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">AIAgents4Pharmabio</a>
+                  {" · "}
+                  <a href="https://github.com/wu-yc/LabClaw" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">LabClaw (Stanford)</a>
+                </p>
+              </div>
+
               {/* ── Research Stack ── */}
               <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
                 {/* Header */}
@@ -923,19 +935,6 @@ export default function StemSolver() {
                 {activeTab === "tools" && (
                   <ToolkitPanel resources={resources} expandedGroups={expandedGroups} onToggle={toggleGroup} />
                 )}
-              </div>
-
-
-              {/* Repo attribution */}
-              <div className="px-1 pb-1">
-                <p className="text-[10px] text-muted-foreground/50 text-center leading-relaxed">
-                  Tool index from{" "}
-                  <a href="https://github.com/zawaditechnologiesllc/awesome-ai-for-science" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">awesome-ai-for-science</a>
-                  {" · "}
-                  <a href="https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">AIAgents4Pharmabio</a>
-                  {" · "}
-                  <a href="https://github.com/wu-yc/LabClaw" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">LabClaw (Stanford)</a>
-                </p>
               </div>
             </div>
 
