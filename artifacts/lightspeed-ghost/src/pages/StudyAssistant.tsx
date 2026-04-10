@@ -1033,39 +1033,33 @@ function FlashcardsView({ cards, cardIdx, flipped, mastered, onFlip, onPrev, onN
         </span>
       )}
 
-      {/* Flip card */}
-      <div onClick={onFlip} style={{ perspective: "1400px" }} className="cursor-pointer select-none">
-        <div
-          className="relative transition-transform duration-500 rounded-2xl"
-          style={{
-            height: "clamp(200px, 30vh, 300px)",
-            transformStyle: "preserve-3d",
-            transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
-          }}
-        >
-          {/* Front */}
-          <div
-            className="absolute inset-0 rounded-2xl border border-border bg-card flex flex-col items-center justify-center p-8 text-center shadow-sm"
-            style={{ backfaceVisibility: "hidden" }}
-          >
+      {/* Flip card — height adapts to content */}
+      <div
+        onClick={onFlip}
+        className={cn(
+          "cursor-pointer select-none rounded-2xl border shadow-sm transition-all duration-200",
+          flipped
+            ? "bg-primary/6 border-primary/20"
+            : "bg-card border-border"
+        )}
+      >
+        {!flipped ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center min-h-[160px]">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40 mb-5">Question</p>
-            <p className="text-lg font-semibold text-foreground leading-snug max-w-sm">{card.front}</p>
+            <p className="text-lg font-semibold text-foreground leading-snug">{card.front}</p>
             <div className="mt-6 flex items-center gap-1.5 text-[11px] text-muted-foreground/30">
               <FlipHorizontal2 size={12} /> <span>Tap or press Space to flip</span>
             </div>
           </div>
-          {/* Back */}
-          <div
-            className="absolute inset-0 rounded-2xl bg-primary/6 border border-primary/20 flex flex-col items-center justify-center p-8 text-center shadow-sm"
-            style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
-          >
+        ) : (
+          <div className="flex flex-col items-center justify-center p-8 text-center min-h-[160px]">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40 mb-5">Answer</p>
             <MathRenderer
               text={card.back}
-              className={`text-base text-foreground leading-relaxed max-w-sm ${card.back.includes("$") ? "font-handwritten" : ""}`}
+              className={`text-base text-foreground leading-relaxed ${card.back.includes("$") ? "font-handwritten" : ""}`}
             />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Navigation controls */}
