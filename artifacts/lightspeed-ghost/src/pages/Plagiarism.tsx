@@ -17,6 +17,7 @@ import { makeLsgFilename } from "@/lib/exportUtils";
 import { extractTopic, extractSubject } from "@/lib/autofill";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
+import { useWakeLock } from "@/hooks/useWakeLock";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -563,6 +564,7 @@ export default function PlagiarismChecker() {
   // ── Text check state
   const [text, setText] = useState("");
   const [textPhase, setTextPhase] = useState<TextPhase>("idle");
+  useWakeLock(textPhase === "checking");
   const [checkError, setCheckError] = useState<string | null>(null);
   const [result, setResult] = useState<PlagiarismResult | null>(null);
   const [humanizedText, setHumanizedText] = useState<string | null>(null);

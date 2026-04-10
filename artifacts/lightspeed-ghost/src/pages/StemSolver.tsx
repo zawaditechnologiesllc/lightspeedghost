@@ -24,6 +24,7 @@ import { stemResourcesBySubject, toolTypeColors } from "@/data/stemResources";
 import { cn } from "@/lib/utils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
+import { useWakeLock } from "@/hooks/useWakeLock";
 
 const schema = z.object({
   problem: z.string().min(5, "Please describe your problem"),
@@ -162,6 +163,7 @@ export default function StemSolver() {
 
   // SSE solve state
   const [isSolving, setIsSolving] = useState(false);
+  useWakeLock(isSolving);
   const [solveError, setSolveError] = useState<string | null>(null);
   const [sseSteps, setSseSteps] = useState<SolveStep[]>([]);
   // Live streaming thinking content — keyed by stage id ("react" | "cove")

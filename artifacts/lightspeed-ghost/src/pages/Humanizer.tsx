@@ -13,6 +13,7 @@ import { ExportButtons } from "@/components/ExportButtons";
 import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { renderInlineMd } from "@/lib/renderInline";
 import { apiFetch } from "@/lib/apiFetch";
+import { useWakeLock } from "@/hooks/useWakeLock";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -104,6 +105,8 @@ export default function Humanizer() {
   const [phase, setPhase] = useState<Phase>("input");
   const [steps, setSteps] = useState<Step[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
+
+  useWakeLock(phase === "detecting" || phase === "humanizing");
 
   // ── input
   const [inputText, setInputText] = useState("");

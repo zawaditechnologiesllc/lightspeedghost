@@ -21,6 +21,7 @@ import { renderInlineMd } from "@/lib/renderInline";
 import { apiFetch } from "@/lib/apiFetch";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
+import { useWakeLock } from "@/hooks/useWakeLock";
 
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -183,6 +184,7 @@ export default function StudyAssistant() {
 
   // Generation state
   const [isGenerating,  setIsGenerating]  = useState(false);
+  useWakeLock(isGenerating);
   const [progressStep,  setProgressStep]  = useState(0);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [activeView,    setActiveView]    = useState<ActiveView>(null);

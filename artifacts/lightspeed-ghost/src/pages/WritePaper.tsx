@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
-  Loader2, Wand2, Download, Save, CheckCircle, ExternalLink,
+  Loader2, Wand2, Download, Save, CheckCircle, XCircle, ExternalLink,
   FileText, ListOrdered, BookMarked, Zap, BarChart3, Edit3,
   Eye, RotateCcw, ChevronDown, Upload, X, Check, AlertTriangle,
   GraduationCap, FlaskConical,
 } from "lucide-react";
+import { useWakeLock } from "@/hooks/useWakeLock";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import MathRenderer from "@/components/MathRenderer";
 import { detectPaperType, detectCitationStyle, extractTopic, extractSubject } from "@/lib/autofill";
@@ -160,12 +161,21 @@ function renderMarkdown(text: string): React.ReactNode[] {
   return nodes;
 }
 
-function StatCard({ label, value, color, sublabel }: { label: string; value: string; color: string; sublabel?: string }) {
+function StatCard({ label, value, color, sublabel, passing }: {
+  label: string; value: string; color: string; sublabel?: string; passing?: boolean;
+}) {
   return (
-    <div className={`rounded-xl border p-3 flex flex-col gap-0.5 ${color}`}>
-      <span className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</span>
-      <span className="text-2xl font-bold">{value}</span>
-      {sublabel && <span className="text-[10px] opacity-60">{sublabel}</span>}
+    <div className={`rounded-lg border px-2 py-1 sm:px-3 sm:py-2.5 flex items-center gap-2 sm:flex-col sm:items-start sm:gap-0.5 ${color}`}>
+      <div className="flex items-center gap-1 shrink-0 sm:w-full">
+        <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide opacity-70 leading-none">{label}</span>
+        {passing !== undefined && (
+          passing
+            ? <CheckCircle size={9} className="text-green-500 shrink-0" />
+            : <XCircle size={9} className="text-red-400 shrink-0" />
+        )}
+      </div>
+      <span className="text-base sm:text-xl font-bold leading-none">{value}</span>
+      {sublabel && <span className="hidden sm:block text-[10px] opacity-60 mt-0.5">{sublabel}</span>}
     </div>
   );
 }
@@ -247,6 +257,12 @@ export default function WritePaper() {
   // ── ref for streaming scroll
   const streamRef = useRef<HTMLDivElement>(null);
 
+  // ── target word count captured at generation start (for condition checking)
+  const targetWordCountRef = useRef<number>(1500);
+
+  // ── keep screen awake during generation
+  useWakeLock(phase === "generating");
+
   // ── autofill from assignment brief
   const handleBriefExtracted = useCallback((file: ExtractedFile) => {
     const text = file.text;
@@ -321,6 +337,7 @@ export default function WritePaper() {
 
     const effectiveWordCount = customWordCount ? parseInt(customWordCount, 10) || wordCount : wordCount;
 
+    targetWordCountRef.current = effectiveWordCount;
     setPhase("generating");
     setStreamedContent("");
     setGenError("");
@@ -421,24 +438,34 @@ export default function WritePaper() {
   const handleSave = async () => {
     if (!result) return;
     setIsSaving(true);
+    // Always apply edits locally and switch to view immediately
+    setResult(prev => prev ? { ...prev, content: editedContent } : prev);
+    setViewMode("view");
+
+    if (!result.documentId) {
+      setSaveMsg("Edits applied");
+      setTimeout(() => setSaveMsg(""), 2000);
+      setIsSaving(false);
+      return;
+    }
+
     try {
-      
       const resp = await apiFetch(`/writing/save/${result.documentId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: editedContent }),
       });
       if (resp.ok) {
         const data = await resp.json() as { wordCount: number };
-        setResult(prev => prev ? { ...prev, content: editedContent, stats: { ...prev.stats, bodyWordCount: data.wordCount } } : prev);
+        setResult(prev => prev ? { ...prev, stats: { ...prev.stats, bodyWordCount: data.wordCount } } : prev);
         setSaveMsg("Changes saved!");
-        setViewMode("view");
-        setTimeout(() => setSaveMsg(""), 3000);
+      } else {
+        setSaveMsg("Server save failed — edits kept locally");
       }
-    } catch { setSaveMsg("Save failed — try again"); }
+    } catch {
+      setSaveMsg("Save failed — edits kept locally");
+    }
+    setTimeout(() => setSaveMsg(""), 3000);
     setIsSaving(false);
   };
 
@@ -571,22 +598,28 @@ export default function WritePaper() {
 
   if (phase === "results" && result) {
     const { stats } = result;
-    const gradeColor = stats.grade >= 90 ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400"
-                     : stats.grade >= 75 ? "border-yellow-500/30 bg-yellow-500/5 text-yellow-600 dark:text-yellow-400"
-                     : "border-red-500/30 bg-red-500/5 text-red-600 dark:text-red-400";
-    const aiColor  = stats.aiScore <= 10 ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400" : "border-yellow-500/30 bg-yellow-500/5 text-yellow-600 dark:text-yellow-400";
-    const plagColor= stats.plagiarismScore <= 8 ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400" : "border-yellow-500/30 bg-yellow-500/5 text-yellow-600 dark:text-yellow-400";
+    const targetWords = targetWordCountRef.current;
+    const gradePassing = stats.grade >= 80;
+    const aiPassing    = stats.aiScore <= 15;
+    const plagPassing  = stats.plagiarismScore <= 10;
+    const wordsPassing = stats.bodyWordCount >= Math.round(targetWords * 0.9);
+    const citePassing  = result.citations.length >= 5;
+    const gradeColor = gradePassing
+      ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400"
+      : "border-red-500/30 bg-red-500/5 text-red-600 dark:text-red-400";
+    const aiColor  = aiPassing  ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400" : "border-yellow-500/30 bg-yellow-500/5 text-yellow-600 dark:text-yellow-400";
+    const plagColor= plagPassing ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400" : "border-yellow-500/30 bg-yellow-500/5 text-yellow-600 dark:text-yellow-400";
 
     return (
       <div className="h-full flex flex-col bg-background overflow-hidden">
         {/* Stats header */}
         <div className="shrink-0 px-3 sm:px-5 py-2 sm:py-3 border-b border-border bg-card flex items-center gap-2 flex-wrap">
-          <div className="flex gap-1.5 sm:gap-2 flex-wrap overflow-x-auto">
-            <StatCard label="Est. Grade" value={`${stats.grade}%`} color={gradeColor} sublabel="Academic quality" />
-            <StatCard label="AI Score" value={`${stats.aiScore}%`} color={aiColor} sublabel="AI detection est." />
-            <StatCard label="Plagiarism" value={`${stats.plagiarismScore}%`} color={plagColor} sublabel="Originality est." />
-            <StatCard label="Body Words" value={stats.bodyWordCount.toLocaleString()} color="border-border bg-muted/30 text-foreground" sublabel="Excl. refs & citations" />
-            <StatCard label="Citations" value={String(result.citations.length)} color="border-border bg-muted/30 text-foreground" sublabel="Verified sources" />
+          <div className="flex gap-1 sm:gap-2 flex-wrap overflow-x-auto">
+            <StatCard label="Est. Grade" value={`${stats.grade}%`} color={gradeColor} sublabel="Academic quality" passing={gradePassing} />
+            <StatCard label="AI Score" value={`${stats.aiScore}%`} color={aiColor} sublabel="AI detection est." passing={aiPassing} />
+            <StatCard label="Plagiarism" value={`${stats.plagiarismScore}%`} color={plagColor} sublabel="Originality est." passing={plagPassing} />
+            <StatCard label="Body Words" value={stats.bodyWordCount.toLocaleString()} color="border-border bg-muted/30 text-foreground" sublabel={`Target: ${targetWords.toLocaleString()}`} passing={wordsPassing} />
+            <StatCard label="Citations" value={String(result.citations.length)} color="border-border bg-muted/30 text-foreground" sublabel="Verified sources" passing={citePassing} />
           </div>
           <div className="ml-auto flex items-center gap-2 flex-wrap">
             {saveMsg && (
@@ -722,27 +755,36 @@ export default function WritePaper() {
 
           {/* ── Stats tab ── */}
           {resultTab === "stats" && (
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className={cn("rounded-xl border p-4 text-center", gradeColor)}>
-                  <div className="text-3xl font-bold">{stats.grade}%</div>
-                  <div className="text-xs mt-1 opacity-70">Estimated Grade</div>
-                  <div className={cn("text-[10px] mt-1 font-semibold", stats.grade >= 90 ? "text-green-600" : "text-yellow-600")}>
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <div className={cn("rounded-xl border p-2.5 sm:p-4 text-center", gradeColor)}>
+                  <div className="flex items-center justify-center gap-1 mb-0.5">
+                    {gradePassing ? <CheckCircle size={11} /> : <XCircle size={11} className="text-red-400" />}
+                    <div className="text-xl sm:text-3xl font-bold leading-none">{stats.grade}%</div>
+                  </div>
+                  <div className="text-[10px] sm:text-xs mt-1 opacity-70">Estimated Grade</div>
+                  <div className="text-[9px] sm:text-[10px] mt-0.5 font-semibold">
                     {stats.grade >= 95 ? "Distinction" : stats.grade >= 90 ? "High Merit" : stats.grade >= 80 ? "Merit" : "Pass"}
                   </div>
                 </div>
-                <div className={cn("rounded-xl border p-4 text-center", aiColor)}>
-                  <div className="text-3xl font-bold">{stats.aiScore}%</div>
-                  <div className="text-xs mt-1 opacity-70">AI Detection</div>
-                  <div className={cn("text-[10px] mt-1 font-semibold", stats.aiScore <= 10 ? "text-green-600" : "text-yellow-600")}>
+                <div className={cn("rounded-xl border p-2.5 sm:p-4 text-center", aiColor)}>
+                  <div className="flex items-center justify-center gap-1 mb-0.5">
+                    {aiPassing ? <CheckCircle size={11} /> : <XCircle size={11} className="text-red-400" />}
+                    <div className="text-xl sm:text-3xl font-bold leading-none">{stats.aiScore}%</div>
+                  </div>
+                  <div className="text-[10px] sm:text-xs mt-1 opacity-70">AI Detection</div>
+                  <div className="text-[9px] sm:text-[10px] mt-0.5 font-semibold">
                     {stats.aiScore <= 5 ? "Excellent" : stats.aiScore <= 15 ? "Good" : "Review"}
                   </div>
                 </div>
-                <div className={cn("rounded-xl border p-4 text-center", plagColor)}>
-                  <div className="text-3xl font-bold">{stats.plagiarismScore}%</div>
-                  <div className="text-xs mt-1 opacity-70">Plagiarism Risk</div>
-                  <div className={cn("text-[10px] mt-1 font-semibold", stats.plagiarismScore <= 8 ? "text-green-600" : "text-yellow-600")}>
-                    {stats.plagiarismScore <= 5 ? "Original" : stats.plagiarismScore <= 15 ? "Acceptable" : "High Risk"}
+                <div className={cn("rounded-xl border p-2.5 sm:p-4 text-center", plagColor)}>
+                  <div className="flex items-center justify-center gap-1 mb-0.5">
+                    {plagPassing ? <CheckCircle size={11} /> : <XCircle size={11} className="text-red-400" />}
+                    <div className="text-xl sm:text-3xl font-bold leading-none">{stats.plagiarismScore}%</div>
+                  </div>
+                  <div className="text-[10px] sm:text-xs mt-1 opacity-70">Plagiarism Risk</div>
+                  <div className="text-[9px] sm:text-[10px] mt-0.5 font-semibold">
+                    {stats.plagiarismScore <= 5 ? "Original" : stats.plagiarismScore <= 10 ? "Acceptable" : "High Risk"}
                   </div>
                 </div>
               </div>

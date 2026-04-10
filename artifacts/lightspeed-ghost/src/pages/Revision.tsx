@@ -14,6 +14,7 @@ import { ExportButtons } from "@/components/ExportButtons";
 import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { renderInlineMd } from "@/lib/renderInline";
 import { apiFetch } from "@/lib/apiFetch";
+import { useWakeLock } from "@/hooks/useWakeLock";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -112,6 +113,8 @@ export default function Revision() {
   const [phase, setPhase] = useState<Phase>("upload");
   const [steps, setSteps] = useState<Step[]>([]);
   const [error, setError] = useState("");
+
+  useWakeLock(phase === "analysing" || phase === "revising");
 
   // ── prefill from plagiarism checker
   const [fromPlagiarism, setFromPlagiarism] = useState(false);
