@@ -1029,7 +1029,7 @@ export default function Landing() {
                 </div>
                 <div>
                   <p className="text-white font-semibold text-sm">Pay as you go</p>
-                  <p className="text-orange-400/70 text-[11px]">From $0.49 per use · no subscription</p>
+                  <p className="text-orange-400/70 text-[11px]">From $1.99 per use · no subscription</p>
                 </div>
               </div>
               <div className="space-y-6">

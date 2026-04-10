@@ -266,7 +266,7 @@ const ARTICLE_BODIES: Record<string, React.ReactNode> = {
         <li>You want to test the platform before committing to a subscription</li>
         <li>You're mid-semester and need help with one or two difficult assignments</li>
       </ul>
-      <p>The math: a standard paper generation costs approximately $3–5 in credits. If you write one paper a month, PAYG costs $36–60/year. Starter at $1.50/month is $18/year for 3 papers per month. Even if you only need one paper per month, Starter wins on cost — but PAYG wins on flexibility.</p>
+      <p>The math: a standard essay-length paper (500–1,500 words) costs $7.99 PAYG. A research paper (1,500–3,500 words) is $14.99. If you write one essay a month, PAYG costs roughly $96/year. Starter at $1.50/month is $18/year for 3 papers per month — Starter almost always wins on cost, but PAYG wins on flexibility if your usage is truly unpredictable.</p>
 
       <h3 className="text-white font-semibold text-base mt-7">When the Starter plan makes more sense</h3>
       <p>The Starter plan at $1.50/month gives you 3 papers, 5 outlines, 5 plagiarism + AI checks, 10 STEM queries per day, 10 study messages per day, and 1 revision per month. At less than the cost of a coffee, it's the cheapest structured academic writing plan available. If you're regularly using those tools, Starter is almost always cheaper than PAYG for the same volume.</p>
