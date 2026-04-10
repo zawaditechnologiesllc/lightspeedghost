@@ -364,6 +364,7 @@ export default function StudyAssistant() {
   const hasContent = topic.trim().length > 0 || sources.length > 0;
   const progressSteps = PROGRESS_STEPS[selectedType] ?? PROGRESS_STEPS.flashcards;
   const imageSources = sources.filter((s) => s.type === "image");
+  const showingResults = !!activeView && !isGenerating;
 
   // ── Render ────────────────────────────────────────────────────────────
 
@@ -377,9 +378,44 @@ export default function StudyAssistant() {
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
       >
-        <div className="max-w-2xl w-full mx-auto px-6 pb-20">
+        <div className={cn(
+          "w-full mx-auto pb-20",
+          showingResults
+            ? activeView === "slides" ? "max-w-5xl px-4 sm:px-6" : "max-w-4xl px-4 sm:px-6"
+            : "max-w-2xl px-6"
+        )}>
+
+          {/* ── RESULT BACK BAR (shown when viewing results) ──────────── */}
+          {showingResults && (
+            <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 bg-background/95 backdrop-blur-sm border-b border-border/60 py-3 mb-8 flex items-center gap-3">
+              <button
+                onClick={() => setActiveView(null)}
+                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0 px-2.5 py-1.5 rounded-lg hover:bg-muted"
+              >
+                <ChevronLeft size={13} /> Edit
+              </button>
+              <div className="w-px h-4 bg-border shrink-0" />
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <span className="text-xs font-semibold text-foreground shrink-0">
+                  {OUTPUT_TYPES.find((t) => t.key === activeView)?.label ?? activeView}
+                </span>
+                {topic.trim() && (
+                  <span className="text-xs text-muted-foreground/60 truncate hidden sm:block">
+                    — {topic.trim().slice(0, 80)}{topic.trim().length > 80 ? "…" : ""}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => generate(activeView as OutputType)}
+                className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors shrink-0"
+              >
+                <RotateCcw size={11} /> Regenerate
+              </button>
+            </div>
+          )}
 
           {/* ── CENTERED HERO HEADER ──────────────────────────────────── */}
+          {!showingResults && !isGenerating && (
           <div className="pt-10 pb-8 text-center space-y-3">
             <div className="flex items-center justify-center gap-2 mb-1">
               <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -399,10 +435,11 @@ export default function StudyAssistant() {
               ))}
             </div>
           </div>
+          )}
 
           {/* ── GENERATING: show compact generating state instead of input ── */}
           {isGenerating && (
-            <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5">
+            <div className="mt-10 mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5">
               <Loader2 size={14} className="animate-spin text-primary shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-primary">
@@ -415,7 +452,7 @@ export default function StudyAssistant() {
             </div>
           )}
 
-          {!isGenerating && (
+          {!showingResults && !isGenerating && (
           <>
           {/* ── 1. MAIN TOPIC TEXTAREA ────────────────────────────────── */}
           <div className="rounded-2xl border border-border bg-card shadow-sm focus-within:border-primary/40 focus-within:shadow-[0_0_0_3px_hsl(var(--primary)/0.06)] transition-all">
@@ -645,9 +682,9 @@ export default function StudyAssistant() {
 
           {/* ── 7. OUTPUT AREA ────────────────────────────────────────── */}
           {activeView && !isGenerating && (
-            <div className="mt-8 border-t border-border pt-6 space-y-5">
+            <div className="space-y-6">
               {/* Output type switch tabs */}
-              <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 {OUTPUT_TYPES.map(({ key, label, icon }) => {
                   const hasData = (
                     (key === "flashcards" && flashcards.length > 0) ||
@@ -660,10 +697,10 @@ export default function StudyAssistant() {
                   return (
                     <button key={key} onClick={() => setActiveView(key)}
                       className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                        "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all",
                         activeView === key
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground hover:text-foreground"
+                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                          : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/30 hover:bg-muted/40"
                       )}>
                       {icon} {label}
                     </button>
@@ -671,8 +708,10 @@ export default function StudyAssistant() {
                 })}
                 {weakQuiz.length > 0 && (
                   <button onClick={() => setActiveView("weakpoints")}
-                    className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
-                      activeView === "weakpoints" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground")}>
+                    className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all",
+                      activeView === "weakpoints"
+                        ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                        : "bg-card text-amber-600 border-amber-200 dark:border-amber-900 hover:bg-amber-50/10")}>
                     <Target size={11} /> Weak Points
                   </button>
                 )}
@@ -953,58 +992,142 @@ function FlashcardsView({ cards, cardIdx, flipped, mastered, onFlip, onPrev, onN
   onFlip: () => void; onPrev: () => void; onNext: () => void;
   onMaster: (i: number) => void; onGenerate: () => void;
 }) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowRight") onNext();
+      else if (e.key === "ArrowLeft") onPrev();
+      else if (e.key === " " || e.key === "Enter") { e.preventDefault(); onFlip(); }
+      else if (e.key.toLowerCase() === "m") onMaster(cardIdx);
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [cardIdx, onNext, onPrev, onFlip, onMaster]);
+
   if (!cards.length) return <EmptyTab label="Generate flashcards from your content" onGenerate={onGenerate} />;
   const card = cards[cardIdx];
+  const pct = Math.round(((cardIdx + 1) / cards.length) * 100);
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <div className="flex items-center gap-3">
-          <div className="h-1 w-32 bg-muted rounded-full overflow-hidden">
-            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${((cardIdx + 1) / cards.length) * 100}%` }} />
-          </div>
-          <span>{cardIdx + 1} / {cards.length}</span>
-        </div>
-        <span className="text-emerald-600 dark:text-emerald-400">{mastered.size} mastered</span>
-      </div>
-      {card.tag && <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">{card.tag}</span>}
-      <div onClick={onFlip} style={{ perspective: "1200px" }} className="cursor-pointer select-none">
-        <div className="relative h-48 transition-transform duration-500 rounded-2xl"
-          style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0)" }}>
-          <div className="absolute inset-0 rounded-2xl bg-muted/40 flex flex-col items-center justify-center p-8 text-center"
-            style={{ backfaceVisibility: "hidden" }}>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-4">Question</p>
-            <p className="text-base font-semibold text-foreground leading-snug">{card.front}</p>
-            <p className="mt-5 text-[10px] text-muted-foreground/30">Tap to reveal</p>
-          </div>
-          <div className="absolute inset-0 rounded-2xl bg-primary/8 flex flex-col items-center justify-center p-8 text-center"
-            style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-            <p className="text-[10px] uppercase tracking-widest text-primary/50 mb-4">Answer</p>
-            <MathRenderer text={card.back} className={`text-sm text-foreground leading-relaxed ${card.back.includes("$") ? "font-handwritten" : ""}`} />
-          </div>
-        </div>
-      </div>
+      {/* Progress bar + stats */}
       <div className="flex items-center justify-between">
-        <button onClick={onPrev} disabled={cardIdx === 0}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
+        <div className="flex items-center gap-3 flex-1 mr-4">
+          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+          </div>
+          <span className="text-xs text-muted-foreground shrink-0 tabular-nums">{cardIdx + 1} / {cards.length}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {mastered.size > 0 && (
+            <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+              <CheckCircle2 size={11} /> {mastered.size} mastered
+            </span>
+          )}
+        </div>
+      </div>
+
+      {card.tag && (
+        <span className="inline-block text-[10px] font-semibold text-primary/60 uppercase tracking-widest px-2 py-0.5 rounded-md bg-primary/8">
+          {card.tag}
+        </span>
+      )}
+
+      {/* Flip card */}
+      <div onClick={onFlip} style={{ perspective: "1400px" }} className="cursor-pointer select-none">
+        <div
+          className="relative transition-transform duration-500 rounded-2xl"
+          style={{
+            height: "clamp(200px, 30vh, 300px)",
+            transformStyle: "preserve-3d",
+            transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+          }}
+        >
+          {/* Front */}
+          <div
+            className="absolute inset-0 rounded-2xl border border-border bg-card flex flex-col items-center justify-center p-8 text-center shadow-sm"
+            style={{ backfaceVisibility: "hidden" }}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40 mb-5">Question</p>
+            <p className="text-lg font-semibold text-foreground leading-snug max-w-sm">{card.front}</p>
+            <div className="mt-6 flex items-center gap-1.5 text-[11px] text-muted-foreground/30">
+              <FlipHorizontal2 size={12} /> <span>Tap or press Space to flip</span>
+            </div>
+          </div>
+          {/* Back */}
+          <div
+            className="absolute inset-0 rounded-2xl bg-primary/6 border border-primary/20 flex flex-col items-center justify-center p-8 text-center shadow-sm"
+            style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40 mb-5">Answer</p>
+            <MathRenderer
+              text={card.back}
+              className={`text-base text-foreground leading-relaxed max-w-sm ${card.back.includes("$") ? "font-handwritten" : ""}`}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation controls */}
+      <div className="flex items-center justify-between gap-3">
+        <button
+          onClick={onPrev} disabled={cardIdx === 0}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 transition-all"
+        >
           <ChevronLeft size={14} /> Previous
         </button>
-        <button onClick={() => onMaster(cardIdx)}
-          className={cn("flex items-center gap-1.5 text-xs font-medium transition-colors",
-            mastered.has(cardIdx) ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground hover:text-foreground")}>
-          <Star size={12} className={mastered.has(cardIdx) ? "fill-current" : ""} />
+
+        <button
+          onClick={() => onMaster(cardIdx)}
+          className={cn(
+            "flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-semibold transition-all",
+            mastered.has(cardIdx)
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+              : "border-border text-muted-foreground hover:border-emerald-400/40 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50/5"
+          )}
+        >
+          <Star size={13} className={mastered.has(cardIdx) ? "fill-current" : ""} />
           {mastered.has(cardIdx) ? "Mastered" : "Mark mastered"}
         </button>
-        <button onClick={onNext} disabled={cardIdx === cards.length - 1}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
+
+        <button
+          onClick={onNext} disabled={cardIdx === cards.length - 1}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 transition-all"
+        >
           Next <ChevronRight size={14} />
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-2 pt-2">
+
+      {/* Keyboard hint bar */}
+      <div className="flex items-center justify-center gap-4 py-2 border-t border-border/50">
+        {[
+          { key: "← →", label: "Navigate" },
+          { key: "Space", label: "Flip" },
+          { key: "M", label: "Mark mastered" },
+        ].map(({ key, label }) => (
+          <span key={key} className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40">
+            <kbd className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground/60 font-mono text-[9px] border border-border/60">{key}</kbd>
+            {label}
+          </span>
+        ))}
+      </div>
+
+      {/* Card overview strip */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 pt-1">
         {cards.map((c, i) => (
-          <div key={i} className={cn("px-3 py-2 rounded-xl text-xs transition-colors",
-            i === cardIdx ? "bg-primary/8 text-foreground" :
-            mastered.has(i) ? "text-muted-foreground/50 line-through" : "bg-muted/30 text-muted-foreground")}>
-            <p className="truncate">{c.front}</p>
+          <div
+            key={i}
+            className={cn(
+              "px-2.5 py-2 rounded-xl text-[11px] text-left border",
+              i === cardIdx
+                ? "bg-primary/8 text-foreground border-primary/30 font-medium"
+                : mastered.has(i)
+                ? "text-muted-foreground/30 border-border/20 line-through"
+                : "bg-muted/20 text-muted-foreground border-transparent"
+            )}
+          >
+            <span className="text-[9px] text-muted-foreground/40 block mb-0.5 tabular-nums">{i + 1}</span>
+            <span className="block truncate">{c.front}</span>
           </div>
         ))}
       </div>
@@ -1021,6 +1144,19 @@ function QuizView({ questions, answers, submitted, currentQ, score, onAnswer, on
   onSubmit: () => void; onRetake: () => void; onGenerate: () => void;
   onWeakPoints?: () => void;
 }) {
+  useEffect(() => {
+    if (submitted) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const n = parseInt(e.key);
+      if (n >= 1 && n <= 4) onAnswer(currentQ, n - 1);
+      else if (e.key === "ArrowRight") onNext();
+      else if (e.key === "ArrowLeft") onPrev();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [submitted, currentQ, onAnswer, onNext, onPrev]);
+
   if (!questions.length) return <EmptyTab label="Generate a quiz from your content" onGenerate={onGenerate} />;
   if (submitted) {
     const pct = Math.round((score / questions.length) * 100);
@@ -1077,27 +1213,54 @@ function QuizView({ questions, answers, submitted, currentQ, score, onAnswer, on
         </div>
         <span>{currentQ + 1} / {questions.length}</span>
       </div>
-      <div className="space-y-4">
-        <p className="text-base font-semibold text-foreground leading-snug">
-          <span className="text-muted-foreground/50 mr-2">{currentQ + 1}.</span>{q.question}
-        </p>
-        <div className="space-y-2">
-          {q.options.map((opt, oi) => (
-            <button key={oi} onClick={() => onAnswer(currentQ, oi)}
-              className={cn("w-full text-left px-4 py-3 rounded-xl text-sm transition-all",
-                answers[currentQ] === oi ? "bg-primary/10 text-foreground font-medium ring-1 ring-primary/30" : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground")}>
-              {opt}
-            </button>
-          ))}
+      <div className="space-y-5">
+        <div className="space-y-1">
+          <p className="text-[11px] text-muted-foreground/50 font-medium uppercase tracking-widest">Question {currentQ + 1} of {questions.length}</p>
+          <p className="text-base font-semibold text-foreground leading-snug">{q.question}</p>
+        </div>
+        <div className="space-y-2.5">
+          {q.options.map((opt, oi) => {
+            const letter = String.fromCharCode(65 + oi);
+            const selected = answers[currentQ] === oi;
+            return (
+              <button key={oi} onClick={() => onAnswer(currentQ, oi)}
+                className={cn(
+                  "w-full text-left px-4 py-3 rounded-xl text-sm transition-all flex items-center gap-3 border",
+                  selected
+                    ? "bg-primary/8 text-foreground font-medium border-primary/40 ring-1 ring-primary/20"
+                    : "bg-card text-muted-foreground border-border hover:bg-muted/50 hover:text-foreground hover:border-border/80"
+                )}>
+                <span className={cn(
+                  "w-6 h-6 rounded-lg text-[11px] font-bold flex items-center justify-center shrink-0 transition-colors",
+                  selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}>
+                  {letter}
+                </span>
+                {opt}
+              </button>
+            );
+          })}
         </div>
       </div>
       <div className="flex items-center justify-between pt-2">
-        <button onClick={onPrev} disabled={currentQ === 0} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
-          <ChevronLeft size={14} /> Previous
+        <button onClick={onPrev} disabled={currentQ === 0} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 transition-all">
+          <ChevronLeft size={14} /> Prev
         </button>
         {currentQ < questions.length - 1
-          ? <button onClick={onNext} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">Next <ChevronRight size={14} /></button>
-          : <button onClick={onSubmit} disabled={!allAnswered} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">Submit <CheckCircle2 size={13} /></button>}
+          ? <button onClick={onNext} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">Next <ChevronRight size={14} /></button>
+          : <button onClick={onSubmit} disabled={!allAnswered} className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">Submit answers <CheckCircle2 size={13} /></button>}
+      </div>
+      {/* Keyboard hint */}
+      <div className="flex items-center justify-center gap-4 py-2 border-t border-border/50">
+        {[
+          { key: "1 – 4", label: "Select answer" },
+          { key: "← →", label: "Navigate" },
+        ].map(({ key, label }) => (
+          <span key={key} className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40">
+            <kbd className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground/60 font-mono text-[9px] border border-border/60">{key}</kbd>
+            {label}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -1160,17 +1323,42 @@ function SummaryView({ data, onGenerate }: { data: SummaryData | null; onGenerat
 
 // ── Study Guide ────────────────────────────────────────────────────────────
 
+const SECTION_TYPE_ICONS: Record<string, React.ReactNode> = {
+  overview:  <BookOpen size={13} />,
+  concepts:  <Brain size={13} />,
+  process:   <Target size={13} />,
+  tips:      <Star size={13} />,
+};
+
 function StudyGuideView({ data, onGenerate }: { data: StudyGuideData | null; onGenerate: () => void }) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set([0]));
   if (!data) return <EmptyTab label="Generate a study guide from your content" onGenerate={onGenerate} />;
+
+  const allExpanded = expanded.size === data.sections.length;
+
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-foreground">{data.title}</h2>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-xl font-bold text-foreground leading-snug">{data.title}</h2>
+        <button
+          onClick={() => setExpanded(allExpanded ? new Set() : new Set(data.sections.map((_, i) => i)))}
+          className="text-[11px] font-medium text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg hover:bg-muted/50 transition-colors shrink-0"
+        >
+          {allExpanded ? "Collapse all" : "Expand all"}
+        </button>
+      </div>
       {data.sections.map((sec, i) => (
         <div key={i}>
           <button onClick={() => setExpanded((s) => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; })}
-            className="w-full flex items-center justify-between py-2 text-sm font-semibold text-foreground hover:text-primary transition-colors">
-            {sec.heading}
+            className="w-full flex items-center justify-between py-2 text-sm font-semibold text-foreground hover:text-primary transition-colors group">
+            <span className="flex items-center gap-2">
+              {sec.type && SECTION_TYPE_ICONS[sec.type] && (
+                <span className="text-primary/50 group-hover:text-primary/80 transition-colors">
+                  {SECTION_TYPE_ICONS[sec.type]}
+                </span>
+              )}
+              {sec.heading}
+            </span>
             {expanded.has(i) ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
           </button>
           <div className="h-px bg-border" />
@@ -1237,56 +1425,153 @@ function StudyGuideView({ data, onGenerate }: { data: StudyGuideData | null; onG
 
 // ── Slides ─────────────────────────────────────────────────────────────────
 
+const SLIDE_THEMES: Record<string, { bg: string; titleColor: string; textColor: string; accent: string }> = {
+  title:      { bg: "bg-gradient-to-br from-slate-900 via-primary/80 to-slate-800", titleColor: "text-white", textColor: "text-white/70", accent: "bg-white/20" },
+  agenda:     { bg: "bg-gradient-to-br from-slate-800 to-slate-700", titleColor: "text-white", textColor: "text-white/75", accent: "bg-white/15" },
+  content:    { bg: "bg-card", titleColor: "text-foreground", textColor: "text-muted-foreground", accent: "bg-primary/8" },
+  conclusion: { bg: "bg-gradient-to-br from-primary/20 via-primary/5 to-transparent", titleColor: "text-foreground", textColor: "text-muted-foreground", accent: "bg-primary/10" },
+};
+
 function SlidesView({ data, slideIdx, onPrev, onNext, onGenerate }: {
   data: SlideData | null; slideIdx: number;
   onPrev: () => void; onNext: () => void; onGenerate: () => void;
 }) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") onNext();
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") onPrev();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onNext, onPrev]);
+
   if (!data?.slides.length) return <EmptyTab label="Generate a slide deck from your content" onGenerate={onGenerate} />;
+
   const slide = data.slides[slideIdx];
   const total = data.slides.length;
+  const theme = SLIDE_THEMES[slide.type] ?? SLIDE_THEMES.content;
+  const isDark = slide.type === "title" || slide.type === "agenda";
+
   return (
-    <div className="space-y-5">
-      <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-muted/60 to-muted/30"
-        style={{ aspectRatio: "16/9", display: "flex", flexDirection: "column" }}>
+    <div className="space-y-4">
+      {/* Slide deck header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold text-foreground">{data.title}</p>
+          <p className="text-[11px] text-muted-foreground/60">{total} slides</p>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40">
+          <kbd className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground/60 font-mono text-[9px] border border-border/60">← →</kbd>
+          Navigate
+        </div>
+      </div>
+
+      {/* Main slide canvas */}
+      <div
+        className={cn("rounded-2xl overflow-hidden border border-border/50 shadow-lg", theme.bg)}
+        style={{ aspectRatio: "16/9", display: "flex", flexDirection: "column", position: "relative" }}
+      >
+        {/* Slide number badge */}
+        <div className={cn(
+          "absolute top-4 right-4 px-2 py-0.5 rounded-full text-[10px] font-mono",
+          isDark ? "bg-white/10 text-white/50" : "bg-black/6 text-foreground/40"
+        )}>
+          {slideIdx + 1} / {total}
+        </div>
+
         {slide.type === "title" ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-10 sm:p-14 text-center">
+            <p className={cn("text-2xl sm:text-3xl font-bold leading-tight mb-3", theme.titleColor)}>{slide.title}</p>
+            {slide.subtitle && <p className={cn("text-sm sm:text-base mt-2 leading-relaxed", theme.textColor)}>{slide.subtitle}</p>}
+            <div className={cn("mt-6 w-16 h-0.5 rounded-full opacity-40", isDark ? "bg-white" : "bg-primary")} />
+          </div>
+        ) : slide.type === "agenda" ? (
+          <div className="flex-1 flex flex-col p-7 sm:p-10">
+            <p className={cn("text-lg font-bold mb-6", theme.titleColor)}>{slide.title}</p>
+            <div className="space-y-3">
+              {slide.bullets?.map((b, bi) => (
+                <div key={bi} className="flex items-center gap-3">
+                  <span className={cn("w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0", theme.accent, theme.textColor)}>{bi + 1}</span>
+                  <p className={cn("text-sm font-medium", theme.textColor)}>{b}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : slide.type === "conclusion" ? (
           <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-            <p className="text-2xl font-bold text-foreground mb-2">{slide.title}</p>
-            {slide.subtitle && <p className="text-sm text-muted-foreground mt-1">{slide.subtitle}</p>}
+            <div className={cn("w-10 h-10 rounded-xl mb-4 flex items-center justify-center", theme.accent)}>
+              <CheckCircle2 size={20} className="text-primary" />
+            </div>
+            <p className={cn("text-xl font-bold mb-4", theme.titleColor)}>{slide.title}</p>
+            {slide.bullets && slide.bullets.length > 0 && (
+              <div className="space-y-2 max-w-sm">
+                {slide.bullets.map((b, bi) => (
+                  <p key={bi} className={cn("text-sm leading-relaxed", theme.textColor)}>{b}</p>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
-          <div className="flex-1 flex flex-col p-7">
-            <p className="text-base font-bold text-foreground mb-4">{slide.title}</p>
-            <div className="space-y-2.5">
+          <div className="flex-1 flex flex-col p-7 sm:p-10">
+            <div className={cn("w-8 h-1 rounded-full mb-4", "bg-primary/40")} />
+            <p className={cn("text-base sm:text-lg font-bold mb-5", theme.titleColor)}>{slide.title}</p>
+            <div className="space-y-3 flex-1">
               {slide.bullets?.map((b, bi) => (
-                <div key={bi} className="flex items-start gap-2.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-1.5 shrink-0" />
-                  <p className="text-sm text-foreground/80 leading-snug">{b}</p>
+                <div key={bi} className="flex items-start gap-3">
+                  <div className={cn("w-1.5 h-1.5 rounded-full mt-2 shrink-0", "bg-primary/50")} />
+                  <p className={cn("text-sm leading-relaxed", theme.textColor)}>{b}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
-      {slide.notes && <p className="text-xs text-muted-foreground leading-relaxed px-1"><span className="font-semibold text-muted-foreground/60 mr-2">Notes:</span>{slide.notes}</p>}
+
+      {/* Speaker notes */}
+      {slide.notes && (
+        <div className="flex gap-3 px-4 py-3 rounded-xl bg-amber-50/5 border border-amber-200/20">
+          <div className="w-1 bg-amber-400/40 rounded-full shrink-0 self-stretch" />
+          <div>
+            <p className="text-[10px] font-semibold text-amber-600/60 dark:text-amber-400/60 uppercase tracking-widest mb-1">Speaker Notes</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">{slide.notes}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation controls */}
       <div className="flex items-center gap-3">
-        <button onClick={onPrev} disabled={slideIdx === 0} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
+        <button onClick={onPrev} disabled={slideIdx === 0}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 transition-all">
           <ChevronLeft size={14} /> Prev
         </button>
         <div className="flex-1 flex gap-1 justify-center">
           {data.slides.map((_, i) => (
-            <div key={i} className={cn("h-1.5 rounded-full transition-all", i === slideIdx ? "w-4 bg-primary" : "w-1.5 bg-muted")} />
+            <div key={i} className={cn("h-1.5 rounded-full transition-all cursor-default",
+              i === slideIdx ? "w-5 bg-primary" : "w-1.5 bg-muted hover:bg-muted-foreground/30")} />
           ))}
         </div>
-        <button onClick={onNext} disabled={slideIdx === total - 1} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
+        <button onClick={onNext} disabled={slideIdx === total - 1}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 transition-all">
           Next <ChevronRight size={14} />
         </button>
       </div>
-      <div className="space-y-0.5 pt-2">
+
+      {/* Slide thumbnail strip */}
+      <div className="border border-border rounded-xl overflow-hidden divide-y divide-border/50">
+        <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest px-4 py-2 bg-muted/20">All slides</p>
         {data.slides.map((s, i) => (
-          <div key={i} className={cn("flex items-center gap-3 px-2 py-1.5 rounded-lg text-xs transition-colors", i === slideIdx ? "text-foreground" : "text-muted-foreground/50")}>
-            <span className="font-mono text-[10px] w-5 text-right shrink-0">{i + 1}</span>
-            <span className="truncate">{s.title}</span>
-          </div>
+          <button key={i} onClick={() => { for (let k = slideIdx; k < i; k++) onNext(); for (let k = slideIdx; k > i; k--) onPrev(); }}
+            className={cn("w-full flex items-center gap-3 px-4 py-2.5 text-xs transition-colors text-left",
+              i === slideIdx ? "bg-primary/6 text-foreground" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/30")}>
+            <span className="font-mono text-[10px] w-5 text-right shrink-0 text-muted-foreground/40">{i + 1}</span>
+            <span className={cn("w-2 h-2 rounded-sm shrink-0",
+              s.type === "title" ? "bg-primary/60" :
+              s.type === "agenda" ? "bg-slate-400/60" :
+              s.type === "conclusion" ? "bg-emerald-400/60" : "bg-border")} />
+            <span className="truncate flex-1">{s.title}</span>
+            <span className="text-[9px] text-muted-foreground/30 shrink-0 capitalize">{s.type}</span>
+          </button>
         ))}
       </div>
     </div>
