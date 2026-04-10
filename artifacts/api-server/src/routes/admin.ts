@@ -321,23 +321,61 @@ router.get("/admin/users", async (req: Request, res: Response) => {
     const planMap = Object.fromEntries(subRows.rows.map((r) => [r.user_id, r]));
     const banMap = Object.fromEntries(banRows.rows.map((r) => [r.user_id, r]));
 
-    // Query Supabase auth.users (real user store — Supabase Auth lives here, not in a custom table)
+    // Query Supabase users via the Admin REST API (requires SUPABASE_SERVICE_ROLE_KEY).
+    // Direct SQL against auth.users is blocked by Supabase's RLS/role restrictions.
     type AuthUser = { id: string; email: string | null; created_at: string; last_sign_in_at: string | null };
     let authUsers: AuthUser[] = [];
     let hasEmailData = false;
     let supabaseError: string | null = null;
-    try {
-      const result = await pool.query<AuthUser>(
-        `SELECT id::text, email, created_at, last_sign_in_at
-         FROM auth.users
-         ORDER BY created_at DESC
-         LIMIT 500`
-      );
-      authUsers = result.rows;
-      hasEmailData = true;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      supabaseError = `auth.users unavailable (${msg}). Showing users from activity data only.`;
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseUrl && serviceRoleKey) {
+      try {
+        // Paginate through all users (Supabase default page size is 50, max 1000)
+        let page = 1;
+        const perPage = 1000;
+        let fetchMore = true;
+        while (fetchMore) {
+          const resp = await fetch(
+            `${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
+            {
+              headers: {
+                Authorization: `Bearer ${serviceRoleKey}`,
+                apikey: serviceRoleKey,
+              },
+            }
+          );
+          if (!resp.ok) {
+            const errText = await resp.text().catch(() => resp.statusText);
+            throw new Error(`Supabase Admin API ${resp.status}: ${errText}`);
+          }
+          const body = await resp.json() as { users?: AuthUser[]; total?: number };
+          const batch = body.users ?? [];
+          authUsers = authUsers.concat(
+            batch.map((u) => ({
+              id: u.id,
+              email: u.email ?? null,
+              created_at: u.created_at,
+              last_sign_in_at: u.last_sign_in_at ?? null,
+            }))
+          );
+          // Stop when we receive fewer users than requested (last page)
+          fetchMore = batch.length === perPage;
+          page++;
+        }
+        hasEmailData = true;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        supabaseError = `Supabase Admin API error: ${msg}`;
+      }
+    } else {
+      const missing = [
+        !supabaseUrl && "SUPABASE_URL",
+        !serviceRoleKey && "SUPABASE_SERVICE_ROLE_KEY",
+      ].filter(Boolean).join(", ");
+      supabaseError = `Add ${missing} to Render env vars to see user emails here. Showing users from activity data only.`;
     }
 
     const authUserMap = Object.fromEntries(authUsers.map((u) => [u.id, u]));

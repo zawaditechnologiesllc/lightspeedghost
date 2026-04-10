@@ -292,6 +292,21 @@ app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 // ── Auth — resolve userId from session or Bearer JWT ─────────────────────────
 app.use(authMiddleware);
 
+// ── /api/me — returns the authenticated user's id/email (auth debug helper) ───
+// Visit https://your-render-url.onrender.com/api/me in the browser with a valid
+// Supabase JWT to quickly confirm that JWT verification is working on Render.
+app.get("/api/me", (req: Request, res: Response) => {
+  if (!req.userId) {
+    res.status(401).json({
+      authenticated: false,
+      hint: "JWT verification failed or no Authorization header sent. " +
+        "Ensure SUPABASE_URL and SUPABASE_JWT_SECRET are set on Render, then redeploy.",
+    });
+    return;
+  }
+  res.json({ authenticated: true, userId: req.userId, email: req.userEmail ?? null });
+});
+
 // ── Public status endpoint — returns maintenance + signup state ───────────────
 // Must be AFTER CORS (so browsers can call it) but BEFORE maintenance middleware
 // so the frontend can always reach it regardless of maintenance state.
