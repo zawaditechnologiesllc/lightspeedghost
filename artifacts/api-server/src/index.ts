@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureUsageTable } from "./lib/usageTracker";
+import { initReferralTables } from "./routes/referral";
 import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
@@ -155,6 +156,14 @@ async function runStartupTasks(): Promise<void> {
     logger.info("[startup] student_profiles table ready");
   } catch (err) {
     logger.error({ err }, "[startup] Failed to ensure student_profiles table");
+  }
+
+  // 7. Ensure referral tables exist (affiliate / ambassador program)
+  try {
+    await initReferralTables();
+    logger.info("[startup] referral tables ready");
+  } catch (err) {
+    logger.error({ err }, "[startup] Failed to ensure referral tables — affiliate program may fail");
   }
 }
 

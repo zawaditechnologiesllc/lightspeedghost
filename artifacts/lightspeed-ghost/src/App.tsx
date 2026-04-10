@@ -197,6 +197,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/confirm-email" component={ConfirmEmail} />
       <Route path="/invite" component={Invite} />
+      <Route path="/ref/:code" component={Invite} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/refunds" component={RefundPolicy} />

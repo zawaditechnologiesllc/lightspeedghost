@@ -8,7 +8,7 @@ import {
   ArrowUp, ArrowDown, ReceiptText, UserX, UserCheck, Edit2, Check,
   Radio, ServerCrash, Database, Clock, CheckCheck, XCircle, Signal,
   Megaphone, Link2, Eye, EyeOff, ThumbsUp, ThumbsDown,
-  Wrench, ToggleLeft, ToggleRight, Timer, BarChart2,
+  Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
@@ -28,7 +28,7 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "tools" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "settings";
+type Tab = "overview" | "users" | "tools" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings";
 
 interface AdminTool {
   key: string;
@@ -322,6 +322,24 @@ export default function Admin() {
     totalLaunches: number; launches7d: number; launches30d: number;
     byPlatform: Array<{ platform: string; installs: string; launches: string }>;
   } | null>(null);
+  const [referralData, setReferralData] = useState<{
+    summary: {
+      totalReferrers: number; totalReferrals: number; totalConversions: number;
+      totalCommissionsCents: number; pendingCommissionsCents: number;
+    };
+    referrers: Array<{
+      code: string; userId: string; createdAt: string;
+      referrals: number; conversions: number;
+      totalEarnedCents: number; pendingCents: number; paidCents: number;
+    }>;
+    conversions: Array<{
+      id: number; referral_code: string; referred_user_id: string;
+      amount_cents: number; commission_cents: number; status: string;
+      created_at: string; paid_at: string | null;
+    }>;
+  } | null>(null);
+  const [payingOutRef, setPayingOutRef] = useState<string | null>(null);
+  const [payingOutId, setPayingOutId] = useState<number | null>(null);
 
   const isAuthed = !!password;
 
@@ -499,6 +517,15 @@ export default function Admin() {
     } catch { setFeedbackStats([]); }
   }, [password]);
 
+  const loadReferrals = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch("/admin/referrals", password) as typeof referralData;
+      setReferralData(data);
+    } catch { setReferralData(null); }
+    finally { setLoading(false); }
+  }, [password]);
+
   async function wakeBeforeLogin() {
     setPreLoginWaking(true);
     setPreLoginStatus("idle");
@@ -546,6 +573,7 @@ export default function Admin() {
     if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); loadPwaStats(); }
     if (activeTab === "logs") loadLogs();
     if (activeTab === "announcements") loadAnnouncements();
+    if (activeTab === "referrals") loadReferrals();
   }, [isAuthed, activeTab]);
 
   useEffect(() => {
@@ -786,6 +814,7 @@ export default function Admin() {
     { id: "credits",        label: "Credits",        icon: Coins },
     { id: "finance",        label: "Finance",        icon: BarChart3 },
     { id: "announcements",  label: "Announcements",  icon: Megaphone },
+    { id: "referrals",      label: "Referrals",      icon: Share2 },
     { id: "settings",       label: "Settings",       icon: Settings },
   ];
 
@@ -978,6 +1007,7 @@ export default function Admin() {
                           { id: "credits",       label: "Credits",        sub: "Balances & topups",         icon: Coins,        color: "text-orange-400",  bg: "bg-orange-500/8",  border: "border-orange-500/12" },
                           { id: "finance",       label: "Finance",        sub: "Revenue & reports",         icon: BarChart3,    color: "text-emerald-400", bg: "bg-emerald-500/8", border: "border-emerald-500/12" },
                           { id: "announcements", label: "Announcements",  sub: "Banner messages",           icon: Megaphone,    color: "text-pink-400",    bg: "bg-pink-500/8",    border: "border-pink-500/12" },
+                          { id: "referrals",     label: "Referrals",      sub: "Affiliate commissions",     icon: Share2,       color: "text-lime-400",    bg: "bg-lime-500/8",    border: "border-lime-500/12" },
                           { id: "settings",      label: "Settings",       sub: "Platform config",           icon: Settings,     color: "text-white/50",    bg: "bg-white/5",       border: "border-white/10" },
                         ] as const).map(({ id, label, sub, icon: Icon, color, bg, border }) => (
                           <button
@@ -1938,6 +1968,180 @@ export default function Admin() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* ── Referrals ─────────────────────────────────────────────── */}
+            {activeTab === "referrals" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <SectionHeader title="Affiliate Program" sub="10% commission on every paying referral" />
+                  <button onClick={loadReferrals} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white/40 hover:text-white/70 hover:bg-white/5 border border-white/8 rounded-lg transition-all">
+                    <RefreshCw size={11} /> Refresh
+                  </button>
+                </div>
+
+                {loading && !referralData && (
+                  <div className="flex items-center justify-center h-40 text-white/30"><Loader2 size={20} className="animate-spin" /></div>
+                )}
+
+                {referralData && (
+                  <>
+                    {/* Summary stats */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {[
+                        { label: "Active Referrers", value: referralData.summary.totalReferrers.toString(),    icon: Users,            color: "text-blue-400" },
+                        { label: "Total Signups",    value: referralData.summary.totalReferrals.toString(),   icon: Share2,           color: "text-violet-400" },
+                        { label: "Conversions",      value: referralData.summary.totalConversions.toString(),  icon: CheckCircle2,     color: "text-emerald-400" },
+                        { label: "Total Earned",     value: `$${(referralData.summary.totalCommissionsCents / 100).toFixed(2)}`,  icon: BadgeDollarSign,  color: "text-lime-400" },
+                        { label: "Pending Payout",   value: `$${(referralData.summary.pendingCommissionsCents / 100).toFixed(2)}`, icon: Gift,             color: "text-amber-400" },
+                      ].map(({ label, value, icon: Icon, color }) => (
+                        <div key={label} className="bg-white/[0.02] border border-white/8 rounded-xl p-4">
+                          <Icon size={14} className={`${color} mb-2`} />
+                          <div className="text-xl font-bold text-white tabular-nums">{value}</div>
+                          <div className="text-xs text-white/35 mt-0.5">{label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Per-referrer table */}
+                    <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                      <div className="px-4 py-3 border-b border-white/8 flex items-center gap-2">
+                        <Share2 size={13} className="text-lime-400" />
+                        <span className="text-sm font-semibold text-white/70">Ambassador Leaderboard</span>
+                        <span className="ml-auto text-xs text-white/25">{referralData.referrers.length} referrers</span>
+                      </div>
+                      {referralData.referrers.length === 0 ? (
+                        <div className="px-4 py-10 text-center text-white/25 text-sm">No referrers yet</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-white/5 text-white/30">
+                                <th className="text-left px-4 py-2.5 font-medium">Code</th>
+                                <th className="text-left px-4 py-2.5 font-medium">User ID</th>
+                                <th className="text-right px-4 py-2.5 font-medium">Signups</th>
+                                <th className="text-right px-4 py-2.5 font-medium">Paid</th>
+                                <th className="text-right px-4 py-2.5 font-medium">Earned</th>
+                                <th className="text-right px-4 py-2.5 font-medium">Pending</th>
+                                <th className="text-right px-4 py-2.5 font-medium">Paid Out</th>
+                                <th className="px-4 py-2.5" />
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {referralData.referrers.map((r) => (
+                                <tr key={r.code} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-4 py-2.5 font-mono font-bold text-lime-300">{r.code}</td>
+                                  <td className="px-4 py-2.5 text-white/40 font-mono truncate max-w-[120px]">{r.userId.slice(0, 12)}…</td>
+                                  <td className="px-4 py-2.5 text-right text-white/70 tabular-nums">{r.referrals}</td>
+                                  <td className="px-4 py-2.5 text-right text-white/70 tabular-nums">{r.conversions}</td>
+                                  <td className="px-4 py-2.5 text-right text-lime-300 font-semibold tabular-nums">${(r.totalEarnedCents / 100).toFixed(2)}</td>
+                                  <td className="px-4 py-2.5 text-right text-amber-300 tabular-nums">${(r.pendingCents / 100).toFixed(2)}</td>
+                                  <td className="px-4 py-2.5 text-right text-white/40 tabular-nums">${(r.paidCents / 100).toFixed(2)}</td>
+                                  <td className="px-4 py-2.5 text-right">
+                                    {r.pendingCents > 0 && (
+                                      <button
+                                        disabled={payingOutRef === r.code}
+                                        onClick={async () => {
+                                          setPayingOutRef(r.code);
+                                          try {
+                                            await adminFetch(`/admin/referrals/code/${r.code}/payout-all`, password, { method: "POST" });
+                                            await loadReferrals();
+                                          } catch { /* ignore */ }
+                                          finally { setPayingOutRef(null); }
+                                        }}
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-lime-500/15 text-lime-400 hover:bg-lime-500/25 border border-lime-500/20 transition-all text-xs font-medium disabled:opacity-40"
+                                      >
+                                        {payingOutRef === r.code ? <Loader2 size={10} className="animate-spin" /> : <CheckCheck size={10} />}
+                                        Pay all
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Recent conversions table */}
+                    <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                      <div className="px-4 py-3 border-b border-white/8 flex items-center gap-2">
+                        <BadgeDollarSign size={13} className="text-emerald-400" />
+                        <span className="text-sm font-semibold text-white/70">Recent Conversions</span>
+                        <span className="ml-auto text-xs text-white/25">{referralData.conversions.length} records</span>
+                      </div>
+                      {referralData.conversions.length === 0 ? (
+                        <div className="px-4 py-10 text-center text-white/25 text-sm">No conversions yet — commissions appear here after a referred user pays</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-white/5 text-white/30">
+                                <th className="text-left px-4 py-2.5 font-medium">ID</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Code</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Referred User</th>
+                                <th className="text-right px-4 py-2.5 font-medium">Payment</th>
+                                <th className="text-right px-4 py-2.5 font-medium">Commission (10%)</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Status</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Date</th>
+                                <th className="px-4 py-2.5" />
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {referralData.conversions.map((c) => (
+                                <tr key={c.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-4 py-2.5 text-white/30 tabular-nums">#{c.id}</td>
+                                  <td className="px-4 py-2.5 font-mono font-bold text-lime-300">{c.referral_code}</td>
+                                  <td className="px-4 py-2.5 text-white/40 font-mono">{c.referred_user_id.slice(0, 10)}…</td>
+                                  <td className="px-4 py-2.5 text-right text-white/70 tabular-nums">${(c.amount_cents / 100).toFixed(2)}</td>
+                                  <td className="px-4 py-2.5 text-right text-lime-300 font-semibold tabular-nums">${(c.commission_cents / 100).toFixed(2)}</td>
+                                  <td className="px-4 py-2.5">
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                                      c.status === "paid"
+                                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                                        : "bg-amber-500/15 text-amber-400 border-amber-500/20"
+                                    }`}>
+                                      {c.status === "paid" ? <CheckCircle2 size={9} /> : <Clock size={9} />}
+                                      {c.status}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2.5 text-white/30">{new Date(c.created_at).toLocaleDateString()}</td>
+                                  <td className="px-4 py-2.5">
+                                    {c.status === "pending" && (
+                                      <button
+                                        disabled={payingOutId === c.id}
+                                        onClick={async () => {
+                                          setPayingOutId(c.id);
+                                          try {
+                                            await adminFetch(`/admin/referrals/${c.id}/payout`, password, { method: "POST" });
+                                            await loadReferrals();
+                                          } catch { /* ignore */ }
+                                          finally { setPayingOutId(null); }
+                                        }}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/15 transition-all text-xs disabled:opacity-40"
+                                      >
+                                        {payingOutId === c.id ? <Loader2 size={9} className="animate-spin" /> : <Check size={9} />}
+                                        Pay
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-blue-500/5 border border-blue-500/15 rounded-xl p-4 text-xs text-blue-300/70 leading-relaxed">
+                      <strong className="text-blue-300">How it works:</strong> Students share their unique <code className="font-mono bg-white/5 px-1 rounded">/ref/CODE</code> link.
+                      When a referred user pays for any plan or PAYG service, 10% commission is recorded here with status <em>pending</em>.
+                      Mark individual conversions or all conversions for a referrer as paid once you've sent the payout (e.g. via PayPal, Venmo, or platform credit).
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

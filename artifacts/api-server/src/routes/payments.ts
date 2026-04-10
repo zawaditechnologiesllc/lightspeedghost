@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import crypto from "node:crypto";
 import Stripe from "stripe";
+import { maybeRecordReferralCommission } from "./referral";
 import { pool } from "@workspace/db";
 import {
   resolveGateway,
@@ -892,6 +893,7 @@ router.post("/payments/webhook/stripe", async (req: Request, res: Response) => {
            WHERE gateway_session_id=$1`,
           [session.id]
         );
+        await maybeRecordReferralCommission(userId, session.amount_total ?? 0);
       }
     } else if (event.type === "customer.subscription.deleted") {
       const sub = event.data.object as Stripe.Subscription;

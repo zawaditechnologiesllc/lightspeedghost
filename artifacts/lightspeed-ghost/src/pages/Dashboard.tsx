@@ -1,9 +1,12 @@
 import { Link } from "wouter";
+import { useState, useEffect } from "react";
 import {
   PenLine, BookOpen, Files, ShieldCheck, FlaskConical,
   GraduationCap, TrendingUp, Clock, ArrowRight, Sparkles, Zap, Wand2,
+  Share2, Copy, Check, Gift,
 } from "lucide-react";
 import { useGetDocumentStats } from "@workspace/api-client-react";
+import { apiFetch } from "@/lib/apiFetch";
 
 const quickActions = [
   {
@@ -64,8 +67,51 @@ const quickActions = [
   },
 ];
 
+interface ReferralInfo {
+  code: string;
+  referrals: number;
+  conversions: number;
+  totalEarnedCents: number;
+  pendingCents: number;
+}
+
 export default function Dashboard() {
   const { data: stats, isLoading } = useGetDocumentStats();
+  const [referral, setReferral] = useState<ReferralInfo | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // If the user signed up via a referral link, record it now that they have a session
+    const storedRef = localStorage.getItem("lsg_ref");
+    if (storedRef) {
+      apiFetch("/referral/record-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: storedRef }),
+      }).then(() => {
+        localStorage.removeItem("lsg_ref");
+      }).catch(() => { /* non-fatal */ });
+    }
+
+    // Load the user's own referral code + stats
+    apiFetch("/referral/my-code")
+      .then((r) => r.json())
+      .then((d: ReferralInfo) => { if (!cancelled) setReferral(d); })
+      .catch(() => { /* non-fatal */ });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  function copyLink() {
+    if (!referral) return;
+    const link = `${window.location.origin}/ref/${referral.code}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5 sm:space-y-7">
@@ -109,6 +155,55 @@ export default function Dashboard() {
               <StatCard label="Study Sessions" value={stats?.studySessions ?? 0} icon={<GraduationCap size={15} />} color="text-sky-500" />
             </>
           )}
+      </div>
+
+      {/* Refer & Earn */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500/8 via-emerald-500/4 to-transparent border border-emerald-500/20 rounded-2xl p-4 sm:p-5">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Gift size={13} className="text-emerald-400" />
+              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Refer & Earn</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5 max-w-md">
+              Earn <span className="text-foreground font-semibold">10% commission</span> for every student you refer who pays. Share your unique link below.
+            </p>
+            {/* Referral link */}
+            <div className="mt-3 flex items-center gap-2 max-w-sm">
+              <div className="flex-1 min-w-0 bg-background/60 border border-border rounded-lg px-3 py-2 text-xs font-mono text-muted-foreground truncate">
+                {referral ? `${window.location.origin}/ref/${referral.code}` : "Loading…"}
+              </div>
+              <button
+                onClick={copyLink}
+                disabled={!referral}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors disabled:opacity-40"
+              >
+                {copied ? <Check size={12} /> : <Copy size={12} />}
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          </div>
+          {/* Stats */}
+          {referral && (
+            <div className="flex sm:flex-col gap-4 sm:gap-2 shrink-0 sm:text-right">
+              <div>
+                <div className="text-xl font-bold text-foreground tabular-nums">{referral.referrals}</div>
+                <div className="text-xs text-muted-foreground">Signups</div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-foreground tabular-nums">{referral.conversions}</div>
+                <div className="text-xs text-muted-foreground">Conversions</div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-emerald-400 tabular-nums">
+                  ${(referral.totalEarnedCents / 100).toFixed(2)}
+                </div>
+                <div className="text-xs text-muted-foreground">Earned</div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Quick actions */}
