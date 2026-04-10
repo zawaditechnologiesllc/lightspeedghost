@@ -25,19 +25,19 @@ interface ToolItem {
 }
 
 const TOOLS: ToolItem[] = [
-  { key: "paper",      label: "Write Paper",          desc: "Full paper with real verified citations",     icon: PenLine,       color: "text-blue-400",    bg: "bg-blue-500/10",   tiered: true },
-  { key: "revision",   label: "Revise Paper",          desc: "AI revision with tracked changes",            icon: Files,         color: "text-violet-400",  bg: "bg-violet-500/10", tiered: true },
-  { key: "humanizer",  label: "LightSpeed Humanizer",  desc: "AI bypass — drop score below 15%",           icon: Wand2,         color: "text-purple-400",  bg: "bg-purple-500/10", tiered: true },
-  { key: "stem",       label: "STEM Problem",          desc: "Step-by-step solve with graphs — $0.99",     icon: FlaskConical,  color: "text-cyan-400",    bg: "bg-cyan-500/10",   tiered: false },
-  { key: "study",      label: "Study Day Pass",        desc: "Unlimited AI tutor for 24 hours — $1.99",    icon: GraduationCap, color: "text-amber-400",   bg: "bg-amber-500/10",  tiered: false },
-  { key: "plagiarism", label: "Plagiarism Check",      desc: "Full AI + similarity scan — $0.99",          icon: ShieldCheck,   color: "text-emerald-400", bg: "bg-emerald-500/10",tiered: false },
-  { key: "outline",    label: "Outline",               desc: "Structured outline for any paper — $0.49",   icon: BookOpen,      color: "text-indigo-400",  bg: "bg-indigo-500/10", tiered: false },
+  { key: "paper",      label: "Write Paper",          desc: "Full paper with real verified citations",      icon: PenLine,       color: "text-blue-400",    bg: "bg-blue-500/10",    tiered: true },
+  { key: "revision",   label: "Revise Paper",          desc: "AI revision with tracked changes",             icon: Files,         color: "text-violet-400",  bg: "bg-violet-500/10",  tiered: true },
+  { key: "humanizer",  label: "LightSpeed Humanizer",  desc: "AI bypass — drop score below 5%",             icon: Wand2,         color: "text-purple-400",  bg: "bg-purple-500/10",  tiered: true },
+  { key: "stem",       label: "STEM Problem",          desc: "Step-by-step solve with graphs — $1.99",      icon: FlaskConical,  color: "text-cyan-400",    bg: "bg-cyan-500/10",    tiered: false },
+  { key: "study",      label: "Study Day Pass",        desc: "Unlimited AI tutor for 24 hours — $2.99",     icon: GraduationCap, color: "text-amber-400",   bg: "bg-amber-500/10",   tiered: false },
+  { key: "plagiarism", label: "Plagiarism Check",      desc: "Full AI + similarity scan — $1.99",           icon: ShieldCheck,   color: "text-emerald-400", bg: "bg-emerald-500/10", tiered: false },
+  { key: "outline",    label: "Outline",               desc: "Structured outline for any paper — $1.99",    icon: BookOpen,      color: "text-indigo-400",  bg: "bg-indigo-500/10",  tiered: false },
 ];
 
 const TIER_MIN: Partial<Record<PaygTool, number>> = {
-  paper:     199,
-  revision:  99,
-  humanizer: 99,
+  paper:     399,
+  revision:  199,
+  humanizer: 199,
 };
 
 export function PAYGMarketModal({ open, onClose }: PAYGMarketModalProps) {

@@ -50,9 +50,10 @@ const GATEWAY_ICONS: Record<string, React.ElementType> = {
 };
 
 const PLAN_AMOUNTS: Record<PlanId, number> = {
+  starter_monthly:   150,
   pro_monthly:      1499,
   pro_annual:       9900,
-  campus_annual:    600,
+  campus_annual:     600,
 };
 
 export function CheckoutModal({

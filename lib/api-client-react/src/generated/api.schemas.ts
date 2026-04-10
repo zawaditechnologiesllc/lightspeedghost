@@ -212,6 +212,12 @@ export interface PlagiarismResult {
   aiSections: PlagiarismResultAiSectionsItem[];
   plagiarismSources: PlagiarismResultPlagiarismSourcesItem[];
   overallRisk: PlagiarismResultOverallRisk;
+  /** Lexical diversity percentage (0-100), if available */
+  lexicalDiversity?: number;
+  /** Average sentence length in words, if available */
+  avgSentenceLength?: number;
+  /** Detected AI indicator flags, if available */
+  aiFlags?: string[];
 }
 
 export type HumanizeBodyIntensity =
@@ -385,8 +391,11 @@ export type ListDocumentsType =
   (typeof ListDocumentsType)[keyof typeof ListDocumentsType];
 
 export const ListDocumentsType = {
-  paper: "paper",
-  revision: "revision",
-  stem: "stem",
-  study: "study",
+  paper:      "paper",
+  outline:    "outline",
+  revision:   "revision",
+  humanizer:  "humanizer",
+  plagiarism: "plagiarism",
+  stem:       "stem",
+  study:      "study",
 } as const;

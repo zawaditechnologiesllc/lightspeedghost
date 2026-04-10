@@ -126,7 +126,7 @@ const faqs = [
   },
   {
     q: "How does Pay-As-You-Go work?",
-    a: "No subscription needed. You pay per job at the time of use. Paper generation is priced by document type — from $1.99 for a short discussion post up to $24.99 for a full dissertation. Plagiarism checks are $0.99 per submission (Scribbr charges $19.95 for the same thing). Credits never expire. If you find yourself using PAYG more than twice a month, Pro becomes the better deal.",
+    a: "No subscription needed. You pay per job at the time of use. Paper generation is priced by document type — from $3.99 for a short discussion post up to $59.99 for a full dissertation. Plagiarism checks are $1.99 per submission (Scribbr charges $19.95 for the same thing). Credits never expire. If you write even one research paper a month on PAYG ($14.99), Pro at the same price becomes the smarter deal.",
   },
 ];
 
@@ -203,31 +203,31 @@ const paygWritingTools = [
   {
     tool: "Paper Writer", toolId: "paper" as PaygTool, color: "blue", Icon: PenLine,
     tiers: [
-      { label: "Discussion / Short response", words: "≤ 500 words",          price: "$1.99", tier: "discussion" as DocumentTier },
-      { label: "Essay",                        words: "500 – 1,500 words",    price: "$3.99", tier: "essay" as DocumentTier },
-      { label: "Research Paper",               words: "1,500 – 3,500 words",  price: "$7.99", tier: "research" as DocumentTier },
-      { label: "Proposal / Report",            words: "3,500 – 6,000 words",  price: "$12.99", tier: "proposal" as DocumentTier },
-      { label: "Dissertation / Thesis",        words: "6,000 – 15,000 words", price: "$24.99", tier: "dissertation" as DocumentTier },
+      { label: "Discussion / Short response", words: "≤ 500 words",          price: "$3.99",  tier: "discussion" as DocumentTier },
+      { label: "Essay",                        words: "500 – 1,500 words",    price: "$7.99",  tier: "essay" as DocumentTier },
+      { label: "Research Paper",               words: "1,500 – 3,500 words",  price: "$14.99", tier: "research" as DocumentTier },
+      { label: "Proposal / Report",            words: "3,500 – 6,000 words",  price: "$24.99", tier: "proposal" as DocumentTier },
+      { label: "Dissertation / Thesis",        words: "6,000 – 15,000 words", price: "$59.99", tier: "dissertation" as DocumentTier },
     ],
   },
   {
     tool: "Revision", toolId: "revision" as PaygTool, color: "violet", Icon: FileText,
     tiers: [
-      { label: "Discussion",         words: "≤ 500 words",          price: "$0.99",  tier: "discussion" as DocumentTier },
-      { label: "Essay",              words: "500 – 1,500 words",    price: "$1.99",  tier: "essay" as DocumentTier },
-      { label: "Research Paper",     words: "1,500 – 3,500 words",  price: "$3.99",  tier: "research" as DocumentTier },
-      { label: "Proposal / Report",  words: "3,500 – 6,000 words",  price: "$5.99",  tier: "proposal" as DocumentTier },
-      { label: "Dissertation",       words: "6,000 – 15,000 words", price: "$9.99",  tier: "dissertation" as DocumentTier },
+      { label: "Discussion",         words: "≤ 500 words",          price: "$1.99",  tier: "discussion" as DocumentTier },
+      { label: "Essay",              words: "500 – 1,500 words",    price: "$3.99",  tier: "essay" as DocumentTier },
+      { label: "Research Paper",     words: "1,500 – 3,500 words",  price: "$7.99",  tier: "research" as DocumentTier },
+      { label: "Proposal / Report",  words: "3,500 – 6,000 words",  price: "$12.99", tier: "proposal" as DocumentTier },
+      { label: "Dissertation",       words: "6,000 – 15,000 words", price: "$24.99", tier: "dissertation" as DocumentTier },
     ],
   },
   {
     tool: "LightSpeed Humanizer", toolId: "humanizer" as PaygTool, color: "indigo", Icon: Sparkles,
     tiers: [
-      { label: "Discussion",         words: "≤ 500 words",          price: "$0.99",  tier: "discussion" as DocumentTier },
-      { label: "Essay",              words: "500 – 1,500 words",    price: "$1.99",  tier: "essay" as DocumentTier },
-      { label: "Research Paper",     words: "1,500 – 3,500 words",  price: "$3.99",  tier: "research" as DocumentTier },
-      { label: "Proposal / Report",  words: "3,500 – 6,000 words",  price: "$5.99",  tier: "proposal" as DocumentTier },
-      { label: "Dissertation",       words: "6,000 – 15,000 words", price: "$9.99",  tier: "dissertation" as DocumentTier },
+      { label: "Discussion",         words: "≤ 500 words",          price: "$1.99",  tier: "discussion" as DocumentTier },
+      { label: "Essay",              words: "500 – 1,500 words",    price: "$3.99",  tier: "essay" as DocumentTier },
+      { label: "Research Paper",     words: "1,500 – 3,500 words",  price: "$7.99",  tier: "research" as DocumentTier },
+      { label: "Proposal / Report",  words: "3,500 – 6,000 words",  price: "$12.99", tier: "proposal" as DocumentTier },
+      { label: "Dissertation",       words: "6,000 – 15,000 words", price: "$24.99", tier: "dissertation" as DocumentTier },
     ],
   },
 ];
@@ -235,22 +235,22 @@ const paygWritingTools = [
 const paygFlatTools = [
   {
     tool: "STEM Solver", toolId: "stem" as PaygTool, Icon: FlaskConical, color: "cyan",
-    price: "$0.99", unit: "per problem",
+    price: "$1.99", unit: "per problem",
     note: "Math, Physics, Chemistry, Biology, CS — step-by-step with formulas",
   },
   {
     tool: "Study Assistant", toolId: "study" as PaygTool, Icon: GraduationCap, color: "amber",
-    price: "$1.99", unit: "/ day pass",
+    price: "$2.99", unit: "/ day pass",
     note: "Unlimited Q&A turns for 24 hours. Flashcards, summaries, quiz mode.",
   },
   {
     tool: "Plagiarism + AI Check", toolId: "plagiarism" as PaygTool, Icon: ShieldCheck, color: "emerald",
-    price: "$0.99", unit: "per submission",
+    price: "$1.99", unit: "per submission",
     note: "Similarity detection across 99B+ academic sources. Includes AI-generated content scoring.",
   },
   {
     tool: "Outline Generator", toolId: "outline" as PaygTool, Icon: BookOpen, color: "orange",
-    price: "$0.49", unit: "per outline",
+    price: "$1.99", unit: "per outline",
     note: "Full hierarchical outline for any document type. APA / MLA ready.",
   },
 ];

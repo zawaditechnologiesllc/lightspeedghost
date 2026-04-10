@@ -48,30 +48,30 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 
 export const PAYG_PRICES: Record<PaygTool, number | Partial<Record<DocumentTier, number>>> = {
   paper: {
+    discussion:    399,
+    essay:         799,
+    research:     1499,
+    proposal:     2499,
+    dissertation: 5999,
+  },
+  revision: {
     discussion:   199,
     essay:        399,
     research:     799,
     proposal:    1299,
     dissertation: 2499,
   },
-  revision: {
-    discussion:   99,
-    essay:        199,
-    research:     399,
-    proposal:     599,
-    dissertation: 999,
-  },
   humanizer: {
-    discussion:   99,
-    essay:        199,
-    research:     399,
-    proposal:     599,
-    dissertation: 999,
+    discussion:   199,
+    essay:        399,
+    research:     799,
+    proposal:    1299,
+    dissertation: 2499,
   },
-  stem:       99,
-  study:      199,
-  plagiarism:  99,
-  outline:     49,
+  stem:       199,
+  study:      299,
+  plagiarism: 199,
+  outline:    199,
 };
 
 export const DOCUMENT_TIERS: DocumentTier[] = [

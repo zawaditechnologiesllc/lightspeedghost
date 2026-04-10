@@ -164,8 +164,8 @@ export default function Dashboard() {
                     <span>{new Date(doc.updatedAt).toLocaleDateString()}</span>
                   </div>
                 </div>
-                {doc.wordCount > 0 && (
-                  <div className="text-xs text-muted-foreground shrink-0 tabular-nums">{doc.wordCount.toLocaleString()}w</div>
+                {(doc.wordCount ?? 0) > 0 && (
+                  <div className="text-xs text-muted-foreground shrink-0 tabular-nums">{(doc.wordCount ?? 0).toLocaleString()}w</div>
                 )}
               </div>
             ))}
@@ -188,30 +188,39 @@ function StatCard({ label, value, icon, color }: { label: string; value: number;
 
 function docColor(type: string) {
   const map: Record<string, string> = {
-    paper: "bg-blue-500/10",
-    revision: "bg-indigo-500/10",
-    stem: "bg-violet-500/10",
-    study: "bg-cyan-500/10",
+    paper:      "bg-blue-500/10",
+    outline:    "bg-emerald-500/10",
+    revision:   "bg-indigo-500/10",
+    humanizer:  "bg-purple-500/10",
+    plagiarism: "bg-rose-500/10",
+    stem:       "bg-violet-500/10",
+    study:      "bg-cyan-500/10",
   };
   return map[type] ?? "bg-primary/10";
 }
 
 function docBadge(type: string) {
   const map: Record<string, string> = {
-    paper: "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400",
-    revision: "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400",
-    stem: "bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400",
-    study: "bg-cyan-100 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-400",
+    paper:      "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400",
+    outline:    "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400",
+    revision:   "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400",
+    humanizer:  "bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400",
+    plagiarism: "bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400",
+    stem:       "bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400",
+    study:      "bg-cyan-100 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-400",
   };
   return map[type] ?? "bg-muted text-muted-foreground";
 }
 
 function DocIcon({ type }: { type: string }) {
   const icons: Record<string, React.ReactNode> = {
-    paper: <PenLine size={14} className="text-blue-500" />,
-    revision: <Files size={14} className="text-indigo-500" />,
-    stem: <FlaskConical size={14} className="text-violet-500" />,
-    study: <GraduationCap size={14} className="text-cyan-500" />,
+    paper:      <PenLine size={14} className="text-blue-500" />,
+    outline:    <BookOpen size={14} className="text-emerald-500" />,
+    revision:   <Files size={14} className="text-indigo-500" />,
+    humanizer:  <Wand2 size={14} className="text-purple-500" />,
+    plagiarism: <ShieldCheck size={14} className="text-rose-500" />,
+    stem:       <FlaskConical size={14} className="text-violet-500" />,
+    study:      <GraduationCap size={14} className="text-cyan-500" />,
   };
   return <>{icons[type] ?? <Files size={14} className="text-primary" />}</>;
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useListDocuments, useDeleteDocument, getListDocumentsQueryKey } from "@workspace/api-client-react";
+import type { ListDocumentsType } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Trash2, FileText, PenLine, FlaskConical, GraduationCap, Files, Search, ListOrdered, Wand2, ShieldCheck } from "lucide-react";
 
@@ -58,8 +59,8 @@ export default function Documents() {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useListDocuments(
-    { type: selectedType as string | undefined, limit: 100, offset: 0 },
-    { query: { queryKey: getListDocumentsQueryKey({ type: selectedType as string | undefined, limit: 100, offset: 0 }) } }
+    { type: selectedType as ListDocumentsType | undefined, limit: 100, offset: 0 },
+    { query: { queryKey: getListDocumentsQueryKey({ type: selectedType as ListDocumentsType | undefined, limit: 100, offset: 0 }) } }
   );
 
   const deleteDocument = useDeleteDocument();
@@ -153,7 +154,7 @@ export default function Documents() {
                     </span>
                     {doc.subject && <span className="text-xs text-muted-foreground">{doc.subject}</span>}
                     <span className="text-xs text-muted-foreground">{new Date(doc.updatedAt).toLocaleDateString()}</span>
-                    {doc.wordCount > 0 && <span className="text-xs text-muted-foreground">{doc.wordCount.toLocaleString()} words</span>}
+                    {(doc.wordCount ?? 0) > 0 && <span className="text-xs text-muted-foreground">{(doc.wordCount ?? 0).toLocaleString()} words</span>}
                   </div>
                 </div>
                 <button

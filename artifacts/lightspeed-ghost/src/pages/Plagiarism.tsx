@@ -595,7 +595,7 @@ export default function PlagiarismChecker() {
     setResult(null);
     setHumanizedText(null);
     try {
-      const res = await checkPlagiarism.mutateAsync({ text, checkAi: true, checkPlagiarism: true });
+      const res = await checkPlagiarism.mutateAsync({ data: { text, checkAi: true, checkPlagiarism: true } });
       setResult(res);
       setTextPhase("results");
     } catch (err) {
@@ -608,7 +608,7 @@ export default function PlagiarismChecker() {
   const handleHumanize = async () => {
     const textToHumanize = humanizedText ?? text;
     if (!textToHumanize.trim()) return;
-    const res = await humanizeText.mutateAsync({ text: textToHumanize, intensity: humanizeIntensity });
+    const res = await humanizeText.mutateAsync({ data: { text: textToHumanize, intensity: humanizeIntensity } });
     setHumanizedText(res.humanizedText);
   };
 
