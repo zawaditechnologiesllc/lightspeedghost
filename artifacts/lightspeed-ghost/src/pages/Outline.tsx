@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { ExportButtons } from "@/components/ExportButtons";
 import { wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { renderInlineMd } from "@/lib/renderInline";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/apiFetch";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
@@ -587,7 +588,7 @@ export default function Outline() {
                         {i + 1}
                       </div>
                       <div className="flex-1 min-w-0 text-left">
-                        <span className="text-sm font-semibold text-foreground block">{section.heading}</span>
+                        <span className="text-sm font-semibold text-foreground block">{renderInlineMd(section.heading)}</span>
                         {!isExpanded && section.subsections.length > 0 && (
                           <span className="text-[11px] text-muted-foreground/60 mt-0.5 block">
                             {section.subsections.slice(0, 2).join(" · ")}{section.subsections.length > 2 ? ` +${section.subsections.length - 2} more` : ""}
@@ -614,7 +615,7 @@ export default function Outline() {
                           <span className="text-[10px] text-primary font-mono mt-0.5 shrink-0 w-6 tabular-nums">
                             {i + 1}.{j + 1}
                           </span>
-                          <span className="text-sm text-foreground/80 leading-relaxed">{sub}</span>
+                          <span className="text-sm text-foreground/80 leading-relaxed">{renderInlineMd(sub)}</span>
                         </div>
                       ))}
                     </div>

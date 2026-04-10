@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
 import { ExportButtons } from "@/components/ExportButtons";
 import { wrapDocHtml, mdToBodyHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { renderInlineMd } from "@/lib/renderInline";
 import { apiFetch } from "@/lib/apiFetch";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
@@ -1175,14 +1176,14 @@ function StudyGuideView({ data, onGenerate }: { data: StudyGuideData | null; onG
           <div className="h-px bg-border" />
           {expanded.has(i) && (
             <div className="pt-4 pb-2">
-              {sec.type === "overview"  && <p className="text-sm text-muted-foreground leading-relaxed">{sec.content}</p>}
+              {sec.type === "overview"  && <p className="text-sm text-muted-foreground leading-relaxed">{renderInlineMd(sec.content)}</p>}
               {sec.type === "concepts"  && (
                 <div className="space-y-4">
                   {sec.items.map((item, ii) => (
                     <div key={ii}>
-                      <p className="text-sm font-semibold text-foreground mb-1">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">{item.explanation}</p>
-                      {item.example && <p className="text-xs text-primary/70 mt-1 italic">e.g. {item.example}</p>}
+                      <p className="text-sm font-semibold text-foreground mb-1">{renderInlineMd(item.name)}</p>
+                      <p className="text-sm text-muted-foreground">{renderInlineMd(item.explanation)}</p>
+                      {item.example && <p className="text-xs text-primary/70 mt-1 italic">e.g. {renderInlineMd(item.example)}</p>}
                     </div>
                   ))}
                 </div>
@@ -1199,7 +1200,7 @@ function StudyGuideView({ data, onGenerate }: { data: StudyGuideData | null; onG
                             <MathRenderer text={step} className="text-sm" />
                           </div>
                         ) : (
-                          <span className="text-sm text-muted-foreground leading-relaxed">{step}</span>
+                          <span className="text-sm text-muted-foreground leading-relaxed">{renderInlineMd(step)}</span>
                         )}
                       </li>
                     );
@@ -1210,7 +1211,7 @@ function StudyGuideView({ data, onGenerate }: { data: StudyGuideData | null; onG
                 <ul className="space-y-2">
                   {sec.tips.map((tip, ti) => (
                     <li key={ti} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Star size={11} className="text-yellow-500 fill-yellow-500 shrink-0 mt-1" /> {tip}
+                      <Star size={11} className="text-yellow-500 fill-yellow-500 shrink-0 mt-1" /> {renderInlineMd(tip)}
                     </li>
                   ))}
                 </ul>
