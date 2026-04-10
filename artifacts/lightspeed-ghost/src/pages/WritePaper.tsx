@@ -599,10 +599,11 @@ export default function WritePaper() {
   if (phase === "results" && result) {
     const { stats } = result;
     const targetWords = targetWordCountRef.current;
-    const gradePassing = stats.grade >= 80;
-    const aiPassing    = stats.aiScore <= 15;
-    const plagPassing  = stats.plagiarismScore <= 10;
-    const wordsPassing = stats.bodyWordCount >= Math.round(targetWords * 0.9);
+    const maxWords     = Math.ceil(targetWords * 1.10);
+    const gradePassing = stats.grade >= 92;
+    const aiPassing    = stats.aiScore <= 5;
+    const plagPassing  = stats.plagiarismScore <= 8;
+    const wordsPassing = stats.bodyWordCount >= targetWords && stats.bodyWordCount <= maxWords;
     const citePassing  = result.citations.length >= 5;
     const gradeColor = gradePassing
       ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400"
@@ -618,7 +619,7 @@ export default function WritePaper() {
             <StatCard label="Est. Grade" value={`${stats.grade}%`} color={gradeColor} sublabel="Academic quality" passing={gradePassing} />
             <StatCard label="AI Score" value={`${stats.aiScore}%`} color={aiColor} sublabel="AI detection est." passing={aiPassing} />
             <StatCard label="Plagiarism" value={`${stats.plagiarismScore}%`} color={plagColor} sublabel="Originality est." passing={plagPassing} />
-            <StatCard label="Body Words" value={stats.bodyWordCount.toLocaleString()} color="border-border bg-muted/30 text-foreground" sublabel={`Target: ${targetWords.toLocaleString()}`} passing={wordsPassing} />
+            <StatCard label="Body Words" value={stats.bodyWordCount.toLocaleString()} color="border-border bg-muted/30 text-foreground" sublabel={`${targetWords.toLocaleString()}–${maxWords.toLocaleString()} words`} passing={wordsPassing} />
             <StatCard label="Citations" value={String(result.citations.length)} color="border-border bg-muted/30 text-foreground" sublabel="Verified sources" passing={citePassing} />
           </div>
           <div className="ml-auto flex items-center gap-2 flex-wrap">
@@ -764,7 +765,7 @@ export default function WritePaper() {
                   </div>
                   <div className="text-[10px] sm:text-xs mt-1 opacity-70">Estimated Grade</div>
                   <div className="text-[9px] sm:text-[10px] mt-0.5 font-semibold">
-                    {stats.grade >= 95 ? "Distinction" : stats.grade >= 90 ? "High Merit" : stats.grade >= 80 ? "Merit" : "Pass"}
+                    {stats.grade >= 95 ? "Distinction" : stats.grade >= 92 ? "High Merit" : stats.grade >= 85 ? "Merit" : "Pass"}
                   </div>
                 </div>
                 <div className={cn("rounded-xl border p-2.5 sm:p-4 text-center", aiColor)}>
@@ -774,7 +775,7 @@ export default function WritePaper() {
                   </div>
                   <div className="text-[10px] sm:text-xs mt-1 opacity-70">AI Detection</div>
                   <div className="text-[9px] sm:text-[10px] mt-0.5 font-semibold">
-                    {stats.aiScore <= 5 ? "Excellent" : stats.aiScore <= 15 ? "Good" : "Review"}
+                    {stats.aiScore === 0 ? "Undetectable" : stats.aiScore <= 5 ? "Excellent" : "Review"}
                   </div>
                 </div>
                 <div className={cn("rounded-xl border p-2.5 sm:p-4 text-center", plagColor)}>
@@ -784,7 +785,7 @@ export default function WritePaper() {
                   </div>
                   <div className="text-[10px] sm:text-xs mt-1 opacity-70">Plagiarism Risk</div>
                   <div className="text-[9px] sm:text-[10px] mt-0.5 font-semibold">
-                    {stats.plagiarismScore <= 5 ? "Original" : stats.plagiarismScore <= 10 ? "Acceptable" : "High Risk"}
+                    {stats.plagiarismScore <= 4 ? "Original" : stats.plagiarismScore <= 8 ? "Acceptable" : "High Risk"}
                   </div>
                 </div>
               </div>
