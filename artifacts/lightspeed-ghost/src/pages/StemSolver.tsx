@@ -7,7 +7,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import {
   FlaskConical, CheckCircle, ExternalLink, Search,
   ChevronDown, ChevronUp, Dna, Sparkles, ShieldCheck,
-  AlertTriangle, XCircle, Lightbulb, Copy, CheckCheck,
+  AlertTriangle, XCircle, Copy, CheckCheck,
   Download, Loader2, RotateCcw, Camera, FileText, Zap,
   BookOpen, Atom, Calculator, Cpu, BarChart2, Layers,
   Database,
@@ -725,12 +725,6 @@ export default function StemSolver() {
                 )}
               </div>
 
-              {/* ── Responsive two-column grid ── */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-
-              {/* Left column (2/3): Answer + Steps */}
-              <div className="lg:col-span-2 space-y-4">
-
               {/* ── Answer card ── */}
               <div className="bg-card border border-green-200 dark:border-green-800/50 rounded-2xl overflow-hidden shadow-sm">
                 <div className="flex items-center justify-between px-5 py-3 bg-green-50 dark:bg-green-950/20 border-b border-green-200 dark:border-green-800/50">
@@ -765,21 +759,6 @@ export default function StemSolver() {
                     </div>
                   )}
                 </div>
-                {result.corrections && result.corrections.length > 0 && (
-                  <div className="mx-5 mb-5 p-3.5 bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-800/50">
-                    <div className="flex items-center gap-1.5 mb-2 text-xs font-bold text-amber-700 dark:text-amber-400">
-                      <Lightbulb size={11} />
-                      Critic Agent fixed {result.corrections.length} issue{result.corrections.length > 1 ? "s" : ""}
-                    </div>
-                    <ul className="space-y-1">
-                      {result.corrections.map((c, i) => (
-                        <li key={i} className="text-xs text-amber-800 dark:text-amber-300 flex gap-1.5">
-                          <span className="shrink-0 text-amber-400 mt-0.5">•</span>{c}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
 
               {/* ── Steps accordion ── */}
@@ -848,10 +827,6 @@ export default function StemSolver() {
                 </div>
               )}
 
-              </div>{/* end left column */}
-
-              {/* Right column (1/3): Graph + Research Stack */}
-              <div className="space-y-4">
 
               {/* ── Graph ── */}
               {result.graphData && (
@@ -950,8 +925,6 @@ export default function StemSolver() {
                 )}
               </div>
 
-              </div>{/* end right column */}
-              </div>{/* end grid */}
 
               {/* Repo attribution */}
               <div className="px-1 pb-1">

@@ -111,9 +111,8 @@ Critically verify this ${subject} solution for any errors.`;
   const rawVerified = verifiedMatch ? verifiedMatch[1].trim() : draft.finalAnswer;
 
   // Strip critic commentary that sometimes leaks into the VERIFIED_ANSWER block.
-  // Cut everything from the first "critic agent", "detailed verification",
-  // or standalone "---" separator line onward.
-  const criticNoisePattern = /\n(?:---+|Critic Agent|##\s*DETAILED VERIFICATION|\*{0,3}Critic Agent)/i;
+  // Handles: leading critic text (no preceding newline), mid-block leakage, separators.
+  const criticNoisePattern = /(?:^|\n)[ \t]*(?:---+|\*{0,3}Critic Agent\b|##\s*DETAILED VERIFICATION\b|DETAILED VERIFICATION\b)/i;
   const noiseIdx = rawVerified.search(criticNoisePattern);
   const verified = noiseIdx !== -1 ? rawVerified.slice(0, noiseIdx).trim() : rawVerified;
 
