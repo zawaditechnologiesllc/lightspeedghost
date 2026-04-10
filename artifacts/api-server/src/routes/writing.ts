@@ -10,7 +10,7 @@ import { getVerifiedCitations } from "../lib/citationVerifier";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { analyseTextPlagiarism } from "../lib/textAnalysis";
 import { recordUsage } from "../lib/apiCost";
-import { eq } from "drizzle-orm";
+import { eq, desc, and, isNotNull } from "drizzle-orm";
 import { trackUsage } from "../lib/usageTracker";
 import { recordSearchResults, recordQualitySignal } from "../lib/learningEngine";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
@@ -212,6 +212,35 @@ Return JSON:
       ).catch(() => {});
     }
 
+    // ── Internal RAG: inject a style excerpt from a previously stored paper ───
+    // Fetches the most recent high-quality stored paper for this subject to give
+    // the AI a style/structure reference drawn from real past output.
+    let internalStyleContext = "";
+    try {
+      const subjectFilter = body.subject?.trim();
+      if (subjectFilter) {
+        const [bestMatch] = await db
+          .select({ title: documentsTable.title, content: documentsTable.content })
+          .from(documentsTable)
+          .where(and(
+            eq(documentsTable.type, "paper"),
+            eq(documentsTable.subject, subjectFilter),
+            isNotNull(documentsTable.content),
+          ))
+          .orderBy(desc(documentsTable.wordCount))
+          .limit(1);
+
+        if (bestMatch?.content && bestMatch.content.length > 300) {
+          // Take the first ~1200 chars — enough for style/structure, not so much it bloats tokens
+          const excerpt = bestMatch.content.slice(0, 1200).trimEnd();
+          internalStyleContext =
+            `STYLE REFERENCE — excerpt from a previously generated ${subjectFilter} paper on this platform ` +
+            `(use as a structural and stylistic benchmark only; do NOT copy content or citations):\n` +
+            `---\n${excerpt}\n---`;
+        }
+      }
+    } catch { /* non-critical — skip silently */ }
+
     send("step", {
       id: "citations",
       message: citations.length > 0
@@ -358,7 +387,7 @@ DO NOT write a generic paper body — the entire body IS the annotated entries.
 
     const systemPrompt = `${WRITER_SOUL}
 
-${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${citationContext}
+${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
 
 ${stemBlock ? `${stemBlock}\n` : ""}${aGradeCriteria ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GRADING TARGET — ${aGradeCriteria}
@@ -690,6 +719,14 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
     stats.plagiarismScore = Math.min(plagiarismGateScore, 8); // enforce ≤ 8% promise
 
     send("step", { id: "stats", message: `Quality assessment complete — estimated grade ${stats.grade}%, AI score ${stats.aiScore}%, plagiarism ${stats.plagiarismScore}% (verified)`, status: "done" });
+
+    // ── Fire quality signals into the learning engine (fire-and-forget) ───────
+    // These accumulate over time so the admin dashboard can track platform-wide
+    // quality trends (average grade, AI score, plagiarism by subject, etc.)
+    const uid = req.userId ?? undefined;
+    recordQualitySignal({ userId: uid, type: "grade_verify",  score: stats.grade,           subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
+    recordQualitySignal({ userId: uid, type: "ai_detection",  score: stats.aiScore,         subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
+    recordQualitySignal({ userId: uid, type: "plagiarism",    score: stats.plagiarismScore, subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
 
     // ── Send "done" to the client FIRST — the paper is ready regardless of DB ─
     // DB save is best-effort: if it fails the user still sees their paper.
