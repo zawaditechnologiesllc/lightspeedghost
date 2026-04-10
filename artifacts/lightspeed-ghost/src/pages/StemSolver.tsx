@@ -545,7 +545,7 @@ export default function StemSolver() {
       {/* ── Top bar — only shown when results exist ────────────────────────── */}
       {result && (
         <div className="shrink-0 border-b border-border bg-card/80 backdrop-blur-sm">
-          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Zap size={14} className="text-primary" />
               <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
@@ -676,7 +676,7 @@ export default function StemSolver() {
       {/* ── RESULTS state (scrollable from top) ──────────────────────────── */}
       {result && (
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 space-y-4">
 
             {/* Collapsed edit bar or expanded form */}
             {showInput ? (
@@ -698,7 +698,7 @@ export default function StemSolver() {
             )}
 
           {/* ── Results ─────────────────────────────────────────────────────── */}
-          <div className="space-y-3">
+          <div className="space-y-4">
 
               {/* Method badges row */}
               <div className="flex items-center gap-2 flex-wrap">
@@ -724,6 +724,12 @@ export default function StemSolver() {
                   )
                 )}
               </div>
+
+              {/* ── Responsive two-column grid ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+
+              {/* Left column (2/3): Answer + Steps */}
+              <div className="lg:col-span-2 space-y-4">
 
               {/* ── Answer card ── */}
               <div className="bg-card border border-green-200 dark:border-green-800/50 rounded-2xl overflow-hidden shadow-sm">
@@ -775,24 +781,6 @@ export default function StemSolver() {
                   </div>
                 )}
               </div>
-
-              {/* ── Graph ── */}
-              {result.graphData && (
-                <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-                  <h3 className="font-bold text-sm mb-4 text-foreground">{result.graphData.labels?.title ?? "Graph"}</h3>
-                  <div className="h-56">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={result.graphData.data}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                        <XAxis dataKey="x" tick={{ fontSize: 11 }} label={{ value: result.graphData.labels?.x ?? "x", position: "insideBottom", offset: -2, fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} label={{ value: result.graphData.labels?.y ?? "y", angle: -90, position: "insideLeft", fontSize: 11 }} />
-                        <Tooltip contentStyle={{ fontSize: "12px", borderRadius: "8px" }} />
-                        <Line type="monotone" dataKey="y" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
 
               {/* ── Steps accordion ── */}
               {result.steps.length > 0 && (
@@ -856,6 +844,29 @@ export default function StemSolver() {
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              )}
+
+              </div>{/* end left column */}
+
+              {/* Right column (1/3): Graph + Research Stack */}
+              <div className="space-y-4">
+
+              {/* ── Graph ── */}
+              {result.graphData && (
+                <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                  <h3 className="font-bold text-sm mb-4 text-foreground">{result.graphData.labels?.title ?? "Graph"}</h3>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={result.graphData.data}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis dataKey="x" tick={{ fontSize: 11 }} label={{ value: result.graphData.labels?.x ?? "x", position: "insideBottom", offset: -2, fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} label={{ value: result.graphData.labels?.y ?? "y", angle: -90, position: "insideLeft", fontSize: 11 }} />
+                        <Tooltip contentStyle={{ fontSize: "12px", borderRadius: "8px" }} />
+                        <Line type="monotone" dataKey="y" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               )}
@@ -938,6 +949,9 @@ export default function StemSolver() {
                   <ToolkitPanel resources={resources} expandedGroups={expandedGroups} onToggle={toggleGroup} />
                 )}
               </div>
+
+              </div>{/* end right column */}
+              </div>{/* end grid */}
 
               {/* Repo attribution */}
               <div className="px-1 pb-1">
