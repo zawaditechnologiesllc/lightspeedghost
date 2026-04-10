@@ -436,12 +436,16 @@ export default function Admin() {
   const loadDocuments = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/admin/documents", password) as { documents: AdminDocument[]; total: number };
+      const params = new URLSearchParams();
+      if (docTypeFilter && docTypeFilter !== "all") params.set("type", docTypeFilter);
+      if (docSearch && docSearch.trim()) params.set("search", docSearch.trim());
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const data = await adminFetch(`/admin/documents${qs}`, password) as { documents: AdminDocument[]; total: number };
       setDocuments(data.documents);
       setDocTotal(data.total);
     } catch { setDocuments([]); setDocTotal(0); }
     finally { setLoading(false); }
-  }, [password]);
+  }, [password, docTypeFilter, docSearch]);
 
   const loadSubscriptions = useCallback(async () => {
     setLoading(true);
@@ -547,6 +551,10 @@ export default function Admin() {
   useEffect(() => {
     if (activeTab === "logs" && isAuthed) loadLogs();
   }, [logFilter]);
+
+  useEffect(() => {
+    if (activeTab === "documents" && isAuthed) loadDocuments();
+  }, [docTypeFilter, docSearch]);
 
   async function toggleGateway(gateway: string, paused: boolean) {
     setTogglingGateway(gateway);

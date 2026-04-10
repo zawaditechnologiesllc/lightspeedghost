@@ -96,6 +96,13 @@ async function runStartupTasks(): Promise<void> {
         updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
+    // Add columns that may be missing on older deployments (safe no-ops if they already exist)
+    await pool.query(`
+      ALTER TABLE documents ADD COLUMN IF NOT EXISTS doc_number  INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE documents ADD COLUMN IF NOT EXISTS word_count  INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE documents ADD COLUMN IF NOT EXISTS subject     TEXT;
+      ALTER TABLE documents ADD COLUMN IF NOT EXISTS updated_at  TIMESTAMP NOT NULL DEFAULT NOW();
+    `);
     logger.info("[startup] documents table ready");
   } catch (err) {
     logger.error({ err }, "[startup] Failed to ensure documents table — paper saving will fail");

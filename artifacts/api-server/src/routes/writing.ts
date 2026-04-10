@@ -679,11 +679,10 @@ Plagiarism guidance: properly cited academic work scores 2-8%.`,
     // ── Send "done" to the client FIRST — the paper is ready regardless of DB ─
     // DB save is best-effort: if it fails the user still sees their paper.
     const userId = req.userId ?? null;
-    const paperTitle = formatDocTitle({ type: "paper", docNumber: 0, paperType: body.paperType });
 
     send("done", {
       documentId: null, // will be updated after DB save if successful
-      title: paperTitle,
+      title: formatDocTitle({ type: "paper", docNumber: 0, paperType: body.paperType }),
       content: finalContent,
       citations: citations.map((c, i) => ({
         id: c.id,
@@ -702,13 +701,21 @@ Plagiarism guidance: properly cited academic work scores 2-8%.`,
     // ── Save to DB in background — failure does NOT affect what the user sees ─
     (async () => {
       try {
-        const docTitle = formatDocTitle({ type: "paper", docNumber: 0, paperType: body.paperType });
-        await pool.query(
-          `INSERT INTO documents (user_id, title, content, type, subject, doc_number, word_count)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [userId, docTitle, finalContent, "paper", body.subject ?? null, 0, bodyWordCount]
-        );
-        console.log(`[writing] Document saved to DB for user ${userId ?? "anonymous"}`);
+        const docNum = await getNextDocNumber(userId, "paper");
+        const docTitle = formatDocTitle({ type: "paper", docNumber: docNum, paperType: body.paperType });
+        const [doc] = await db
+          .insert(documentsTable)
+          .values({
+            userId,
+            title: docTitle,
+            content: finalContent,
+            type: "paper",
+            subject: body.subject ?? null,
+            docNumber: docNum,
+            wordCount: bodyWordCount,
+          })
+          .returning();
+        console.log(`[writing] Document saved to DB id=${doc.id} for user ${userId ?? "anonymous"}`);
       } catch (err: unknown) {
         const e = err as { message?: string };
         console.error("[writing] DB save failed (paper still delivered):", e?.message ?? err);

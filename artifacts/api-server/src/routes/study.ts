@@ -17,13 +17,13 @@ import { z } from "zod";
 
 const router = Router();
 
-router.get("/study/sessions", async (req, res) => {
+router.get("/study/sessions", requireAuth, async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.userId!;
     const sessions = await db
       .select()
       .from(studySessionsTable)
-      .where(userId ? eq(studySessionsTable.userId, userId) : undefined)
+      .where(eq(studySessionsTable.userId, userId))
       .orderBy(desc(studySessionsTable.lastActivity))
       .limit(20);
 

@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
-import { and, eq, count } from "drizzle-orm";
+import { and, eq, isNull, count } from "drizzle-orm";
 
 // ── Tool codes ─────────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ export async function getNextDocNumber(userId: string | null, type: string): Pro
   try {
     const condition = userId
       ? and(eq(documentsTable.userId, userId), eq(documentsTable.type, type))
-      : eq(documentsTable.type, type);
+      : and(isNull(documentsTable.userId), eq(documentsTable.type, type));
 
     const [{ value }] = await db
       .select({ value: count() })
