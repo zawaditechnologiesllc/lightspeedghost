@@ -749,9 +749,15 @@ export default function StemSolver() {
                   />
                 </div>
                 <div className="px-5 py-5">
-                  <div className="handwritten-block">
-                    <MathRenderer text={result.answer} className="text-base" />
-                  </div>
+                  {result.graphData ? (
+                    <div className="rounded-xl border border-border bg-muted/30 px-5 py-4 font-mono text-sm leading-relaxed text-foreground">
+                      <MathRenderer text={result.answer} className="text-base" />
+                    </div>
+                  ) : (
+                    <div className="handwritten-block">
+                      <MathRenderer text={result.answer} className="text-base" />
+                    </div>
+                  )}
                 </div>
                 {result.corrections && result.corrections.length > 0 && (
                   <div className="mx-5 mb-5 p-3.5 bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-800/50">
@@ -810,7 +816,11 @@ export default function StemSolver() {
                             onClick={() => toggleStep(step.stepNumber)}
                             className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/20 transition-colors"
                           >
-                            <span className="handwritten-step-num shrink-0">{step.stepNumber}</span>
+                            {result.graphData ? (
+                              <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{step.stepNumber}</span>
+                            ) : (
+                              <span className="handwritten-step-num shrink-0">{step.stepNumber}</span>
+                            )}
                             <div className="flex-1 flex items-center gap-2 min-w-0">
                               <span className="text-xs font-semibold text-foreground truncate">{step.description}</span>
                               <StepTypeBadge desc={step.description} />
@@ -822,13 +832,25 @@ export default function StemSolver() {
                           {isOpen && (
                             <div className="px-5 pb-5 pl-14 space-y-2.5">
                               {step.expression && (
-                                <div className="handwritten-expression">
-                                  <MathRenderer text={step.expression} className="text-sm" />
+                                result.graphData ? (
+                                  <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5">
+                                    <MathRenderer text={step.expression} className="text-sm" />
+                                  </div>
+                                ) : (
+                                  <div className="handwritten-expression">
+                                    <MathRenderer text={step.expression} className="text-sm" />
+                                  </div>
+                                )
+                              )}
+                              {result.graphData ? (
+                                <div className="text-sm text-muted-foreground leading-relaxed">
+                                  <MathRenderer text={step.explanation} className="text-sm" />
+                                </div>
+                              ) : (
+                                <div className="handwritten-block">
+                                  <MathRenderer text={step.explanation} className="text-sm" />
                                 </div>
                               )}
-                              <div className="handwritten-block">
-                                <MathRenderer text={step.explanation} className="text-sm" />
-                              </div>
                             </div>
                           )}
                         </div>
