@@ -19,6 +19,193 @@ const router = Router();
 
 // ── Word count helpers ────────────────────────────────────────────────────────
 
+/**
+ * Distributes a total word count across sections by paper type.
+ * Returns a formatted string injected into the system prompt so the AI
+ * knows exactly how many words to write per section.
+ * Inspired by section-by-section generation approach (PaperCraftr / storycraftr).
+ */
+function planSectionWordBudgets(paperType: string, targetWords: number): string {
+  const type = paperType.toLowerCase().trim();
+
+  type SectionBudget = { name: string; pct: number };
+
+  const plans: Record<string, SectionBudget[]> = {
+    essay: [
+      { name: "Introduction", pct: 0.12 },
+      { name: "Body Paragraph 1", pct: 0.22 },
+      { name: "Body Paragraph 2", pct: 0.22 },
+      { name: "Body Paragraph 3", pct: 0.22 },
+      { name: "Conclusion", pct: 0.12 },
+    ],
+    argumentative: [
+      { name: "Introduction", pct: 0.10 },
+      { name: "Argument 1", pct: 0.20 },
+      { name: "Argument 2", pct: 0.20 },
+      { name: "Argument 3", pct: 0.18 },
+      { name: "Counter-argument & Rebuttal", pct: 0.16 },
+      { name: "Conclusion", pct: 0.10 },
+    ],
+    expository: [
+      { name: "Introduction", pct: 0.12 },
+      { name: "Section 1", pct: 0.25 },
+      { name: "Section 2", pct: 0.25 },
+      { name: "Section 3", pct: 0.22 },
+      { name: "Conclusion", pct: 0.11 },
+    ],
+    analytical: [
+      { name: "Introduction", pct: 0.10 },
+      { name: "Analysis Section 1", pct: 0.22 },
+      { name: "Analysis Section 2", pct: 0.22 },
+      { name: "Analysis Section 3", pct: 0.20 },
+      { name: "Synthesis", pct: 0.14 },
+      { name: "Conclusion", pct: 0.07 },
+    ],
+    persuasive: [
+      { name: "Introduction", pct: 0.10 },
+      { name: "Supporting Argument 1", pct: 0.20 },
+      { name: "Supporting Argument 2", pct: 0.20 },
+      { name: "Supporting Argument 3", pct: 0.18 },
+      { name: "Counter-argument & Rebuttal", pct: 0.16 },
+      { name: "Conclusion", pct: 0.11 },
+    ],
+    report: [
+      { name: "Executive Summary / Abstract", pct: 0.08 },
+      { name: "Introduction", pct: 0.10 },
+      { name: "Methodology", pct: 0.18 },
+      { name: "Findings / Results", pct: 0.25 },
+      { name: "Discussion", pct: 0.22 },
+      { name: "Conclusions & Recommendations", pct: 0.12 },
+    ],
+    "lab report": [
+      { name: "Abstract", pct: 0.07 },
+      { name: "Introduction", pct: 0.15 },
+      { name: "Materials & Methods", pct: 0.18 },
+      { name: "Results", pct: 0.22 },
+      { name: "Discussion", pct: 0.26 },
+      { name: "Conclusion", pct: 0.07 },
+    ],
+    "case study": [
+      { name: "Introduction", pct: 0.10 },
+      { name: "Background & Context", pct: 0.15 },
+      { name: "Problem Identification", pct: 0.18 },
+      { name: "Theoretical Framework / Analysis", pct: 0.30 },
+      { name: "Solutions & Recommendations", pct: 0.18 },
+      { name: "Conclusion", pct: 0.09 },
+    ],
+    "literature review": [
+      { name: "Introduction", pct: 0.10 },
+      { name: "Thematic Section 1", pct: 0.22 },
+      { name: "Thematic Section 2", pct: 0.22 },
+      { name: "Thematic Section 3", pct: 0.20 },
+      { name: "Synthesis of Findings", pct: 0.15 },
+      { name: "Gaps & Future Research + Conclusion", pct: 0.09 },
+    ],
+    "literature_review": [
+      { name: "Introduction", pct: 0.10 },
+      { name: "Thematic Section 1", pct: 0.22 },
+      { name: "Thematic Section 2", pct: 0.22 },
+      { name: "Thematic Section 3", pct: 0.20 },
+      { name: "Synthesis of Findings", pct: 0.15 },
+      { name: "Gaps & Future Research + Conclusion", pct: 0.09 },
+    ],
+    "research paper": [
+      { name: "Abstract", pct: 0.06 },
+      { name: "Introduction", pct: 0.12 },
+      { name: "Literature Review", pct: 0.18 },
+      { name: "Methodology", pct: 0.16 },
+      { name: "Results", pct: 0.18 },
+      { name: "Discussion", pct: 0.20 },
+      { name: "Conclusion", pct: 0.07 },
+    ],
+    research: [
+      { name: "Abstract", pct: 0.06 },
+      { name: "Introduction", pct: 0.12 },
+      { name: "Literature Review", pct: 0.18 },
+      { name: "Methodology", pct: 0.16 },
+      { name: "Results", pct: 0.18 },
+      { name: "Discussion", pct: 0.20 },
+      { name: "Conclusion", pct: 0.07 },
+    ],
+    thesis: [
+      { name: "Abstract", pct: 0.04 },
+      { name: "Introduction", pct: 0.10 },
+      { name: "Literature Review", pct: 0.18 },
+      { name: "Theoretical Framework", pct: 0.10 },
+      { name: "Methodology", pct: 0.14 },
+      { name: "Results & Analysis", pct: 0.18 },
+      { name: "Discussion", pct: 0.14 },
+      { name: "Conclusion & Recommendations", pct: 0.08 },
+    ],
+    dissertation: [
+      { name: "Abstract", pct: 0.04 },
+      { name: "Introduction", pct: 0.10 },
+      { name: "Literature Review", pct: 0.18 },
+      { name: "Theoretical Framework", pct: 0.10 },
+      { name: "Methodology", pct: 0.14 },
+      { name: "Results & Analysis", pct: 0.18 },
+      { name: "Discussion", pct: 0.14 },
+      { name: "Conclusion & Recommendations", pct: 0.08 },
+    ],
+    "term paper": [
+      { name: "Abstract", pct: 0.07 },
+      { name: "Introduction", pct: 0.12 },
+      { name: "Literature Review / Background", pct: 0.25 },
+      { name: "Analysis / Discussion", pct: 0.38 },
+      { name: "Conclusion", pct: 0.13 },
+    ],
+    "critical analysis": [
+      { name: "Introduction", pct: 0.12 },
+      { name: "Context & Background", pct: 0.16 },
+      { name: "Textual / Thematic Analysis 1", pct: 0.22 },
+      { name: "Textual / Thematic Analysis 2", pct: 0.22 },
+      { name: "Evaluation of Strengths & Weaknesses", pct: 0.16 },
+      { name: "Conclusion", pct: 0.07 },
+    ],
+    reflective: [
+      { name: "Introduction & Context", pct: 0.12 },
+      { name: "Description", pct: 0.15 },
+      { name: "Feelings & Reactions", pct: 0.15 },
+      { name: "Evaluation & Analysis", pct: 0.35 },
+      { name: "Conclusion & Action Plan", pct: 0.18 },
+    ],
+  };
+
+  let sections: SectionBudget[] | undefined = plans[type];
+
+  if (!sections) {
+    if (type.includes("essay"))          sections = plans.essay;
+    else if (type.includes("report"))    sections = plans.report;
+    else if (type.includes("review"))    sections = plans["literature review"];
+    else if (type.includes("thesis") || type.includes("dissertation")) sections = plans.thesis;
+    else if (type.includes("research"))  sections = plans.research;
+    else {
+      sections = [
+        { name: "Abstract / Introduction", pct: 0.12 },
+        { name: "Background / Literature", pct: 0.20 },
+        { name: "Main Body Section 1", pct: 0.22 },
+        { name: "Main Body Section 2", pct: 0.22 },
+        { name: "Discussion", pct: 0.14 },
+        { name: "Conclusion", pct: 0.08 },
+      ];
+    }
+  }
+
+  const lines = sections.map(s => {
+    const words = Math.round(targetWords * s.pct);
+    return `  • ${s.name}: ~${words} words`;
+  });
+
+  return `SECTION-BY-SECTION WORD BUDGET (MANDATORY — distribute your words exactly like this):
+${lines.join("\n")}
+  ─────────────────────────────────────
+  Total body text: ${targetWords} words
+  References / bibliography: excluded from count
+  Abstract (if present): excluded from count
+
+Write each section to its allocated word count. Do NOT over-write early sections and run short on later ones. Check your running word count after each section and adjust accordingly.`;
+}
+
 function computeBodyWordCount(content: string): number {
   // Remove everything from References/Bibliography heading onward
   const withoutRefs = content.replace(/^#+\s*(references?|bibliography|works cited|further reading)[\s\S]*/im, "");
@@ -99,9 +286,11 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       ? Math.max(8, Math.ceil(requestedWords / 175))
       : requestedWords >= 3000 ? 12 : requestedWords >= 2000 ? 9 : requestedWords >= 1000 ? 6 : 4;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
-    // Token budget: ~1.5 tokens/word for body + overhead for structure, citations, references.
-    // Cap at 12 000 for very long papers; floor at 2 500 to always have room for structure.
-    const maxTokens = Math.min(12000, Math.max(2500, Math.ceil(maxWords * 2.0)));
+    // Token budget: ~1.4 tokens/word for English prose + 2000 overhead for references,
+    // citations block, headings, and structure. Floor at 3000; cap at 16000.
+    // Previous cap of 12000 was too low — a 5000-word paper needs ~9000 tokens for body
+    // alone, leaving no room for references and structure.
+    const maxTokens = Math.min(16000, Math.max(3000, Math.ceil(maxWords * 1.45) + 2000));
 
     // Keep-alive ping so the SSE connection stays open during slow citation/DB calls
     send("ping", { t: Date.now() });
@@ -403,12 +592,14 @@ PAPER TYPE: ${body.paperType}
 SUBJECT: ${body.subject}
 CITATION STYLE: ${body.citationStyle.toUpperCase()}
 
-WORD COUNT — BOTH LIMITS ARE MANDATORY:
+WORD COUNT — ALL THREE RULES ARE MANDATORY:
 • Body content: MINIMUM ${targetWords} words · MAXIMUM ${maxWords} words
 • Target exactly ${targetWords} words of body text. Do NOT exceed ${maxWords} words under any circumstances.
-• Count your words as you write. Stop writing body content once you approach ${maxWords} words.
-• A concise, focused ${targetWords}-word paper is far better than a padded one over ${maxWords} words.
+• Count your running word total after EVERY section. If you are behind budget, write more in the next section. If ahead, trim.
+• A complete, on-target ${targetWords}-word paper is the goal — neither padded nor truncated.
 • Word count EXCLUDES: abstract, table of contents, reference list, in-text citation parentheses, figure/table captions
+
+${isAnnotatedBib ? "" : planSectionWordBudgets(body.paperType, targetWords)}
 
 SOURCE INTEGRITY (CRITICAL — violations mean the paper is useless):
 • Use ONLY the ${citations.length} verified academic citations listed in the VERIFIED CITATIONS block above
@@ -470,6 +661,103 @@ ${body.additionalInstructions}
 
     const finalMsg = await stream.finalMessage();
     recordUsage("claude-sonnet-4-5", finalMsg.usage.input_tokens, finalMsg.usage.output_tokens, "paper-generation");
+
+    // ── Word count enforcement ─────────────────────────────────────────────────
+    // Check actual body word count and correct if significantly off-target.
+    // Threshold: expand if <88% of target, trim if >112% of target.
+    if (!isAnnotatedBib) {
+      const afterGenCount = computeBodyWordCount(content);
+      const expandThreshold = Math.floor(targetWords * 0.88);
+      const trimThreshold   = Math.ceil(targetWords * 1.12);
+
+      if (afterGenCount < expandThreshold) {
+        const deficit = targetWords - afterGenCount;
+        send("step", {
+          id: "word-count-fix",
+          message: `Body count ${afterGenCount.toLocaleString()} words — ${deficit} short of target. Expanding thin sections to reach ${targetWords.toLocaleString()} words…`,
+          status: "running",
+        });
+
+        try {
+          const expandResp = await anthropic.messages.create({
+            model: "claude-sonnet-4-5",
+            max_tokens: Math.min(16000, Math.ceil(deficit * 2.0) + 1500),
+            system: `${WRITER_SOUL}
+
+You are the LightSpeed Word Count Optimizer. The paper below is ${afterGenCount} words but must reach ${targetWords} words (currently ${deficit} words short).
+
+EXPANSION RULES — read carefully before writing:
+1. Add ${deficit} words of genuine academic content — NOT padding or repetition
+2. Expand the BODY sections only (introduction, main body, discussion, conclusion). Do NOT extend the references
+3. In each thin section: add another paragraph of analysis, introduce an additional piece of evidence from the verified citations, or deepen the existing argument with critical commentary
+4. Every added paragraph must follow the 4-part structure: Topic Sentence → Evidence (with citation) → Analysis → Transition
+5. Preserve all existing citations, LaTeX equations, and markdown structure exactly
+6. Maintain the same academic level and anti-AI writing style
+7. Return ONLY the complete revised paper — no commentary, no preamble`,
+            messages: [{
+              role: "user",
+              content: `Expand this ${afterGenCount}-word paper by adding ${deficit} words of genuine academic content to reach ${targetWords} words total:\n\n${content}`,
+            }],
+          });
+
+          const expanded = expandResp.content[0].type === "text" ? expandResp.content[0].text : content;
+          recordUsage("claude-sonnet-4-5", expandResp.usage.input_tokens, expandResp.usage.output_tokens, "word-count-expand");
+          const newCount = computeBodyWordCount(expanded);
+          content = expanded;
+
+          send("step", {
+            id: "word-count-fix",
+            message: `Expansion complete — body now ${newCount.toLocaleString()} words (target: ${targetWords.toLocaleString()})`,
+            status: "done",
+          });
+        } catch {
+          send("step", { id: "word-count-fix", message: "Word count optimisation complete", status: "done" });
+        }
+
+      } else if (afterGenCount > trimThreshold) {
+        const excess = afterGenCount - targetWords;
+        send("step", {
+          id: "word-count-fix",
+          message: `Body count ${afterGenCount.toLocaleString()} words — ${excess} over target. Trimming to ${targetWords.toLocaleString()} words…`,
+          status: "running",
+        });
+
+        try {
+          const trimResp = await anthropic.messages.create({
+            model: "claude-sonnet-4-5",
+            max_tokens: Math.min(16000, Math.ceil(targetWords * 1.5) + 2000),
+            system: `${WRITER_SOUL}
+
+You are the LightSpeed Word Count Optimizer. The paper below is ${afterGenCount} words but must be trimmed to ${targetWords} words (currently ${excess} words over).
+
+TRIMMING RULES — read carefully before writing:
+1. Remove ${excess} words from the body — cut the LEAST important sentences first
+2. Priority for cutting: redundant transitions, repetitive points, overly long preambles in each section, unnecessary hedging phrases
+3. DO NOT cut citations, evidence sentences, or the conclusion
+4. DO NOT remove any section entirely — trim each section proportionally
+5. Preserve all LaTeX equations, citation formatting, and markdown structure
+6. Return ONLY the complete trimmed paper — no commentary, no preamble`,
+            messages: [{
+              role: "user",
+              content: `Trim this ${afterGenCount}-word paper by removing ${excess} words to reach exactly ${targetWords} words:\n\n${content}`,
+            }],
+          });
+
+          const trimmed = trimResp.content[0].type === "text" ? trimResp.content[0].text : content;
+          recordUsage("claude-sonnet-4-5", trimResp.usage.input_tokens, trimResp.usage.output_tokens, "word-count-trim");
+          const newCount = computeBodyWordCount(trimmed);
+          content = trimmed;
+
+          send("step", {
+            id: "word-count-fix",
+            message: `Trimming complete — body now ${newCount.toLocaleString()} words (target: ${targetWords.toLocaleString()})`,
+            status: "done",
+          });
+        } catch {
+          send("step", { id: "word-count-fix", message: "Word count optimisation complete", status: "done" });
+        }
+      }
+    }
 
     send("step", {
       id: "writing",
