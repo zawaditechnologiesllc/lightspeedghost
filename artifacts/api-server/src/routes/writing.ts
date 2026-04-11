@@ -39,19 +39,19 @@ function planSectionWordBudgets(paperType: string, targetWords: number): string 
       { name: "Conclusion", pct: 0.12 },
     ],
     argumentative: [
-      { name: "Introduction", pct: 0.10 },
-      { name: "Argument 1", pct: 0.20 },
-      { name: "Argument 2", pct: 0.20 },
-      { name: "Argument 3", pct: 0.18 },
-      { name: "Counter-argument & Rebuttal", pct: 0.16 },
-      { name: "Conclusion", pct: 0.10 },
+      { name: "Introduction — hook, context, and clear arguable thesis", pct: 0.10 },
+      { name: "First Main Argument — state claim, provide 2 pieces of evidence, analyse critically", pct: 0.20 },
+      { name: "Second Main Argument — distinct claim, supporting evidence, analytical commentary", pct: 0.20 },
+      { name: "Third Main Argument — strongest evidence cluster, deepen the analytical thread", pct: 0.18 },
+      { name: "Counter-argument & Rebuttal — steelman the opposition, then systematically refute it", pct: 0.16 },
+      { name: "Conclusion — synthesise all three arguments, restate evolved thesis, broader significance", pct: 0.10 },
     ],
     expository: [
-      { name: "Introduction", pct: 0.12 },
-      { name: "Section 1", pct: 0.25 },
-      { name: "Section 2", pct: 0.25 },
-      { name: "Section 3", pct: 0.22 },
-      { name: "Conclusion", pct: 0.11 },
+      { name: "Introduction — context, scope, and explanatory purpose (no thesis to argue)", pct: 0.12 },
+      { name: "First Explanatory Section — define the first key concept, explain mechanisms, give concrete examples", pct: 0.25 },
+      { name: "Second Explanatory Section — second distinct aspect, how it connects to the first, further examples", pct: 0.25 },
+      { name: "Third Explanatory Section — third aspect or application, real-world context, deepen understanding", pct: 0.22 },
+      { name: "Conclusion — summary of what was explained, significance, what reader now understands", pct: 0.11 },
     ],
     analytical: [
       { name: "Introduction", pct: 0.10 },
@@ -62,12 +62,12 @@ function planSectionWordBudgets(paperType: string, targetWords: number): string 
       { name: "Conclusion", pct: 0.07 },
     ],
     persuasive: [
-      { name: "Introduction", pct: 0.10 },
-      { name: "Supporting Argument 1", pct: 0.20 },
-      { name: "Supporting Argument 2", pct: 0.20 },
-      { name: "Supporting Argument 3", pct: 0.18 },
-      { name: "Counter-argument & Rebuttal", pct: 0.16 },
-      { name: "Conclusion", pct: 0.11 },
+      { name: "Introduction — compelling hook, emotional/logical appeal, and clear position statement", pct: 0.10 },
+      { name: "First Supporting Argument — strongest evidence first, data/expert testimony, appeal to values", pct: 0.20 },
+      { name: "Second Supporting Argument — second evidence thread, build on first, deepen conviction", pct: 0.20 },
+      { name: "Third Supporting Argument — practical/real-world consequences, urgency, final evidence layer", pct: 0.18 },
+      { name: "Counter-argument & Rebuttal — acknowledge the strongest opposition, systematically refute it", pct: 0.16 },
+      { name: "Conclusion — reinforce position, call to action, leave reader with clear next step", pct: 0.11 },
     ],
     report: [
       { name: "Executive Summary / Abstract", pct: 0.08 },
@@ -163,30 +163,78 @@ function planSectionWordBudgets(paperType: string, targetWords: number): string 
       { name: "Conclusion", pct: 0.07 },
     ],
     reflective: [
-      { name: "Introduction & Context", pct: 0.12 },
-      { name: "Description", pct: 0.15 },
-      { name: "Feelings & Reactions", pct: 0.15 },
-      { name: "Evaluation & Analysis", pct: 0.35 },
-      { name: "Conclusion & Action Plan", pct: 0.18 },
+      { name: "Introduction & Context — describe the experience/event and why it matters", pct: 0.12 },
+      { name: "Description — factual account of what happened (what, when, who, how)", pct: 0.15 },
+      { name: "Feelings & Initial Reactions — honest emotional response, immediate thoughts", pct: 0.15 },
+      { name: "Evaluation & Analysis — what went well, what didn't, link to theory/framework", pct: 0.35 },
+      { name: "Conclusion & Action Plan — key learning, how behaviour/practice will change", pct: 0.18 },
+    ],
+    narrative: [
+      { name: "Introduction & Scene Setting — establish characters, place, time, narrative voice", pct: 0.12 },
+      { name: "Rising Action — build conflict, deepen stakes, reveal character through event", pct: 0.25 },
+      { name: "Climax — peak tension moment, decisive choice or confrontation", pct: 0.20 },
+      { name: "Falling Action — immediate aftermath, consequences unfold, tension releases", pct: 0.25 },
+      { name: "Resolution & Reflection — outcome, changed understanding, thematic resonance", pct: 0.13 },
+    ],
+    "position paper": [
+      { name: "Introduction — state the issue, why it matters, and the clear position taken", pct: 0.12 },
+      { name: "Background & Context — history of the issue, key stakeholders, current debate", pct: 0.18 },
+      { name: "First Supporting Argument — strongest evidence for the position", pct: 0.20 },
+      { name: "Second Supporting Argument — second evidence thread, different angle", pct: 0.18 },
+      { name: "Counter-arguments & Rebuttal — acknowledge opposition, refute systematically", pct: 0.16 },
+      { name: "Conclusion & Policy Recommendation — restate position, concrete recommended action", pct: 0.11 },
+    ],
+    "policy brief": [
+      { name: "Executive Summary — problem, recommendation, and key evidence in 1 paragraph", pct: 0.08 },
+      { name: "Problem Statement — define the issue, scope, affected populations, urgency", pct: 0.15 },
+      { name: "Background & Evidence — data, prior policy attempts, literature context", pct: 0.22 },
+      { name: "Policy Options — 2–3 alternatives with pros/cons each", pct: 0.25 },
+      { name: "Recommended Option — argue for one option, implementation steps", pct: 0.20 },
+      { name: "Conclusion & Next Steps — summary, who acts, by when, expected outcome", pct: 0.10 },
+    ],
+    "book report": [
+      { name: "Introduction — title, author, genre, publication context, thesis about the work", pct: 0.12 },
+      { name: "Summary — concise plot/argument summary without spoiling evaluative stance", pct: 0.25 },
+      { name: "Analysis of Themes & Techniques — major themes, author's craft, narrative choices", pct: 0.30 },
+      { name: "Critical Evaluation — strengths, weaknesses, what the work achieves or fails at", pct: 0.20 },
+      { name: "Conclusion — overall assessment, who should read it and why", pct: 0.08 },
+    ],
+    "white paper": [
+      { name: "Executive Summary — problem, solution, and business/policy case in brief", pct: 0.07 },
+      { name: "Introduction — context, why this problem matters now, audience", pct: 0.10 },
+      { name: "Problem Definition — detailed breakdown of the challenge, data, stakeholder impact", pct: 0.18 },
+      { name: "Current Landscape — existing approaches, why they fall short", pct: 0.15 },
+      { name: "Proposed Solution — detailed solution description, methodology, evidence base", pct: 0.28 },
+      { name: "Implementation & Benefits — steps, timeline, ROI or policy outcome", pct: 0.15 },
+      { name: "Conclusion — call to action, next steps, contact/further information", pct: 0.07 },
     ],
   };
 
   let sections: SectionBudget[] | undefined = plans[type];
 
   if (!sections) {
-    if (type.includes("essay"))          sections = plans.essay;
-    else if (type.includes("report"))    sections = plans.report;
-    else if (type.includes("review"))    sections = plans["literature review"];
+    if (type.includes("essay"))                                  sections = plans.essay;
+    else if (type.includes("argumentative"))                     sections = plans.argumentative;
+    else if (type.includes("persuasive"))                        sections = plans.persuasive;
+    else if (type.includes("report"))                            sections = plans.report;
+    else if (type.includes("review"))                            sections = plans["literature review"];
     else if (type.includes("thesis") || type.includes("dissertation")) sections = plans.thesis;
-    else if (type.includes("research"))  sections = plans.research;
+    else if (type.includes("research"))                          sections = plans.research;
+    else if (type.includes("narrative") || type.includes("story"))    sections = plans.narrative;
+    else if (type.includes("reflect"))                           sections = plans.reflective;
+    else if (type.includes("position"))                          sections = plans["position paper"];
+    else if (type.includes("policy"))                            sections = plans["policy brief"];
+    else if (type.includes("critical") || type.includes("analysis")) sections = plans["critical analysis"];
+    else if (type.includes("white"))                             sections = plans["white paper"];
     else {
+      // Generic fallback — descriptive labels so the AI knows what each section must do
       sections = [
-        { name: "Abstract / Introduction", pct: 0.12 },
-        { name: "Background / Literature", pct: 0.20 },
-        { name: "Main Body Section 1", pct: 0.22 },
-        { name: "Main Body Section 2", pct: 0.22 },
-        { name: "Discussion", pct: 0.14 },
-        { name: "Conclusion", pct: 0.08 },
+        { name: "Abstract / Introduction — state the topic, research question or thesis, and scope", pct: 0.12 },
+        { name: "Background & Literature — theoretical foundations, key sources, prior work", pct: 0.20 },
+        { name: "Core Analysis — first major analytical thread, evidence, and interpretation", pct: 0.22 },
+        { name: "Extended Analysis — second analytical thread, further evidence, deepened argument", pct: 0.22 },
+        { name: "Discussion — synthesis of findings, implications, limitations, alternate views", pct: 0.14 },
+        { name: "Conclusion — summary of contribution, significance, directions for future work", pct: 0.08 },
       ];
     }
   }
@@ -518,7 +566,6 @@ Do NOT move equations to the introduction, do NOT put results in the methodology
       expository:      "Introduction → Body Sections (explain each aspect clearly with examples) → Conclusion → References",
       analytical:      "Introduction (analytical question + thesis) → Analysis Section 1 → Analysis Section 2 → Analysis Section 3 → Synthesis → Conclusion → References",
       persuasive:      "Introduction (hook + strong thesis) → Supporting Argument 1 → Supporting Argument 2 → Supporting Argument 3 → Counter-argument & Rebuttal → Call to Action / Conclusion → References",
-      narrative:       "Introduction (scene/hook) → Rising Action → Climax → Falling Action → Resolution / Reflection → References (if academic)",
       reflective:      "Introduction (context & experience) → Description → Feelings & Reactions → Evaluation → Analysis → Conclusion → Action Plan → References",
       report:          "Title Page → Executive Summary / Abstract → Table of Contents → Introduction → Methodology → Findings / Results → Discussion → Conclusions → Recommendations → References → Appendices",
       "lab report":    "Title → Abstract → Introduction → Materials & Methods → Results (tables/figures) → Discussion → Conclusion → References",
@@ -538,15 +585,28 @@ LATEST FORMAT STANDARDS FOR ANNOTATED BIBLIOGRAPHY:
 • Chicago 17th Author-Date: Bibliographic entry in Author-Date format, annotation in indented paragraph immediately below.
 • Harvard: Full reference list entry, annotation indented below as a separate paragraph.
 • IEEE: Numbered entry [N], annotation paragraph immediately below each entry.`,
+      "position paper": "Introduction (issue + clear position statement) → Background & Context (history, stakeholders, current debate) → First Supporting Argument (strongest evidence) → Second Supporting Argument (different angle) → Counter-arguments & Rebuttal (steelman then refute) → Conclusion & Recommendation → References",
+      "policy brief":   "Executive Summary (problem + recommendation in 1 paragraph) → Problem Statement (scope, affected populations, urgency) → Background & Evidence (data, prior policy attempts) → Policy Options (2–3 alternatives with pros/cons) → Recommended Option (argue for one + implementation steps) → Conclusion & Next Steps → References",
+      "book report":    "Introduction (title, author, genre, publication context, thesis about the work) → Summary (concise plot/argument without revealing evaluative stance) → Analysis of Themes & Techniques (major themes, author's craft, narrative choices) → Critical Evaluation (strengths, weaknesses, what the work achieves or fails at) → Conclusion (overall assessment + who should read it and why) → References",
+      "white paper":    "Executive Summary (problem, solution, business/policy case in brief) → Introduction (context, why the problem matters now, audience) → Problem Definition (detailed breakdown, data, stakeholder impact) → Current Landscape (existing approaches, why they fall short) → Proposed Solution (detailed solution, methodology, evidence base) → Implementation & Benefits (steps, timeline, ROI or policy outcome) → Conclusion (call to action, next steps) → References",
+      narrative:        "Introduction & Scene Setting (establish characters, setting, time, narrative voice) → Rising Action (build conflict, deepen stakes, reveal character) → Climax (peak tension, decisive choice or confrontation) → Falling Action (immediate aftermath, consequences) → Resolution & Reflection (outcome, changed understanding, thematic resonance)",
     };
     function getPaperTypeStructure(type: string): string {
       const key = type.toLowerCase().trim();
       return PAPER_TYPE_STRUCTURES[key]
-        ?? (key.includes("essay")    ? PAPER_TYPE_STRUCTURES.essay
-          : key.includes("report")  ? PAPER_TYPE_STRUCTURES.report
-          : key.includes("review")  ? PAPER_TYPE_STRUCTURES["literature review"]
-          : key.includes("thesis")  ? PAPER_TYPE_STRUCTURES.thesis
-          : "Abstract → Introduction → Literature Review / Background → Methodology / Theory → Results / Analysis → Discussion → Conclusion → References");
+        ?? (key.includes("essay")         ? PAPER_TYPE_STRUCTURES.essay
+          : key.includes("argumentative") ? PAPER_TYPE_STRUCTURES.argumentative
+          : key.includes("persuasive")    ? PAPER_TYPE_STRUCTURES.persuasive
+          : key.includes("report")        ? PAPER_TYPE_STRUCTURES.report
+          : key.includes("review")        ? PAPER_TYPE_STRUCTURES["literature review"]
+          : key.includes("thesis")        ? PAPER_TYPE_STRUCTURES.thesis
+          : key.includes("narrative") || key.includes("story") ? PAPER_TYPE_STRUCTURES.narrative
+          : key.includes("reflect")       ? PAPER_TYPE_STRUCTURES.reflective
+          : key.includes("position")      ? PAPER_TYPE_STRUCTURES["position paper"]
+          : key.includes("policy")        ? PAPER_TYPE_STRUCTURES["policy brief"]
+          : key.includes("critical") || key.includes("analysis") ? PAPER_TYPE_STRUCTURES["critical analysis"]
+          : key.includes("white")         ? PAPER_TYPE_STRUCTURES["white paper"]
+          : "Abstract → Introduction → Literature Review / Background → Core Analysis (first analytical thread) → Extended Analysis (second analytical thread) → Discussion (synthesis + implications) → Conclusion → References");
     }
 
     // Format standards: read from instructions first, then fall back to latest institutional formats
