@@ -13,6 +13,7 @@ import { indexStudyExchange, recallStudyContext } from "../lib/memvidMemory";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage } from "../lib/usageTracker";
+import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
 import { z } from "zod";
 
 const router = Router();
@@ -150,6 +151,8 @@ router.post("/study/ask", requireAuth, async (req, res) => {
 
     const modeInstruction = modeInstructions[body.mode ?? "tutor"] ?? modeInstructions.tutor;
 
+    const datasetAnalysis = body.datasetText?.trim() ? parseAndAnalyzeDataset(body.datasetText) : "";
+
     const systemPrompt = `${TUTOR_SOUL}
 
 ${memoryContext}
@@ -158,6 +161,9 @@ STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — answer from this material first a
 ${body.documentContext.slice(0, 6000)}
 
 INSTRUCTION: The student has uploaded their own notes/materials above. Base your answer primarily on what is in those materials. If the question is answered there, cite from it directly. Only use the academic sources below for supplementary depth.
+
+` : ""}${datasetAnalysis ? `
+${datasetAnalysis}
 
 ` : ""}${ragContext ? `${ragContext}\n\n` : ""}ANSWER QUALITY STANDARDS:
 • Accuracy target: 92%+ — ground every claim in the student's materials or the verified sources above
@@ -261,6 +267,7 @@ const GenerateBody = z.object({
   type: z.enum(["flashcards", "quiz", "summary", "studyguide", "slides", "weakpoints"]),
   subject: z.string().optional(),
   weakTopics: z.array(z.string()).optional(),
+  datasetText: z.string().optional(),
   images: z.array(z.object({
     base64: z.string().max(10_000_000),
     mimeType: z.string(),
@@ -342,7 +349,12 @@ router.post("/study/generate", requireAuth, async (req, res) => {
     const promptFn = GENERATE_PROMPTS[body.type];
     if (!promptFn) return res.status(400).json({ error: "Invalid type" });
 
-    const prompt = promptFn(body.content, subject, body.weakTopics);
+    const datasetAnalysis = body.datasetText?.trim() ? parseAndAnalyzeDataset(body.datasetText) : "";
+    const enrichedContent = datasetAnalysis
+      ? `${body.content}\n\n---\n\n${datasetAnalysis}`
+      : body.content;
+
+    const prompt = promptFn(enrichedContent, subject, body.weakTopics);
 
     // Build message content — include images as vision blocks if provided
     type ImageBlock = { type: "image"; source: { type: "base64"; media_type: string; data: string } };

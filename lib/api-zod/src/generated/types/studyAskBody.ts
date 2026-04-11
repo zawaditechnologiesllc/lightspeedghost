@@ -12,5 +12,7 @@ export interface StudyAskBody {
   sessionId?: number;
   imageUrl?: string | null;
   documentContext?: string | null;
+  datasetText?: string;
   mode?: StudyAskBodyMode;
+  subject?: string;
 }

@@ -14,6 +14,7 @@ import { eq, desc, and, isNotNull } from "drizzle-orm";
 import { trackUsage } from "../lib/usageTracker";
 import { recordSearchResults, recordQualitySignal } from "../lib/learningEngine";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
+import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
 
 const router = Router();
 
@@ -268,68 +269,6 @@ function getSectionBudgets(paperType: string, targetWords: number): { name: stri
     name: s.name,
     targetWords: Math.ceil(targetWords * s.pct),
   }));
-}
-
-/**
- * Parses CSV/TSV text and returns a descriptive-statistics block for the system prompt.
- * Used when a student uploads quantitative data for their Results/Findings section.
- */
-function parseAndAnalyzeDataset(csvText: string): string {
-  const lines = csvText.trim().split("\n").filter(l => l.trim().length > 0);
-  if (lines.length < 2) return "";
-
-  const firstLine = lines[0];
-  const sep = firstLine.split("\t").length > firstLine.split(",").length ? "\t" : ",";
-  const parseRow = (line: string) => line.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""));
-
-  const headers = parseRow(lines[0]);
-  const rows = lines.slice(1).map(parseRow);
-  const totalRows = rows.length;
-
-  const colStats: string[] = [];
-  headers.forEach((header, colIdx) => {
-    const rawValues = rows.map(r => r[colIdx] ?? "").filter(v => v.length > 0);
-    const numericValues = rawValues.map(v => parseFloat(v.replace(/,/g, ""))).filter(v => !isNaN(v));
-    if (numericValues.length >= rawValues.length * 0.7 && numericValues.length >= 3) {
-      const n = numericValues.length;
-      const mean = numericValues.reduce((a, b) => a + b, 0) / n;
-      const sorted = [...numericValues].sort((a, b) => a - b);
-      const median = n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
-      const variance = numericValues.reduce((a, b) => a + (b - mean) ** 2, 0) / n;
-      const stdDev = Math.sqrt(variance);
-      colStats.push(
-        `**${header}** (n=${n}): mean=${mean.toFixed(3)}, median=${median.toFixed(3)}, SD=${stdDev.toFixed(3)}, min=${sorted[0]}, max=${sorted[n - 1]}`
-      );
-    } else {
-      const counts: Record<string, number> = {};
-      rawValues.forEach(v => { counts[v] = (counts[v] ?? 0) + 1; });
-      const topCats = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-      colStats.push(`**${header}** (categorical, n=${rawValues.length}): ${topCats.map(([v, c]) => `${v}=${c}`).join(", ")}`);
-    }
-  });
-
-  const previewRows = rows.slice(0, 5);
-  const tableHeader = `| ${headers.join(" | ")} |`;
-  const tableSep = `| ${headers.map(() => "---").join(" | ")} |`;
-  const tableBody = previewRows.map(r => `| ${headers.map((_, i) => r[i] ?? "").join(" | ")} |`).join("\n");
-
-  return `STUDENT-PROVIDED DATASET (${totalRows} rows × ${headers.length} columns)
-Variables: ${headers.join(", ")}
-
-Data Preview (first ${Math.min(5, totalRows)} rows):
-${tableHeader}
-${tableSep}
-${tableBody}
-
-Descriptive Statistics:
-${colStats.join("\n")}
-
-MANDATORY DATA USAGE RULES:
-1. Your Results/Findings section MUST present and discuss the ACTUAL statistics above — never invent alternative numbers
-2. Include at least one properly formatted markdown table in the Results section showing key statistics
-3. Reference specific values (means, SD, ranges) with precision in your prose
-4. In the Discussion, interpret what these specific results mean for the research question
-5. Report trends, patterns, or notable distributions you observe in the data`;
 }
 
 function computeBodyWordCount(content: string): number {

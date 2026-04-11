@@ -294,6 +294,7 @@ export const SolveStemBody = zod.object({
   exportFormat: zod
     .enum(["text", "latex", "json", "csv"])
     .default(solveStemBodyExportFormatDefault),
+  datasetText: zod.string().optional(),
 });
 
 export const SolveStemResponse = zod.object({
@@ -345,9 +346,11 @@ export const AskStudyAssistantBody = zod.object({
   sessionId: zod.number().optional(),
   imageUrl: zod.string().nullish(),
   documentContext: zod.string().nullish(),
+  datasetText: zod.string().optional(),
   mode: zod
     .enum(["tutor", "explain", "quiz", "summarize"])
     .default(askStudyAssistantBodyModeDefault),
+  subject: zod.string().optional(),
 });
 
 export const AskStudyAssistantResponse = zod.object({

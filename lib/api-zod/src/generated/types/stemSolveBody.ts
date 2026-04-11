@@ -14,4 +14,5 @@ export interface StemSolveBody {
   showSteps?: boolean;
   generateGraph?: boolean;
   exportFormat?: StemSolveBodyExportFormat;
+  datasetText?: string;
 }

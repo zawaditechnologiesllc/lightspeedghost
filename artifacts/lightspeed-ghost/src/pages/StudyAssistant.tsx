@@ -11,7 +11,7 @@ import {
   BookOpen, Brain, GraduationCap, AlertTriangle,
   Presentation, ChevronDown, ChevronUp,
   Star, Target, BookMarked, FlipHorizontal2,
-  Image as ImageIcon, Plus, Sparkles, MessageSquare, X,
+  Image as ImageIcon, Plus, Sparkles, MessageSquare, X, Database, CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
@@ -148,11 +148,12 @@ async function callGenerate(
   subject: string,
   images: { base64: string; mimeType: string }[],
   weakTopics?: string[],
+  datasetText?: string,
 ) {
   const res = await apiFetch(`/study/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, type, subject, weakTopics, images }),
+    body: JSON.stringify({ content, type, subject, weakTopics, images, datasetText: datasetText?.trim() || undefined }),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -163,6 +164,7 @@ async function callGenerate(
 export default function StudyAssistant() {
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const imageInputRef   = useRef<HTMLInputElement>(null);
+  const datasetInputRef = useRef<HTMLInputElement>(null);
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
   const chatEndRef      = useRef<HTMLDivElement>(null);
   const chatInputRef    = useRef<HTMLTextAreaElement>(null);
@@ -181,6 +183,11 @@ export default function StudyAssistant() {
   // Sources (uploaded files + images)
   const [sources,   setSources]   = useState<StudySource[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  // Dataset (CSV / TSV)
+  const [datasetText,    setDatasetText]    = useState("");
+  const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
+  const [showDataset,    setShowDataset]    = useState(false);
 
   // Generation state
   const [isGenerating,  setIsGenerating]  = useState(false);
@@ -288,6 +295,33 @@ export default function StudyAssistant() {
     for (const f of Array.from(e.dataTransfer.files)) await uploadFile(f);
   }, [uploadFile]);
 
+  const handleDatasetFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const raw = (ev.target?.result as string) ?? "";
+      setDatasetText(raw);
+      const lines = raw.trim().split("\n").filter(Boolean);
+      if (lines.length > 1) {
+        const sep = lines[0].split("\t").length > lines[0].split(",").length ? "\t" : ",";
+        setDatasetPreview(lines.slice(0, 4).map(l => l.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""))));
+      } else setDatasetPreview([]);
+      setShowDataset(true);
+    };
+    reader.readAsText(file);
+  }, []);
+
+  const handleDatasetPaste = useCallback((raw: string) => {
+    setDatasetText(raw);
+    const lines = raw.trim().split("\n").filter(Boolean);
+    if (lines.length > 1) {
+      const sep = lines[0].split("\t").length > lines[0].split(",").length ? "\t" : ",";
+      setDatasetPreview(lines.slice(0, 4).map(l => l.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""))));
+    } else setDatasetPreview([]);
+  }, []);
+
   // ── Generate ──────────────────────────────────────────────────────────
 
   const generate = useCallback(async (type: OutputType | "weakpoints" = selectedType) => {
@@ -311,6 +345,7 @@ export default function StudyAssistant() {
         selectedSubject,
         images,
         type === "weakpoints" ? wrongTopics : undefined,
+        datasetText,
       );
       if (type === "flashcards") { setFlashcards(r.data?.flashcards ?? []); setCardIdx(0); setCardFlipped(false); setMasteredCards(new Set()); }
       if (type === "quiz")       { setQuiz(r.data?.questions ?? []); setQuizAnswers([]); setQuizSubmitted(false); setCurrentQ(0); }
@@ -323,7 +358,7 @@ export default function StudyAssistant() {
       setGenerateError(e instanceof Error ? e.message : "Generation failed. Please try again.");
       setActiveView(null);
     } finally { setIsGenerating(false); }
-  }, [topic, sources, selectedType, selectedSubject, wrongTopics]);
+  }, [topic, sources, selectedType, selectedSubject, wrongTopics, datasetText]);
 
   // ── Chat ──────────────────────────────────────────────────────────────
 
@@ -342,6 +377,8 @@ export default function StudyAssistant() {
         question: withCtx,
         sessionId: chatSessionId,
         mode: chatMode,
+        datasetText: datasetText.trim() || undefined,
+        subject: selectedSubject,
       });
       setChatSessionId(res.sessionId);
       setChatMessages((prev) => [...prev, { role: "assistant", content: res.answer, followUpQuestions: res.followUpQuestions }]);
@@ -349,7 +386,7 @@ export default function StudyAssistant() {
     } catch {
       setChatMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong. Try again." }]);
     }
-  }, [chatInput, chatSessionId, chatMode, topic, sources, selectedSubject, askAssistant, queryClient]);
+  }, [chatInput, chatSessionId, chatMode, topic, sources, selectedSubject, datasetText, askAssistant, queryClient]);
 
   // ── Quiz helpers ──────────────────────────────────────────────────────
 
@@ -484,6 +521,8 @@ export default function StudyAssistant() {
               accept=".pdf,.docx,.doc,.txt,.md" onChange={handleFileInput} />
             <input ref={imageInputRef} type="file" multiple className="sr-only"
               accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleFileInput} />
+            <input ref={datasetInputRef} type="file" className="sr-only"
+              accept=".csv,.tsv,.txt" onChange={handleDatasetFile} />
 
             {/* Upload row */}
             <div className="flex gap-2">
@@ -506,7 +545,66 @@ export default function StudyAssistant() {
                 <ImageIcon size={14} className="shrink-0" />
                 <span className="text-xs">Screenshot</span>
               </button>
+              <button
+                onClick={() => setShowDataset(v => !v)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
+                  showDataset || datasetText
+                    ? "border-violet-400/60 text-violet-600 dark:text-violet-400 bg-violet-50/10 dark:bg-violet-900/20"
+                    : "border-border text-muted-foreground hover:border-violet-400/40 hover:text-violet-500"
+                )}
+              >
+                <Database size={14} className="shrink-0" />
+                <span className="text-xs">{datasetText ? "Dataset ✓" : "Dataset"}</span>
+              </button>
             </div>
+
+            {/* Dataset panel */}
+            {showDataset && (
+              <div className="rounded-xl border border-violet-400/30 bg-violet-50/10 dark:bg-violet-900/10 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold text-violet-700 dark:text-violet-400">
+                    Dataset <span className="font-normal text-muted-foreground ml-1">(CSV/TSV — AI builds study materials from your actual data)</span>
+                  </p>
+                  {datasetText && (
+                    <button onClick={() => { setDatasetText(""); setDatasetPreview([]); }}
+                      className="text-[10px] text-muted-foreground hover:text-destructive transition-colors">
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => datasetInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-violet-300 dark:border-violet-700 rounded-lg py-2 transition-colors hover:border-violet-400"
+                >
+                  <Database size={12} /> Upload CSV or TSV file
+                </button>
+                <textarea
+                  value={datasetText}
+                  onChange={e => handleDatasetPaste(e.target.value)}
+                  rows={3}
+                  placeholder={"Or paste CSV / tab-separated data…\ne.g.  Group,Score\n      Control,72.3\n      Treatment,84.1"}
+                  className="w-full px-2.5 py-1.5 font-mono text-xs rounded-lg border border-violet-200 dark:border-violet-800 bg-background focus:outline-none focus:ring-1 focus:ring-violet-400 resize-none"
+                />
+                {datasetPreview.length > 1 && (
+                  <div className="rounded-lg border border-violet-300/40 bg-background p-2 overflow-x-auto">
+                    <p className="text-[10px] text-violet-600 dark:text-violet-400 flex items-center gap-1 mb-1.5 font-medium">
+                      <CheckCircle size={10} /> {datasetText.trim().split("\n").length - 1} rows × {datasetPreview[0]?.length ?? 0} columns — AI will compute statistics and build study materials from your data
+                    </p>
+                    <table className="text-[10px] w-full border-collapse">
+                      <thead>
+                        <tr>{datasetPreview[0]?.map((h, i) => <th key={i} className="text-left px-2 py-0.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">{h}</th>)}</tr>
+                      </thead>
+                      <tbody>
+                        {datasetPreview.slice(1).map((row, i) => (
+                          <tr key={i}>{row.map((cell, j) => <td key={j} className="px-2 py-0.5 text-muted-foreground whitespace-nowrap">{cell}</td>)}</tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Source chips */}
             {sources.length > 0 && (

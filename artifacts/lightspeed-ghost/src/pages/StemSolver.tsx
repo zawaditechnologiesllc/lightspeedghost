@@ -138,8 +138,12 @@ interface SolveStep { id: string; message: string; status: "running" | "done" | 
 
 export default function StemSolver() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const datasetInputRef = useRef<HTMLInputElement>(null);
   const [isFileExtracting, setIsFileExtracting] = useState(false);
   const [fileExtractError, setFileExtractError] = useState<string | null>(null);
+  const [datasetText, setDatasetText] = useState("");
+  const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
+  const [showDataset, setShowDataset] = useState(false);
   const [result, setResult] = useState<StemSolution | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [papersLoading, setPapersLoading] = useState(false);
@@ -212,6 +216,36 @@ export default function StemSolver() {
 
   const handleStemImageOcr = (text: string) => form.setValue("problem", text.slice(0, 1000));
 
+  const handleDatasetFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const raw = (ev.target?.result as string) ?? "";
+      setDatasetText(raw);
+      const lines = raw.trim().split("\n").filter(Boolean);
+      if (lines.length > 1) {
+        const sep = lines[0].split("\t").length > lines[0].split(",").length ? "\t" : ",";
+        setDatasetPreview(lines.slice(0, 4).map(l => l.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""))));
+      } else {
+        setDatasetPreview([]);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDatasetPaste = (raw: string) => {
+    setDatasetText(raw);
+    const lines = raw.trim().split("\n").filter(Boolean);
+    if (lines.length > 1) {
+      const sep = lines[0].split("\t").length > lines[0].split(",").length ? "\t" : ",";
+      setDatasetPreview(lines.slice(0, 4).map(l => l.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""))));
+    } else {
+      setDatasetPreview([]);
+    }
+  };
+
   const onSubmit = async (data: FormData) => {
     if (isAtLimit("stem")) { guard("stem", () => {}); return; }
     setPapers([]);
@@ -235,7 +269,7 @@ export default function StemSolver() {
       const resp = await apiFetch(`/stem/solve-stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, datasetText: datasetText.trim() || undefined }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -482,6 +516,7 @@ export default function StemSolver() {
         <div className="flex items-center gap-2 px-4 pt-3 pb-0 flex-wrap">
           <StemImageOcr onExtracted={handleStemImageOcr} compact />
           <input ref={fileInputRef} type="file" accept=".txt,.pdf,.docx,.doc,.md" className="sr-only" onChange={handleStemFileExtracted} />
+          <input ref={datasetInputRef} type="file" accept=".csv,.tsv,.txt" className="sr-only" onChange={handleDatasetFile} />
           <button
             type="button"
             disabled={isFileExtracting}
@@ -492,10 +527,71 @@ export default function StemSolver() {
               ? <><Loader2 size={12} className="animate-spin" /> Extracting…</>
               : <><FileText size={12} /> Upload file</>}
           </button>
+          <button
+            type="button"
+            onClick={() => setShowDataset(v => !v)}
+            className={cn(
+              "flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all",
+              showDataset || datasetText
+                ? "border-violet-400/60 text-violet-600 dark:text-violet-400 bg-violet-50/30 dark:bg-violet-900/20"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-primary/50 bg-card"
+            )}
+          >
+            <Database size={12} />
+            {datasetText ? "Dataset loaded" : "Add dataset"}
+          </button>
           {fileExtractError && (
             <span className="text-xs text-destructive">{fileExtractError}</span>
           )}
         </div>
+        {/* Dataset panel */}
+        {showDataset && (
+          <div className="mx-4 mt-2 rounded-xl border border-violet-400/30 bg-violet-50/20 dark:bg-violet-900/10 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold text-violet-700 dark:text-violet-400">
+                Dataset <span className="font-normal text-muted-foreground">(CSV/TSV — AI computes statistics and incorporates them into the solution)</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => { setDatasetText(""); setDatasetPreview([]); }}
+                className="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => datasetInputRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-violet-300 dark:border-violet-700 rounded-lg py-2 transition-colors hover:border-violet-400"
+            >
+              <Database size={12} /> Upload CSV or TSV file
+            </button>
+            <textarea
+              value={datasetText}
+              onChange={e => handleDatasetPaste(e.target.value)}
+              rows={3}
+              placeholder={"Or paste CSV / tab-separated data…\ne.g.  Group,Value\n      A,3.14\n      B,2.71"}
+              className="w-full px-2.5 py-1.5 font-mono text-xs rounded-lg border border-violet-200 dark:border-violet-800 bg-background focus:outline-none focus:ring-1 focus:ring-violet-400 resize-none"
+            />
+            {datasetPreview.length > 1 && (
+              <div className="rounded-lg border border-violet-300/40 bg-background p-2 overflow-x-auto">
+                <p className="text-[10px] text-violet-600 dark:text-violet-400 flex items-center gap-1 mb-1.5 font-medium">
+                  <CheckCircle size={10} /> {datasetText.trim().split("\n").length - 1} rows × {datasetPreview[0]?.length ?? 0} columns loaded
+                </p>
+                <table className="text-[10px] w-full border-collapse">
+                  <thead>
+                    <tr>{datasetPreview[0]?.map((h, i) => <th key={i} className="text-left px-2 py-0.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {datasetPreview.slice(1).map((row, i) => (
+                      <tr key={i}>{row.map((cell, j) => <td key={j} className="px-2 py-0.5 text-muted-foreground whitespace-nowrap">{cell}</td>)}</tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
         {/* Textarea */}
         <textarea
           {...form.register("problem")}
