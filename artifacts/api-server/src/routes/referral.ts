@@ -14,7 +14,15 @@ function verifyAdminToken(req: Request): boolean {
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
   if (!ADMIN_PASSWORD) return false;
   const token = req.headers["x-admin-password"] as string | undefined;
-  return token === ADMIN_PASSWORD;
+  if (!token) return false;
+  const aBuf = Buffer.from(token, "utf8");
+  const bBuf = Buffer.from(ADMIN_PASSWORD, "utf8");
+  const maxLen = Math.max(aBuf.length, bBuf.length);
+  const aPadded = Buffer.alloc(maxLen);
+  const bPadded = Buffer.alloc(maxLen);
+  aBuf.copy(aPadded);
+  bBuf.copy(bPadded);
+  return crypto.timingSafeEqual(aPadded, bPadded) && aBuf.length === bBuf.length;
 }
 
 // ── Table init ────────────────────────────────────────────────────────────────

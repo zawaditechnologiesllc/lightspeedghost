@@ -253,6 +253,15 @@ const aiLimiter = rateLimit({
   message: { error: "Too many AI requests. Please wait before trying again." },
 });
 
+// ── Admin login limiter — 10 attempts/15 min per IP (brute-force protection) ──
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many admin login attempts. Try again in 15 minutes." },
+});
+
 app.use(
   [
     "/api/writing/generate-stream",
@@ -270,6 +279,9 @@ app.use(
   ],
   aiLimiter,
 );
+
+// ── Admin login brute-force protection ────────────────────────────────────────
+app.use("/api/admin/verify", adminLoginLimiter);
 
 // ── Body parsers — strict size limits ─────────────────────────────────────────
 // Webhook routes need raw body for signature verification

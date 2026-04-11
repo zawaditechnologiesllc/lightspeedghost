@@ -95,9 +95,9 @@ function inlineMathAndMarkdown(line: string): string {
   //  so we only run mathToHtml on remaining unprocessed math tokens)
   out = out.replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g, (full, block, inline) => {
     if (block !== undefined) {
-      try { return `<div class="math-block">${katex.renderToString(block.trim(), { displayMode: true, throwOnError: false })}</div>`; } catch { return `<code>$$${escHtml(block)}$$</code>`; }
+      try { return `<div class="math-block">${katex.renderToString(block.trim(), { displayMode: true, throwOnError: false, trust: false })}</div>`; } catch { return `<code>$$${escHtml(block)}$$</code>`; }
     }
-    try { return katex.renderToString(inline.trim(), { displayMode: false, throwOnError: false }); } catch { return `<code>$${escHtml(inline)}$</code>`; }
+    try { return katex.renderToString(inline.trim(), { displayMode: false, throwOnError: false, trust: false }); } catch { return `<code>$${escHtml(inline)}$</code>`; }
   });
 
   return out;
@@ -293,7 +293,7 @@ export function buildStemExportHtml(data: StemExportData): string {
 <div class="answer-block">
   <div class="answer-label">✓ Solution</div>
   ${richToHtml(data.answer)}
-  ${data.latex && data.latex !== "\\text{See solution above}" ? `<div class="math-block">${katex.renderToString(data.latex.replace(/^\$\$|\$\$$/g, "").trim(), { displayMode: true, throwOnError: false })}</div>` : ""}
+  ${data.latex && data.latex !== "\\text{See solution above}" ? `<div class="math-block">${katex.renderToString(data.latex.replace(/^\$\$|\$\$$/g, "").trim(), { displayMode: true, throwOnError: false, trust: false })}</div>` : ""}
 </div>`);
 
   // Corrections

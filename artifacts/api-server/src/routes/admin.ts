@@ -4,15 +4,28 @@ import { documentsTable, studySessionsTable } from "@workspace/db";
 import { desc, sql, eq, ilike, and } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { invalidateSettingsCache } from "../lib/systemSettings";
+import crypto from "node:crypto";
 
 const router = Router();
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
+function timingSafeCompare(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a, "utf8");
+  const bBuf = Buffer.from(b, "utf8");
+  const maxLen = Math.max(aBuf.length, bBuf.length);
+  const aPadded = Buffer.alloc(maxLen);
+  const bPadded = Buffer.alloc(maxLen);
+  aBuf.copy(aPadded);
+  bBuf.copy(bPadded);
+  return crypto.timingSafeEqual(aPadded, bPadded) && aBuf.length === bBuf.length;
+}
+
 function verifyAdminToken(req: Request): boolean {
   if (!ADMIN_PASSWORD) return false;
   const token = req.headers["x-admin-password"] as string | undefined;
-  return token === ADMIN_PASSWORD;
+  if (!token) return false;
+  return timingSafeCompare(token, ADMIN_PASSWORD);
 }
 
 // ── Bootstrap admin tables ───────────────────────────────────────────────────
@@ -92,7 +105,7 @@ router.post("/admin/verify", (req, res) => {
     res.status(503).json({ error: "Admin not configured. Set ADMIN_PASSWORD environment variable." });
     return;
   }
-  if (password === ADMIN_PASSWORD) {
+  if (timingSafeCompare(password ?? "", ADMIN_PASSWORD)) {
     res.json({ ok: true });
   } else {
     res.status(401).json({ ok: false, error: "Invalid admin password" });
