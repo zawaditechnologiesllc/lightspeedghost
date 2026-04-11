@@ -42,7 +42,6 @@ const PAPER_TYPES: { value: PaperType; label: string }[] = [
   { value: "report",            label: "Report" },
 ];
 
-const WORD_PRESETS = [500, 800, 1000, 1200, 1500, 2000, 2500, 3000, 4000, 5000];
 
 const SECTION_COLORS = [
   "border-l-blue-500 bg-blue-500/5",
@@ -78,8 +77,7 @@ export default function Outline() {
   const [topic, setTopic] = useState("");
   const [subject, setSubject] = useState("");
   const [paperType, setPaperType] = useState<PaperType>("research");
-  const [wordCount, setWordCount] = useState(1500);
-  const [customWordCount, setCustomWordCount] = useState("");
+  const [wordCount, setWordCount] = useState(1000);
   const [instructionsText, setInstructionsText] = useState("");
   const [referenceText, setReferenceText] = useState("");
   const [instructionsLoaded, setInstructionsLoaded] = useState(false);
@@ -164,7 +162,6 @@ export default function Outline() {
     }, 1000);
 
     try {
-      const effectiveWordCount = customWordCount ? parseInt(customWordCount, 10) || wordCount : wordCount;
       const resp = await apiFetch(`/writing/outline`, {
         method: "POST",
         headers: {
@@ -174,7 +171,7 @@ export default function Outline() {
           topic: topic.trim(),
           subject: subject.trim(),
           paperType,
-          wordCount: effectiveWordCount,
+          wordCount,
           instructionsText: instructionsText || undefined,
           referenceText: referenceText || undefined,
         }),
@@ -223,13 +220,12 @@ export default function Outline() {
 
   const handleWritePaper = () => {
     if (!result) return;
-    const effectiveWordCount = customWordCount ? parseInt(customWordCount, 10) || wordCount : wordCount;
     const outlineText = formatOutlineAsText(result);
     sessionStorage.setItem("outline_prefill", JSON.stringify({
       topic,
       subject,
       paperType,
-      wordCount: effectiveWordCount,
+      wordCount,
       additionalInstructions: outlineText,
     }));
     navigate("/write");
@@ -417,43 +413,20 @@ export default function Outline() {
 
             {/* Word count */}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">
-                Word Count
-                <span className="ml-2 text-[10px] font-semibold text-orange-500 uppercase tracking-wider">Non-negotiable</span>
-              </label>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {WORD_PRESETS.map(n => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => { setWordCount(n); setCustomWordCount(""); }}
-                    className={cn(
-                      "px-2.5 py-1 rounded-lg border text-xs font-medium transition-all",
-                      wordCount === n && !customWordCount
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                    )}
-                  >
-                    {n >= 1000 ? `${n / 1000}k` : n}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={100}
-                  max={15000}
-                  value={customWordCount}
-                  onChange={e => setCustomWordCount(e.target.value)}
-                  placeholder="Custom word count…"
-                  className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-                {customWordCount && (
-                  <span className="text-xs text-muted-foreground">Using {parseInt(customWordCount).toLocaleString()} words</span>
-                )}
-              </div>
+              <label className="text-sm font-medium mb-1.5 block">Word Count</label>
+              <input
+                type="number"
+                min={100}
+                max={15000}
+                value={wordCount}
+                onChange={e => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!isNaN(v)) setWordCount(v);
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
               <p className="text-[10px] text-muted-foreground mt-1.5">
-                Paper will be written to at least this count (+10% buffer guaranteed). Currently set to <strong>{(customWordCount ? parseInt(customWordCount) || wordCount : wordCount).toLocaleString()}</strong> words.
+                Outline word targets will be distributed across sections based on <strong>{wordCount.toLocaleString()}</strong> words total.
               </p>
             </div>
 

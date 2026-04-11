@@ -47,7 +47,6 @@ type PaperViewMode = "view" | "edit";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const WORD_PRESETS = [500, 800, 1000, 1200, 1500, 2000, 2500, 3000, 4000, 5000];
 
 const ACADEMIC_LEVELS = [
   { value: "high_school",   label: "High School" },
@@ -239,8 +238,7 @@ export default function WritePaper() {
   // ── form
   const [paperType, setPaperType] = useState("research");
   const [citationStyle, setCitationStyle] = useState<string>("apa");
-  const [wordCount, setWordCount] = useState(1500);
-  const [customWordCount, setCustomWordCount] = useState("");
+  const [wordCount, setWordCount] = useState(1000);
   const [academicLevel, setAcademicLevel] = useState("undergrad_3_4");
   const [isStem, setIsStem] = useState(false);
   const [topic, setTopic] = useState("");
@@ -278,10 +276,7 @@ export default function WritePaper() {
     const wMatch = text.match(/(\d[\d,]*)\s*(?:to\s*(\d[\d,]*))?\s*words?\b/i);
     if (wMatch) {
       const n = parseInt(wMatch[1].replace(/,/g, ""), 10);
-      if (n >= 100 && n <= 10000) {
-        setWordCount(n);
-        setCustomWordCount(WORD_PRESETS.includes(n) ? "" : String(n));
-      }
+      if (n >= 100 && n <= 15000) setWordCount(n);
     }
   }, [topic, subject]);
 
@@ -302,12 +297,7 @@ export default function WritePaper() {
         if (data.topic)    setTopic(data.topic);
         if (data.subject)  setSubject(data.subject);
         if (data.paperType) setPaperType(data.paperType);
-        if (data.wordCount) {
-          setWordCount(data.wordCount);
-          // If the value is a standard preset, activate the preset button (clear custom).
-          // If it's a non-standard value, show it in the custom input.
-          setCustomWordCount(WORD_PRESETS.includes(data.wordCount) ? "" : String(data.wordCount));
-        }
+        if (data.wordCount) setWordCount(data.wordCount);
         if (data.additionalInstructions) setAdditionalInstructions(data.additionalInstructions);
         return; // skip URL params if outline prefill was used
       } catch { /* ignore parse errors */ }
@@ -340,9 +330,7 @@ export default function WritePaper() {
     if (!topic.trim() || !subject.trim()) return;
     if (isAtLimit("paper")) { guard("paper", () => {}); return; }
 
-    const effectiveWordCount = customWordCount ? parseInt(customWordCount, 10) || wordCount : wordCount;
-
-    targetWordCountRef.current = effectiveWordCount;
+    targetWordCountRef.current = wordCount;
     setPhase("generating");
     setStreamedContent("");
     setGenError("");
@@ -363,7 +351,7 @@ export default function WritePaper() {
           topic: topic.trim(),
           subject: subject.trim(),
           paperType,
-          wordCount: effectiveWordCount,
+          wordCount,
           citationStyle,
           academicLevel,
           isStem,
@@ -951,35 +939,20 @@ export default function WritePaper() {
         {/* ── Word count ── */}
         <div>
           <label className="text-sm font-medium mb-2 block">Word Count</label>
-          <div className="flex gap-2 flex-wrap items-center mb-2">
-            {WORD_PRESETS.map(n => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => { setWordCount(n); setCustomWordCount(""); }}
-                className={cn(
-                  "px-3 py-1 rounded-lg border text-xs font-medium transition-all",
-                  wordCount === n && !customWordCount ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                )}
-              >
-                {n.toLocaleString()}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min={100}
-              max={15000}
-              value={customWordCount}
-              onChange={e => setCustomWordCount(e.target.value)}
-              placeholder="Or type exact count…"
-              className="w-44 px-3 py-1.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            {customWordCount && (
-              <span className="text-xs text-muted-foreground">Using {parseInt(customWordCount).toLocaleString()} words</span>
-            )}
-          </div>
+          <input
+            type="number"
+            min={100}
+            max={15000}
+            value={wordCount}
+            onChange={e => {
+              const v = parseInt(e.target.value, 10);
+              if (!isNaN(v)) setWordCount(v);
+            }}
+            className="w-44 px-3 py-1.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <p className="text-xs text-muted-foreground mt-1.5">
+            Paper will be written to exactly <strong>{wordCount.toLocaleString()}</strong> words (±10%).
+          </p>
         </div>
 
         {/* ── Citation style ── */}
