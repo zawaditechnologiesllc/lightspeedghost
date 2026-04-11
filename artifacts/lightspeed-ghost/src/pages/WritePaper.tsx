@@ -278,7 +278,10 @@ export default function WritePaper() {
     const wMatch = text.match(/(\d[\d,]*)\s*(?:to\s*(\d[\d,]*))?\s*words?\b/i);
     if (wMatch) {
       const n = parseInt(wMatch[1].replace(/,/g, ""), 10);
-      if (n >= 100 && n <= 10000) { setWordCount(n); setCustomWordCount(String(n)); }
+      if (n >= 100 && n <= 10000) {
+        setWordCount(n);
+        setCustomWordCount(WORD_PRESETS.includes(n) ? "" : String(n));
+      }
     }
   }, [topic, subject]);
 
@@ -301,7 +304,9 @@ export default function WritePaper() {
         if (data.paperType) setPaperType(data.paperType);
         if (data.wordCount) {
           setWordCount(data.wordCount);
-          setCustomWordCount(String(data.wordCount));
+          // If the value is a standard preset, activate the preset button (clear custom).
+          // If it's a non-standard value, show it in the custom input.
+          setCustomWordCount(WORD_PRESETS.includes(data.wordCount) ? "" : String(data.wordCount));
         }
         if (data.additionalInstructions) setAdditionalInstructions(data.additionalInstructions);
         return; // skip URL params if outline prefill was used
