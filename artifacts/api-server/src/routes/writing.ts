@@ -1172,32 +1172,43 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
       });
     } catch { /* non-fatal — continue even if save fails */ }
 
-    // Enrich each section with a word count target.
-    // Inspired by PaperCraftr / storycraftr section-budget approach (Repo 1).
-    // Reuses the same percentage distribution from planSectionWordBudgets so that
-    // the outline word targets are identical to what the paper writer targets.
+    // Enrich each section with a word count target using the 3-group model:
+    //   Introduction  10–15%  (midpoint 12%)
+    //   Main Body     70–80%  (remainder, split evenly among body sections)
+    //   Conclusion    10–15%  (midpoint 12%)
+    //   References / Appendix → 0 (excluded from word count)
     const targetWordCount = Number(req.body.wordCount) || 2000;
-    const sectionCount = outline.sections.length;
 
-    // Build a percentage distribution for this paper type
-    const budgetString = planSectionWordBudgets(body.paperType, targetWordCount);
-    const budgetLines = budgetString.match(/•\s+.+?:\s+~(\d+) words/g) ?? [];
-    const budgetWords = budgetLines.map(line => {
-      const match = line.match(/~(\d+) words/);
-      return match ? parseInt(match[1], 10) : 0;
+    const classifySection = (heading: string): "intro" | "body" | "conclusion" | "none" => {
+      const h = heading.toLowerCase();
+      if (/\b(introduction|intro|overview|background|context)\b/.test(h)) return "intro";
+      if (/\b(conclusion|conclusions|summary|closing|future work|future research|recommendation)\b/.test(h)) return "conclusion";
+      if (/\b(references?|bibliography|works cited|appendix|appendices)\b/.test(h)) return "none";
+      return "body";
+    };
+
+    const types = (outline.sections as Array<{ heading: string; subsections: string[] }>).map(s => classifySection(s.heading));
+    const introCount = types.filter(t => t === "intro").length;
+    const concCount  = types.filter(t => t === "conclusion").length;
+    const bodyCount  = types.filter(t => t === "body").length;
+
+    const INTRO_PCT = 0.12;
+    const CONC_PCT  = 0.12;
+    const introPct  = introCount > 0 ? INTRO_PCT : 0;
+    const concPct   = concCount  > 0 ? CONC_PCT  : 0;
+    const bodyPct   = Math.max(0, 1 - introPct - concPct);
+
+    const wordTargets = types.map(type => {
+      switch (type) {
+        case "intro":      return Math.round((introPct / Math.max(1, introCount)) * targetWordCount);
+        case "conclusion": return Math.round((concPct  / Math.max(1, concCount))  * targetWordCount);
+        case "body":       return Math.round((bodyPct  / Math.max(1, bodyCount))  * targetWordCount);
+        case "none":       return 0;
+      }
     });
 
-    const enrichedSections = outline.sections.map(
-      (section: { heading: string; subsections: string[] }, i: number) => {
-        // Try to get allocated words from budget; fall back to even split
-        const allocated = budgetWords[i] ?? Math.round(targetWordCount / sectionCount);
-        // References section has no word target — it's excluded from the count
-        const isRefSection = /references?|bibliography|works cited/i.test(section.heading);
-        return {
-          ...section,
-          wordTarget: isRefSection ? 0 : allocated,
-        };
-      }
+    const enrichedSections = (outline.sections as Array<{ heading: string; subsections: string[] }>).map(
+      (section, i) => ({ ...section, wordTarget: wordTargets[i] })
     );
 
     res.json({ ...outline, sections: enrichedSections, totalWordTarget: targetWordCount });

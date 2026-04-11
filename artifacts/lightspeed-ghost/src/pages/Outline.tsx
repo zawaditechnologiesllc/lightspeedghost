@@ -23,11 +23,13 @@ type Phase = "config" | "generating" | "results";
 interface OutlineSection {
   heading: string;
   subsections: string[];
+  wordTarget: number;
 }
 
 interface OutlineResult {
   title: string;
   sections: OutlineSection[];
+  totalWordTarget: number;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -162,16 +164,17 @@ export default function Outline() {
     }, 1000);
 
     try {
+      const effectiveWordCount = customWordCount ? parseInt(customWordCount, 10) || wordCount : wordCount;
       const resp = await apiFetch(`/writing/outline`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          
         },
         body: JSON.stringify({
           topic: topic.trim(),
           subject: subject.trim(),
           paperType,
+          wordCount: effectiveWordCount,
           instructionsText: instructionsText || undefined,
           referenceText: referenceText || undefined,
         }),
@@ -571,6 +574,12 @@ export default function Outline() {
               <span>{result.sections.length} sections</span>
               <span className="text-border">·</span>
               <span>{result.sections.reduce((acc, s) => acc + s.subsections.length, 0)} sub-points</span>
+              {result.totalWordTarget > 0 && (
+                <>
+                  <span className="text-border">·</span>
+                  <span className="font-semibold text-primary">{result.totalWordTarget.toLocaleString()} words total</span>
+                </>
+              )}
             </div>
           </div>
           <div className="divide-y divide-border">
@@ -596,6 +605,11 @@ export default function Outline() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        {section.wordTarget > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded bg-primary/8 text-primary/70 border border-primary/15 hidden sm:block">
+                            ~{section.wordTarget.toLocaleString()}w
+                          </span>
+                        )}
                         {section.subsections.length > 0 && (
                           <span className="text-[10px] text-muted-foreground/50 hidden sm:block">
                             {section.subsections.length} points
