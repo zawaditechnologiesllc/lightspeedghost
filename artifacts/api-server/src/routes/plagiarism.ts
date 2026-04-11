@@ -14,36 +14,133 @@ import { runOpenSourcePlagiarismCheck } from "../lib/openSourceSearch";
 
 const router = Router();
 
+// Stop-words used for cosine similarity (mirrors textAnalysis.ts corpus logic)
+const STOP_WORDS = new Set([
+  "the","a","an","and","or","but","in","on","at","to","for","of","with","by","from","as","is","was","are",
+  "were","be","been","being","have","has","had","do","does","did","will","would","could","should","may",
+  "might","shall","that","this","these","those","it","its","which","who","what","when","where","how","if",
+  "then","than","so","yet","both","not","no","nor","any","each","few","more","most","other","some","such",
+  "all","also","just","into","over","after","before","about","up","out","can","now","like","only","same",
+  "too","very","one","two","three","four","five","i","we","you","they","he","she","our","their","your",
+  "his","her","my","its","used","using","study","paper","research","results","show","shows","showed",
+  "article","journal","found","finding","analysis","data","however","whereas","while","thus","therefore",
+]);
+
 /**
- * Query live academic databases with the opening of the submitted text,
- * returning real papers that may contain similar content (with DOI links).
- * Runs with a 7-second timeout so it never blocks the response.
+ * Compute TF-based cosine similarity between two text strings.
+ * Returns a percentage (0–100). This is the same algorithm used in
+ * textAnalysis.ts — the result is directly comparable to the local corpus score.
+ */
+function computeCosineSimilarity(text1: string, text2: string): number {
+  const tokenize = (t: string) =>
+    t.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter(w => w.length > 3 && !STOP_WORDS.has(w));
+
+  const tokens1 = tokenize(text1);
+  const tokens2 = tokenize(text2);
+  if (!tokens1.length || !tokens2.length) return 0;
+
+  const buildTF = (tokens: string[]) => {
+    const tf = new Map<string, number>();
+    for (const w of tokens) tf.set(w, (tf.get(w) ?? 0) + 1);
+    return tf;
+  };
+
+  const tf1 = buildTF(tokens1);
+  const tf2 = buildTF(tokens2);
+  const vocab = new Set([...tf1.keys(), ...tf2.keys()]);
+
+  let dot = 0, mag1 = 0, mag2 = 0;
+  for (const w of vocab) {
+    const v1 = tf1.get(w) ?? 0;
+    const v2 = tf2.get(w) ?? 0;
+    dot += v1 * v2;
+    mag1 += v1 * v1;
+    mag2 += v2 * v2;
+  }
+
+  return (mag1 === 0 || mag2 === 0) ? 0 : (dot / (Math.sqrt(mag1) * Math.sqrt(mag2))) * 100;
+}
+
+/**
+ * Extract the most distinctive / content-rich phrases from the text.
+ * Used to build multi-angle queries so all 13 databases are searched
+ * against representative samples from beginning, middle, and key concepts.
+ */
+function extractQueryPhrases(text: string): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const queries: string[] = [];
+
+  // Opening (first 40 words — usually abstract/intro — most search-relevant)
+  if (words.length > 0) queries.push(words.slice(0, 40).join(" "));
+
+  // Middle section (avoids overlap with opening query)
+  if (words.length > 80) {
+    const mid = Math.floor(words.length / 2);
+    queries.push(words.slice(mid - 18, mid + 18).join(" "));
+  }
+
+  // Extract technically-distinctive tokens (long, non-stop words) for a concept query
+  const techTokens = words
+    .filter(w => w.length > 7 && !STOP_WORDS.has(w.toLowerCase()) && /^[a-zA-Z]/.test(w))
+    .slice(0, 12);
+  if (techTokens.length >= 4) queries.push(techTokens.join(" "));
+
+  return queries;
+}
+
+/**
+ * Query all 13 live academic databases with multiple representative phrases
+ * extracted from the submitted text, then compute REAL cosine similarity
+ * between the submitted text and each returned paper abstract.
+ *
+ * This is the same corpus the AI Paper Writer reads from — so if a paper was
+ * used as a source for writing, it will appear here as a match.
  */
 async function fetchLiveAcademicMatches(
   text: string,
-): Promise<Array<{ url: string; title: string; authors: string; year: number; similarity: number }>> {
+): Promise<Array<{ url: string; title: string; authors: string; year: number; similarity: number; matchedText?: string; sourceType: string }>> {
   try {
-    const query = text
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 35)
-      .join(" ");
+    const queries = extractQueryPhrases(text);
 
-    const papers = await Promise.race<Awaited<ReturnType<typeof searchAllAcademicSources>>>([
-      searchAllAcademicSources(query, 4, undefined),
-      new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 7000)),
-    ]);
+    // Fan out to all 13 databases with each phrase, collect unique papers by DOI/URL
+    const seenKeys = new Set<string>();
+    const allPapers: Awaited<ReturnType<typeof searchAllAcademicSources>> = [];
 
-    return papers
-      .filter((p) => p.abstract && p.abstract.length > 40)
-      .slice(0, 3)
-      .map((p, i) => ({
+    await Promise.all(
+      queries.map(async (q) => {
+        try {
+          const papers = await Promise.race<Awaited<ReturnType<typeof searchAllAcademicSources>>>([
+            searchAllAcademicSources(q, 6, undefined),
+            new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 7000)),
+          ]);
+          for (const p of papers) {
+            const key = p.doi ?? p.url ?? p.title;
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key);
+              allPapers.push(p);
+            }
+          }
+        } catch { /* non-fatal per query */ }
+      }),
+    );
+
+    // Score each paper against the submitted text using real cosine similarity
+    const scored = allPapers
+      .filter(p => p.abstract && p.abstract.length > 60)
+      .map(p => ({
         url: p.doi ? `https://doi.org/${p.doi}` : p.url,
         title: p.title,
         authors: p.authors,
         year: p.year,
-        similarity: Math.max(3, 12 - i * 3),
-      }));
+        similarity: Math.round(computeCosineSimilarity(text, p.abstract!) * 10) / 10,
+        matchedText: p.abstract!.slice(0, 120),
+        sourceType: "academic-live" as const,
+      }))
+      .filter(p => p.similarity > 1) // only papers with measurable vocabulary overlap
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 5);
+
+    return scored;
   } catch {
     return [];
   }
@@ -110,8 +207,10 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
     const livePlagiarismSources = liveMatches.map((m) => ({
       url: m.url,
       similarity: m.similarity,
-      matchedText: `${m.authors}, ${m.year}`,
+      matchedText: m.matchedText ?? `${m.authors}, ${m.year}`,
       title: m.title,
+      authors: m.authors,
+      year: m.year,
       live: true,
       sourceType: "academic-live",
     }));
