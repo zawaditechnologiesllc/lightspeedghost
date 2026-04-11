@@ -483,20 +483,32 @@ export function AssistantPanel({
 export default function FloatingWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: -1, y: -1 }); // -1 = not yet calculated
+  const [isMobile, setIsMobile] = useState(false);
   const dragState = useRef({ active: false, startX: 0, startY: 0, origX: 0, origY: 0 });
   const panelRef = useRef<HTMLDivElement>(null);
 
   const PANEL_W = 380;
   const PANEL_H = 540;
 
-  // Initialise position once we know the viewport.
-  // Left side so it never overlaps Tidio (which lives bottom-right).
+  // Track mobile breakpoint (< 1024px = lg in Tailwind)
   useEffect(() => {
-    if (position.x === -1) {
-      setPosition({
-        x: 20,
-        y: Math.max(16, window.innerHeight - PANEL_H - 80),
-      });
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // Initialise panel position once viewport is known.
+  // Desktop: left side (away from Tidio at bottom-right).
+  // Mobile: open from bottom-right (button position), panel placed top-right.
+  useEffect(() => {
+    if (position.x === -1 && window.innerWidth > 0) {
+      const mobile = window.innerWidth < 1024;
+      setPosition(
+        mobile
+          ? { x: Math.max(8, window.innerWidth - PANEL_W - 8), y: Math.max(16, window.innerHeight - PANEL_H - 120) }
+          : { x: 20, y: Math.max(16, window.innerHeight - PANEL_H - 80) },
+      );
     }
   }, [position.x]);
 
@@ -580,11 +592,20 @@ export default function FloatingWidget() {
 
   return (
     <>
-      {/* ── Floating trigger button ── */}
+      {/* ── Floating trigger button ──
+          Desktop: bottom-left (avoids Tidio at bottom-right).
+          Mobile/iOS/Android: bottom-right with safe-area-inset-bottom so the button
+          always clears the mobile nav bar even on iPhones with a home indicator.
+          z-index 999999 places us above Tidio (capped at 999998 via index.html CSS).
+      */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed z-[9999] bottom-[5.5rem] left-4 lg:bottom-6 lg:left-6 w-12 h-12 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white shadow-xl shadow-violet-600/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+          className={cn(
+            "fixed z-[999999] w-12 h-12 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white shadow-xl shadow-violet-600/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95",
+            isMobile ? "right-4" : "left-6 bottom-6",
+          )}
+          style={isMobile ? { bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.5rem)" } : undefined}
           title="Open AI Assistant"
         >
           <Sparkles size={20} />
@@ -595,11 +616,11 @@ export default function FloatingWidget() {
       {isOpen && (
         <div
           ref={panelRef}
-          className="fixed z-[9999] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 overflow-hidden"
+          className="fixed z-[999999] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 overflow-hidden"
           style={{
             left: position.x,
             top: position.y,
-            width: PANEL_W,
+            width: isMobile ? Math.min(PANEL_W, window.innerWidth - 16) : PANEL_W,
             height: PANEL_H,
           }}
         >

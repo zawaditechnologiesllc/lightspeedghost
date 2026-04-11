@@ -445,17 +445,27 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&font-display=swap" rel="stylesheet" />
 
-    <!-- Push Tidio widget above the mobile bottom nav bar -->
+    <!-- Tidio: push above mobile nav, cap z-index below our AI assistant widget -->
     <style>
+      /* Our AI assistant sits at z-index 999999 — force Tidio below it always */
+      #tidio-chat,
+      #tidio-chat-code,
+      #tidio-chat-iframe,
+      .tidio-1 {
+        z-index: 999998 !important;
+      }
+
+      /* On mobile: push Tidio button above the 60px bottom nav bar
+         (safe-area-inset-bottom handled by Tidio's own iframe padding) */
       @media (max-width: 1023px) {
         #tidio-chat-iframe {
-          bottom: 66px !important;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 66px) !important;
         }
         #tidio-chat-code > iframe {
-          bottom: 66px !important;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 66px) !important;
         }
         .tidio-1 iframe {
-          bottom: 66px !important;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 66px) !important;
         }
       }
     </style>
