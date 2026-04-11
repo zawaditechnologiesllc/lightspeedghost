@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/Layout";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { SplashScreen } from "@/components/SplashScreen";
 import Landing from "@/pages/Landing";
 import Auth from "@/pages/Auth";
 import Admin from "@/pages/Admin";
@@ -221,10 +222,19 @@ function Router() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window !== "undefined" && !sessionStorage.getItem("lsg_splash_shown")) {
+      sessionStorage.setItem("lsg_splash_shown", "1");
+      return true;
+    }
+    return false;
+  });
+
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
+          {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <MaintenanceGate>
               <AuthProvider>
