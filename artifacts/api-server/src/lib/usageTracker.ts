@@ -26,7 +26,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     assistant:  300, // per month — Haiku text; Sonnet image (Pro only)
   },
   campus: {
-    paper:      8,   // per month per seat
+    paper:      5,   // per month per seat
     revision:   8,   // per month per seat
     humanizer:  8,   // per month per seat
     stem:       5,   // per day per seat

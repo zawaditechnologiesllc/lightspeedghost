@@ -35,7 +35,7 @@ const PLAN_LIMITS: Record<string, Partial<Record<keyof UsageData, number | null>
     outline:    20,
   },
   campus: {
-    paper:      8,
+    paper:      5,
     revision:   8,
     humanizer:  8,
     stem:       5,

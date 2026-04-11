@@ -195,14 +195,14 @@ const pricingPlans = [
   {
     name: "Campus",
     priceMonthly: null,
-    priceAnnual: "$6",
+    priceAnnual: "$9",
     perMonthly: "",
     perAnnual: "/ seat / month  ·  min 5 seats  ·  annual",
     desc: "For study groups, tutoring centers, and institutions. Annual billing only.",
     features: [
       "Pro features, per seat",
-      "15 papers / seat / month",
-      "30 STEM problems / seat / day",
+      "5 papers / seat / month",
+      "5 STEM problems / seat / day",
       "Minimum 5 seats — single invoice",
       "Shared document library + admin dashboard",
       "Academic integrity reporting + SLA support",

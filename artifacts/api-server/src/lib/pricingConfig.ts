@@ -33,7 +33,7 @@ export const SUBSCRIPTION_PLANS: Record<PlanId, PlanPrice> = {
     description: "Full access to all LightSpeed Ghost tools (billed annually)",
   },
   campus_annual: {
-    amountCents: 600,
+    amountCents: 900,
     currency: "USD",
     interval: "month",
     label: "Campus — Per Seat",

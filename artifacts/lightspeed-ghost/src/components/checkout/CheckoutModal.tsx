@@ -53,7 +53,7 @@ const PLAN_AMOUNTS: Record<PlanId, number> = {
   starter_monthly:   150,
   pro_monthly:      1499,
   pro_annual:       9900,
-  campus_annual:     600,
+  campus_annual:     900,
 };
 
 export function CheckoutModal({
@@ -225,7 +225,7 @@ export function CheckoutModal({
             </div>
             {mode === "subscription" && plan === "campus_annual" && (
               <div className="mt-1.5 text-xs text-white/35">
-                {seats} seats × $6/seat/mo × 12 months
+                {seats} seats × $9/seat/mo × 12 months
               </div>
             )}
             {mode === "subscription" && plan === "pro_annual" && (
