@@ -499,15 +499,14 @@ export default function FloatingWidget() {
   }, []);
 
   // Initialise panel position once viewport is known.
-  // Desktop: left side (away from Tidio at bottom-right).
-  // Mobile: open from bottom-right (button position), panel placed top-right.
+  // Both desktop and mobile: spawn from bottom-right so it never overlaps the left sidebar.
   useEffect(() => {
     if (position.x === -1 && window.innerWidth > 0) {
       const mobile = window.innerWidth < 1024;
       setPosition(
         mobile
           ? { x: Math.max(8, window.innerWidth - PANEL_W - 8), y: Math.max(16, window.innerHeight - PANEL_H - 120) }
-          : { x: 20, y: Math.max(16, window.innerHeight - PANEL_H - 80) },
+          : { x: Math.max(8, window.innerWidth - PANEL_W - 24), y: Math.max(16, window.innerHeight - PANEL_H - 80) },
       );
     }
   }, [position.x]);
@@ -593,9 +592,9 @@ export default function FloatingWidget() {
   return (
     <>
       {/* ── Floating trigger button ──
-          Desktop: bottom-left (avoids Tidio at bottom-right).
-          Mobile/iOS/Android: bottom-right with safe-area-inset-bottom so the button
-          always clears the mobile nav bar even on iPhones with a home indicator.
+          Both desktop and mobile: bottom-right so it never overlaps the left sidebar.
+          Mobile/iOS/Android: safe-area-inset-bottom clears the home indicator and
+          the fixed bottom nav bar.
           z-index 999999 places us above Tidio (capped at 999998 via index.html CSS).
       */}
       {!isOpen && (
@@ -603,7 +602,7 @@ export default function FloatingWidget() {
           onClick={() => setIsOpen(true)}
           className={cn(
             "fixed z-[999999] w-12 h-12 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white shadow-xl shadow-violet-600/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95",
-            isMobile ? "right-4" : "left-6 bottom-6",
+            isMobile ? "right-4" : "right-6 bottom-6",
           )}
           style={isMobile ? { bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.5rem)" } : undefined}
           title="Open AI Assistant"
