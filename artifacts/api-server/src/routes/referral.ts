@@ -6,8 +6,6 @@ import crypto from "node:crypto";
 
 const router = Router();
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function generateCode(): string {
   return crypto.randomBytes(4).toString("hex").toUpperCase();
 }
@@ -19,7 +17,7 @@ function verifyAdminToken(req: Request): boolean {
   return token === ADMIN_PASSWORD;
 }
 
-// ── Table init (called from index.ts startup) ─────────────────────────────────
+// ── Table init ────────────────────────────────────────────────────────────────
 
 export async function initReferralTables(): Promise<void> {
   await pool.query(`
@@ -41,17 +39,28 @@ export async function initReferralTables(): Promise<void> {
       referred_user_id TEXT NOT NULL,
       amount_cents     INTEGER NOT NULL,
       commission_cents INTEGER NOT NULL,
-      status           TEXT NOT NULL DEFAULT 'pending',
+      status           TEXT NOT NULL DEFAULT 'applied',
       created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       paid_at          TIMESTAMPTZ
     );
-    CREATE INDEX IF NOT EXISTS idx_ref_signups_code ON referral_signups (referral_code);
-    CREATE INDEX IF NOT EXISTS idx_ref_conv_code    ON referral_conversions (referral_code);
-    CREATE INDEX IF NOT EXISTS idx_ref_conv_user    ON referral_conversions (referred_user_id);
+    CREATE TABLE IF NOT EXISTS referral_discounts (
+      id                SERIAL PRIMARY KEY,
+      referrer_user_id  TEXT NOT NULL,
+      referral_code     TEXT NOT NULL,
+      referred_user_id  TEXT NOT NULL UNIQUE,
+      discount_pct      INTEGER NOT NULL DEFAULT 10,
+      status            TEXT NOT NULL DEFAULT 'pending',
+      created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      applied_at        TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_ref_signups_code  ON referral_signups (referral_code);
+    CREATE INDEX IF NOT EXISTS idx_ref_conv_code     ON referral_conversions (referral_code);
+    CREATE INDEX IF NOT EXISTS idx_ref_conv_user     ON referral_conversions (referred_user_id);
+    CREATE INDEX IF NOT EXISTS idx_ref_disc_referrer ON referral_discounts (referrer_user_id);
   `);
 }
 
-// ── Commission helper — imported by payments.ts webhook handlers ───────────────
+// ── Called by payments webhook: record conversion + grant referrer a discount ──
 
 export async function maybeRecordReferralCommission(
   userId: string,
@@ -63,20 +72,78 @@ export async function maybeRecordReferralCommission(
       [userId],
     );
     if (res.rows.length === 0) return;
+
     const code = res.rows[0].referral_code;
     const commissionCents = Math.round(amountCents * 0.10);
+
     await pool.query(
       `INSERT INTO referral_conversions (referral_code, referred_user_id, amount_cents, commission_cents, status)
-       VALUES ($1, $2, $3, $4, 'pending')`,
+       VALUES ($1, $2, $3, $4, 'applied')
+       ON CONFLICT DO NOTHING`,
       [code, userId, amountCents, commissionCents],
     );
-    logger.info({ code, userId, commissionCents }, "[referral] Commission recorded");
+
+    const referrerRes = await pool.query<{ user_id: string }>(
+      `SELECT user_id FROM referral_codes WHERE code = $1 LIMIT 1`,
+      [code],
+    );
+    if (referrerRes.rows.length === 0) return;
+
+    const referrerUserId = referrerRes.rows[0].user_id;
+    await pool.query(
+      `INSERT INTO referral_discounts (referrer_user_id, referral_code, referred_user_id, discount_pct, status)
+       VALUES ($1, $2, $3, 10, 'pending')
+       ON CONFLICT (referred_user_id) DO NOTHING`,
+      [referrerUserId, code, userId],
+    );
+
+    logger.info({ code, referrerUserId, userId }, "[referral] 10% discount granted to referrer");
   } catch (err) {
-    logger.warn({ err }, "[referral] Failed to record commission — non-fatal");
+    logger.warn({ err }, "[referral] Failed to record — non-fatal");
   }
 }
 
-// ── GET /referral/my-code — get or create the caller's referral code + stats ──
+// ── Called before checkout: apply pending discount to amount if available ──────
+
+export async function maybeApplyReferralDiscount(
+  userId: string,
+  amountCents: number,
+): Promise<{ discountedAmount: number; discountApplied: boolean }> {
+  try {
+    const res = await pool.query<{ discount_pct: number }>(
+      `SELECT discount_pct FROM referral_discounts
+       WHERE referrer_user_id = $1 AND status = 'pending'
+       ORDER BY created_at ASC LIMIT 1`,
+      [userId],
+    );
+    if (res.rows.length === 0) return { discountedAmount: amountCents, discountApplied: false };
+    const pct = res.rows[0].discount_pct;
+    const discounted = Math.round(amountCents * (1 - pct / 100));
+    return { discountedAmount: discounted, discountApplied: true };
+  } catch {
+    return { discountedAmount: amountCents, discountApplied: false };
+  }
+}
+
+// ── Called after successful subscription payment: mark oldest pending discount applied
+
+export async function markFirstPendingDiscountApplied(userId: string): Promise<void> {
+  try {
+    await pool.query(
+      `UPDATE referral_discounts SET status='applied', applied_at=NOW()
+       WHERE id = (
+         SELECT id FROM referral_discounts
+         WHERE referrer_user_id = $1 AND status = 'pending'
+         ORDER BY created_at ASC LIMIT 1
+       )`,
+      [userId],
+    );
+  } catch (err) {
+    logger.warn({ err, userId }, "[referral] Failed to mark discount applied — non-fatal");
+  }
+}
+
+// ── GET /referral/my-code ─────────────────────────────────────────────────────
 
 router.get("/referral/my-code", async (req: Request, res: Response) => {
   if (!req.userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -99,34 +166,59 @@ router.get("/referral/my-code", async (req: Request, res: Response) => {
     }
     const code = codeRes.rows[0]?.code ?? "";
 
-    const [signupsRes, convRes] = await Promise.all([
+    const [signupsRes, convRes, discountRes] = await Promise.all([
       pool.query<{ count: string }>(
         `SELECT COUNT(*) as count FROM referral_signups WHERE referral_code = $1`,
         [code],
       ),
-      pool.query<{ count: string; total_commission: string; paid_commission: string }>(
-        `SELECT COUNT(*) as count,
-                COALESCE(SUM(commission_cents), 0)                                            as total_commission,
-                COALESCE(SUM(CASE WHEN status = 'paid' THEN commission_cents ELSE 0 END), 0)  as paid_commission
-         FROM referral_conversions WHERE referral_code = $1`,
+      pool.query<{ count: string }>(
+        `SELECT COUNT(*) as count FROM referral_conversions WHERE referral_code = $1`,
         [code],
+      ),
+      pool.query<{ count: string }>(
+        `SELECT COUNT(*) as count FROM referral_discounts
+         WHERE referrer_user_id = $1 AND status = 'pending'`,
+        [req.userId],
       ),
     ]);
 
-    const referrals       = parseInt(signupsRes.rows[0]?.count ?? "0");
-    const conversions     = parseInt(convRes.rows[0]?.count    ?? "0");
-    const totalEarnedCents = parseInt(convRes.rows[0]?.total_commission ?? "0");
-    const paidCents        = parseInt(convRes.rows[0]?.paid_commission  ?? "0");
-    const pendingCents     = totalEarnedCents - paidCents;
-
-    res.json({ code, referrals, conversions, totalEarnedCents, paidCents, pendingCents });
+    res.json({
+      code,
+      referrals:        parseInt(signupsRes.rows[0]?.count ?? "0"),
+      conversions:      parseInt(convRes.rows[0]?.count    ?? "0"),
+      pendingDiscounts: parseInt(discountRes.rows[0]?.count ?? "0"),
+    });
   } catch (err) {
     logger.error({ err }, "[referral] my-code error");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// ── POST /referral/record-signup — record that this user was referred ──────────
+// ── GET /referral/my-discount — has a pending 10% discount? ──────────────────
+
+router.get("/referral/my-discount", async (req: Request, res: Response) => {
+  if (!req.userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  try {
+    const res2 = await pool.query<{ discount_pct: number; created_at: string }>(
+      `SELECT discount_pct, created_at FROM referral_discounts
+       WHERE referrer_user_id = $1 AND status = 'pending'
+       ORDER BY created_at ASC LIMIT 1`,
+      [req.userId],
+    );
+    if (res2.rows.length === 0) {
+      res.json({ hasDiscount: false });
+      return;
+    }
+    const d = res2.rows[0];
+    res.json({ hasDiscount: true, discountPct: d.discount_pct, createdAt: d.created_at });
+  } catch (err) {
+    logger.error({ err }, "[referral] my-discount error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /referral/record-signup ──────────────────────────────────────────────
 
 router.post("/referral/record-signup", async (req: Request, res: Response) => {
   if (!req.userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -145,8 +237,7 @@ router.post("/referral/record-signup", async (req: Request, res: Response) => {
 
     await pool.query(
       `INSERT INTO referral_signups (referral_code, referred_user_id)
-       VALUES ($1, $2)
-       ON CONFLICT (referred_user_id) DO NOTHING`,
+       VALUES ($1, $2) ON CONFLICT (referred_user_id) DO NOTHING`,
       [normalised, req.userId],
     );
     res.json({ ok: true });
@@ -156,82 +247,77 @@ router.post("/referral/record-signup", async (req: Request, res: Response) => {
   }
 });
 
-// ── GET /admin/referrals — full referral data for admin panel ─────────────────
+// ── GET /admin/referrals ──────────────────────────────────────────────────────
 
 router.get("/admin/referrals", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   try {
     const summaryRes = await pool.query<{
-      total_referrers: string;
-      total_referrals: string;
-      total_conversions: string;
-      total_commissions: string;
-      pending_commissions: string;
+      total_referrers: string; total_referrals: string;
+      total_conversions: string; pending_discounts: string; applied_discounts: string;
     }>(`
       SELECT
-        (SELECT COUNT(*) FROM referral_codes)                                                   AS total_referrers,
-        (SELECT COUNT(*) FROM referral_signups)                                                 AS total_referrals,
-        (SELECT COUNT(*) FROM referral_conversions)                                             AS total_conversions,
-        (SELECT COALESCE(SUM(commission_cents),0) FROM referral_conversions)                   AS total_commissions,
-        (SELECT COALESCE(SUM(commission_cents),0) FROM referral_conversions WHERE status='pending') AS pending_commissions
+        (SELECT COUNT(*) FROM referral_codes)                                  AS total_referrers,
+        (SELECT COUNT(*) FROM referral_signups)                                AS total_referrals,
+        (SELECT COUNT(*) FROM referral_conversions)                            AS total_conversions,
+        (SELECT COUNT(*) FROM referral_discounts WHERE status='pending')       AS pending_discounts,
+        (SELECT COUNT(*) FROM referral_discounts WHERE status='applied')       AS applied_discounts
     `);
     const s = summaryRes.rows[0];
     const summary = {
-      totalReferrers:        parseInt(s.total_referrers),
-      totalReferrals:        parseInt(s.total_referrals),
-      totalConversions:      parseInt(s.total_conversions),
-      totalCommissionsCents: parseInt(s.total_commissions),
-      pendingCommissionsCents: parseInt(s.pending_commissions),
+      totalReferrers:   parseInt(s.total_referrers),
+      totalReferrals:   parseInt(s.total_referrals),
+      totalConversions: parseInt(s.total_conversions),
+      pendingDiscounts: parseInt(s.pending_discounts),
+      appliedDiscounts: parseInt(s.applied_discounts),
     };
 
     const referrersRes = await pool.query<{
       code: string; user_id: string; created_at: string;
       referrals: string; conversions: string;
-      total_earned: string; pending: string; paid: string;
+      pending_discounts: string; applied_discounts: string;
     }>(`
       SELECT
         rc.code, rc.user_id, rc.created_at,
-        (SELECT COUNT(*) FROM referral_signups    rs   WHERE rs.referral_code   = rc.code) AS referrals,
-        (SELECT COUNT(*) FROM referral_conversions conv WHERE conv.referral_code = rc.code) AS conversions,
-        (SELECT COALESCE(SUM(commission_cents),0) FROM referral_conversions WHERE referral_code = rc.code)                        AS total_earned,
-        (SELECT COALESCE(SUM(commission_cents),0) FROM referral_conversions WHERE referral_code = rc.code AND status = 'pending') AS pending,
-        (SELECT COALESCE(SUM(commission_cents),0) FROM referral_conversions WHERE referral_code = rc.code AND status = 'paid')    AS paid
+        (SELECT COUNT(*) FROM referral_signups    rs WHERE rs.referral_code   = rc.code) AS referrals,
+        (SELECT COUNT(*) FROM referral_conversions cv WHERE cv.referral_code  = rc.code) AS conversions,
+        (SELECT COUNT(*) FROM referral_discounts   rd WHERE rd.referral_code  = rc.code AND rd.status='pending') AS pending_discounts,
+        (SELECT COUNT(*) FROM referral_discounts   rd WHERE rd.referral_code  = rc.code AND rd.status='applied') AS applied_discounts
       FROM referral_codes rc
-      ORDER BY total_earned DESC, rc.created_at DESC
+      ORDER BY conversions DESC, rc.created_at DESC
     `);
     const referrers = referrersRes.rows.map(r => ({
-      code:            r.code,
-      userId:          r.user_id,
-      createdAt:       r.created_at,
-      referrals:       parseInt(r.referrals),
-      conversions:     parseInt(r.conversions),
-      totalEarnedCents: parseInt(r.total_earned),
-      pendingCents:    parseInt(r.pending),
-      paidCents:       parseInt(r.paid),
+      code:             r.code,
+      userId:           r.user_id,
+      createdAt:        r.created_at,
+      referrals:        parseInt(r.referrals),
+      conversions:      parseInt(r.conversions),
+      pendingDiscounts: parseInt(r.pending_discounts),
+      appliedDiscounts: parseInt(r.applied_discounts),
     }));
 
-    const conversionsRes = await pool.query<{
-      id: number; referral_code: string; referred_user_id: string;
-      amount_cents: number; commission_cents: number; status: string;
-      created_at: string; paid_at: string | null;
+    const discountsRes = await pool.query<{
+      id: number; referrer_user_id: string; referral_code: string;
+      referred_user_id: string; discount_pct: number; status: string;
+      created_at: string; applied_at: string | null;
     }>(`
-      SELECT id, referral_code, referred_user_id, amount_cents, commission_cents, status, created_at, paid_at
-      FROM referral_conversions
-      ORDER BY created_at DESC
-      LIMIT 200
+      SELECT id, referrer_user_id, referral_code, referred_user_id,
+             discount_pct, status, created_at, applied_at
+      FROM referral_discounts
+      ORDER BY created_at DESC LIMIT 200
     `);
 
-    res.json({ summary, referrers, conversions: conversionsRes.rows });
+    res.json({ summary, referrers, discounts: discountsRes.rows });
   } catch (err) {
     logger.error({ err }, "[referral] admin list error");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// ── POST /admin/referrals/:id/payout — mark one conversion as paid ────────────
+// ── POST /admin/referrals/discount/:id/apply — manually mark a discount applied
 
-router.post("/admin/referrals/:id/payout", async (req: Request, res: Response) => {
+router.post("/admin/referrals/discount/:id/apply", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const id = parseInt(req.params.id);
@@ -239,31 +325,12 @@ router.post("/admin/referrals/:id/payout", async (req: Request, res: Response) =
 
   try {
     await pool.query(
-      `UPDATE referral_conversions SET status='paid', paid_at=NOW() WHERE id=$1`,
+      `UPDATE referral_discounts SET status='applied', applied_at=NOW() WHERE id=$1`,
       [id],
     );
     res.json({ ok: true });
   } catch (err) {
-    logger.error({ err }, "[referral] payout error");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// ── POST /admin/referrals/code/:code/payout-all — pay all pending for a referrer
-
-router.post("/admin/referrals/code/:code/payout-all", async (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
-
-  const { code } = req.params;
-  try {
-    const result = await pool.query(
-      `UPDATE referral_conversions SET status='paid', paid_at=NOW()
-       WHERE referral_code=$1 AND status='pending'`,
-      [code],
-    );
-    res.json({ ok: true, updated: result.rowCount });
-  } catch (err) {
-    logger.error({ err }, "[referral] payout-all error");
+    logger.error({ err }, "[referral] apply discount error");
     res.status(500).json({ error: "Internal server error" });
   }
 });

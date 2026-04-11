@@ -18,6 +18,7 @@ import Plagiarism from "@/pages/Plagiarism";
 import StemSolver from "@/pages/StemSolver";
 import StudyAssistant from "@/pages/StudyAssistant";
 import Documents from "@/pages/Documents";
+import Billing from "@/pages/Billing";
 import ResetPassword from "@/pages/ResetPassword";
 import ConfirmEmail from "@/pages/ConfirmEmail";
 import Invite from "@/pages/Invite";
@@ -169,6 +170,7 @@ function AppRoutes() {
               <Route path="/stem" component={StemSolver} />
               <Route path="/study" component={StudyAssistant} />
               <Route path="/documents" component={Documents} />
+              <Route path="/billing" component={Billing} />
               <Route component={NotFound} />
             </Switch>
           </Layout>

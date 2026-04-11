@@ -325,21 +325,20 @@ export default function Admin() {
   const [referralData, setReferralData] = useState<{
     summary: {
       totalReferrers: number; totalReferrals: number; totalConversions: number;
-      totalCommissionsCents: number; pendingCommissionsCents: number;
+      pendingDiscounts: number; appliedDiscounts: number;
     };
     referrers: Array<{
       code: string; userId: string; createdAt: string;
       referrals: number; conversions: number;
-      totalEarnedCents: number; pendingCents: number; paidCents: number;
+      pendingDiscounts: number; appliedDiscounts: number;
     }>;
-    conversions: Array<{
-      id: number; referral_code: string; referred_user_id: string;
-      amount_cents: number; commission_cents: number; status: string;
-      created_at: string; paid_at: string | null;
+    discounts: Array<{
+      id: number; referrer_user_id: string; referral_code: string;
+      referred_user_id: string; discount_pct: number; status: string;
+      created_at: string; applied_at: string | null;
     }>;
   } | null>(null);
-  const [payingOutRef, setPayingOutRef] = useState<string | null>(null);
-  const [payingOutId, setPayingOutId] = useState<number | null>(null);
+  const [applyingDiscountId, setApplyingDiscountId] = useState<number | null>(null);
 
   const isAuthed = !!password;
 
@@ -1975,7 +1974,7 @@ export default function Admin() {
             {activeTab === "referrals" && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <SectionHeader title="Affiliate Program" sub="10% commission on every paying referral" />
+                  <SectionHeader title="Affiliate Program" sub="Referrers earn 10% off their next subscription payment" />
                   <button onClick={loadReferrals} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white/40 hover:text-white/70 hover:bg-white/5 border border-white/8 rounded-lg transition-all">
                     <RefreshCw size={11} /> Refresh
                   </button>
@@ -1990,11 +1989,11 @@ export default function Admin() {
                     {/* Summary stats */}
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                       {[
-                        { label: "Active Referrers", value: referralData.summary.totalReferrers.toString(),    icon: Users,            color: "text-blue-400" },
-                        { label: "Total Signups",    value: referralData.summary.totalReferrals.toString(),   icon: Share2,           color: "text-violet-400" },
-                        { label: "Conversions",      value: referralData.summary.totalConversions.toString(),  icon: CheckCircle2,     color: "text-emerald-400" },
-                        { label: "Total Earned",     value: `$${(referralData.summary.totalCommissionsCents / 100).toFixed(2)}`,  icon: BadgeDollarSign,  color: "text-lime-400" },
-                        { label: "Pending Payout",   value: `$${(referralData.summary.pendingCommissionsCents / 100).toFixed(2)}`, icon: Gift,             color: "text-amber-400" },
+                        { label: "Active Referrers",    value: referralData.summary.totalReferrers.toString(),   icon: Users,        color: "text-blue-400" },
+                        { label: "Total Signups",        value: referralData.summary.totalReferrals.toString(),   icon: Share2,       color: "text-violet-400" },
+                        { label: "Paid Conversions",     value: referralData.summary.totalConversions.toString(), icon: CheckCircle2, color: "text-emerald-400" },
+                        { label: "Pending Discounts",    value: referralData.summary.pendingDiscounts.toString(), icon: Gift,         color: "text-amber-400" },
+                        { label: "Discounts Applied",    value: referralData.summary.appliedDiscounts.toString(), icon: BadgeDollarSign, color: "text-lime-400" },
                       ].map(({ label, value, icon: Icon, color }) => (
                         <div key={label} className="bg-white/[0.02] border border-white/8 rounded-xl p-4">
                           <Icon size={14} className={`${color} mb-2`} />
@@ -2021,11 +2020,9 @@ export default function Admin() {
                                 <th className="text-left px-4 py-2.5 font-medium">Code</th>
                                 <th className="text-left px-4 py-2.5 font-medium">User ID</th>
                                 <th className="text-right px-4 py-2.5 font-medium">Signups</th>
-                                <th className="text-right px-4 py-2.5 font-medium">Paid</th>
-                                <th className="text-right px-4 py-2.5 font-medium">Earned</th>
-                                <th className="text-right px-4 py-2.5 font-medium">Pending</th>
-                                <th className="text-right px-4 py-2.5 font-medium">Paid Out</th>
-                                <th className="px-4 py-2.5" />
+                                <th className="text-right px-4 py-2.5 font-medium">Conversions</th>
+                                <th className="text-right px-4 py-2.5 font-medium">Pending Discounts</th>
+                                <th className="text-right px-4 py-2.5 font-medium">Applied</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -2035,28 +2032,12 @@ export default function Admin() {
                                   <td className="px-4 py-2.5 text-white/40 font-mono truncate max-w-[120px]">{r.userId.slice(0, 12)}…</td>
                                   <td className="px-4 py-2.5 text-right text-white/70 tabular-nums">{r.referrals}</td>
                                   <td className="px-4 py-2.5 text-right text-white/70 tabular-nums">{r.conversions}</td>
-                                  <td className="px-4 py-2.5 text-right text-lime-300 font-semibold tabular-nums">${(r.totalEarnedCents / 100).toFixed(2)}</td>
-                                  <td className="px-4 py-2.5 text-right text-amber-300 tabular-nums">${(r.pendingCents / 100).toFixed(2)}</td>
-                                  <td className="px-4 py-2.5 text-right text-white/40 tabular-nums">${(r.paidCents / 100).toFixed(2)}</td>
-                                  <td className="px-4 py-2.5 text-right">
-                                    {r.pendingCents > 0 && (
-                                      <button
-                                        disabled={payingOutRef === r.code}
-                                        onClick={async () => {
-                                          setPayingOutRef(r.code);
-                                          try {
-                                            await adminFetch(`/admin/referrals/code/${r.code}/payout-all`, password, { method: "POST" });
-                                            await loadReferrals();
-                                          } catch { /* ignore */ }
-                                          finally { setPayingOutRef(null); }
-                                        }}
-                                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-lime-500/15 text-lime-400 hover:bg-lime-500/25 border border-lime-500/20 transition-all text-xs font-medium disabled:opacity-40"
-                                      >
-                                        {payingOutRef === r.code ? <Loader2 size={10} className="animate-spin" /> : <CheckCheck size={10} />}
-                                        Pay all
-                                      </button>
-                                    )}
+                                  <td className="px-4 py-2.5 text-right tabular-nums">
+                                    {r.pendingDiscounts > 0
+                                      ? <span className="text-amber-300 font-semibold">{r.pendingDiscounts}</span>
+                                      : <span className="text-white/30">0</span>}
                                   </td>
+                                  <td className="px-4 py-2.5 text-right text-emerald-400 tabular-nums">{r.appliedDiscounts}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -2065,15 +2046,15 @@ export default function Admin() {
                       )}
                     </div>
 
-                    {/* Recent conversions table */}
+                    {/* Referral discounts table */}
                     <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
                       <div className="px-4 py-3 border-b border-white/8 flex items-center gap-2">
-                        <BadgeDollarSign size={13} className="text-emerald-400" />
-                        <span className="text-sm font-semibold text-white/70">Recent Conversions</span>
-                        <span className="ml-auto text-xs text-white/25">{referralData.conversions.length} records</span>
+                        <Gift size={13} className="text-amber-400" />
+                        <span className="text-sm font-semibold text-white/70">Referral Discounts</span>
+                        <span className="ml-auto text-xs text-white/25">{referralData.discounts.length} records</span>
                       </div>
-                      {referralData.conversions.length === 0 ? (
-                        <div className="px-4 py-10 text-center text-white/25 text-sm">No conversions yet — commissions appear here after a referred user pays</div>
+                      {referralData.discounts.length === 0 ? (
+                        <div className="px-4 py-10 text-center text-white/25 text-sm">No discounts issued yet — discounts appear here after a referred user makes their first payment</div>
                       ) : (
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs">
@@ -2081,49 +2062,51 @@ export default function Admin() {
                               <tr className="border-b border-white/5 text-white/30">
                                 <th className="text-left px-4 py-2.5 font-medium">ID</th>
                                 <th className="text-left px-4 py-2.5 font-medium">Code</th>
-                                <th className="text-left px-4 py-2.5 font-medium">Referred User</th>
-                                <th className="text-right px-4 py-2.5 font-medium">Payment</th>
-                                <th className="text-right px-4 py-2.5 font-medium">Commission (10%)</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Referrer</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Referred By</th>
+                                <th className="text-right px-4 py-2.5 font-medium">Discount</th>
                                 <th className="text-left px-4 py-2.5 font-medium">Status</th>
-                                <th className="text-left px-4 py-2.5 font-medium">Date</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Earned</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Applied</th>
                                 <th className="px-4 py-2.5" />
                               </tr>
                             </thead>
                             <tbody>
-                              {referralData.conversions.map((c) => (
-                                <tr key={c.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                                  <td className="px-4 py-2.5 text-white/30 tabular-nums">#{c.id}</td>
-                                  <td className="px-4 py-2.5 font-mono font-bold text-lime-300">{c.referral_code}</td>
-                                  <td className="px-4 py-2.5 text-white/40 font-mono">{c.referred_user_id.slice(0, 10)}…</td>
-                                  <td className="px-4 py-2.5 text-right text-white/70 tabular-nums">${(c.amount_cents / 100).toFixed(2)}</td>
-                                  <td className="px-4 py-2.5 text-right text-lime-300 font-semibold tabular-nums">${(c.commission_cents / 100).toFixed(2)}</td>
+                              {referralData.discounts.map((d) => (
+                                <tr key={d.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-4 py-2.5 text-white/30 tabular-nums">#{d.id}</td>
+                                  <td className="px-4 py-2.5 font-mono font-bold text-lime-300">{d.referral_code}</td>
+                                  <td className="px-4 py-2.5 text-white/40 font-mono">{d.referrer_user_id.slice(0, 10)}…</td>
+                                  <td className="px-4 py-2.5 text-white/40 font-mono">{d.referred_user_id.slice(0, 10)}…</td>
+                                  <td className="px-4 py-2.5 text-right text-lime-300 font-semibold tabular-nums">{d.discount_pct}%</td>
                                   <td className="px-4 py-2.5">
                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                                      c.status === "paid"
+                                      d.status === "applied"
                                         ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
                                         : "bg-amber-500/15 text-amber-400 border-amber-500/20"
                                     }`}>
-                                      {c.status === "paid" ? <CheckCircle2 size={9} /> : <Clock size={9} />}
-                                      {c.status}
+                                      {d.status === "applied" ? <CheckCircle2 size={9} /> : <Clock size={9} />}
+                                      {d.status}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-2.5 text-white/30">{new Date(c.created_at).toLocaleDateString()}</td>
+                                  <td className="px-4 py-2.5 text-white/30">{new Date(d.created_at).toLocaleDateString()}</td>
+                                  <td className="px-4 py-2.5 text-white/30">{d.applied_at ? new Date(d.applied_at).toLocaleDateString() : "—"}</td>
                                   <td className="px-4 py-2.5">
-                                    {c.status === "pending" && (
+                                    {d.status === "pending" && (
                                       <button
-                                        disabled={payingOutId === c.id}
+                                        disabled={applyingDiscountId === d.id}
                                         onClick={async () => {
-                                          setPayingOutId(c.id);
+                                          setApplyingDiscountId(d.id);
                                           try {
-                                            await adminFetch(`/admin/referrals/${c.id}/payout`, password, { method: "POST" });
+                                            await adminFetch(`/admin/referrals/discount/${d.id}/apply`, password, { method: "POST" });
                                             await loadReferrals();
                                           } catch { /* ignore */ }
-                                          finally { setPayingOutId(null); }
+                                          finally { setApplyingDiscountId(null); }
                                         }}
                                         className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/15 transition-all text-xs disabled:opacity-40"
                                       >
-                                        {payingOutId === c.id ? <Loader2 size={9} className="animate-spin" /> : <Check size={9} />}
-                                        Pay
+                                        {applyingDiscountId === d.id ? <Loader2 size={9} className="animate-spin" /> : <Check size={9} />}
+                                        Mark applied
                                       </button>
                                     )}
                                   </td>
@@ -2136,9 +2119,9 @@ export default function Admin() {
                     </div>
 
                     <div className="bg-blue-500/5 border border-blue-500/15 rounded-xl p-4 text-xs text-blue-300/70 leading-relaxed">
-                      <strong className="text-blue-300">How it works:</strong> Students share their unique <code className="font-mono bg-white/5 px-1 rounded">/ref/CODE</code> link.
-                      When a referred user pays for any plan or PAYG service, 10% commission is recorded here with status <em>pending</em>.
-                      Mark individual conversions or all conversions for a referrer as paid once you've sent the payout (e.g. via PayPal, Venmo, or platform credit).
+                      <strong className="text-blue-300">How it works:</strong> Users share their unique <code className="font-mono bg-white/5 px-1 rounded">/ref/CODE</code> link.
+                      When a referred user makes their first subscription payment, the referrer automatically receives a 10% discount on their next renewal.
+                      The discount is applied automatically at checkout — no manual payouts needed. Status updates to <em>applied</em> once used.
                     </div>
                   </>
                 )}

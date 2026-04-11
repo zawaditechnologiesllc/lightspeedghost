@@ -127,7 +127,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }
 
   const userEmail = user?.email ?? "";
-  const userInitial = userEmail[0]?.toUpperCase() ?? "?";
+  const userName = userEmail.split("@")[0] ?? userEmail;
+  const userInitial = userName[0]?.toUpperCase() ?? "?";
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -204,12 +205,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {user && (
             (collapsed && !mobileOpen) ? (
               <>
-                <div
-                  title={userEmail}
-                  className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0"
+                <button
+                  onClick={() => navigate("/billing")}
+                  title={`${userName} — Billing`}
+                  className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
                 >
                   <span className="text-sidebar-primary-foreground text-xs font-bold">{userInitial}</span>
-                </div>
+                </button>
                 <button
                   onClick={handleSignOut}
                   title="Sign out"
@@ -220,12 +222,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </>
             ) : (
               <div className="flex items-center gap-2.5 mb-2 px-1">
-                <div className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0">
+                <button
+                  onClick={() => navigate("/billing")}
+                  title="Billing"
+                  className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
+                >
                   <span className="text-sidebar-primary-foreground text-xs font-bold">{userInitial}</span>
-                </div>
+                </button>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sidebar-foreground text-xs font-medium truncate">{userEmail}</p>
-                  <p className="text-sidebar-foreground/40 text-[10px]">User</p>
+                  <p className="text-sidebar-foreground text-xs font-medium truncate">{userName}</p>
+                  <p className="text-sidebar-foreground/40 text-[10px]">Account</p>
                 </div>
                 <button
                   onClick={handleSignOut}

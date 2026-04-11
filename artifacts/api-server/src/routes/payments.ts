@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import crypto from "node:crypto";
 import Stripe from "stripe";
-import { maybeRecordReferralCommission } from "./referral";
+import { maybeRecordReferralCommission, maybeApplyReferralDiscount, markFirstPendingDiscountApplied } from "./referral";
 import { pool } from "@workspace/db";
 import {
   resolveGateway,
@@ -633,6 +633,13 @@ router.post("/payments/create", async (req: Request, res: Response) => {
         amountCents = amountCents * numSeats * 12;
       }
       label = SUBSCRIPTION_PLANS[plan].label;
+
+      // Apply referral discount (10% off next subscription) if pending
+      const disc = await maybeApplyReferralDiscount(userId, amountCents);
+      if (disc.discountApplied) {
+        amountCents = disc.discountedAmount;
+        logger.info({ userId, original: SUBSCRIPTION_PLANS[plan].amountCents, discounted: amountCents }, "[referral] 10% discount applied at checkout");
+      }
     } else {
       if (!tool) {
         res.status(400).json({ error: "Tool required for PAYG" });
@@ -824,6 +831,7 @@ router.get("/payments/verify", async (req: Request, res: Response) => {
              status='active', current_period_end=EXCLUDED.current_period_end, updated_at=NOW()`,
           [userId, planName, billing, gateway, ref, periodEnd]
         );
+        await markFirstPendingDiscountApplied(userId);
       }
     }
 
@@ -862,6 +870,31 @@ router.get("/payments/subscription", async (req: Request, res: Response) => {
   }
 });
 
+// ── Route: transaction history ────────────────────────────────────────────────
+
+router.get("/payments/transactions", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) { res.status(401).json({ error: "Authentication required" }); return; }
+  try {
+    const { rows } = await pool.query<{
+      id: string; gateway: string; type: string; plan: string | null;
+      tool: string | null; tier: string | null; amount_cents: number;
+      currency: string; status: string; created_at: string; completed_at: string | null;
+    }>(
+      `SELECT id, gateway, type, plan, tool, tier, amount_cents, currency, status, created_at, completed_at
+       FROM payments
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 100`,
+      [userId],
+    );
+    res.json({ transactions: rows });
+  } catch (err) {
+    logger.error({ err }, "[payments] transactions error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── Webhook: Stripe ───────────────────────────────────────────────────────────
 
 router.post("/payments/webhook/stripe", async (req: Request, res: Response) => {
@@ -894,6 +927,7 @@ router.post("/payments/webhook/stripe", async (req: Request, res: Response) => {
           [session.id]
         );
         await maybeRecordReferralCommission(userId, session.amount_total ?? 0);
+        await markFirstPendingDiscountApplied(userId);
       }
     } else if (event.type === "customer.subscription.deleted") {
       const sub = event.data.object as Stripe.Subscription;
@@ -930,11 +964,13 @@ router.post("/payments/webhook/paystack", async (req: Request, res: Response) =>
     };
 
     if (event.event === "charge.success" && event.data?.reference) {
-      await pool.query(
+      const pRes = await pool.query<{ user_id: string }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1`,
+         WHERE gateway_session_id=$1 RETURNING user_id`,
         [event.data.reference]
       );
+      const uid = pRes.rows[0]?.user_id;
+      if (uid) await markFirstPendingDiscountApplied(uid);
     }
   } catch (err) {
     logger.error({ err }, "Paystack webhook error");
@@ -949,11 +985,13 @@ router.post("/payments/webhook/intasend", async (req: Request, res: Response) =>
   try {
     const payload = req.body as { invoice_id?: string; state?: string };
     if (payload.state === "COMPLETE" && payload.invoice_id) {
-      await pool.query(
+      const pRes = await pool.query<{ user_id: string }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1`,
+         WHERE gateway_session_id=$1 RETURNING user_id`,
         [payload.invoice_id]
       );
+      const uid = pRes.rows[0]?.user_id;
+      if (uid) await markFirstPendingDiscountApplied(uid);
     }
   } catch (err) {
     logger.error({ err }, "IntaSend webhook error");
@@ -990,11 +1028,13 @@ router.post("/payments/webhook/paddle", async (req: Request, res: Response) => {
     };
 
     if (event.event_type === "transaction.completed" && event.data?.id) {
-      await pool.query(
+      const pRes = await pool.query<{ user_id: string }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1`,
+         WHERE gateway_session_id=$1 RETURNING user_id`,
         [event.data.id]
       );
+      const uid = pRes.rows[0]?.user_id;
+      if (uid) await markFirstPendingDiscountApplied(uid);
     }
   } catch (err) {
     logger.error({ err }, "Paddle webhook error");
@@ -1026,11 +1066,14 @@ router.post("/payments/webhook/lemon-squeezy", async (req: Request, res: Respons
 
     const evName = event.meta?.event_name ?? "";
     if ((evName === "order_created" || evName === "subscription_created") && event.data?.id) {
-      await pool.query(
+      const lsUserId = event.meta?.custom_data?.userId;
+      const pRes = await pool.query<{ user_id: string }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1`,
+         WHERE gateway_session_id=$1 RETURNING user_id`,
         [event.data.id]
       );
+      const uid = lsUserId ?? pRes.rows[0]?.user_id;
+      if (uid) await markFirstPendingDiscountApplied(uid);
     }
   } catch (err) {
     logger.error({ err }, "Lemon Squeezy webhook error");
