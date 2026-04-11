@@ -2,38 +2,38 @@ import { pool } from "@workspace/db";
 
 export type ToolName = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline" | "assistant";
 
-const DAILY_TOOLS = new Set<ToolName>(["stem", "study"]);
+const DAILY_TOOLS = new Set<ToolName>(["stem"]);
 
 export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
   starter: {
-    paper:     3,
-    revision:  1,
-    humanizer: 1,
-    stem:      10,   // per day
-    study:     10,   // per day (messages)
-    plagiarism: 5,
-    outline:   5,
-    assistant: 30,   // per month — text modes only; image mode blocked at route level
+    paper:      3,
+    revision:   1,
+    humanizer:  1,
+    stem:       5,   // per day
+    study:      20,  // per month
+    plagiarism: 5,   // per month
+    outline:    5,   // per month
+    assistant:  30,  // per month — text modes only; image mode blocked at route level
   },
   pro: {
-    paper:     50,
-    revision:  50,
-    humanizer: 50,
-    stem:      30,   // per day
-    study:     300,  // per month (~10/day) — resets monthly
-    plagiarism: 50,  // per month — ~daily checking, generous for a student
-    outline:   50,   // per month — matches paper limit
-    assistant: 300,  // per month — text modes via Haiku; image mode Sonnet (Pro only)
+    paper:      15,  // per month
+    revision:   20,  // per month — paired with papers
+    humanizer:  20,  // per month — paired with papers
+    stem:       10,  // per day
+    study:      150, // per month
+    plagiarism: 20,  // per month — ~1 check per paper + buffer
+    outline:    20,  // per month — paired with papers
+    assistant:  300, // per month — Haiku text; Sonnet image (Pro only)
   },
   campus: {
-    paper:     15,
-    revision:  15,
-    humanizer: 15,
-    stem:      30,   // per day
-    study:     150,  // per month per seat
-    plagiarism: 25,  // per month per seat
-    outline:   25,   // per month per seat
-    assistant: 150,  // per month per seat
+    paper:      8,   // per month per seat
+    revision:   8,   // per month per seat
+    humanizer:  8,   // per month per seat
+    stem:       5,   // per day per seat
+    study:      75,  // per month per seat
+    plagiarism: 10,  // per month per seat
+    outline:    10,  // per month per seat
+    assistant:  150, // per month per seat
   },
 };
 
