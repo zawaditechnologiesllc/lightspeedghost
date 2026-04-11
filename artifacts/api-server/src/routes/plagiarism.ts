@@ -10,6 +10,7 @@ import { documentsTable } from "@workspace/db";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection";
 import { searchAllAcademicSources } from "../lib/academicSources";
+import { runOpenSourcePlagiarismCheck } from "../lib/openSourceSearch";
 
 const router = Router();
 
@@ -71,11 +72,13 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       { score: aiScore, indicators: aiIndicators, burstiness, stdDev },
       readability,
       liveMatches,
+      openSourceResult,
     ] = await Promise.all([
       Promise.resolve(analyseTextPlagiarism(text)),
       detectAIScore(text, "plagiarism-check"),
       Promise.resolve(computeReadabilityScores(text)),
       fetchLiveAcademicMatches(text),
+      runOpenSourcePlagiarismCheck(text),
     ]);
 
     const sentenceList = text.split(/(?<=[.!?])\s+/).filter((s) => s.length > 20);
@@ -94,13 +97,14 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
 
     const localPlagiarismSources = sourceMatches
       .filter((s) => s.similarity > 5)
-      .slice(0, 3)
+      .slice(0, 2)
       .map((s) => ({
         url: `https://scholar.google.com/search?q=${encodeURIComponent(s.label)}`,
         similarity: s.similarity,
         matchedText: s.matchedWords.slice(0, 12).join(", "),
         title: s.label,
         live: false,
+        sourceType: "academic-local",
       }));
 
     const livePlagiarismSources = liveMatches.map((m) => ({
@@ -109,17 +113,35 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       matchedText: `${m.authors}, ${m.year}`,
       title: m.title,
       live: true,
+      sourceType: "academic-live",
+    }));
+
+    const openSourceSources = openSourceResult.sourcesFound.slice(0, 4).map((s) => ({
+      url: s.url,
+      similarity: Math.round(openSourceResult.overallScore * (s.confidence / 100)),
+      matchedText: s.matchedPhrase.slice(0, 80),
+      title: s.title,
+      authors: s.authors,
+      year: s.year,
+      live: true,
+      sourceType: s.source,
     }));
 
     const plagiarismSources = [
       ...livePlagiarismSources,
+      ...openSourceSources,
       ...localPlagiarismSources,
-    ].slice(0, 5);
+    ].slice(0, 8);
+
+    // Blended score: local cosine similarity + open-source sentence-match rate
+    const blendedPlagiarismScore = openSourceResult.totalSentencesChecked > 0
+      ? Math.round((plagiarismScore * 0.4) + (openSourceResult.overallScore * 0.6))
+      : plagiarismScore;
 
     const overallRisk: "low" | "medium" | "high" =
-      aiScore > 65 || plagiarismScore > 35
+      aiScore > 65 || blendedPlagiarismScore > 35
         ? "high"
-        : aiScore > 35 || plagiarismScore > 15
+        : aiScore > 35 || blendedPlagiarismScore > 15
         ? "medium"
         : "low";
 
@@ -135,7 +157,7 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       await db.insert(documentsTable).values({
         userId,
         title: formatDocTitle({ type: "plagiarism", docNumber: docNum, plagiarismMode: mode }),
-        content: `AI Score: ${aiScore}% | Plagiarism Score: ${plagiarismScore}%\nRisk: ${overallRisk}\nBurstiness: ${burstiness}/100 (stdDev: ${stdDev.toFixed(1)}w)\n\n${text.slice(0, 2000)}`,
+        content: `AI Score: ${aiScore}% | Plagiarism Score: ${blendedPlagiarismScore}% (local: ${plagiarismScore}%, open-source: ${openSourceResult.overallScore}%)\nRisk: ${overallRisk}\nBurstiness: ${burstiness}/100 (stdDev: ${stdDev.toFixed(1)}w)\n\n${text.slice(0, 2000)}`,
         type: "plagiarism",
         docNumber: docNum,
         wordCount: text.split(/\s+/).filter(Boolean).length,
@@ -146,9 +168,20 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
 
     res.json({
       aiScore,
-      plagiarismScore,
+      plagiarismScore: blendedPlagiarismScore,
+      plagiarismScoreBreakdown: {
+        localSimilarity: plagiarismScore,
+        openSourceMatch: openSourceResult.overallScore,
+        sentencesChecked: openSourceResult.totalSentencesChecked,
+        breakdown: openSourceResult.breakdown,
+      },
       aiSections,
       plagiarismSources,
+      matchedSentences: openSourceResult.matchedSentences.slice(0, 5).map(ms => ({
+        sentence: ms.sentence.slice(0, 200),
+        matchScore: ms.matchScore,
+        sources: ms.sources.slice(0, 2).map(s => ({ url: s.url, title: s.title, sourceType: s.source })),
+      })),
       overallRisk,
       matchedWords,
       burstiness,
@@ -156,6 +189,11 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       aiFlags: aiIndicators,
       readability,
       detectionModel: "gpt-4o-mini + burstiness",
+      sourcesScanned: [
+        "OpenAlex (250M+ papers)", "Semantic Scholar (200M+ papers)", "CrossRef (145M+ DOIs)",
+        "Open Library (20M+ books)", "Wikipedia", "Google Books", "Internet Archive",
+        "PubMed NCBI", "Europe PMC", "arXiv", "CORE", "Zenodo", "DOAJ",
+      ],
     });
   } catch (err) {
     req.log.error({ err }, "Error checking plagiarism");

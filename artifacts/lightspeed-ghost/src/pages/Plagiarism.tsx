@@ -888,17 +888,74 @@ export default function PlagiarismChecker() {
                   {/* Plagiarism sources */}
                   {result.plagiarismSources.length > 0 && (
                     <div className="bg-card border border-border rounded-xl p-4">
-                      <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-3">Plagiarism Source Matches ({result.plagiarismSources.length})</h3>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">Source Matches ({result.plagiarismSources.length})</h3>
+                        <span className="text-[10px] text-muted-foreground">{result.sourcesScanned ? `${result.sourcesScanned.length} sources scanned` : "Multiple sources scanned"}</span>
+                      </div>
                       <div className="space-y-2">
-                        {result.plagiarismSources.map((source: { url: string; similarity: number; matchedText: string }, i: number) => (
-                          <div key={i} className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900">
-                            <div className="flex items-center justify-between mb-1">
-                              <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate flex-1 flex items-center gap-0.5">
-                                {decodeURIComponent(source.url.split("q=")[1] ?? source.url).slice(0, 50)} <ExternalLink size={9} />
-                              </a>
-                              <span className="text-xs font-bold text-red-600 dark:text-red-400 ml-2 shrink-0">{source.similarity}% match</span>
+                        {(result.plagiarismSources as Array<{ url: string; similarity: number; matchedText: string; title?: string; authors?: string; year?: number; sourceType?: string; live?: boolean }>).map((source, i) => {
+                          const typeColors: Record<string, string> = {
+                            "wikipedia": "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900",
+                            "open-library": "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900",
+                            "google-books": "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900",
+                            "internet-archive": "bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-900",
+                            "crossref": "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-900",
+                            "academic-live": "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-900",
+                            "academic-local": "bg-slate-100 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800",
+                          };
+                          const typeLabel: Record<string, string> = {
+                            "wikipedia": "Wikipedia",
+                            "open-library": "Open Library",
+                            "google-books": "Google Books",
+                            "internet-archive": "Internet Archive",
+                            "crossref": "CrossRef DOI",
+                            "academic-live": "Academic DB",
+                            "academic-local": "Academic Corpus",
+                          };
+                          const colorClass = typeColors[source.sourceType ?? ""] ?? typeColors["academic-local"];
+                          const label = typeLabel[source.sourceType ?? ""] ?? "Source";
+                          const displayTitle = source.title ?? decodeURIComponent(source.url.split("q=")[1] ?? source.url).slice(0, 60);
+                          return (
+                            <div key={i} className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 mb-0.5">
+                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${colorClass}`}>{label}</span>
+                                    {source.year && <span className="text-[10px] text-muted-foreground">{source.year}</span>}
+                                  </div>
+                                  <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate flex items-center gap-0.5">
+                                    <span className="truncate">{displayTitle}</span> <ExternalLink size={9} className="shrink-0" />
+                                  </a>
+                                  {source.authors && <p className="text-[10px] text-muted-foreground truncate">{source.authors}</p>}
+                                </div>
+                                <span className="text-xs font-bold text-red-600 dark:text-red-400 shrink-0">{source.similarity}%</span>
+                              </div>
+                              {source.matchedText && <p className="text-[11px] text-muted-foreground mt-1">Matched: "{source.matchedText.slice(0, 80)}{source.matchedText.length > 80 ? "…" : ""}"</p>}
                             </div>
-                            <p className="text-[11px] text-muted-foreground">Shared terms: {source.matchedText}</p>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sentence-level matches from open-source check */}
+                  {result.matchedSentences && result.matchedSentences.length > 0 && (
+                    <div className="bg-card border border-border rounded-xl p-4">
+                      <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-3">Flagged Sentences — External Source Matches</h3>
+                      <div className="space-y-2.5">
+                        {(result.matchedSentences as Array<{ sentence: string; matchScore: number; sources: Array<{ url: string; title: string; sourceType: string }> }>).map((ms, i) => (
+                          <div key={i} className="rounded-lg border border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/20 p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] font-semibold text-orange-700 dark:text-orange-400">Sentence {i + 1} — {ms.matchScore}% match confidence</span>
+                            </div>
+                            <p className="text-[12px] text-foreground/90 leading-relaxed mb-2">"{ms.sentence}"</p>
+                            <div className="flex flex-wrap gap-1">
+                              {ms.sources.map((src, j) => (
+                                <a key={j} href={src.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-0.5 bg-white dark:bg-black/20 border border-border rounded px-1.5 py-0.5">
+                                  {src.title.slice(0, 30)}{src.title.length > 30 ? "…" : ""} <ExternalLink size={8} />
+                                </a>
+                              ))}
+                            </div>
                           </div>
                         ))}
                       </div>

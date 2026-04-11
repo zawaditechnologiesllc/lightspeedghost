@@ -113,9 +113,16 @@ export function AssistantPanel({
       return;
     }
 
+    // Snapshot before clearing so the API call still has the text
+    const questionSnapshot = question.trim();
+    const imageSnapshot = imageBase64;
+    const mimeSnapshot = imageMimeType;
+
     setIsLoading(true);
     setError(null);
     setAnswer("");
+    setQuestion("");   // clear input immediately on send
+    clearImage();      // clear attached image immediately
     setDetectedMode(null);
     setResolvedModeLabel("");
 
@@ -127,10 +134,10 @@ export function AssistantPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: question.trim(),
+          question: questionSnapshot,
           mode,
-          imageBase64: imageBase64 ?? undefined,
-          mimeType: imageBase64 ? imageMimeType : undefined,
+          imageBase64: imageSnapshot ?? undefined,
+          mimeType: imageSnapshot ? mimeSnapshot : undefined,
         }),
         signal: ctrl.signal,
       });
@@ -432,12 +439,13 @@ export default function FloatingWidget() {
   const PANEL_W = 380;
   const PANEL_H = 540;
 
-  // Initialise position once we know the viewport
+  // Initialise position once we know the viewport.
+  // Left side so it never overlaps Tidio (which lives bottom-right).
   useEffect(() => {
     if (position.x === -1) {
       setPosition({
-        x: Math.max(16, window.innerWidth - PANEL_W - 24),
-        y: Math.max(16, window.innerHeight - PANEL_H - 72),
+        x: 20,
+        y: Math.max(16, window.innerHeight - PANEL_H - 80),
       });
     }
   }, [position.x]);
@@ -526,7 +534,7 @@ export default function FloatingWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed z-[9999] bottom-20 right-4 lg:bottom-6 lg:right-6 w-12 h-12 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white shadow-xl shadow-violet-600/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+          className="fixed z-[9999] bottom-[5.5rem] left-4 lg:bottom-6 lg:left-6 w-12 h-12 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white shadow-xl shadow-violet-600/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
           title="Open AI Assistant"
         >
           <Sparkles size={20} />

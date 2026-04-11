@@ -199,6 +199,21 @@ All three tools (Plagiarism Checker, Humanizer, Paper Writer) now use the SAME d
 - **Quick humanizer** (plagiarism page): TARGET_SCORE changed 25% → 10%; uses shared detection model
 - **Scores are now consistent**: Humanizing in Humanizer tool then re-checking in Plagiarism Checker will show meaningfully lower scores because both use identical detection
 
+### Open-Source Plagiarism Engine (lib/openSourceSearch.ts) — NO PAID API
+Replicates CopyLeaks/Copyscape algorithm using 5 completely free sources:
+- **Open Library** (openlibrary.org) — 20M+ book records, no key required
+- **Wikipedia REST API** — all articles, no key required
+- **Google Books Volumes API** — free quota (1,000/day), no key required
+- **Internet Archive** — 70M+ items including web archives, no key required
+- **CrossRef DOI search** — 145M+ academic records, no key required
+Algorithm: sentence-level fingerprinting → extract 8-word n-grams from distinctive sentences → concurrent search across all sources → sentence-level match percentage + highlighted flagged sentences
+Frontend: source type badges (Wikipedia/Book/Academic/Archive), sentence-level match display, "N sources scanned" counter
+
+### FloatingWidget fixes
+- Input cleared immediately on send (snapshot taken before clearing, sent to API)
+- Trigger button moved to LEFT side (`left-4 lg:left-6`) to avoid Tidio chat conflict
+- Panel initial position starts at left edge (x: 20) instead of right edge
+
 ## File Upload Feature (Phases 1-2-3)
 
 All services now support file upload with smart autofill:
