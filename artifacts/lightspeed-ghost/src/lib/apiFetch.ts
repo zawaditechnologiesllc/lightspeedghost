@@ -1,17 +1,24 @@
-import { auth } from "./auth";
+import { supabase } from "./supabase";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
 async function getAuthHeader(): Promise<Record<string, string>> {
-  const token = auth.getAccessToken();
-  if (token) return { Authorization: `Bearer ${token}` };
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (token) return { Authorization: `Bearer ${token}` };
+  } catch {
+    // Ignore — unauthenticated request
+  }
   return {};
 }
 
 /**
  * Wraps `fetch` with:
- * - Automatic `Authorization: Bearer <token>` header
+ * - Automatic `Authorization: Bearer <supabase_token>` header
  * - Resolves relative /api paths against VITE_API_URL
+ *
+ * Use for all authenticated API calls instead of raw `fetch`.
  */
 export async function apiFetch(
   path: string,
@@ -22,7 +29,6 @@ export async function apiFetch(
 
   return fetch(url, {
     ...options,
-    credentials: "include",
     headers: {
       ...authHeader,
       ...(options.headers as Record<string, string> | undefined),

@@ -2,14 +2,18 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
-import { auth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 if (apiUrl) {
   setBaseUrl(apiUrl as string);
 }
 
-setAuthTokenGetter(() => auth.getAccessToken());
+// Attach the Supabase JWT to all API requests automatically
+setAuthTokenGetter(async () => {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+});
 
 createRoot(document.getElementById("root")!).render(<App />);
 

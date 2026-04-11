@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { auth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
 
 export default function ResetPassword() {
@@ -13,8 +13,9 @@ export default function ResetPassword() {
   const [hasSession, setHasSession] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const session = auth.getSession();
-    setHasSession(!!session);
+    supabase.auth.getSession().then(({ data }) => {
+      setHasSession(!!data.session);
+    });
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -31,7 +32,7 @@ export default function ResetPassword() {
     }
 
     setStatus("loading");
-    const { error: updateError } = await auth.updateUser({ password });
+    const { error: updateError } = await supabase.auth.updateUser({ password });
     if (updateError) {
       setError(updateError.message);
       setStatus("error");

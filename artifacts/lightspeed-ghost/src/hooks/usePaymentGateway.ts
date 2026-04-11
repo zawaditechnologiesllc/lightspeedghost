@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import type { PaygTool, DocumentTier, PlanId } from "@/lib/pricing";
-import { auth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
@@ -23,8 +23,9 @@ export interface PaymentSession {
   label: string;
 }
 
-function getAuthHeaders(): HeadersInit {
-  const token = auth.getAccessToken();
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -36,7 +37,7 @@ export function usePaymentGateway() {
 
   const detectGateway = useCallback(async (): Promise<GatewayInfo | null> => {
     try {
-      const headers = getAuthHeaders();
+      const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/payments/gateway`, {
         credentials: "include",
         headers,
@@ -57,7 +58,7 @@ export function usePaymentGateway() {
     setLoading(true);
     setError(null);
     try {
-      const authHeaders = getAuthHeaders();
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/payments/create`, {
         method: "POST",
         credentials: "include",
@@ -85,7 +86,7 @@ export function usePaymentGateway() {
     setLoading(true);
     setError(null);
     try {
-      const authHeaders = getAuthHeaders();
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/payments/create`, {
         method: "POST",
         credentials: "include",
@@ -110,7 +111,7 @@ export function usePaymentGateway() {
     plan: string;
   }> => {
     try {
-      const authHeaders = getAuthHeaders();
+      const authHeaders = await getAuthHeaders();
       const params = new URLSearchParams({ gateway, session_id: ref });
       const res = await fetch(`${API_BASE}/payments/verify?${params}`, {
         credentials: "include",

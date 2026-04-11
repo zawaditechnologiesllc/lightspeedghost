@@ -19,11 +19,16 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 // ── Startup env-var audit ─────────────────────────────────────────────────────
+// Logs which critical variables are present/absent so Render logs tell you exactly
+// what to add — no guesswork needed.
 const REQUIRED_VARS: Record<string, string> = {
-  DATABASE_URL:     "PostgreSQL connection string",
-  OPENAI_API_KEY:   "OpenAI API key (platform.openai.com → API keys)",
-  ANTHROPIC_API_KEY:"Anthropic API key (console.anthropic.com → API keys)",
-  SESSION_SECRET:   "Random 32-char string for session cookies and JWT signing",
+  DATABASE_URL:              "PostgreSQL connection string (Supabase → Settings → Database → Connection string)",
+  SUPABASE_JWT_SECRET:       "Supabase JWT secret (Supabase → Settings → API → JWT Secret)",
+  SUPABASE_URL:              "Your Supabase project URL, e.g. https://xxxx.supabase.co (Supabase → Settings → API → Project URL) — required for ES256/RS256 JWT verification",
+  SUPABASE_SERVICE_ROLE_KEY: "Supabase service role key (Supabase → Settings → API → service_role) — required to list users in Admin panel",
+  OPENAI_API_KEY:            "OpenAI API key (platform.openai.com → API keys)",
+  ANTHROPIC_API_KEY:         "Anthropic API key (console.anthropic.com → API keys)",
+  SESSION_SECRET:            "Random 32-char string for session cookies",
 };
 
 const missingVars: string[] = [];
