@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight, CheckCircle } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { supabase } from "@/lib/supabase";
+import { auth } from "@/lib/auth";
 import { Link } from "wouter";
 
 type Tab = "login" | "signup";
@@ -35,7 +35,7 @@ export default function Auth() {
     setError("");
     setStatus("loading");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await auth.signInWithPassword({ email, password });
     if (error) {
       setError(error.message);
       setStatus("error");
@@ -60,7 +60,7 @@ export default function Auth() {
 
     setStatus("loading");
 
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await auth.signUp({ email, password });
 
     if (error) {
       setError(error.message);

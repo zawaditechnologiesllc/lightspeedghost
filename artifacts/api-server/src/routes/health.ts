@@ -30,7 +30,6 @@ router.get("/status", async (_req: Request, res: Response) => {
 
   const envVars = [
     "DATABASE_URL",
-    "SUPABASE_JWT_SECRET",
     "OPENAI_API_KEY",
     "ANTHROPIC_API_KEY",
     "SESSION_SECRET",

@@ -5,8 +5,6 @@ import connectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import jwt from "jsonwebtoken";
-import { createRemoteJWKSet, jwtVerify, decodeProtectedHeader, decodeJwt } from "jose";
 import router from "./routes";
 import { authMiddleware } from "./middlewares/auth";
 import { requestLoggerMiddleware } from "./lib/requestLogger";
@@ -33,7 +31,6 @@ app.head("/api/health", (_req: Request, res: Response) => {
 });
 
 // ── Diagnostic config — before CORS so direct browser access works ─────────
-// Shows which env vars are present (as booleans) — no secret values exposed.
 app.get("/api/health/config", (_req: Request, res: Response) => {
   const check = (key: string) => !!process.env[key];
   res.json({
@@ -41,8 +38,6 @@ app.get("/api/health/config", (_req: Request, res: Response) => {
     keys: {
       ANTHROPIC_API_KEY: check("ANTHROPIC_API_KEY"),
       OPENAI_API_KEY: check("OPENAI_API_KEY"),
-      SUPABASE_JWT_SECRET: check("SUPABASE_JWT_SECRET"),
-      SUPABASE_URL: check("SUPABASE_URL"),
       DATABASE_URL: check("DATABASE_URL"),
       SESSION_SECRET: check("SESSION_SECRET"),
       ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ?? "(not set)",
@@ -50,85 +45,6 @@ app.get("/api/health/config", (_req: Request, res: Response) => {
   });
 });
 
-// ── Auth diagnostic — before CORS, dev+prod safe (no secrets exposed) ────────
-// Call with: fetch("https://lightspeedghost-5szz.onrender.com/api/auth/test",
-//   { headers: { Authorization: "Bearer <your-supabase-token>" } })
-app.get("/api/auth/test", async (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization ?? "";
-  // Accept token from Authorization header OR ?token= query param (for easy browser testing)
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : (req.query.token as string | undefined) ?? "";
-  if (!token) {
-    res.json({ error: "No token supplied. Either add Authorization: Bearer <token> header, or use ?token=<value> in the URL." });
-    return;
-  }
-
-  // 1. Decode header without verification
-  let header: Record<string, unknown> = {};
-  let payload: Record<string, unknown> = {};
-  try {
-    const decoded = jwt.decode(token, { complete: true });
-    if (decoded && typeof decoded === "object") {
-      header = decoded.header as Record<string, unknown>;
-      payload = decoded.payload as Record<string, unknown>;
-    }
-  } catch (e) {
-    res.json({ error: "Cannot decode token — likely malformed JWT." });
-    return;
-  }
-
-  const alg = header.alg as string ?? "unknown";
-  const kid = header.kid as string | undefined;
-  const sub = payload.sub as string | undefined;
-  const exp = payload.exp as number | undefined;
-  const expired = exp ? Date.now() / 1000 > exp : null;
-
-  const result: Record<string, unknown> = {
-    token_header: { alg, kid, typ: header.typ },
-    token_sub: sub ?? "(missing)",
-    token_expired: expired,
-    env: {
-      SUPABASE_JWT_SECRET: !!process.env.SUPABASE_JWT_SECRET,
-      SUPABASE_URL: process.env.SUPABASE_URL
-        ? process.env.SUPABASE_URL.replace(/\/\/[^.]+/, "//***") // mask project ref
-        : "(not set)",
-    },
-  };
-
-  // 2. Try HS256 verification (Legacy JWT Secret)
-  if (process.env.SUPABASE_JWT_SECRET) {
-    try {
-      const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET);
-      await jwtVerify(token, secret, { algorithms: ["HS256"] });
-      result.hs256_verify = "✓ passed";
-    } catch (e) {
-      result.hs256_verify = `✗ failed: ${e instanceof Error ? e.message : String(e)}`;
-    }
-  } else {
-    result.hs256_verify = "skipped — SUPABASE_JWT_SECRET not set";
-  }
-
-  // 3. Try asymmetric verification via JWKS (RS256, ES256, etc.)
-  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  if (supabaseUrl && kid) {
-    try {
-      const JWKS = createRemoteJWKSet(
-        new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`),
-      );
-      await jwtVerify(token, JWKS);
-      result.jwks_verify = "✓ passed";
-    } catch (e) {
-      result.jwks_verify = `✗ failed: ${e instanceof Error ? e.message : String(e)}`;
-    }
-  } else if (!kid) {
-    result.jwks_verify = "skipped — token has no kid header (not using JWT Signing Keys)";
-  } else {
-    result.jwks_verify = "skipped — SUPABASE_URL not set";
-  }
-
-  res.json(result);
-});
 
 // ── Security headers (helmet) ─────────────────────────────────────────────────
 app.use(
@@ -300,7 +216,7 @@ app.get("/api/me", (req: Request, res: Response) => {
     res.status(401).json({
       authenticated: false,
       hint: "JWT verification failed or no Authorization header sent. " +
-        "Ensure SUPABASE_URL and SUPABASE_JWT_SECRET are set on Render, then redeploy.",
+        "Ensure SESSION_SECRET is set in your environment variables.",
     });
     return;
   }
