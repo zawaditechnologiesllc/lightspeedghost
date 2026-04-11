@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middlewares/auth";
 import { CheckPlagiarismBody, HumanizeTextBody } from "@workspace/api-zod";
 import { compareDocuments } from "../lib/winnow";
-import { analyseTextPlagiarism, analyseAIContent } from "../lib/textAnalysis";
+import { analyseTextPlagiarism, analyseAIContent, computeReadabilityScores } from "../lib/textAnalysis";
 import { anthropic, openai } from "../lib/ai";
 import { HUMANIZER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
@@ -22,6 +22,7 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
 
     const plagResult = analyseTextPlagiarism(text);
     const aiResult = analyseAIContent(text);
+    const readability = computeReadabilityScores(text);
 
     const { plagiarismScore, matchedWords, sourceMatches } = plagResult;
     const { aiScore, lexicalDiversity, avgSentenceLength, flags } = aiResult;
@@ -79,6 +80,7 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       lexicalDiversity: Math.round(lexicalDiversity * 100),
       avgSentenceLength: Math.round(avgSentenceLength),
       aiFlags: flags,
+      readability,
     });
   } catch (err) {
     req.log.error({ err }, "Error checking plagiarism");

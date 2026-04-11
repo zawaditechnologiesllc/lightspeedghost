@@ -213,15 +213,22 @@ function computeBodyWordCount(content: string): number {
   const withoutCitations = withoutRefs
     .replace(/\[[\d,\s–-]+\]/g, "")
     .replace(/\([A-Z][A-Za-z\s&,]+\d{4}[a-z]?(?:,\s*p\.?\s*\d+)?\)/g, "");
-  // Remove markdown syntax
+  // Remove markdown syntax and non-body content.
+  // Inspired by quarto-wordcount (Repo 4) which excludes tables, images, figures,
+  // and figure captions from academic word counts.
   const clean = withoutCitations
-    .replace(/^#+\s*.*/gm, "")        // headings
-    .replace(/\*\*|__|\*|_/g, "")     // bold/italic
-    .replace(/`[^`]*`/g, "")          // code
-    .replace(/!\[.*?\]\(.*?\)/g, "")  // images
-    .replace(/\[.*?\]\(.*?\)/g, "")   // links
-    .replace(/^\|.*\|$/gm, "")        // tables
-    .replace(/^\s*[-*+]\s/gm, "");    // list markers
+    .replace(/^#+\s*.*/gm, "")                              // headings
+    .replace(/\*\*|__|\*|_/g, "")                           // bold/italic markers
+    .replace(/`[^`]*`/g, "")                                // inline code
+    .replace(/```[\s\S]*?```/gm, "")                        // fenced code blocks
+    .replace(/\$\$[\s\S]*?\$\$/gm, "")                      // block LaTeX equations
+    .replace(/\$[^$\n]+\$/g, "")                            // inline LaTeX equations
+    .replace(/!\[.*?\]\(.*?\)/g, "")                        // images
+    .replace(/\[.*?\]\(.*?\)/g, "")                         // links
+    .replace(/^\|[-:| ]+\|$/gm, "")                         // table separator rows (---|---|---)
+    .replace(/^\|.*\|$/gm, "")                              // table rows
+    .replace(/^\s*[-*+]\s/gm, "")                           // list markers
+    .replace(/^\s*\*\*?(figure|fig\.?|table|appendix)\s+[\d.]+[^*]*\*?\*?/gim, ""); // figure/table captions
   return clean.split(/\s+/).filter((w) => w.trim().length > 0).length;
 }
 

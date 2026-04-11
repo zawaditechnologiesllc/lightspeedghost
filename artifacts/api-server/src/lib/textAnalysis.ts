@@ -209,6 +209,107 @@ export function computeBurstiness(text: string): { score: number; avgLen: number
   return { score: burstinessScore, avgLen: Math.round(mean), stdDev: Math.round(stdDev * 10) / 10 };
 }
 
+// ── Readability scores ────────────────────────────────────────────────────────
+// Implements five standard academic readability formulas.
+// Inspired by wordcounter2 (Repo 6) real-time readability analysis feature.
+// Formulas: Flesch-Kincaid Grade Level, Flesch Reading Ease, Gunning Fog Index,
+// SMOG Index, Automated Readability Index (ARI).
+
+export interface ReadabilityScores {
+  fleschKincaidGrade: number;
+  fleschReadingEase: number;
+  gunningFog: number;
+  smogIndex: number;
+  automatedReadabilityIndex: number;
+  readingLevel: string;
+  avgWordsPerSentence: number;
+  avgSyllablesPerWord: number;
+}
+
+/** Estimate syllable count for an English word */
+function countSyllables(word: string): number {
+  const w = word.toLowerCase().replace(/[^a-z]/g, "");
+  if (w.length <= 2) return 1;
+  const cleaned = w.replace(/e$/, "").replace(/[aeiou]{2,}/g, "a");
+  const vowelGroups = cleaned.match(/[aeiouy]+/g);
+  return Math.max(1, vowelGroups ? vowelGroups.length : 1);
+}
+
+/** Map FK grade level to a human-readable label */
+function readingLevelLabel(fkGrade: number): string {
+  if (fkGrade <= 6)  return "Easy (Middle School)";
+  if (fkGrade <= 8)  return "Moderate (High School)";
+  if (fkGrade <= 10) return "Standard (Undergraduate)";
+  if (fkGrade <= 13) return "Advanced (Graduate)";
+  return "Expert (Academic / Doctoral)";
+}
+
+export function computeReadabilityScores(text: string): ReadabilityScores {
+  const stripped = text
+    .replace(/^#+.+$/gm, "")
+    .replace(/\*\*|__|\*|_/g, "")
+    .replace(/`[^`]*`/g, "")
+    .replace(/!\[.*?\]\(.*?\)/g, "")
+    .replace(/\[.*?\]\(.*?\)/g, "")
+    .replace(/^\|.*\|$/gm, "")
+    .replace(/^\s*[-*+]\s/gm, "")
+    .replace(/\$\$[\s\S]*?\$\$/g, "")
+    .replace(/\$[^$]+\$/g, "")
+    .trim();
+
+  const sentences = stripped
+    .split(/[.!?]+/)
+    .map(s => s.trim())
+    .filter(s => s.split(/\s+/).length >= 3);
+
+  const wordList = stripped
+    .replace(/[^a-zA-Z\s'-]/g, " ")
+    .split(/\s+/)
+    .filter(w => w.length > 0);
+
+  const numSentences = Math.max(1, sentences.length);
+  const numWords     = Math.max(1, wordList.length);
+  const numChars     = wordList.join("").length;
+
+  const numSyllables = wordList.reduce((sum, w) => sum + countSyllables(w), 0);
+  const complexWords  = wordList.filter(w => countSyllables(w) >= 3).length;
+
+  const wordsPerSentence   = numWords / numSentences;
+  const syllablesPerWord   = numSyllables / numWords;
+  const complexWordsRatio  = complexWords / numWords;
+
+  const fleschKincaidGrade = Math.max(0, Math.round(
+    (0.39 * wordsPerSentence + 11.8 * syllablesPerWord - 15.59) * 10) / 10
+  );
+
+  const fleschReadingEase = Math.min(100, Math.max(0, Math.round(
+    (206.835 - 1.015 * wordsPerSentence - 84.6 * syllablesPerWord) * 10) / 10
+  ));
+
+  const gunningFog = Math.max(0, Math.round(
+    0.4 * (wordsPerSentence + 100 * complexWordsRatio) * 10) / 10
+  );
+
+  const smogIndex = Math.max(0, Math.round(
+    (1.0430 * Math.sqrt(complexWords * (30 / numSentences)) + 3.1291) * 10) / 10
+  );
+
+  const automatedReadabilityIndex = Math.max(0, Math.round(
+    (4.71 * (numChars / numWords) + 0.5 * wordsPerSentence - 21.43) * 10) / 10
+  );
+
+  return {
+    fleschKincaidGrade,
+    fleschReadingEase,
+    gunningFog,
+    smogIndex,
+    automatedReadabilityIndex,
+    readingLevel: readingLevelLabel(fleschKincaidGrade),
+    avgWordsPerSentence: Math.round(wordsPerSentence * 10) / 10,
+    avgSyllablesPerWord: Math.round(syllablesPerWord * 100) / 100,
+  };
+}
+
 // ── Multi-section text sampler ────────────────────────────────────────────────
 // Turnitin analyses the full document — not just the opening paragraphs.
 // Sample beginning, middle, and end so long papers are scored throughout.

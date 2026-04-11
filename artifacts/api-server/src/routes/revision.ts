@@ -148,6 +148,7 @@ router.post("/revision/submit-stream", requireAuth, async (req, res) => {
       sectionsToRewrite: Array<{ sectionName: string; issue: string; howToFix: string }>;
       estimatedCurrentGrade: string;
       keyImprovements: string[];
+      peerReview?: Record<string, { score: number; diagnosis: string }>;
     } = {
       overallWeaknesses: [],
       sectionsToRewrite: [],
@@ -156,20 +157,40 @@ router.post("/revision/submit-stream", requireAuth, async (req, res) => {
     };
 
     try {
+      // Structured peer-review approach inspired by LLM-Academic-Writing (Repo 2).
+      // Scores the paper across 6 academic dimensions before rewriting, giving the
+      // revision engine precise targets rather than vague "improve this section" notes.
       const weakSectionResp = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_tokens: 1500,
+        max_tokens: 1800,
         response_format: { type: "json_object" },
         messages: [
           {
             role: "system",
-            content: `You are an expert academic reviewer. Analyse this paper and identify every section that needs improvement to reach ${targetGradeNorm} (minimum floor: 92%).
+            content: `You are a senior academic peer reviewer at a top-tier institution. Analyse this paper using a structured review protocol across 6 dimensions, then identify specific sections that need rewriting to reach ${targetGradeNorm}.
 
-GRADING CRITERIA (these determine whether the paper earns ${targetGradeNorm}):
+GRADING CRITERIA (target standard):
 ${effectiveGradingCriteria}
 ${body.marksScored ? `\nCURRENT GRADE: ${body.marksScored}` : ""}
+
+REVIEW DIMENSIONS — score each 0-100 and give a one-sentence diagnosis:
+1. Argument Coherence — Does the thesis flow logically through each section?
+2. Evidence Quality — Are claims supported with specific, cited, peer-reviewed evidence?
+3. Critical Analysis Depth — Does the paper go beyond description to genuine critique and synthesis?
+4. Academic Register — Is the tone, vocabulary, and style appropriate for the academic level?
+5. Citation Density — Are citations distributed consistently (every 150-200 words)?
+6. Originality — Does the paper contribute original analysis, or is it merely a summary?
+
 Return ONLY valid JSON:
 {
+  "peerReview": {
+    "argumentCoherence":  { "score": number, "diagnosis": "string" },
+    "evidenceQuality":    { "score": number, "diagnosis": "string" },
+    "criticalAnalysis":   { "score": number, "diagnosis": "string" },
+    "academicRegister":   { "score": number, "diagnosis": "string" },
+    "citationDensity":    { "score": number, "diagnosis": "string" },
+    "originality":        { "score": number, "diagnosis": "string" }
+  },
   "overallWeaknesses": ["weakness1", "weakness2"],
   "sectionsToRewrite": [
     { "sectionName": "string", "issue": "what is wrong", "howToFix": "specific instruction" }
@@ -188,7 +209,23 @@ Return ONLY valid JSON:
       if (weakSectionResp.usage) {
         recordUsage("gpt-4o-mini", weakSectionResp.usage.prompt_tokens, weakSectionResp.usage.completion_tokens, "revision-section-analysis");
       }
-      analysis = JSON.parse(weakSectionResp.choices[0]?.message?.content ?? "{}");
+      const rawAnalysis = JSON.parse(weakSectionResp.choices[0]?.message?.content ?? "{}");
+      analysis = rawAnalysis;
+
+      // Build a rich section breakdown from the peer review dimensions for the rewriter
+      if (rawAnalysis.peerReview) {
+        const pr = rawAnalysis.peerReview as Record<string, { score: number; diagnosis: string }>;
+        const weakDimensions = Object.entries(pr)
+          .filter(([, v]) => v.score < 75)
+          .map(([k, v]) => ({
+            sectionName: k.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase()),
+            issue: v.diagnosis,
+            howToFix: `Improve ${k.replace(/([A-Z])/g, " $1").toLowerCase()} to reach score ≥85/100`,
+          }));
+        if (weakDimensions.length > 0 && (!analysis.sectionsToRewrite || analysis.sectionsToRewrite.length === 0)) {
+          analysis.sectionsToRewrite = weakDimensions;
+        }
+      }
     } catch { /* use defaults */ }
 
     const sectionList = analysis.sectionsToRewrite?.map((s) => s.sectionName).join(", ") || "multiple sections";
@@ -371,6 +408,7 @@ Return ONLY valid JSON:
       gradeEstimate: result.gradeEstimate ?? "A / 92%+",
       stats: { aiScore, plagiarismScore: plagScore },
       improvementAreas: result.improvementAreas ?? [],
+      peerReview: analysis.peerReview ?? null,
       documentId,
     });
 
