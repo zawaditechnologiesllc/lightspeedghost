@@ -71,8 +71,7 @@ interface ReferralInfo {
   code: string;
   referrals: number;
   conversions: number;
-  totalEarnedCents: number;
-  pendingCents: number;
+  pendingDiscounts: number;
 }
 
 export default function Dashboard() {
@@ -164,10 +163,10 @@ export default function Dashboard() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Gift size={13} className="text-emerald-400" />
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Refer & Earn</span>
+              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Refer & Save</span>
             </div>
             <p className="text-sm text-muted-foreground mt-0.5 max-w-md">
-              Earn <span className="text-foreground font-semibold">10% commission</span> for every student you refer who pays. Share your unique link below.
+              Get <span className="text-foreground font-semibold">10% off your next subscription</span> for every student you refer who pays. Share your unique link below.
             </p>
             {/* Referral link */}
             <div className="mt-3 flex items-center gap-2 max-w-sm">
@@ -197,9 +196,9 @@ export default function Dashboard() {
               </div>
               <div>
                 <div className="text-xl font-bold text-emerald-400 tabular-nums">
-                  ${(referral.totalEarnedCents / 100).toFixed(2)}
+                  {referral.pendingDiscounts > 0 ? referral.pendingDiscounts : "—"}
                 </div>
-                <div className="text-xs text-muted-foreground">Earned</div>
+                <div className="text-xs text-muted-foreground">Discount Pending</div>
               </div>
             </div>
           )}
