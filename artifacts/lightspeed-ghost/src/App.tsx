@@ -225,7 +225,11 @@ function Router() {
 
 function App() {
   const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window !== "undefined" && !sessionStorage.getItem("lsg_splash_shown")) {
+    if (typeof window === "undefined") return false;
+    const isPwa =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    if (isPwa && !sessionStorage.getItem("lsg_splash_shown")) {
       sessionStorage.setItem("lsg_splash_shown", "1");
       return true;
     }
