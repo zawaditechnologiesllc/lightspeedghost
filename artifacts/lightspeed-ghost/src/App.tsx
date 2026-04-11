@@ -32,6 +32,7 @@ import BlogPost from "@/pages/BlogPost";
 import RefundPolicy from "@/pages/RefundPolicy";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import NotFound from "@/pages/not-found";
+import FloatingAssistant from "@/pages/FloatingAssistant";
 import { Loader2, Wrench } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { Logo } from "@/components/Logo";
@@ -153,20 +154,25 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <AuthGuard>
-      <Layout>
-        <Switch>
-          <Route path="/app" component={Dashboard} />
-          <Route path="/write" component={WritePaper} />
-          <Route path="/outline" component={Outline} />
-          <Route path="/revision" component={Revision} />
-          <Route path="/humanizer" component={Humanizer} />
-          <Route path="/plagiarism" component={Plagiarism} />
-          <Route path="/stem" component={StemSolver} />
-          <Route path="/study" component={StudyAssistant} />
-          <Route path="/documents" component={Documents} />
-          <Route component={NotFound} />
-        </Switch>
-      </Layout>
+      <Switch>
+        <Route path="/assistant" component={FloatingAssistant} />
+        <Route>
+          <Layout>
+            <Switch>
+              <Route path="/app" component={Dashboard} />
+              <Route path="/write" component={WritePaper} />
+              <Route path="/outline" component={Outline} />
+              <Route path="/revision" component={Revision} />
+              <Route path="/humanizer" component={Humanizer} />
+              <Route path="/plagiarism" component={Plagiarism} />
+              <Route path="/stem" component={StemSolver} />
+              <Route path="/study" component={StudyAssistant} />
+              <Route path="/documents" component={Documents} />
+              <Route component={NotFound} />
+            </Switch>
+          </Layout>
+        </Route>
+      </Switch>
     </AuthGuard>
   );
 }
