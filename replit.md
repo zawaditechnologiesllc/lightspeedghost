@@ -186,10 +186,18 @@ All routes prefixed with `/api`:
 
 ### Repo 5: Plagiarism-Checker-and-AI-Text-Detection
 - Cosine similarity plagiarism detection: TF vector dot products against academic corpus
-- Lexical diversity AI detection: unique-word ratio heuristic (AI text → lower diversity)
-- `lib/textAnalysis.ts`: `analyseTextPlagiarism()` + `analyseAIContent()`
+- `lib/textAnalysis.ts`: `analyseTextPlagiarism()` (cosine similarity vs ACADEMIC_CORPUS) + `computeReadabilityScores()` + `computeBurstiness()` + `sampleTextSections()`
 - `lib/academicCorpus.ts`: 12 academic reference sources (AI/ML, research methods, climate science, biology, economics, psychology, mathematics, etc.)
 - UI enhancements: Writing Metrics card (lexical diversity + avg sentence length), AI flags, corpus matched words
+
+### Shared AI Detection Pipeline (lib/aiDetection.ts) — CRITICAL ARCHITECTURE
+All three tools (Plagiarism Checker, Humanizer, Paper Writer) now use the SAME detection model:
+- **GPT-4o-mini + burstiness blend**: `detectAIScore()` — single source of truth for AI probability
+- **Shared humanization**: `humanizeTextOnce()` — one-pass humanization used by Paper Writer auto-gate
+- **Paper Writer AI gate**: After plagiarism gate, runs AI detection; auto-humanizes if score > 25%
+- **Plagiarism checker**: Now queries live 13-database network for real academic matches (with real DOI links); AI score uses same GPT-4o-mini model as Humanizer
+- **Quick humanizer** (plagiarism page): TARGET_SCORE changed 25% → 10%; uses shared detection model
+- **Scores are now consistent**: Humanizing in Humanizer tool then re-checking in Plagiarism Checker will show meaningfully lower scores because both use identical detection
 
 ## File Upload Feature (Phases 1-2-3)
 

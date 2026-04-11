@@ -2,94 +2,14 @@ import { Router } from "express";
 import { requireAuth } from "../middlewares/auth";
 import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
-import { anthropic, openai } from "../lib/ai";
+import { anthropic } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage } from "../lib/usageTracker";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
-import { computeBurstiness, sampleTextSections } from "../lib/textAnalysis.js";
+import { detectAIScore } from "../lib/aiDetection.js";
 
 const router = Router();
-
-// ── AI detection helper (actual GPT-4o-mini scoring, not self-assessment) ─────
-
-async function detectAIScore(text: string): Promise<{ score: number; indicators: string[] }> {
-  try {
-    // Compute burstiness locally (fast, free, and Turnitin's primary signal)
-    const { score: burstiness, stdDev } = computeBurstiness(text);
-
-    // Sample full paper (not just first 4000 chars — catches AI patterns throughout)
-    const sample = sampleTextSections(text);
-
-    const resp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 600,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert AI content detection specialist replicating Turnitin, GPTZero, and Originality.AI methodology.
-
-The text has already been measured for burstiness (sentence length variance):
-- Burstiness stdDev: ${stdDev} words (human writing: 8–15, AI writing: 3–6)
-- Burstiness score: ${burstiness}/100 (higher = more human-like variation)
-
-Analyse the sampled text sections and return JSON:
-{
-  "aiScore": number (0-100, probability the full text is AI-generated — calibrate against burstiness above),
-  "indicators": ["up to 4 specific AI patterns found, or 'none detected' if clean"]
-}
-
-TURNITIN AI DETECTION SIGNALS — each one found raises the score:
-• LOW BURSTINESS (already measured above — weight this heavily)
-• Paragraph-level symmetry: every paragraph has the same structure (claim → evidence → conclusion)
-• Sentence starters: 3+ consecutive sentences begin with the same word class
-• Transition clichés: "Furthermore", "Moreover", "Additionally", "In conclusion" as openers
-• AI vocabulary: "delve", "crucial", "pivotal", "underscore", "navigate complexities", "it is worth noting", "it is important to note", "in today's world", "in the realm of"
-• Uniform hedging register: constant "can be argued", "it should be noted", "this suggests"
-• Encyclopaedic neutral tone: no personal analytical voice, no genuine uncertainty or position
-• Perfect 3-part paragraph structure repeated throughout without variation
-• Missing imperfection: no mid-thought corrections, rhetorical questions, or self-challenges
-
-HUMAN WRITING SIGNALS — reduce the score:
-• Short declarative sentences (under 8 words) mixed with complex ones
-• Em dashes, parenthetical asides, rhetorical questions
-• Specific analytical opinions ("the data here is less convincing")
-• Non-standard or discipline-specific transitions
-• At least one moment of genuine uncertainty or nuance`,
-        },
-        {
-          role: "user",
-          content: `Detect AI content in these sampled sections:\n\n${sample}`,
-        },
-      ],
-    });
-
-    if (resp.usage) {
-      recordUsage("gpt-4o-mini", resp.usage.prompt_tokens, resp.usage.completion_tokens, "humanizer-detect-pass");
-    }
-
-    const raw = JSON.parse(resp.choices[0]?.message?.content ?? "{}") as {
-      aiScore?: number;
-      indicators?: string[];
-    };
-
-    const gptScore = Math.min(100, Math.max(0, Number(raw.aiScore) ?? 40));
-
-    // Blend GPT score with burstiness signal:
-    // Low burstiness (low score) = higher AI probability → push gptScore up
-    // High burstiness = more human → trust GPT but allow it to be lower
-    const burstinessPenalty = burstiness < 30 ? Math.round((30 - burstiness) * 0.5) : 0;
-    const blendedScore = Math.min(98, gptScore + burstinessPenalty);
-
-    return {
-      score: blendedScore,
-      indicators: Array.isArray(raw.indicators) ? raw.indicators : [],
-    };
-  } catch {
-    return { score: 30, indicators: [] };
-  }
-}
 
 // ── Humanize pass helper ──────────────────────────────────────────────────────
 
