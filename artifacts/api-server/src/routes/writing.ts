@@ -1172,7 +1172,35 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
       });
     } catch { /* non-fatal — continue even if save fails */ }
 
-    res.json(outline);
+    // Enrich each section with a word count target.
+    // Inspired by PaperCraftr / storycraftr section-budget approach (Repo 1).
+    // Reuses the same percentage distribution from planSectionWordBudgets so that
+    // the outline word targets are identical to what the paper writer targets.
+    const targetWordCount = Number(req.body.wordCount) || 2000;
+    const sectionCount = outline.sections.length;
+
+    // Build a percentage distribution for this paper type
+    const budgetString = planSectionWordBudgets(body.paperType, targetWordCount);
+    const budgetLines = budgetString.match(/•\s+.+?:\s+~(\d+) words/g) ?? [];
+    const budgetWords = budgetLines.map(line => {
+      const match = line.match(/~(\d+) words/);
+      return match ? parseInt(match[1], 10) : 0;
+    });
+
+    const enrichedSections = outline.sections.map(
+      (section: { heading: string; subsections: string[] }, i: number) => {
+        // Try to get allocated words from budget; fall back to even split
+        const allocated = budgetWords[i] ?? Math.round(targetWordCount / sectionCount);
+        // References section has no word target — it's excluded from the count
+        const isRefSection = /references?|bibliography|works cited/i.test(section.heading);
+        return {
+          ...section,
+          wordTarget: isRefSection ? 0 : allocated,
+        };
+      }
+    );
+
+    res.json({ ...outline, sections: enrichedSections, totalWordTarget: targetWordCount });
   } catch (err) {
     req.log.error({ err }, "Error generating outline");
     res.status(500).json({ error: "Internal server error" });
