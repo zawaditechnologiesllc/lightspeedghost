@@ -8,7 +8,7 @@ import {
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, ChevronUp, Sparkles, Upload, BarChart3,
   Users, Award, Clock, Quote, MapPin, Mail, Twitter, Linkedin, Wand2,
-  Lock, Building2, Share,
+  Lock, Building2, Share, BotMessageSquare,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
@@ -27,7 +27,7 @@ const tools = [
   {
     icon: PenLine,
     name: "AI Paper Writer",
-    desc: "Papers grounded in 10 live academic databases (1B+ papers). Upload your rubric and we target the A-grade criteria only. Plagiarism checked below 8% before delivery. Real DOI citations, no Wikipedia.",
+    desc: "Papers grounded in 10 live academic databases (1B+ papers). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
     badge: "Most used",
     href: "/auth",
     color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -59,7 +59,7 @@ const tools = [
   {
     icon: FlaskConical,
     name: "STEM Solver",
-    desc: "Photograph your problem set. Get full step-by-step solutions with equations, graphs, and linked research papers — Math, Physics, Chemistry, CS, and more.",
+    desc: "Photograph your problem set or upload a dataset. Get full step-by-step solutions with equations, graphs, and linked research papers — Math, Physics, Chemistry, CS, and more. Drop in lab data and it analyses it for you.",
     badge: "Photo upload",
     href: "/auth",
     color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
@@ -67,10 +67,18 @@ const tools = [
   {
     icon: GraduationCap,
     name: "AI Study Assistant",
-    desc: "Ask anything, upload lecture notes, quiz yourself with flashcards. LightSpeed AI builds a personal memory of everything you've studied — so it recalls your past struggles, past topics, and past sessions to tutor you better every single time.",
+    desc: "Ask anything, upload lecture notes, or drop in a dataset. LightSpeed AI builds a personal memory of everything you've studied — recalling past struggles, past topics, and past sessions to tutor you better every time.",
     badge: "Long-term memory",
     href: "/auth",
     color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  },
+  {
+    icon: BotMessageSquare,
+    name: "Floating AI Assistant",
+    desc: "A draggable AI panel that rides alongside any page. Choose from 7 modes — Learn, Quick Answer, Exam, Simplify, Diagram, Deep Research, or let Auto-Router pick the best approach for your question. Upload images, paste MCQs, get instant answers.",
+    badge: "New",
+    href: "/auth",
+    color: "bg-violet-500/10 text-violet-400 border-violet-500/20",
   },
 ];
 
@@ -98,7 +106,15 @@ const testimonials = [
 const faqs = [
   {
     q: "What is Light Speed Ghost?",
-    a: "Light Speed Ghost is an AI-powered academic writing platform built for students. It includes seven tools: an AI paper writer with real citations, an outline builder, a paper revision tool, LightSpeed Humanizer for bypassing AI detectors, an AI and plagiarism checker, a STEM step-by-step solver, and an AI study assistant with session memory.",
+    a: "Light Speed Ghost is an AI-powered academic assistance platform built for students. It includes eight tools: an AI paper writer with real citations, an outline builder, a paper revision tool, LightSpeed Humanizer for bypassing AI detectors, an AI and plagiarism checker, a STEM step-by-step solver, an AI study assistant with session memory, and a floating AI assistant with seven answer modes including auto-routing.",
+  },
+  {
+    q: "What is the Floating AI Assistant and how does it work?",
+    a: "The Floating AI Assistant is a draggable panel that appears on any page of the platform. Click the sparkle button in the bottom-right corner to open it. Drag it anywhere on your screen. Choose from seven modes: Learn (step-by-step breakdown), Quick Answer (2-4 sentences), Exam (picks the correct MCQ option with justification), Simplify (explains like you're 10), Diagram (explains uploaded images or diagrams), Deep Research (sourced, multi-perspective answer), or Auto (the AI reads your input and picks the right mode automatically). You can also upload images directly — useful for photographing diagrams, textbook pages, or problem sets.",
+  },
+  {
+    q: "Can I upload my own data or research to the tools?",
+    a: "Yes. The Paper Writer, STEM Solver, and Study Assistant all accept dataset uploads — CSV files and spreadsheets. Upload your lab results, survey data, or any tabular data and the AI will analyse it and weave your actual numbers into the output. This is especially useful for data analysis papers, lab reports, and quantitative research questions.",
   },
   {
     q: "Is this actually safe to use? Will my university know?",
@@ -473,7 +489,7 @@ export default function Landing() {
         <div className="relative max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium mb-6 sm:mb-8">
             <Zap size={11} className="text-blue-400" />
-            7 AI tools. One platform. Actually works.
+            8 AI tools. One platform. Actually works.
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-5 sm:mb-6">
@@ -486,7 +502,7 @@ export default function Landing() {
           </h1>
 
           <p className="text-base sm:text-lg md:text-xl text-white/55 max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10">
-            Light Speed Ghost handles the writing, revision, plagiarism checking, and STEM problems — so you can stop staring at a blank page and actually sleep.
+            Light Speed Ghost handles the writing, revision, plagiarism checking, STEM problems, and instant Q&amp;A — with a draggable AI assistant that rides alongside every page so you can stop staring at a blank screen and actually sleep.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
@@ -862,10 +878,10 @@ export default function Landing() {
           <div className="max-w-2xl mb-10 sm:mb-16">
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">What it does</p>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-4 sm:mb-5">
-              Seven tools.<br />One subscription.
+              Eight tools.<br />One subscription.
             </h2>
             <p className="text-white/50 text-base sm:text-lg">
-              Each tool is built for a specific academic pain point. They work independently or in sequence — run your paper through the writer, then straight into the plagiarism checker.
+              Each tool is built for a specific academic pain point. They work independently or in sequence — run your paper through the writer, into the plagiarism checker, then ask the AI assistant to explain the tricky bits.
             </p>
           </div>
 
@@ -965,6 +981,20 @@ export default function Landing() {
                 desc: "The Study Assistant has four distinct modes: Tutor (guided, Socratic), Explain (fast, example-driven), Quiz (test-and-reveal), and Summarize (structured key points). Switch mid-session — the AI tracks context across every mode change.",
                 color: "border-orange-500/20 bg-orange-500/5",
                 tag: "Study Assistant",
+              },
+              {
+                icon: "⚡",
+                title: "AI Mode Router",
+                desc: "Set the Floating Assistant to Auto and it reads your input — if it sees an MCQ it switches to Exam mode, a diagram to Diagram mode, a formula to Learn mode. You get the right output for your question without having to pick a mode manually.",
+                color: "border-violet-500/20 bg-violet-500/5",
+                tag: "Floating AI Assistant",
+              },
+              {
+                icon: "📊",
+                title: "Dataset Analysis Integration",
+                desc: "All three main tools — Paper Writer, STEM Solver, and Study Assistant — accept CSV and spreadsheet uploads. Your data is parsed, analysed, and injected into the AI context so responses are grounded in your actual numbers, not generics.",
+                color: "border-teal-500/20 bg-teal-500/5",
+                tag: "Paper Writer · STEM Solver · Study Assistant",
               },
             ].map(({ icon, title, desc, color, tag }) => (
               <div key={title} className={`p-5 sm:p-6 rounded-2xl border ${color} hover:bg-white/[0.04] transition-all`}>
