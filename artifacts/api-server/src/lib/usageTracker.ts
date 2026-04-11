@@ -20,20 +20,20 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     revision:  50,
     humanizer: 50,
     stem:      30,   // per day
-    study:     null, // unlimited
-    plagiarism: null,
-    outline:   null,
-    assistant: null, // unlimited, all modes including image/diagram
+    study:     300,  // per month (~10/day) — resets monthly
+    plagiarism: 50,  // per month — ~daily checking, generous for a student
+    outline:   50,   // per month — matches paper limit
+    assistant: 300,  // per month — text modes via Haiku; image mode Sonnet (Pro only)
   },
   campus: {
     paper:     15,
     revision:  15,
     humanizer: 15,
     stem:      30,   // per day
-    study:     null,
-    plagiarism: null,
-    outline:   null,
-    assistant: null, // unlimited, all modes
+    study:     150,  // per month per seat
+    plagiarism: 25,  // per month per seat
+    outline:   25,   // per month per seat
+    assistant: 150,  // per month per seat
   },
 };
 

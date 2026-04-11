@@ -25,7 +25,7 @@ const PLAN_PERIOD: Record<PaygTool, string> = {
   revision:   "this month",
   humanizer:  "this month",
   stem:       "today",
-  study:      "today",
+  study:      "this month",
   plagiarism: "this month",
   outline:    "this month",
 };
@@ -88,7 +88,7 @@ export function PaywallGate({ tool, tier, children }: PaywallGateProps) {
 
             {!isPro && (
               <p className="mt-3 text-[11px] text-white/25">
-                Pro: 50 papers/mo · 30 STEM/day · unlimited plagiarism
+                Pro: 50 papers/mo · 50 plagiarism/mo · 300 study/mo · 30 STEM/day
               </p>
             )}
           </div>
