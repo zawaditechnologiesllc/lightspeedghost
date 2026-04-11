@@ -57,6 +57,12 @@ const ACADEMIC_LEVELS = [
   { value: "phd",           label: "PhD" },
 ];
 
+// Paper types that have a Results/Findings section — show dataset upload for these
+const DATA_PAPER_TYPES = new Set([
+  "research", "research paper", "lab report", "report",
+  "dissertation", "thesis", "case study", "term paper",
+]);
+
 const PAPER_TYPES = [
   { value: "research",               label: "Research Paper" },
   { value: "essay",                  label: "Essay" },
@@ -75,7 +81,7 @@ const PAPER_TYPES = [
 
 const CITATION_STYLES = ["apa", "mla", "chicago", "harvard", "ieee"] as const;
 
-const STEP_ORDER = ["citations", "stem", "writing", "bibliography", "stats"];
+const STEP_ORDER = ["citations", "data", "stem", "writing", "bibliography", "stats"];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -247,6 +253,8 @@ export default function WritePaper() {
   const [rubricText, setRubricText] = useState("");
   const [fromPlagiarism, setFromPlagiarism] = useState(false);
   const [referenceText, setReferenceText] = useState("");
+  const [datasetText, setDatasetText] = useState("");
+  const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
 
   // ── citation confirmation
   const [detectedStyle, setDetectedStyle] = useState<string | null>(null);
@@ -325,6 +333,18 @@ export default function WritePaper() {
     setReferenceText(prev => (prev ? prev + "\n\n" : "") + file.text.slice(0, 5000));
   }, []);
 
+  // ── dataset upload (CSV / TSV / text)
+  const handleDatasetUpload = useCallback((file: ExtractedFile) => {
+    const raw = file.text.slice(0, 50000);
+    setDatasetText(raw);
+    const lines = raw.trim().split("\n").filter(Boolean);
+    if (lines.length > 0) {
+      const firstLine = lines[0];
+      const sep = firstLine.split("\t").length > firstLine.split(",").length ? "\t" : ",";
+      setDatasetPreview(lines.slice(0, 4).map(l => l.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""))));
+    }
+  }, []);
+
   // ── generate
   const handleGenerate = async () => {
     if (!topic.trim() || !subject.trim()) return;
@@ -336,6 +356,7 @@ export default function WritePaper() {
     setGenError("");
     const initialSteps: Step[] = STEP_ORDER
       .filter(id => id !== "stem" || isStem)
+      .filter(id => id !== "data" || !!datasetText.trim())
       .map(id => ({ id, message: "", status: "pending" }));
     setSteps(initialSteps);
 
@@ -358,6 +379,7 @@ export default function WritePaper() {
           additionalInstructions: additionalInstructions.trim() || undefined,
           rubricText: rubricText.trim() || undefined,
           referenceText: referenceText.trim() || undefined,
+          datasetText: datasetText.trim() || undefined,
         }),
       });
 
@@ -893,6 +915,71 @@ export default function WritePaper() {
             </p>
           )}
         </div>
+
+        {/* ── Dataset upload (quantitative paper types only) ── */}
+        {DATA_PAPER_TYPES.has(paperType) && (
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">
+              Your Dataset
+              <span className="text-[10px] font-normal ml-1 text-muted-foreground/60">(optional — for Results/Findings sections)</span>
+            </label>
+            <FileUploadZone
+              onExtracted={handleDatasetUpload}
+              accept=".csv,.tsv,.txt,.xlsx,.xls"
+              label="Upload your data file (CSV, TSV, Excel)…"
+              hint="The AI computes descriptive statistics and writes your Results section from actual data"
+            />
+            <div className="mt-2">
+              <textarea
+                value={datasetText}
+                onChange={e => {
+                  const raw = e.target.value;
+                  setDatasetText(raw);
+                  const lines = raw.trim().split("\n").filter(Boolean);
+                  if (lines.length > 1) {
+                    const sep = lines[0].split("\t").length > lines[0].split(",").length ? "\t" : ",";
+                    setDatasetPreview(lines.slice(0, 4).map(l => l.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""))));
+                  } else {
+                    setDatasetPreview([]);
+                  }
+                }}
+                rows={3}
+                placeholder={"Or paste CSV / tab-separated data directly here…\ne.g.  Group,Score,Age\n      Control,72.3,21\n      Treatment,84.1,23"}
+                className="w-full px-3 py-2 font-mono text-xs rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              />
+            </div>
+            {datasetPreview.length > 1 && (
+              <div className="mt-1.5 rounded-lg border border-green-500/30 bg-green-500/5 p-2 overflow-x-auto">
+                <p className="text-[10px] text-green-600 dark:text-green-400 flex items-center gap-1 mb-1.5 font-medium">
+                  <CheckCircle size={10} /> Dataset ready — {datasetText.trim().split("\n").length - 1} rows × {datasetPreview[0]?.length ?? 0} variables
+                </p>
+                <table className="text-[10px] w-full border-collapse">
+                  <thead>
+                    <tr>
+                      {datasetPreview[0]?.map((h, i) => (
+                        <th key={i} className="text-left px-2 py-0.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {datasetPreview.slice(1).map((row, i) => (
+                      <tr key={i}>
+                        {row.map((cell, j) => (
+                          <td key={j} className="px-2 py-0.5 text-muted-foreground whitespace-nowrap">{cell}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {datasetText && (
+              <p className="text-[10px] text-muted-foreground mt-1">
+                AI will compute means, medians, and standard deviations — your Results section will cite real numbers
+              </p>
+            )}
+          </div>
+        )}
 
         {/* ── Topic & Subject ── */}
         <div className="grid sm:grid-cols-2 gap-3">

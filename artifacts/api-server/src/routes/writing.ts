@@ -19,16 +19,15 @@ const router = Router();
 
 // ── Word count helpers ────────────────────────────────────────────────────────
 
-/**
- * Distributes a total word count across sections by paper type.
- * Returns a formatted string injected into the system prompt so the AI
- * knows exactly how many words to write per section.
- * Inspired by section-by-section generation approach (PaperCraftr / storycraftr).
- */
-function planSectionWordBudgets(paperType: string, targetWords: number): string {
-  const type = paperType.toLowerCase().trim();
+type SectionBudget = { name: string; pct: number };
 
-  type SectionBudget = { name: string; pct: number };
+/**
+ * Returns the raw section plan (name + percentage) for a given paper type.
+ * Used by both planSectionWordBudgets (prompt injection) and
+ * getSectionBudgets (sectional generation).
+ */
+function lookupSectionPlan(paperType: string): SectionBudget[] {
+  const type = paperType.toLowerCase().trim();
 
   const plans: Record<string, SectionBudget[]> = {
     essay: [
@@ -239,11 +238,18 @@ function planSectionWordBudgets(paperType: string, targetWords: number): string 
     }
   }
 
+  return sections!;
+}
+
+/**
+ * Formats the section plan as a word-budget string for injection into the system prompt.
+ */
+function planSectionWordBudgets(paperType: string, targetWords: number): string {
+  const sections = lookupSectionPlan(paperType);
   const lines = sections.map(s => {
     const words = Math.round(targetWords * s.pct);
     return `  • ${s.name}: ~${words} words`;
   });
-
   return `SECTION-BY-SECTION WORD BUDGET (MANDATORY — distribute your words exactly like this):
 ${lines.join("\n")}
   ─────────────────────────────────────
@@ -252,6 +258,78 @@ ${lines.join("\n")}
   Abstract (if present): excluded from count
 
 Write each section to its allocated word count. Do NOT over-write early sections and run short on later ones. Check your running word count after each section and adjust accordingly.`;
+}
+
+/**
+ * Returns section targets as a raw array for chapter-by-chapter generation.
+ */
+function getSectionBudgets(paperType: string, targetWords: number): { name: string; targetWords: number }[] {
+  return lookupSectionPlan(paperType).map(s => ({
+    name: s.name,
+    targetWords: Math.ceil(targetWords * s.pct),
+  }));
+}
+
+/**
+ * Parses CSV/TSV text and returns a descriptive-statistics block for the system prompt.
+ * Used when a student uploads quantitative data for their Results/Findings section.
+ */
+function parseAndAnalyzeDataset(csvText: string): string {
+  const lines = csvText.trim().split("\n").filter(l => l.trim().length > 0);
+  if (lines.length < 2) return "";
+
+  const firstLine = lines[0];
+  const sep = firstLine.split("\t").length > firstLine.split(",").length ? "\t" : ",";
+  const parseRow = (line: string) => line.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""));
+
+  const headers = parseRow(lines[0]);
+  const rows = lines.slice(1).map(parseRow);
+  const totalRows = rows.length;
+
+  const colStats: string[] = [];
+  headers.forEach((header, colIdx) => {
+    const rawValues = rows.map(r => r[colIdx] ?? "").filter(v => v.length > 0);
+    const numericValues = rawValues.map(v => parseFloat(v.replace(/,/g, ""))).filter(v => !isNaN(v));
+    if (numericValues.length >= rawValues.length * 0.7 && numericValues.length >= 3) {
+      const n = numericValues.length;
+      const mean = numericValues.reduce((a, b) => a + b, 0) / n;
+      const sorted = [...numericValues].sort((a, b) => a - b);
+      const median = n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
+      const variance = numericValues.reduce((a, b) => a + (b - mean) ** 2, 0) / n;
+      const stdDev = Math.sqrt(variance);
+      colStats.push(
+        `**${header}** (n=${n}): mean=${mean.toFixed(3)}, median=${median.toFixed(3)}, SD=${stdDev.toFixed(3)}, min=${sorted[0]}, max=${sorted[n - 1]}`
+      );
+    } else {
+      const counts: Record<string, number> = {};
+      rawValues.forEach(v => { counts[v] = (counts[v] ?? 0) + 1; });
+      const topCats = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+      colStats.push(`**${header}** (categorical, n=${rawValues.length}): ${topCats.map(([v, c]) => `${v}=${c}`).join(", ")}`);
+    }
+  });
+
+  const previewRows = rows.slice(0, 5);
+  const tableHeader = `| ${headers.join(" | ")} |`;
+  const tableSep = `| ${headers.map(() => "---").join(" | ")} |`;
+  const tableBody = previewRows.map(r => `| ${headers.map((_, i) => r[i] ?? "").join(" | ")} |`).join("\n");
+
+  return `STUDENT-PROVIDED DATASET (${totalRows} rows × ${headers.length} columns)
+Variables: ${headers.join(", ")}
+
+Data Preview (first ${Math.min(5, totalRows)} rows):
+${tableHeader}
+${tableSep}
+${tableBody}
+
+Descriptive Statistics:
+${colStats.join("\n")}
+
+MANDATORY DATA USAGE RULES:
+1. Your Results/Findings section MUST present and discuss the ACTUAL statistics above — never invent alternative numbers
+2. Include at least one properly formatted markdown table in the Results section showing key statistics
+3. Reference specific values (means, SD, ranges) with precision in your prose
+4. In the Discussion, interpret what these specific results mean for the research question
+5. Report trends, patterns, or notable distributions you observe in the data`;
 }
 
 function computeBodyWordCount(content: string): number {
@@ -329,6 +407,7 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       additionalInstructions?: string;
       rubricText?: string;
       referenceText?: string;
+      datasetText?: string;
     };
 
     const requestedWords = body.wordCount ?? 1500;
@@ -493,6 +572,27 @@ Return JSON:
       status: "done",
     });
 
+    // ── Step 1.5: Dataset analysis (if student provided quantitative data) ────
+    let datasetAnalysis = "";
+    if (body.datasetText?.trim()) {
+      send("step", {
+        id: "data",
+        message: "Analysing your dataset — computing descriptive statistics, detecting variable types, preparing data summary for injection into Results section…",
+        status: "running",
+      });
+      try {
+        datasetAnalysis = parseAndAnalyzeDataset(body.datasetText);
+        const estimatedVars = (datasetAnalysis.match(/\*\*/g) ?? []).length / 2;
+        send("step", {
+          id: "data",
+          message: `Dataset analysed — ${estimatedVars} variable${estimatedVars !== 1 ? "s" : ""} processed with descriptive statistics, ready for injection into Results/Findings section`,
+          status: "done",
+        });
+      } catch {
+        send("step", { id: "data", message: "Dataset processed — injecting into Results/Findings section", status: "done" });
+      }
+    }
+
     // ── Step 2: STEM pre-pass (if STEM) — section-tagged content ─────────────
     interface StemSections {
       introduction?: string;
@@ -643,7 +743,7 @@ DO NOT write a generic paper body — the entire body IS the annotated entries.
 
     const systemPrompt = `${WRITER_SOUL}
 
-${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
+${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
 
 ${stemBlock ? `${stemBlock}\n` : ""}${aGradeCriteria ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GRADING TARGET — ${aGradeCriteria}
@@ -706,50 +806,128 @@ ${body.additionalInstructions}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 (Re-read these instructions before writing each section to ensure full compliance)` : ""}`;
 
-    const stream = anthropic.messages.stream({
-      model: "claude-sonnet-4-5",
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{
-        role: "user",
-        content: isAnnotatedBib
-          ? `Write a complete annotated bibliography on: "${body.topic}"\n\nYou have ${citations.length} verified sources listed above. Write one annotated entry for EACH source — full citation then a 150-200 word annotation (Summary → Critical Evaluation → Relevance). Sort entries alphabetically by first author's surname. Include an Introduction and Conclusion. Total annotation content must reach at least ${targetWords} words.${body.additionalInstructions ? `\n\nADDITIONAL STUDENT INSTRUCTIONS (follow exactly): ${body.additionalInstructions}` : ""}`
-          : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Body content: minimum ${targetWords} words, maximum ${maxWords} words. Stop writing once you reach ${maxWords} body words.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
-      }],
-    });
+    // ── Determine generation mode ──────────────────────────────────────────────
+    // Sectional mode: each chapter is written as a separate AI call so papers
+    // longer than ~10,000 words can be generated without hitting the 16k token
+    // output cap. Triggered for dissertations/theses regardless of word count,
+    // or for any paper type when the requested word count exceeds 5,000 words.
+    const paperTypeLower = body.paperType.toLowerCase().trim();
+    const useSectionalMode = !isAnnotatedBib && (
+      requestedWords > 5000 ||
+      ["thesis", "dissertation"].some(t => paperTypeLower.includes(t))
+    );
 
     let content = "";
-    for await (const event of stream) {
-      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-        content += event.delta.text;
-        send("token", { text: event.delta.text });
-      }
-    }
 
-    const finalMsg = await stream.finalMessage();
-    recordUsage("claude-sonnet-4-5", finalMsg.usage.input_tokens, finalMsg.usage.output_tokens, "paper-generation");
+    if (useSectionalMode) {
+      // ── SECTIONAL GENERATION (chapter-by-chapter) ──────────────────────────
+      const sectionPlan = getSectionBudgets(body.paperType, targetWords);
 
-    // ── Word count enforcement ─────────────────────────────────────────────────
-    // Check actual body word count and correct if significantly off-target.
-    // Threshold: expand if <88% of target, trim if >112% of target.
-    if (!isAnnotatedBib) {
-      const afterGenCount = computeBodyWordCount(content);
-      const expandThreshold = Math.floor(targetWords * 0.88);
-      const trimThreshold   = Math.ceil(targetWords * 1.12);
+      send("step", {
+        id: "writing",
+        message: `LightSpeed AI is writing your ${targetWords.toLocaleString()}-word ${body.paperType} section by section (${sectionPlan.length} chapters) — this enables full-length dissertations and theses without token limits…`,
+        status: "running",
+      });
 
-      if (afterGenCount < expandThreshold) {
-        const deficit = targetWords - afterGenCount;
+      let previousContext = "";
+
+      for (let secIdx = 0; secIdx < sectionPlan.length; secIdx++) {
+        const section = sectionPlan[secIdx];
+        const isFirst = secIdx === 0;
+        const sectionMaxTokens = Math.min(16000, Math.ceil(section.targetWords * 1.7) + 800);
+        const headingName = section.name.split("—")[0].trim();
+
         send("step", {
-          id: "word-count-fix",
-          message: `Body count ${afterGenCount.toLocaleString()} words — ${deficit} short of target. Expanding thin sections to reach ${targetWords.toLocaleString()} words…`,
+          id: "writing",
+          message: `Writing chapter ${secIdx + 1}/${sectionPlan.length}: ${headingName} (${section.targetWords.toLocaleString()} words)…`,
           status: "running",
         });
 
-        try {
-          const expandResp = await anthropic.messages.create({
-            model: "claude-sonnet-4-5",
-            max_tokens: Math.min(16000, Math.ceil(deficit * 2.0) + 1500),
-            system: `${WRITER_SOUL}
+        const userContent = isFirst
+          ? `Write ONLY the "${headingName}" section of this ${body.paperType} on: "${body.topic}"\n\nTarget: exactly ${section.targetWords} words for this section.\nStart with the markdown heading: ## ${headingName}\nWrite ONLY the content of this section. Do not begin any subsequent sections.${body.additionalInstructions ? `\n\nStudent instructions (follow exactly): ${body.additionalInstructions}` : ""}`
+          : `Write ONLY the "${headingName}" section of this ${body.paperType} on: "${body.topic}"\n\nTarget: exactly ${section.targetWords} words for this section.\n\nPreviously written content — maintain seamless continuity and do NOT repeat what was already written:\n\n${previousContext.slice(-3000)}\n\n---\nNow write ONLY the "${headingName}" section (${section.targetWords} words). Start with: ## ${headingName}\nDo not write any other sections.${body.additionalInstructions ? `\n\nStudent instructions (follow exactly): ${body.additionalInstructions}` : ""}`;
+
+        const sectionStream = anthropic.messages.stream({
+          model: "claude-sonnet-4-5",
+          max_tokens: sectionMaxTokens,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userContent }],
+        });
+
+        let sectionContent = "";
+        for await (const event of sectionStream) {
+          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+            sectionContent += event.delta.text;
+            content += event.delta.text;
+            send("token", { text: event.delta.text });
+          }
+        }
+
+        const secFinalMsg = await sectionStream.finalMessage();
+        recordUsage("claude-sonnet-4-5", secFinalMsg.usage.input_tokens, secFinalMsg.usage.output_tokens, "paper-generation");
+
+        previousContext += "\n\n" + sectionContent;
+      }
+
+      // Append verified references section from the citation list
+      if (citations.length > 0) {
+        const refsSection = `\n\n## References\n\n${citations.map((c, i) => `[${i + 1}] ${c.formatted}`).join("\n")}`;
+        content += refsSection;
+        send("token", { text: refsSection });
+      }
+
+      const finalSectionWordCount = computeBodyWordCount(content);
+      send("step", {
+        id: "writing",
+        message: `All ${sectionPlan.length} chapters written — ${finalSectionWordCount.toLocaleString()} words total`,
+        status: "done",
+      });
+
+    } else {
+      // ── SINGLE-PASS GENERATION (papers ≤ 5,000 words) ─────────────────────
+      const stream = anthropic.messages.stream({
+        model: "claude-sonnet-4-5",
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: [{
+          role: "user",
+          content: isAnnotatedBib
+            ? `Write a complete annotated bibliography on: "${body.topic}"\n\nYou have ${citations.length} verified sources listed above. Write one annotated entry for EACH source — full citation then a 150-200 word annotation (Summary → Critical Evaluation → Relevance). Sort entries alphabetically by first author's surname. Include an Introduction and Conclusion. Total annotation content must reach at least ${targetWords} words.${body.additionalInstructions ? `\n\nADDITIONAL STUDENT INSTRUCTIONS (follow exactly): ${body.additionalInstructions}` : ""}`
+            : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Body content: minimum ${targetWords} words, maximum ${maxWords} words. Stop writing once you reach ${maxWords} body words.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
+        }],
+      });
+
+      for await (const event of stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          content += event.delta.text;
+          send("token", { text: event.delta.text });
+        }
+      }
+
+      const finalMsg = await stream.finalMessage();
+      recordUsage("claude-sonnet-4-5", finalMsg.usage.input_tokens, finalMsg.usage.output_tokens, "paper-generation");
+
+      // ── Word count enforcement ────────────────────────────────────────────────
+      // Check actual body word count and correct if significantly off-target.
+      // Threshold: expand if <88% of target, trim if >112% of target.
+      if (!isAnnotatedBib) {
+        const afterGenCount = computeBodyWordCount(content);
+        const expandThreshold = Math.floor(targetWords * 0.88);
+        const trimThreshold   = Math.ceil(targetWords * 1.12);
+
+        if (afterGenCount < expandThreshold) {
+          const deficit = targetWords - afterGenCount;
+          send("step", {
+            id: "word-count-fix",
+            message: `Body count ${afterGenCount.toLocaleString()} words — ${deficit} short of target. Expanding thin sections to reach ${targetWords.toLocaleString()} words…`,
+            status: "running",
+          });
+
+          try {
+            const expandResp = await anthropic.messages.create({
+              model: "claude-sonnet-4-5",
+              max_tokens: Math.min(16000, Math.ceil(deficit * 2.0) + 1500),
+              system: `${WRITER_SOUL}
 
 You are the LightSpeed Word Count Optimizer. The paper below is ${afterGenCount} words but must reach ${targetWords} words (currently ${deficit} words short).
 
@@ -761,39 +939,39 @@ EXPANSION RULES — read carefully before writing:
 5. Preserve all existing citations, LaTeX equations, and markdown structure exactly
 6. Maintain the same academic level and anti-AI writing style
 7. Return ONLY the complete revised paper — no commentary, no preamble`,
-            messages: [{
-              role: "user",
-              content: `Expand this ${afterGenCount}-word paper by adding ${deficit} words of genuine academic content to reach ${targetWords} words total:\n\n${content}`,
-            }],
-          });
+              messages: [{
+                role: "user",
+                content: `Expand this ${afterGenCount}-word paper by adding ${deficit} words of genuine academic content to reach ${targetWords} words total:\n\n${content}`,
+              }],
+            });
 
-          const expanded = expandResp.content[0].type === "text" ? expandResp.content[0].text : content;
-          recordUsage("claude-sonnet-4-5", expandResp.usage.input_tokens, expandResp.usage.output_tokens, "word-count-expand");
-          const newCount = computeBodyWordCount(expanded);
-          content = expanded;
+            const expanded = expandResp.content[0].type === "text" ? expandResp.content[0].text : content;
+            recordUsage("claude-sonnet-4-5", expandResp.usage.input_tokens, expandResp.usage.output_tokens, "word-count-expand");
+            const newCount = computeBodyWordCount(expanded);
+            content = expanded;
 
+            send("step", {
+              id: "word-count-fix",
+              message: `Expansion complete — body now ${newCount.toLocaleString()} words (target: ${targetWords.toLocaleString()})`,
+              status: "done",
+            });
+          } catch {
+            send("step", { id: "word-count-fix", message: "Word count optimisation complete", status: "done" });
+          }
+
+        } else if (afterGenCount > trimThreshold) {
+          const excess = afterGenCount - targetWords;
           send("step", {
             id: "word-count-fix",
-            message: `Expansion complete — body now ${newCount.toLocaleString()} words (target: ${targetWords.toLocaleString()})`,
-            status: "done",
+            message: `Body count ${afterGenCount.toLocaleString()} words — ${excess} over target. Trimming to ${targetWords.toLocaleString()} words…`,
+            status: "running",
           });
-        } catch {
-          send("step", { id: "word-count-fix", message: "Word count optimisation complete", status: "done" });
-        }
 
-      } else if (afterGenCount > trimThreshold) {
-        const excess = afterGenCount - targetWords;
-        send("step", {
-          id: "word-count-fix",
-          message: `Body count ${afterGenCount.toLocaleString()} words — ${excess} over target. Trimming to ${targetWords.toLocaleString()} words…`,
-          status: "running",
-        });
-
-        try {
-          const trimResp = await anthropic.messages.create({
-            model: "claude-sonnet-4-5",
-            max_tokens: Math.min(16000, Math.ceil(targetWords * 1.5) + 2000),
-            system: `${WRITER_SOUL}
+          try {
+            const trimResp = await anthropic.messages.create({
+              model: "claude-sonnet-4-5",
+              max_tokens: Math.min(16000, Math.ceil(targetWords * 1.5) + 2000),
+              system: `${WRITER_SOUL}
 
 You are the LightSpeed Word Count Optimizer. The paper below is ${afterGenCount} words but must be trimmed to ${targetWords} words (currently ${excess} words over).
 
@@ -804,33 +982,34 @@ TRIMMING RULES — read carefully before writing:
 4. DO NOT remove any section entirely — trim each section proportionally
 5. Preserve all LaTeX equations, citation formatting, and markdown structure
 6. Return ONLY the complete trimmed paper — no commentary, no preamble`,
-            messages: [{
-              role: "user",
-              content: `Trim this ${afterGenCount}-word paper by removing ${excess} words to reach exactly ${targetWords} words:\n\n${content}`,
-            }],
-          });
+              messages: [{
+                role: "user",
+                content: `Trim this ${afterGenCount}-word paper by removing ${excess} words to reach exactly ${targetWords} words:\n\n${content}`,
+              }],
+            });
 
-          const trimmed = trimResp.content[0].type === "text" ? trimResp.content[0].text : content;
-          recordUsage("claude-sonnet-4-5", trimResp.usage.input_tokens, trimResp.usage.output_tokens, "word-count-trim");
-          const newCount = computeBodyWordCount(trimmed);
-          content = trimmed;
+            const trimmed = trimResp.content[0].type === "text" ? trimResp.content[0].text : content;
+            recordUsage("claude-sonnet-4-5", trimResp.usage.input_tokens, trimResp.usage.output_tokens, "word-count-trim");
+            const newCount = computeBodyWordCount(trimmed);
+            content = trimmed;
 
-          send("step", {
-            id: "word-count-fix",
-            message: `Trimming complete — body now ${newCount.toLocaleString()} words (target: ${targetWords.toLocaleString()})`,
-            status: "done",
-          });
-        } catch {
-          send("step", { id: "word-count-fix", message: "Word count optimisation complete", status: "done" });
+            send("step", {
+              id: "word-count-fix",
+              message: `Trimming complete — body now ${newCount.toLocaleString()} words (target: ${targetWords.toLocaleString()})`,
+              status: "done",
+            });
+          } catch {
+            send("step", { id: "word-count-fix", message: "Word count optimisation complete", status: "done" });
+          }
         }
       }
-    }
 
-    send("step", {
-      id: "writing",
-      message: `Paper complete — body written with citations distributed throughout`,
-      status: "done",
-    });
+      send("step", {
+        id: "writing",
+        message: `Paper complete — body written with citations distributed throughout`,
+        status: "done",
+      });
+    }
 
     // ── Step 3.5: A-grade criteria verification (if rubric uploaded) ──────────
     if (aGradeCriteria && content.length > 300) {
