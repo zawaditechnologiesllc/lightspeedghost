@@ -73,6 +73,9 @@ export function AssistantPanel({
   const [resolvedModeLabel, setResolvedModeLabel] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<"quota" | "plan_gate" | "general" | null>(null);
+  const [queriesRemaining, setQueriesRemaining] = useState<number | null>(null);
+  const [imageEnabled, setImageEnabled] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const answerRef = useRef<HTMLDivElement>(null);
@@ -120,6 +123,7 @@ export function AssistantPanel({
 
     setIsLoading(true);
     setError(null);
+    setErrorType(null);
     setAnswer("");
     setQuestion("");   // clear input immediately on send
     clearImage();      // clear attached image immediately
@@ -166,6 +170,8 @@ export function AssistantPanel({
           if (event === "meta") {
             if (data.detected) setDetectedMode(data.mode as Mode);
             setResolvedModeLabel(data.modeLabel as string);
+            if (typeof data.queriesRemaining === "number") setQueriesRemaining(data.queriesRemaining);
+            if (typeof data.imageEnabled === "boolean") setImageEnabled(data.imageEnabled);
           } else if (event === "token") {
             setAnswer(prev => prev + (data.text as string));
             requestAnimationFrame(() => {
@@ -175,6 +181,7 @@ export function AssistantPanel({
             });
           } else if (event === "error") {
             setError(data.message as string);
+            setErrorType((data.type as "quota" | "plan_gate") ?? "general");
           }
         }
       }
@@ -334,7 +341,29 @@ export function AssistantPanel({
           </div>
         )}
 
-        {error && (
+        {error && errorType === "quota" && (
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 space-y-2">
+            <p className="text-xs text-amber-300 leading-relaxed">{error}</p>
+            <a
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Upgrade to Pro — unlimited access
+            </a>
+          </div>
+        )}
+        {error && errorType === "plan_gate" && (
+          <div className="rounded-lg bg-violet-500/10 border border-violet-500/20 p-3 space-y-2">
+            <p className="text-xs text-violet-300 leading-relaxed">{error}</p>
+            <a
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Upgrade to Pro
+            </a>
+          </div>
+        )}
+        {error && !errorType && (
           <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-300">
             {error}
           </div>
@@ -385,14 +414,35 @@ export function AssistantPanel({
               style={{ minHeight: "52px", maxHeight: "120px" }}
             />
             <div className="flex items-center justify-between px-2 pb-2">
-              <button
-                onClick={() => fileRef.current?.click()}
-                title="Upload image"
-                className="p-1 rounded text-white/25 hover:text-white/60 hover:bg-white/8 transition-colors"
-              >
-                <Paperclip size={13} />
-              </button>
-              <span className="text-[10px] text-white/15">Shift+Enter for new line</span>
+              {imageEnabled ? (
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  title="Upload image"
+                  className="p-1 rounded text-white/25 hover:text-white/60 hover:bg-white/8 transition-colors"
+                >
+                  <Paperclip size={13} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => {}}
+                  title="Image upload — Pro plan only"
+                  className="p-1 rounded text-white/15 cursor-not-allowed flex items-center gap-1"
+                >
+                  <Paperclip size={13} />
+                  <span className="text-[9px] text-violet-400/70 font-semibold">PRO</span>
+                </button>
+              )}
+              <div className="flex items-center gap-2">
+                {queriesRemaining !== null && (
+                  <span className={cn(
+                    "text-[10px] font-medium",
+                    queriesRemaining <= 5 ? "text-amber-400/80" : "text-white/20"
+                  )}>
+                    {queriesRemaining} left this month
+                  </span>
+                )}
+                <span className="text-[10px] text-white/15">Shift+Enter for new line</span>
+              </div>
             </div>
           </div>
           <button

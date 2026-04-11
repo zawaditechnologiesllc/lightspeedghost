@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middlewares/auth";
 import { anthropic } from "../lib/ai";
 import { recordUsage } from "../lib/apiCost";
-import { trackUsage } from "../lib/usageTracker";
+import { trackUsage, isAtLimit, getUserPlan, getUsage, PLAN_LIMITS } from "../lib/usageTracker";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { z } from "zod";
 
@@ -107,7 +107,21 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
   }
 
   try {
-    if (req.userId) trackUsage(req.userId, "study").catch(() => {});
+    // ── Plan check ────────────────────────────────────────────────────────────
+    const userId = req.userId!;
+    const [plan, atLimit] = await Promise.all([
+      getUserPlan(userId),
+      isAtLimit(userId, "assistant"),
+    ]);
+
+    if (atLimit) {
+      const planLimitVal = PLAN_LIMITS[plan]?.assistant ?? 0;
+      send("error", {
+        type: "quota",
+        message: `You've used all ${planLimitVal} assistant queries for this month on your ${plan} plan. Upgrade to Pro for unlimited access.`,
+      });
+      return;
+    }
 
     let body: z.infer<typeof AskBody>;
     try {
@@ -122,10 +136,35 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
       ? detectMode(body.question, hasImage)
       : (body.mode as Mode);
 
+    // ── Image gate — Pro/Campus only ─────────────────────────────────────────
+    if (hasImage && plan === "starter") {
+      send("error", {
+        type: "plan_gate",
+        message: "Image and diagram reading is available on the Pro plan. Upgrade to unlock it.",
+      });
+      return;
+    }
+
+    // Track AFTER passing all gates so quota is never burned on a blocked request
+    trackUsage(userId, "assistant").catch(() => {});
+
+    // Compute remaining quota so frontend can display it to Starter users
+    const planLimit = PLAN_LIMITS[plan]?.assistant ?? null;
+    let queriesUsed = 0;
+    if (planLimit !== null) {
+      const usage = await getUsage(userId);
+      queriesUsed = usage["assistant"] ?? 0;
+    }
+    const queriesRemaining = planLimit !== null ? Math.max(0, planLimit - queriesUsed - 1) : null;
+
     send("meta", {
       mode: resolvedMode,
       modeLabel: MODE_LABELS[resolvedMode],
       detected: body.mode === "auto",
+      plan,
+      queriesRemaining,
+      planLimit,
+      imageEnabled: plan !== "starter",
     });
 
     let ragContext = "";

@@ -1,6 +1,6 @@
 import { pool } from "@workspace/db";
 
-export type ToolName = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline";
+export type ToolName = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline" | "assistant";
 
 const DAILY_TOOLS = new Set<ToolName>(["stem", "study"]);
 
@@ -13,6 +13,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     study:     10,   // per day (messages)
     plagiarism: 5,
     outline:   5,
+    assistant: 30,   // per month — text modes only; image mode blocked at route level
   },
   pro: {
     paper:     50,
@@ -22,6 +23,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     study:     null, // unlimited
     plagiarism: null,
     outline:   null,
+    assistant: null, // unlimited, all modes including image/diagram
   },
   campus: {
     paper:     15,
@@ -31,6 +33,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     study:     null,
     plagiarism: null,
     outline:   null,
+    assistant: null, // unlimited, all modes
   },
 };
 
