@@ -37,7 +37,7 @@ app.head("/api/health", (_req: Request, res: Response) => {
 app.get("/api/health/config", (_req: Request, res: Response) => {
   const check = (key: string) => !!process.env[key];
   res.json({
-    env: process.env.NODE_ENV,
+    production: process.env.NODE_ENV === "production",
     keys: {
       ANTHROPIC_API_KEY: check("ANTHROPIC_API_KEY"),
       OPENAI_API_KEY: check("OPENAI_API_KEY"),
@@ -54,6 +54,10 @@ app.get("/api/health/config", (_req: Request, res: Response) => {
 // Call with: fetch("https://lightspeedghost-5szz.onrender.com/api/auth/test",
 //   { headers: { Authorization: "Bearer <your-supabase-token>" } })
 app.get("/api/auth/test", async (req: Request, res: Response) => {
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
   const authHeader = req.headers.authorization ?? "";
   // Token must come from Authorization header only — never from URL query params
   // (URL params appear in server access logs, which would leak tokens)
@@ -280,6 +284,7 @@ app.use(
     "/api/plagiarism/check",
     "/api/plagiarism/humanize",
     "/api/plagiarism/code",
+    "/api/assistant/ask-stream",
   ],
   aiLimiter,
 );
