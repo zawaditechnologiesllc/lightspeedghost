@@ -22,6 +22,22 @@ import { logger } from "../lib/logger";
 
 const router = Router();
 
+// ── Admin auth helper (timing-safe — mirrors admin.ts) ────────────────────────
+function verifyAdminToken(req: Request): boolean {
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+  if (!ADMIN_PASSWORD) return false;
+  const token = req.headers["x-admin-password"] as string | undefined;
+  if (!token) return false;
+  const aBuf = Buffer.from(token, "utf8");
+  const bBuf = Buffer.from(ADMIN_PASSWORD, "utf8");
+  const maxLen = Math.max(aBuf.length, bBuf.length);
+  const aPadded = Buffer.alloc(maxLen);
+  const bPadded = Buffer.alloc(maxLen);
+  aBuf.copy(aPadded);
+  bBuf.copy(bPadded);
+  return crypto.timingSafeEqual(aPadded, bPadded) && aBuf.length === bBuf.length;
+}
+
 // ── DB bootstrap ─────────────────────────────────────────────────────────────
 
 async function initTables() {
@@ -573,30 +589,6 @@ router.post("/payments/credits/spend", async (req: Request, res: Response) => {
   res.json({ success: true, newBalanceCents: result.newBalance });
 });
 
-// ── Route: purchase credits package ──────────────────────────────────────────
-
-router.post("/payments/credits/purchase-callback", async (req: Request, res: Response) => {
-  const userId = req.userId;
-  if (!userId) {
-    res.status(401).json({ error: "Authentication required" });
-    return;
-  }
-  const { packageId, amountCents } = req.body as { packageId: string; amountCents: number };
-  const CREDIT_PACKAGES: Record<string, number> = {
-    "credits_500":  500,
-    "credits_1100": 1100,
-    "credits_2850": 2850,
-    "credits_6000": 6000,
-  };
-  const creditAmount = CREDIT_PACKAGES[packageId];
-  if (!creditAmount) {
-    res.status(400).json({ error: "Invalid credit package" });
-    return;
-  }
-  const result = await adjustCredits(userId, creditAmount, "purchase", `Credit purchase: ${packageId}`);
-  res.json({ success: result.ok, newBalanceCents: result.newBalance });
-});
-
 // ── Route: create payment session ─────────────────────────────────────────────
 
 router.post("/payments/create", async (req: Request, res: Response) => {
@@ -982,8 +974,21 @@ router.post("/payments/webhook/paystack", async (req: Request, res: Response) =>
 // ── Webhook: IntaSend ─────────────────────────────────────────────────────────
 
 router.post("/payments/webhook/intasend", async (req: Request, res: Response) => {
+  // Optional HMAC signature check — activate by setting INTASEND_WEBHOOK_SECRET on Render.
+  // IntaSend sends the signature in the x-intasend-signature header.
+  const intasendSecret = process.env.INTASEND_WEBHOOK_SECRET ?? "";
+  if (intasendSecret) {
+    const sig = req.headers["x-intasend-signature"] as string ?? "";
+    const body = req.body as Buffer;
+    const expected = crypto.createHmac("sha256", intasendSecret).update(body).digest("hex");
+    if (!sig || expected !== sig) {
+      res.status(400).json({ error: "Invalid signature" });
+      return;
+    }
+  }
   try {
-    const payload = req.body as { invoice_id?: string; state?: string };
+    const raw = req.body as Buffer | Record<string, unknown>;
+    const payload = (Buffer.isBuffer(raw) ? JSON.parse(raw.toString()) : raw) as { invoice_id?: string; state?: string };
     if (payload.state === "COMPLETE" && payload.invoice_id) {
       const pRes = await pool.query<{ user_id: string }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
@@ -1085,7 +1090,7 @@ router.post("/payments/webhook/lemon-squeezy", async (req: Request, res: Respons
 // ── Admin: gateway management ─────────────────────────────────────────────────
 
 router.get("/admin/gateways", async (req: Request, res: Response) => {
-  if (!req.userId) {
+  if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -1127,7 +1132,7 @@ function isGatewayConfigured(g: GatewayName): boolean {
 }
 
 router.patch("/admin/gateways/:name", async (req: Request, res: Response) => {
-  if (!req.userId) {
+  if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -1152,7 +1157,7 @@ router.patch("/admin/gateways/:name", async (req: Request, res: Response) => {
 });
 
 router.get("/admin/payments", async (req: Request, res: Response) => {
-  if (!req.userId) {
+  if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -1189,7 +1194,7 @@ router.get("/admin/payments", async (req: Request, res: Response) => {
 });
 
 router.get("/admin/subscriptions", async (req: Request, res: Response) => {
-  if (!req.userId) {
+  if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -1206,7 +1211,7 @@ router.get("/admin/subscriptions", async (req: Request, res: Response) => {
 });
 
 router.patch("/admin/user-risk/:userId", async (req: Request, res: Response) => {
-  if (!req.userId) {
+  if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }

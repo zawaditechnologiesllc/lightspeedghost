@@ -126,8 +126,8 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
               <p className="text-[11px] text-muted-foreground">
                 {planLoading                  && "Fetching your plan…"}
                 {!planLoading && resolvedPlan === "starter" && "3 papers · 1 revision · 1 humanization per month included"}
-                {!planLoading && resolvedPlan === "pro"     && "50 papers · 50 revisions · 50 humanizations per month"}
-                {!planLoading && resolvedPlan === "campus"  && "15 papers · 15 revisions · 15 humanizations per month (seat)"}
+                {!planLoading && resolvedPlan === "pro"     && "15 papers · 20 revisions · 20 humanizations per month"}
+                {!planLoading && resolvedPlan === "campus"  && "5 papers · 8 revisions · 8 humanizations per month (seat)"}
               </p>
             </div>
 

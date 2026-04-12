@@ -45,7 +45,7 @@ app.get("/api/health/config", (_req: Request, res: Response) => {
       SUPABASE_URL: check("SUPABASE_URL"),
       DATABASE_URL: check("DATABASE_URL"),
       SESSION_SECRET: check("SESSION_SECRET"),
-      ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ?? "(not set)",
+      ALLOWED_ORIGINS: check("ALLOWED_ORIGINS"),
     },
   });
 });
@@ -55,12 +55,11 @@ app.get("/api/health/config", (_req: Request, res: Response) => {
 //   { headers: { Authorization: "Bearer <your-supabase-token>" } })
 app.get("/api/auth/test", async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization ?? "";
-  // Accept token from Authorization header OR ?token= query param (for easy browser testing)
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : (req.query.token as string | undefined) ?? "";
+  // Token must come from Authorization header only — never from URL query params
+  // (URL params appear in server access logs, which would leak tokens)
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
   if (!token) {
-    res.json({ error: "No token supplied. Either add Authorization: Bearer <token> header, or use ?token=<value> in the URL." });
+    res.json({ error: "No token supplied. Add Authorization: Bearer <token> header." });
     return;
   }
 
@@ -178,13 +177,18 @@ if (process.env.ALLOWED_ORIGINS) {
   }
 }
 
-const KNOWN_DEV_ORIGINS = [
-  /^https?:\/\/localhost(:\d+)?$/,
-  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
-  /\.replit\.dev$/,
-  /\.repl\.co$/,
-  /\.vercel\.app$/,
-];
+// Dev / preview patterns — only applied in non-production to avoid letting
+// arbitrary third-party Vercel deployments call the production API.
+const KNOWN_DEV_ORIGINS =
+  process.env.NODE_ENV !== "production"
+    ? [
+        /^https?:\/\/localhost(:\d+)?$/,
+        /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+        /\.replit\.dev$/,
+        /\.repl\.co$/,
+        /\.vercel\.app$/,
+      ]
+    : [];
 
 app.use(
   cors({

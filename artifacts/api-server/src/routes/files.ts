@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import mammoth from "mammoth";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
@@ -88,7 +89,7 @@ function extractTextFallback(buffer: Buffer): string {
   return cleaned;
 }
 
-router.post("/files/extract", upload.single("file"), async (req, res) => {
+router.post("/files/extract", requireAuth, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
