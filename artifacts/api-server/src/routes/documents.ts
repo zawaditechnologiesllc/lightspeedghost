@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { eq, desc, and, isNull } from "drizzle-orm";
+import { requireAuth } from "../middlewares/auth";
 import {
   CreateDocumentBody,
   UpdateDocumentBody,
@@ -13,15 +14,14 @@ import {
 
 const router = Router();
 
-router.get("/documents/stats", async (req, res) => {
+router.get("/documents/stats", requireAuth, async (req, res) => {
   try {
-    const userId = req.userId;
-    const condition = userId ? eq(documentsTable.userId, userId) : isNull(documentsTable.userId);
+    const userId = req.userId!;
 
     const allDocs = await db
       .select()
       .from(documentsTable)
-      .where(condition)
+      .where(eq(documentsTable.userId, userId))
       .orderBy(desc(documentsTable.updatedAt));
 
     const stats = {
@@ -44,18 +44,17 @@ router.get("/documents/stats", async (req, res) => {
   }
 });
 
-router.get("/documents", async (req, res) => {
+router.get("/documents", requireAuth, async (req, res) => {
   try {
     const params = ListDocumentsQueryParams.parse(req.query);
     const limit = params.limit ?? 20;
     const offset = params.offset ?? 0;
-    const userId = req.userId;
-    const condition = userId ? eq(documentsTable.userId, userId) : isNull(documentsTable.userId);
+    const userId = req.userId!;
 
     const allDocs = await db
       .select()
       .from(documentsTable)
-      .where(condition)
+      .where(eq(documentsTable.userId, userId))
       .orderBy(desc(documentsTable.updatedAt));
 
     const filtered = params.type ? allDocs.filter((d) => d.type === params.type) : allDocs;
@@ -75,11 +74,11 @@ router.get("/documents", async (req, res) => {
   }
 });
 
-router.post("/documents", async (req, res) => {
+router.post("/documents", requireAuth, async (req, res) => {
   try {
     const body = CreateDocumentBody.parse(req.body);
     const wordCount = body.content.split(/\s+/).filter(Boolean).length;
-    const userId = req.userId ?? null;
+    const userId = req.userId!;
 
     const [doc] = await db
       .insert(documentsTable)
@@ -97,10 +96,13 @@ router.post("/documents", async (req, res) => {
   }
 });
 
-router.get("/documents/:id", async (req, res) => {
+router.get("/documents/:id", requireAuth, async (req, res) => {
   try {
     const { id } = GetDocumentParams.parse(req.params);
-    const [doc] = await db.select().from(documentsTable).where(eq(documentsTable.id, id));
+    const [doc] = await db
+      .select()
+      .from(documentsTable)
+      .where(and(eq(documentsTable.id, id), eq(documentsTable.userId, req.userId!)));
 
     if (!doc) {
       return res.status(404).json({ error: "Document not found" });
@@ -117,7 +119,7 @@ router.get("/documents/:id", async (req, res) => {
   }
 });
 
-router.put("/documents/:id", async (req, res) => {
+router.put("/documents/:id", requireAuth, async (req, res) => {
   try {
     const { id } = UpdateDocumentParams.parse(req.params);
     const body = UpdateDocumentBody.parse(req.body);
@@ -130,7 +132,7 @@ router.put("/documents/:id", async (req, res) => {
     const [doc] = await db
       .update(documentsTable)
       .set(updates)
-      .where(eq(documentsTable.id, id))
+      .where(and(eq(documentsTable.id, id), eq(documentsTable.userId, req.userId!)))
       .returning();
 
     if (!doc) {
@@ -148,10 +150,18 @@ router.put("/documents/:id", async (req, res) => {
   }
 });
 
-router.delete("/documents/:id", async (req, res) => {
+router.delete("/documents/:id", requireAuth, async (req, res) => {
   try {
     const { id } = DeleteDocumentParams.parse(req.params);
-    await db.delete(documentsTable).where(eq(documentsTable.id, id));
+    const [deleted] = await db
+      .delete(documentsTable)
+      .where(and(eq(documentsTable.id, id), eq(documentsTable.userId, req.userId!)))
+      .returning({ id: documentsTable.id });
+
+    if (!deleted) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+
     res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting document");

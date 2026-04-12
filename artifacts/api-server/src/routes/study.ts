@@ -3,7 +3,7 @@ import { requireAuth } from "../middlewares/auth";
 import { db } from "@workspace/db";
 import { studySessionsTable, studyMessagesTable, documentsTable } from "@workspace/db";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { AskStudyAssistantBody, GetSessionMessagesParams } from "@workspace/api-zod";
 import { anthropic } from "../lib/ai";
 import { TUTOR_SOUL } from "../lib/soul";
@@ -41,9 +41,20 @@ router.get("/study/sessions", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/study/sessions/:id/messages", async (req, res) => {
+router.get("/study/sessions/:id/messages", requireAuth, async (req, res) => {
   try {
     const { id } = GetSessionMessagesParams.parse(req.params);
+
+    // Verify the session belongs to the requesting user before returning its messages
+    const [session] = await db
+      .select({ userId: studySessionsTable.userId })
+      .from(studySessionsTable)
+      .where(and(eq(studySessionsTable.id, id), eq(studySessionsTable.userId, req.userId!)));
+
+    if (!session) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
     const messages = await db
       .select()
       .from(studyMessagesTable)
