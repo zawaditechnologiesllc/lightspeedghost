@@ -362,7 +362,6 @@ export default function Landing() {
             </div>
             <ol className="space-y-3">
               {[
-                <>Open this page in <strong className="text-white/85">Safari</strong> (not Chrome)</>,
                 <>Tap the <Share size={13} className="inline mx-1 -mt-0.5 text-blue-400" /> <strong className="text-white/85">Share</strong> button at the bottom of the screen</>,
                 <>Scroll down and tap <strong className="text-white/85">Add to Home Screen</strong></>,
               ].map((step, i) => (
@@ -394,7 +393,6 @@ export default function Landing() {
             </div>
             <ol className="space-y-3">
               {[
-                <>Open this page in <strong className="text-white/85">Chrome</strong> on your Android device</>,
                 <>Tap the <strong className="text-white/85">⋮ menu</strong> in the top right corner</>,
                 <>Tap <strong className="text-white/85">Add to Home Screen</strong> or <strong className="text-white/85">Install App</strong></>,
               ].map((step, i) => (

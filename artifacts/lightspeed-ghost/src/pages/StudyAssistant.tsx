@@ -1,17 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  useAskStudyAssistant,
-  useListStudySessions,
-  getListStudySessionsQueryKey,
-} from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  Send, Loader2, Zap, Upload, FileText,
+  Loader2, Zap, Upload, FileText,
   ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, XCircle,
-  BookOpen, Brain, GraduationCap, AlertTriangle,
+  BookOpen, GraduationCap, AlertTriangle,
   Presentation, ChevronDown, ChevronUp,
   Star, Target, BookMarked, FlipHorizontal2,
-  Image as ImageIcon, Plus, Sparkles, MessageSquare, X, Database, CheckCircle,
+  Image as ImageIcon, Plus, Sparkles, Database, CheckCircle,
+  Brain, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
@@ -61,7 +56,6 @@ interface SlideData { title: string; slides: Slide[] }
 
 type OutputType = "flashcards" | "quiz" | "summary" | "studyguide" | "slides";
 type ActiveView = OutputType | "weakpoints" | null;
-type ChatMsg = { role: "user" | "assistant"; content: string; followUpQuestions?: string[] };
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -166,12 +160,7 @@ export default function StudyAssistant() {
   const imageInputRef   = useRef<HTMLInputElement>(null);
   const datasetInputRef = useRef<HTMLInputElement>(null);
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
-  const chatEndRef      = useRef<HTMLDivElement>(null);
-  const chatInputRef    = useRef<HTMLTextAreaElement>(null);
   const subjectInputRef = useRef<HTMLInputElement>(null);
-  const queryClient     = useQueryClient();
-  const askAssistant    = useAskStudyAssistant();
-  const { data: sessions } = useListStudySessions();
 
   // Input state
   const [topic,           setTopic]           = useState("");
@@ -222,24 +211,6 @@ export default function StudyAssistant() {
   const [weakAnswers,   setWeakAnswers]   = useState<(number | null)[]>([]);
   const [weakSubmitted, setWeakSubmitted] = useState(false);
   const [weakCurrentQ,  setWeakCurrentQ]  = useState(0);
-
-  // Floating chat state
-  const [chatOpen,      setChatOpen]      = useState(false);
-  const [chatInput,     setChatInput]     = useState("");
-  const [chatMessages,  setChatMessages]  = useState<ChatMsg[]>([]);
-  const [chatSessionId, setChatSessionId] = useState<number | undefined>();
-  const [chatMode,      setChatMode]      = useState<"tutor" | "explain" | "quiz" | "summarize">("tutor");
-
-  useEffect(() => {
-    if (chatOpen) chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages, askAssistant.isPending, chatOpen]);
-
-  useEffect(() => {
-    if (chatInputRef.current) {
-      chatInputRef.current.style.height = "auto";
-      chatInputRef.current.style.height = Math.min(chatInputRef.current.scrollHeight, 130) + "px";
-    }
-  }, [chatInput]);
 
   // Progress ticker
   useEffect(() => {
@@ -359,34 +330,6 @@ export default function StudyAssistant() {
       setActiveView(null);
     } finally { setIsGenerating(false); }
   }, [topic, sources, selectedType, selectedSubject, wrongTopics, datasetText]);
-
-  // ── Chat ──────────────────────────────────────────────────────────────
-
-  const sendChat = useCallback(async (override?: string) => {
-    const msg = (override ?? chatInput).trim();
-    if (!msg || askAssistant.isPending) return;
-    if (isAtLimit("study")) { guard("study", () => {}); return; }
-    setChatInput("");
-    const ctx = mergedContent(topic, sources);
-    const withCtx = ctx.trim()
-      ? `[Study Context: ${selectedSubject}]\n${ctx.slice(0, 8000)}\n\n---\n\n${msg}`
-      : msg;
-    setChatMessages((prev) => [...prev, { role: "user", content: msg }]);
-    try {
-      const res = await askAssistant.mutateAsync({
-        question: withCtx,
-        sessionId: chatSessionId,
-        mode: chatMode,
-        datasetText: datasetText.trim() || undefined,
-        subject: selectedSubject,
-      });
-      setChatSessionId(res.sessionId);
-      setChatMessages((prev) => [...prev, { role: "assistant", content: res.answer, followUpQuestions: res.followUpQuestions }]);
-      queryClient.invalidateQueries({ queryKey: getListStudySessionsQueryKey() });
-    } catch {
-      setChatMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong. Try again." }]);
-    }
-  }, [chatInput, chatSessionId, chatMode, topic, sources, selectedSubject, datasetText, askAssistant, queryClient]);
 
   // ── Quiz helpers ──────────────────────────────────────────────────────
 
@@ -906,170 +849,6 @@ export default function StudyAssistant() {
           <div className="h-28" />
         </div>
       </div>
-
-      {/* ── FLOATING CHAT BUBBLE (Gauth-style) ────────────────────────── */}
-
-      {/* Wrapper — vertically centered on right edge, clear of Tidio at bottom-right */}
-      <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col items-end gap-3">
-
-      {/* Floating panel */}
-      {chatOpen && (
-        <div className="w-80 bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-          style={{ maxHeight: "min(500px, 60vh)" }}>
-
-          {/* Panel header */}
-          <div className="shrink-0 px-4 pt-3.5 pb-3 border-b border-border">
-            <div className="flex items-center justify-between mb-2.5">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Brain size={13} className="text-primary" />
-                </div>
-                <span className="text-xs font-semibold text-foreground">AI Tutor</span>
-                {chatMessages.length > 0 && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                    {chatMessages.filter((m) => m.role === "user").length} messages
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button onClick={() => { setChatMessages([]); setChatSessionId(undefined); }}
-                  title="New chat"
-                  className="flex items-center gap-0.5 text-[10px] text-muted-foreground/50 hover:text-foreground transition-colors px-1.5 py-0.5 rounded-md hover:bg-muted">
-                  <Plus size={10} /> New
-                </button>
-                <button onClick={() => setChatOpen(false)}
-                  className="text-muted-foreground/50 hover:text-foreground transition-colors p-0.5">
-                  <X size={13} />
-                </button>
-              </div>
-            </div>
-            {/* Mode pills */}
-            <div className="flex gap-1">
-              {(["tutor", "explain", "quiz", "summarize"] as const).map((m) => (
-                <button key={m} onClick={() => setChatMode(m)}
-                  className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium capitalize transition-colors",
-                    chatMode === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground")}>
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3.5 min-h-0">
-            {!chatMessages.length && (
-              <div className="space-y-2.5">
-                <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                  {hasContent
-                    ? `Ask me anything about your ${selectedSubject} material`
-                    : "Ask any study question — I'll guide you"}
-                </p>
-                {hasContent && ["Summarize key concepts", "Quiz me on this", "What should I focus on?"].map((s) => (
-                  <button key={s} onClick={() => sendChat(s)}
-                    className="w-full text-left px-3 py-1.5 rounded-lg text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent hover:border-border transition-all">
-                    {s}
-                  </button>
-                ))}
-                {(sessions?.sessions?.length ?? 0) > 0 && (
-                  <div className="pt-1">
-                    <p className="text-[9px] text-muted-foreground/40 uppercase tracking-widest mb-1">Recent</p>
-                    {sessions!.sessions.slice(0, 3).map((s: { id: number; title: string }) => (
-                      <button key={s.id}
-                        onClick={() => { setChatSessionId(s.id); setChatMessages([]); }}
-                        className={cn("w-full text-left px-2 py-1.5 rounded-lg text-[11px] transition-colors truncate",
-                          chatSessionId === s.id ? "text-foreground bg-muted" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/40")}>
-                        {s.title}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {chatMessages.map((msg, i) => (
-              <div key={i} className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "justify-start")}>
-                {msg.role === "assistant" && (
-                  <div className="w-5 h-5 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Brain size={10} className="text-primary" />
-                  </div>
-                )}
-                <div className="max-w-[86%] space-y-1">
-                  <div className={cn("px-3 py-2 rounded-xl text-[11px] leading-relaxed",
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-muted text-foreground rounded-bl-sm")}>
-                    {msg.role === "assistant"
-                      ? <MathRenderer text={msg.content} className={`text-[11px] ${msg.content.includes("$") ? "font-handwritten" : ""}`} />
-                      : msg.content}
-                  </div>
-                  {msg.role === "assistant" && msg.followUpQuestions?.slice(0, 2).map((q, qi) => (
-                    <button key={qi} onClick={() => sendChat(q)}
-                      className="block w-full text-left text-[10px] px-2 py-1 rounded-lg text-primary/60 hover:text-primary hover:bg-primary/5 transition-colors">
-                      ↳ {q}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            {askAssistant.isPending && (
-              <div className="flex gap-2">
-                <div className="w-5 h-5 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Brain size={10} className="text-primary" />
-                </div>
-                <div className="bg-muted px-3 py-2 rounded-xl rounded-bl-sm flex gap-1 items-center">
-                  {[0,1,2].map((d) => (
-                    <div key={d} className="w-1 h-1 rounded-full bg-muted-foreground/40 animate-bounce"
-                      style={{ animationDelay: `${d * 0.15}s` }} />
-                  ))}
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Chat input */}
-          <div className="shrink-0 px-3 pb-3 pt-2 border-t border-border">
-            <div className="flex items-end gap-2 bg-muted/50 rounded-xl px-3 py-2 focus-within:bg-muted transition-colors">
-              <textarea ref={chatInputRef} value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
-                rows={1} placeholder="Ask a follow-up question…"
-                className="flex-1 bg-transparent text-[11px] resize-none focus:outline-none leading-relaxed text-foreground placeholder:text-muted-foreground/50"
-                style={{ minHeight: "18px", maxHeight: "100px" }}
-              />
-              <button onClick={() => sendChat()} disabled={!chatInput.trim() || askAssistant.isPending}
-                className="flex items-center justify-center w-6 h-6 rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 shrink-0 transition-opacity">
-                {askAssistant.isPending ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Floating button */}
-      <button
-        onClick={() => setChatOpen((o) => !o)}
-        className={cn(
-          "w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center transition-all duration-200 relative",
-          chatOpen
-            ? "bg-foreground text-background scale-95"
-            : "bg-primary text-primary-foreground hover:scale-105 hover:shadow-xl"
-        )}
-        title={chatOpen ? "Close AI Tutor" : "Open AI Tutor"}
-      >
-        {chatOpen
-          ? <X size={18} />
-          : <MessageSquare size={18} />}
-        {!chatOpen && chatMessages.length > 0 && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-background text-[8px] text-white font-bold flex items-center justify-center">
-            {chatMessages.filter((m) => m.role === "user").length}
-          </span>
-        )}
-      </button>
-
-      </div>{/* end floating wrapper */}
-
     </div>
 
     <PaywallFlow
