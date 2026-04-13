@@ -216,10 +216,13 @@ Frontend: source type badges (Wikipedia/Book/Academic/Archive), sentence-level m
 - Mode change clears results: switching modes aborts in-flight stream, clears answer/error/detected mode
 
 ### Word Count & Citation Policy
-- **Word count includes references** — `computeBodyWordCount` counts body text + reference list
+- **Word count excludes**: reference list, in-text citations, headings, abstract, ToC, figure/table captions
+- **Word count includes**: body text from introduction through conclusion
 - **Max words cap**: target + 5% (hard limit)
 - **Correction thresholds**: expand if <92% of target, trim if >105%
 - **Citation ratio**: 1 in-text citation per 150-200 words → `Math.ceil(requestedWords / 175)` (min 3)
+- **AI detection gate**: triggers humanization if score > 5%, up to 2 passes to get ≤5%
+- **Plagiarism gate**: triggers rephrasing if score > 8%, target <8%
 
 ### PWA Install UX
 - App Store / Google Play banners on landing page trigger install action directly

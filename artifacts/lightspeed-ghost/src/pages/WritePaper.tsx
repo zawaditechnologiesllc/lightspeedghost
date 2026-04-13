@@ -1038,7 +1038,7 @@ export default function WritePaper() {
             className="w-44 px-3 py-1.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <p className="text-xs text-muted-foreground mt-1.5">
-            Paper will be written to exactly <strong>{wordCount.toLocaleString()}</strong> words (±10%).
+            Paper will be written to exactly <strong>{wordCount.toLocaleString()}</strong> words (±5%).
           </p>
         </div>
 

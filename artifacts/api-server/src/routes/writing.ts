@@ -273,7 +273,11 @@ function getSectionBudgets(paperType: string, targetWords: number): { name: stri
 }
 
 function computeBodyWordCount(content: string): number {
-  const clean = content
+  const withoutRefs = content.replace(/^#+\s*(references?|bibliography|works cited|further reading)[\s\S]*/im, "");
+  const withoutCitations = withoutRefs
+    .replace(/\[[\d,\s–-]+\]/g, "")
+    .replace(/\([A-Z][A-Za-z\s&,]+\d{4}[a-z]?(?:,\s*p\.?\s*\d+)?\)/g, "");
+  const clean = withoutCitations
     .replace(/^#+\s*.*/gm, "")
     .replace(/\*\*|__|\*|_/g, "")
     .replace(/`[^`]*`/g, "")
@@ -690,11 +694,11 @@ SUBJECT: ${body.subject}
 CITATION STYLE: ${body.citationStyle.toUpperCase()}
 
 WORD COUNT — ALL THREE RULES ARE MANDATORY:
-• Total content INCLUDING references: MINIMUM ${targetWords} words · MAXIMUM ${maxWords} words
-• Target exactly ${targetWords} words total (body + references). Do NOT exceed ${maxWords} words under any circumstances.
+• Body content (introduction through conclusion): MINIMUM ${targetWords} words · MAXIMUM ${maxWords} words
+• Target exactly ${targetWords} words of body text. Do NOT exceed ${maxWords} words under any circumstances.
 • Count your running word total after EVERY section. If you are behind budget, write more in the next section. If ahead, trim.
 • A complete, on-target ${targetWords}-word paper is the goal — neither padded nor truncated.
-• Word count INCLUDES: body text and reference list. EXCLUDES: abstract, table of contents, figure/table captions
+• Word count EXCLUDES: reference list, in-text citation parentheses, headings, abstract, table of contents, figure/table captions
 
 ${isAnnotatedBib ? "" : planSectionWordBudgets(body.paperType, targetWords)}
 
@@ -823,7 +827,7 @@ ${body.additionalInstructions}
           role: "user",
           content: isAnnotatedBib
             ? `Write a complete annotated bibliography on: "${body.topic}"\n\nYou have ${citations.length} verified sources listed above. Write one annotated entry for EACH source — full citation then a 150-200 word annotation (Summary → Critical Evaluation → Relevance). Sort entries alphabetically by first author's surname. Include an Introduction and Conclusion. Total annotation content must reach at least ${targetWords} words.${body.additionalInstructions ? `\n\nADDITIONAL STUDENT INSTRUCTIONS (follow exactly): ${body.additionalInstructions}` : ""}`
-            : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Total word count (body + references): minimum ${targetWords} words, maximum ${maxWords} words. Stop writing once you reach ${maxWords} total words.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
+            : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Body word count (introduction through conclusion, excluding references and in-text citations): minimum ${targetWords} words, maximum ${maxWords} words. Stop writing body content once you reach ${maxWords} words, then add the references section.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
         }],
       });
 
@@ -1011,7 +1015,7 @@ ${gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}
 RULES:
 - Keep all existing citations, facts, and arguments — only strengthen weak sections
 - Add evidence, analysis, or depth where criteria are missing — do not waffle or pad
-- Maintain the same approximate word count (±10%)
+- Maintain the same approximate word count (±5%)
 - Preserve all markdown formatting and LaTeX equations
 - Return ONLY the revised paper — no commentary, no preamble`,
             messages: [{
@@ -1147,6 +1151,8 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
     });
 
     let realAiScore = 0;
+    const AI_PASS_THRESHOLD = 5;
+    const AI_HUMANIZE_MAX_PASSES = 2;
     try {
       const { score: detectedScore, indicators: aiIndicators } = await detectAIScore(
         finalContent,
@@ -1154,28 +1160,45 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
       );
       realAiScore = detectedScore;
 
-      if (detectedScore > 25) {
-        send("step", {
-          id: "ai-gate",
-          message: `AI score ${detectedScore}% detected — above threshold. Applying humanization layer: restructuring sentence rhythm, removing AI clichés, injecting authentic voice…`,
-          status: "running",
-        });
+      if (detectedScore > AI_PASS_THRESHOLD) {
+        let currentScore = detectedScore;
+        let currentIndicators = aiIndicators;
+        for (let pass = 1; pass <= AI_HUMANIZE_MAX_PASSES; pass++) {
+          send("step", {
+            id: "ai-gate",
+            message: `AI score ${currentScore}% detected — above ${AI_PASS_THRESHOLD}% threshold. Humanization pass ${pass}/${AI_HUMANIZE_MAX_PASSES}: restructuring sentence rhythm, removing AI clichés, injecting authentic voice…`,
+            status: "running",
+          });
 
-        const humanized = await humanizeTextOnce(finalContent, "academic", 1, aiIndicators);
-        finalContent = humanized;
+          const humanized = await humanizeTextOnce(finalContent, "academic", 1, currentIndicators);
+          finalContent = humanized;
 
-        const { score: recheck } = await detectAIScore(humanized, "writer-ai-recheck");
-        realAiScore = recheck;
+          const { score: recheck, indicators: recheckIndicators } = await detectAIScore(humanized, `writer-ai-recheck-${pass}`);
+          realAiScore = recheck;
+          currentScore = recheck;
+          currentIndicators = recheckIndicators;
 
-        send("step", {
-          id: "ai-gate",
-          message: `Humanization complete — AI score reduced to ${recheck}%. Paper now reads as naturally human-authored.`,
-          status: "done",
-        });
+          if (currentScore <= AI_PASS_THRESHOLD) {
+            send("step", {
+              id: "ai-gate",
+              message: `Humanization pass ${pass} complete — AI score reduced to ${currentScore}% (target: ≤${AI_PASS_THRESHOLD}%). Paper reads as human-authored.`,
+              status: "done",
+            });
+            break;
+          }
+
+          if (pass === AI_HUMANIZE_MAX_PASSES) {
+            send("step", {
+              id: "ai-gate",
+              message: `Humanization complete after ${pass} passes — AI score at ${currentScore}%. Best achievable with current content.`,
+              status: "done",
+            });
+          }
+        }
       } else {
         send("step", {
           id: "ai-gate",
-          message: `AI detection passed — score ${detectedScore}% (WRITER_SOUL anti-AI rules effective). No humanization pass needed.`,
+          message: `AI detection passed — score ${detectedScore}% ≤ ${AI_PASS_THRESHOLD}% (WRITER_SOUL anti-AI rules effective). No humanization needed.`,
           status: "done",
         });
       }
