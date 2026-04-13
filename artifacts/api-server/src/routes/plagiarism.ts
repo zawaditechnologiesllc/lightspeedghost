@@ -237,10 +237,12 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       ? Math.round((plagiarismScore * 0.4) + (openSourceResult.overallScore * 0.6))
       : plagiarismScore;
 
+    const effectiveAiScore = aiScore >= 0 ? aiScore : null;
+
     const overallRisk: "low" | "medium" | "high" =
-      aiScore > 65 || blendedPlagiarismScore > 35
+      (effectiveAiScore !== null && effectiveAiScore > 65) || blendedPlagiarismScore > 35
         ? "high"
-        : aiScore > 35 || blendedPlagiarismScore > 15
+        : (effectiveAiScore !== null && effectiveAiScore > 35) || blendedPlagiarismScore > 15
         ? "medium"
         : "low";
 
@@ -266,7 +268,8 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
     }
 
     res.json({
-      aiScore,
+      aiScore: effectiveAiScore !== null ? effectiveAiScore : 0,
+      aiDetectionAvailable: effectiveAiScore !== null,
       plagiarismScore: blendedPlagiarismScore,
       plagiarismScoreBreakdown: {
         localSimilarity: plagiarismScore,
@@ -326,6 +329,18 @@ router.post("/plagiarism/humanize", requireAuth, async (req, res) => {
       "quick-humanize-initial",
     );
 
+    if (initialScore < 0) {
+      return res.json({
+        humanizedText: text,
+        changes: 0,
+        beforeScore: 0,
+        afterScore: 0,
+        passes: 0,
+        message: "AI detection unavailable — score could not be verified. Please try again.",
+        detectionAvailable: false,
+      });
+    }
+
     if (initialScore <= TARGET_SCORE) {
       return res.json({
         humanizedText: text,
@@ -350,6 +365,8 @@ router.post("/plagiarism/humanize", requireAuth, async (req, res) => {
         humanized,
         `quick-humanize-pass-${pass}`,
       );
+
+      if (newScore < 0) break;
 
       if (newScore < bestScore) {
         bestText = humanized;

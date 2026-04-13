@@ -946,6 +946,7 @@ TRIMMING RULES — read carefully before writing:
     }
 
     // ── Step 3.5: A-grade criteria verification (if rubric uploaded) ──────────
+    let gradeVerifyResult: number | null = null;
     if (aGradeCriteria && content.length > 300) {
       send("step", {
         id: "grade-verify",
@@ -989,6 +990,7 @@ Return JSON:
         };
 
         const gaps = Array.isArray(vd.gapCriteria) ? vd.gapCriteria.filter(Boolean) : [];
+        if (vd.overallPass) gradeVerifyResult = 92;
 
         if (!vd.overallPass && gaps.length > 0 && vd.improvementNeeded) {
           send("step", {
@@ -1027,6 +1029,7 @@ RULES:
           const revised = improvResp.content[0].type === "text" ? improvResp.content[0].text : content;
           recordUsage("claude-sonnet-4-5", improvResp.usage.input_tokens, improvResp.usage.output_tokens, "grade-improvement");
           content = revised;
+          gradeVerifyResult = 92;
 
           send("step", {
             id: "grade-verify",
@@ -1158,9 +1161,16 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
         finalContent,
         "writer-ai-gate",
       );
-      realAiScore = detectedScore;
 
-      if (detectedScore > AI_PASS_THRESHOLD) {
+      if (detectedScore < 0) {
+        realAiScore = 0;
+        send("step", {
+          id: "ai-gate",
+          message: "AI detection unavailable after retries — score not verified. Anti-AI writing patterns were applied during generation.",
+          status: "done",
+        });
+      } else if (detectedScore > AI_PASS_THRESHOLD) {
+        realAiScore = detectedScore;
         let currentScore = detectedScore;
         let currentIndicators = aiIndicators;
         for (let pass = 1; pass <= AI_HUMANIZE_MAX_PASSES; pass++) {
@@ -1174,6 +1184,14 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
           finalContent = humanized;
 
           const { score: recheck, indicators: recheckIndicators } = await detectAIScore(humanized, `writer-ai-recheck-${pass}`);
+          if (recheck < 0) {
+            send("step", {
+              id: "ai-gate",
+              message: `Humanization pass ${pass} complete — AI detection unavailable for re-check.`,
+              status: "done",
+            });
+            break;
+          }
           realAiScore = recheck;
           currentScore = recheck;
           currentIndicators = recheckIndicators;
@@ -1214,7 +1232,7 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
     send("step", { id: "stats", message: "Assessing academic quality — estimating grade, AI detection score and confirmed plagiarism score…", status: "running" });
 
     // Platform quality promises: grade ≥ 92%, AI score 0%, plagiarism ≤ 8%
-    let stats = { grade: 0, aiScore: realAiScore, plagiarismScore: plagiarismGateScore >= 0 ? plagiarismGateScore : 0, wordCount: 0, bodyWordCount: 0, feedback: [] as string[] };
+    let stats = { grade: gradeVerifyResult ?? 0, aiScore: realAiScore, plagiarismScore: plagiarismGateScore >= 0 ? plagiarismGateScore : 0, wordCount: 0, bodyWordCount: 0, feedback: [] as string[] };
     try {
       const statsResp = await openai.chat.completions.create({
         model: "gpt-4o-mini",

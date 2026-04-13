@@ -191,13 +191,15 @@ All routes prefixed with `/api`:
 - UI enhancements: Writing Metrics card (lexical diversity + avg sentence length), AI flags, corpus matched words
 
 ### Shared AI Detection Pipeline (lib/aiDetection.ts) — CRITICAL ARCHITECTURE
-All three tools (Plagiarism Checker, Humanizer, Paper Writer) now use the SAME detection model:
+All tools (Plagiarism Checker, Humanizer, Paper Writer, Revision) use the SAME detection model:
 - **GPT-4o-mini + burstiness blend**: `detectAIScore()` — single source of truth for AI probability
-- **Shared humanization**: `humanizeTextOnce()` — one-pass humanization used by Paper Writer auto-gate
-- **Paper Writer AI gate**: After plagiarism gate, runs AI detection; auto-humanizes if score > 25%
-- **Plagiarism checker**: Now queries live 13-database network for real academic matches (with real DOI links); AI score uses same GPT-4o-mini model as Humanizer
-- **Quick humanizer** (plagiarism page): TARGET_SCORE changed 25% → 10%; uses shared detection model
-- **Scores are now consistent**: Humanizing in Humanizer tool then re-checking in Plagiarism Checker will show meaningfully lower scores because both use identical detection
+- **Retry on failure**: 2 attempts before returning `score: -1` (unavailable); all callers handle `-1` gracefully
+- **Shared humanization**: `humanizeTextOnce()` — one-pass humanization used by all tools' auto-gates
+- **Paper Writer AI gate**: After plagiarism gate, runs AI detection; auto-humanizes if score > 0%, up to 3 passes
+- **Revision AI gate**: After grade verification and plagiarism gate; same 3-pass humanization loop
+- **Plagiarism checker**: 13-database live academic search + open-source sentence matching; AI score uses same model
+- **Quick humanizer** (plagiarism page): TARGET_SCORE = 0%; uses shared detection model; handles unavailable detection
+- **Scores are consistent**: All tools use identical detection — results are reproducible across tools
 
 ### Open-Source Plagiarism Engine (lib/openSourceSearch.ts) — NO PAID API
 Replicates CopyLeaks/Copyscape algorithm using 5 completely free sources:

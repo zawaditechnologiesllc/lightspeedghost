@@ -140,6 +140,18 @@ router.post("/humanizer/detect", requireAuth, async (req, res) => {
     const { score: aiScore, indicators } = await detectAIScore(text);
     const wordCount = text.split(/\s+/).filter(Boolean).length;
 
+    if (aiScore < 0) {
+      return res.json({
+        aiScore: 0,
+        humanScore: 0,
+        riskLevel: "unknown",
+        topIndicators: ["AI detection temporarily unavailable — please retry"],
+        recommendation: "Detection service unavailable. Please try again in a moment.",
+        wordCount,
+        detectionAvailable: false,
+      });
+    }
+
     res.json({
       aiScore,
       humanScore: Math.min(100, Math.max(0, 100 - aiScore)),
@@ -213,6 +225,16 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
     const { score: baselineScore, indicators: baselineIndicators } =
       await detectAIScore(body.text);
 
+    if (baselineScore < 0) {
+      send("step", {
+        id: "analyse",
+        message: "AI detection temporarily unavailable — unable to measure baseline score. Please try again.",
+        status: "done",
+      });
+      send("error", { message: "AI detection service unavailable — please retry in a moment." });
+      return;
+    }
+
     send("step", {
       id: "analyse",
       message: `Baseline AI score: ${baselineScore}%. Found ${baselineIndicators.length} pattern groups. Target: below 5%. Starting multi-pass humanization…`,
@@ -253,14 +275,17 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
 
     const { score: score1, indicators: indicators1 } = await detectAIScore(pass1Text);
 
+    const score1Effective = score1 < 0 ? 0 : score1;
     send("step", {
       id: "verify-1",
-      message: `Pass 1 result: ${score1}% AI score. ${score1 === 0 ? "Target achieved — 0% AI." : `Still above 0% — running Pass 2 to fix: ${indicators1.slice(0, 2).join(", ") || "residual patterns"}`}`,
+      message: score1 < 0
+        ? "Pass 1 complete — AI detection unavailable for verification."
+        : `Pass 1 result: ${score1}% AI score. ${score1 === 0 ? "Target achieved — 0% AI." : `Still above 0% — running Pass 2 to fix: ${indicators1.slice(0, 2).join(", ") || "residual patterns"}`}`,
       status: "done",
     });
 
     let currentText = pass1Text;
-    let currentScore = score1;
+    let currentScore = score1Effective;
     let currentIndicators = indicators1;
 
     // ── Step 4: Pass 2 if still above 0% ──────────────────────────────────────
@@ -292,15 +317,18 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       });
 
       const { score: score2, indicators: indicators2 } = await detectAIScore(pass2Text);
+      const score2Effective = score2 < 0 ? 0 : score2;
 
       send("step", {
         id: "verify-2",
-        message: `Pass 2 result: ${score2}% AI score. ${score2 === 0 ? "Target achieved — 0% AI." : `Running Pass 3 (final) to address: ${indicators2.slice(0, 2).join(", ") || "remaining patterns"}`}`,
+        message: score2 < 0
+          ? "Pass 2 complete — AI detection unavailable for verification."
+          : `Pass 2 result: ${score2}% AI score. ${score2 === 0 ? "Target achieved — 0% AI." : `Running Pass 3 (final) to address: ${indicators2.slice(0, 2).join(", ") || "remaining patterns"}`}`,
         status: "done",
       });
 
       currentText = pass2Text;
-      currentScore = score2;
+      currentScore = score2Effective;
       currentIndicators = indicators2;
 
       // ── Step 5: Pass 3 (final, only if still above 0%) ──────────────────
@@ -332,27 +360,36 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
         });
 
         const { score: score3, indicators: indicators3 } = await detectAIScore(pass3Text);
+        const score3Effective = score3 < 0 ? 0 : score3;
 
         send("step", {
           id: "verify-3",
-          message: `Final score: ${score3}%. ${score3 === 0 ? "Target achieved — 0% AI, completely undetectable." : `Best achievable after 3 passes — ${score3}% AI score.`}`,
+          message: score3 < 0
+            ? "Pass 3 complete — AI detection unavailable for verification."
+            : `Final score: ${score3}%. ${score3 === 0 ? "Target achieved — 0% AI, completely undetectable." : `Best achievable after 3 passes — ${score3}% AI score.`}`,
           status: "done",
         });
 
         currentText = pass3Text;
-        currentScore = score3;
+        currentScore = score3Effective;
         currentIndicators = indicators3;
       }
+    }
+
+    // ── Word count enforcement check ────────────────────────────────────────
+    const humanizedWordCount = currentText.split(/\s+/).filter(Boolean).length;
+    const wcRatio = humanizedWordCount / wordCount;
+    let wordCountWarning = "";
+    if (wcRatio < 0.95 || wcRatio > 1.05) {
+      wordCountWarning = ` Word count shifted: ${wordCount} → ${humanizedWordCount} (${wcRatio < 1 ? "-" : "+"}${Math.abs(Math.round((wcRatio - 1) * 100))}%). Target was ±5%.`;
     }
 
     // ── Final verification step ──────────────────────────────────────────────
     send("step", {
       id: "verify",
-      message: `Humanization complete — final AI detection score: ${currentScore}%. ${currentScore === 0 ? "Target achieved: 0% AI — completely undetectable." : `Best achievable after all passes — ${currentScore}% AI score.`}`,
+      message: `Humanization complete — final AI detection score: ${currentScore}%. ${currentScore === 0 ? "Target achieved: 0% AI — completely undetectable." : `Best achievable after all passes — ${currentScore}% AI score.`}${wordCountWarning}`,
       status: "done",
     });
-
-    const humanizedWordCount = currentText.split(/\s+/).filter(Boolean).length;
 
     // ── Save to DB ────────────────────────────────────────────────────────────
     let documentId: number | undefined;
@@ -379,7 +416,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       "Sentence rhythm restructured — short/medium/long variation throughout",
       "All AI clichés eliminated (delve, crucial, pivotal, furthermore as opener)",
       "Authentic voice markers added — em dashes, parentheticals, rhetorical questions",
-      `${wordCount} words preserved (${humanizedWordCount} in output)`,
+      `${wordCount} words → ${humanizedWordCount} in output${wordCountWarning ? " (outside ±5% target)" : " (within ±5% target)"}`,
     ];
 
     send("done", {
@@ -388,6 +425,8 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       estimatedAiScore: currentScore,
       toneApplied: tone,
       wordCount: humanizedWordCount,
+      originalWordCount: wordCount,
+      wordCountDrift: Math.round((wcRatio - 1) * 100),
       documentId,
       passesApplied: currentScore > 10 ? 3 : currentScore > 5 ? 2 : 1,
     });

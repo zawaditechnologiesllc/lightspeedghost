@@ -433,7 +433,7 @@ export default function Outline() {
             {/* Quality badge */}
             <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-green-500/5 border border-green-500/20 text-[11px] text-green-700 dark:text-green-400">
               <CheckCircle size={13} className="shrink-0" />
-              <span>Outline is engineered for <strong>0% AI detection</strong> and <strong>&lt;8% plagiarism risk</strong> when written</span>
+              <span>Engineered for <strong>0% AI detection</strong> and <strong>&lt;8% plagiarism risk</strong> when written into a full paper</span>
             </div>
 
             {/* Generate button */}

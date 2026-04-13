@@ -179,8 +179,10 @@ ${datasetAnalysis}
 ` : ""}${ragContext ? `${ragContext}\n\n` : ""}ANSWER QUALITY STANDARDS:
 • Accuracy target: 92%+ — ground every claim in the student's materials or the verified sources above
 • Do NOT cite Wikipedia or unverified sources
-• If you are uncertain, say so explicitly rather than speculating
+• If you are uncertain, say so explicitly rather than speculating — never present uncertain claims as fact
 • Cite sources by [Source N] number when drawing from the academic knowledge base above
+• For claims based on general knowledge (no specific source), mark them as "based on established principles" — do not present them as cited
+• If a factual claim cannot be grounded in the provided materials or academic sources, flag it: "[unverified — recommend checking primary sources]"
 
 CURRENT MODE: ${(body.mode ?? "tutor").toUpperCase()}
 Mode instructions: ${modeInstruction}

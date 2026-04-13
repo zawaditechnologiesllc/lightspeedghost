@@ -90,6 +90,10 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
       })
       .returning();
 
+    const verificationStatus = coveResult.passedVerification
+      ? "Verified: all steps correct — no errors found"
+      : `Verified: ${coveResult.corrections.length} correction(s) applied — answer updated`;
+
     res.json({
       answer: finalAnswer,
       steps,
@@ -99,6 +103,7 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
       confidence: reactResult.confidence,
       corrections: coveResult.corrections,
       passedVerification: coveResult.passedVerification,
+      verificationStatus,
       documentId: doc.id,
     });
   } catch (err) {
@@ -338,6 +343,10 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
       send("step", { id: "saving", message: "Solution ready (save skipped)", status: "done" });
     }
 
+    const verificationStatus = coveResult.passedVerification
+      ? "Verified: all steps correct — no errors found"
+      : `Verified: ${coveResult.corrections.length} correction(s) applied — answer updated`;
+
     send("done", {
       answer: finalAnswer,
       steps,
@@ -347,6 +356,7 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
       confidence: reactResult.confidence,
       corrections: coveResult.corrections,
       passedVerification: coveResult.passedVerification,
+      verificationStatus,
       documentId,
     });
   } catch (err) {

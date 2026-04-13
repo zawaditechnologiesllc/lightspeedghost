@@ -68,42 +68,46 @@ export async function detectAIScore(
   text: string,
   context = "ai-detection",
 ): Promise<AIDetectionResult> {
-  try {
-    const { score: burstiness, stdDev } = computeBurstiness(text);
-    const sample = sampleTextSections(text);
+  const { score: burstiness, stdDev } = computeBurstiness(text);
+  const sample = sampleTextSections(text);
 
-    const resp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 600,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: DETECTION_SYSTEM(burstiness, stdDev) },
-        { role: "user", content: `Detect AI content in these sampled sections:\n\n${sample}` },
-      ],
-    });
+  const MAX_RETRIES = 2;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const resp = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_tokens: 600,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: DETECTION_SYSTEM(burstiness, stdDev) },
+          { role: "user", content: `Detect AI content in these sampled sections:\n\n${sample}` },
+        ],
+      });
 
-    if (resp.usage) {
-      recordUsage("gpt-4o-mini", resp.usage.prompt_tokens, resp.usage.completion_tokens, context);
+      if (resp.usage) {
+        recordUsage("gpt-4o-mini", resp.usage.prompt_tokens, resp.usage.completion_tokens, context);
+      }
+
+      const raw = JSON.parse(resp.choices[0]?.message?.content ?? "{}") as {
+        aiScore?: number;
+        indicators?: string[];
+      };
+
+      const gptScore = Math.min(100, Math.max(0, Number(raw.aiScore) ?? 40));
+      const burstinessPenalty = burstiness < 30 ? Math.round((30 - burstiness) * 0.5) : 0;
+      const blendedScore = Math.min(98, gptScore + burstinessPenalty);
+
+      return {
+        score: blendedScore,
+        indicators: Array.isArray(raw.indicators) ? raw.indicators : [],
+        burstiness,
+        stdDev,
+      };
+    } catch {
+      if (attempt < MAX_RETRIES) continue;
     }
-
-    const raw = JSON.parse(resp.choices[0]?.message?.content ?? "{}") as {
-      aiScore?: number;
-      indicators?: string[];
-    };
-
-    const gptScore = Math.min(100, Math.max(0, Number(raw.aiScore) ?? 40));
-    const burstinessPenalty = burstiness < 30 ? Math.round((30 - burstiness) * 0.5) : 0;
-    const blendedScore = Math.min(98, gptScore + burstinessPenalty);
-
-    return {
-      score: blendedScore,
-      indicators: Array.isArray(raw.indicators) ? raw.indicators : [],
-      burstiness,
-      stdDev,
-    };
-  } catch {
-    return { score: 50, indicators: ["detection_failed_assume_high"], burstiness: 0, stdDev: 0 };
   }
+  return { score: -1, indicators: ["detection_unavailable"], burstiness, stdDev };
 }
 
 /**
