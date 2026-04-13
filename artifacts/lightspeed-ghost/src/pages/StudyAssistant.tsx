@@ -72,7 +72,9 @@ const SUBJECTS = [
   "English Literature", "Geography", "Computer Science", "Economics",
   "Psychology", "Sociology", "Business Studies", "Art & Design",
   "Music", "Languages", "Political Science", "Philosophy",
-  "Environmental Science", "Statistics", "Medicine", "Law", "General",
+  "Environmental Science", "Statistics", "Medicine", "Law",
+  "Finance", "Accounting", "Actuarial Science", "Insurance",
+  "Credit Analysis", "Banking", "Investment", "General",
 ];
 
 const MODE_DESCRIPTIONS: Record<string, string> = {

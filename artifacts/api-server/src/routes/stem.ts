@@ -24,6 +24,10 @@ const STEM_SUBJECTS = [
   { id: "engineering", name: "Engineering", description: "Civil, mechanical, electrical, chemical engineering", icon: "cog" },
   { id: "computer_science", name: "Computer Science", description: "Algorithms, data structures, complexity theory, AI/ML", icon: "cpu" },
   { id: "statistics", name: "Statistics", description: "Probability, hypothesis testing, regression, Bayesian methods", icon: "chart-bar" },
+  { id: "finance", name: "Finance", description: "TVM, DCF, portfolio theory, derivatives, risk management, financial modelling", icon: "trending-up" },
+  { id: "accounting", name: "Accounting", description: "Financial statements, cost accounting, auditing, tax, IFRS/GAAP", icon: "receipt" },
+  { id: "economics", name: "Economics", description: "Micro/macroeconomics, econometrics, game theory, development", icon: "bar-chart" },
+  { id: "actuarial_science", name: "Actuarial Science", description: "Life tables, survival models, risk pricing, reserving, probability", icon: "shield" },
 ];
 
 router.get("/stem/subjects", async (req, res) => {

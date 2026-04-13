@@ -78,6 +78,21 @@ export function extractSubject(text: string): string {
     law: "Law",
     political: "Political Science",
     environmental: "Environmental Science",
+    finance: "Finance",
+    accounting: "Accounting",
+    "financial statement": "Accounting",
+    actuarial: "Actuarial Science",
+    insurance: "Insurance",
+    "credit analysis": "Credit Analysis",
+    "credit risk": "Credit Analysis",
+    banking: "Banking",
+    investment: "Investment",
+    "portfolio": "Finance",
+    "corporate finance": "Finance",
+    "financial management": "Finance",
+    "cost accounting": "Accounting",
+    audit: "Accounting",
+    tax: "Accounting",
   };
   const t = text.toLowerCase();
   for (const [key, label] of Object.entries(subjects)) {

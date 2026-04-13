@@ -238,6 +238,27 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
       { name: "Budget & Budget Narrative — itemised costs, justification for each line item", pct: 0.10 },
       { name: "Expected Outcomes & Broader Impact — anticipated results, dissemination plan, significance", pct: 0.12 },
     ],
+    "business plan": [
+      { name: "Executive Summary — business concept, mission, value proposition, key financials at a glance", pct: 0.08 },
+      { name: "Company Description — legal structure, ownership, history, vision, objectives", pct: 0.08 },
+      { name: "Market Analysis — industry overview, target market, market size, trends, competitor analysis", pct: 0.16 },
+      { name: "Products & Services — offerings, unique selling points, pricing strategy, competitive advantages", pct: 0.10 },
+      { name: "Marketing & Sales Strategy — channels, customer acquisition, branding, sales funnel, growth plan", pct: 0.12 },
+      { name: "Operations Plan — facilities, technology, supply chain, key processes, quality control", pct: 0.10 },
+      { name: "Management & Organisation — team bios, organisational chart, advisory board, hiring plan", pct: 0.08 },
+      { name: "Financial Plan & Projections — income statement, balance sheet, cash flow (3–5 year projections), break-even analysis, funding requirements", pct: 0.18 },
+      { name: "Risk Analysis & Mitigation — key risks, contingency plans, SWOT analysis", pct: 0.06 },
+      { name: "Appendices & Supporting Data — supplementary tables, charts, detailed financial schedules", pct: 0.04 },
+    ],
+    "financial analysis": [
+      { name: "Executive Summary — purpose, scope, key findings, and recommendations", pct: 0.08 },
+      { name: "Company / Industry Overview — background, sector context, recent developments", pct: 0.10 },
+      { name: "Financial Statement Analysis — income statement, balance sheet, cash flow analysis with ratio calculations", pct: 0.24 },
+      { name: "Ratio Analysis & Benchmarking — profitability, liquidity, solvency, efficiency ratios compared to industry", pct: 0.20 },
+      { name: "Trend Analysis & Forecasting — multi-period comparisons, growth rates, projections", pct: 0.16 },
+      { name: "Risk Assessment — financial risks, sensitivity analysis, credit evaluation", pct: 0.12 },
+      { name: "Conclusions & Recommendations — investment opinion, strategic recommendations, limitations", pct: 0.10 },
+    ],
   };
 
   let sections: SectionBudget[] | undefined = plans[type];
@@ -257,6 +278,8 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
     else if (type.includes("reflect"))                           sections = plans.reflective;
     else if (type.includes("position"))                          sections = plans["position paper"];
     else if (type.includes("policy"))                            sections = plans["policy brief"];
+    else if (type.includes("business") && type.includes("plan"))  sections = plans["business plan"];
+    else if (type.includes("financial") && type.includes("analysis")) sections = plans["financial analysis"];
     else if (type.includes("critical") || type.includes("analysis")) sections = plans["critical analysis"];
     else if (type.includes("white"))                             sections = plans["white paper"];
     else {

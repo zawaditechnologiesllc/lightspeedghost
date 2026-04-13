@@ -28,7 +28,7 @@ import { useWakeLock } from "@/hooks/useWakeLock";
 
 const schema = z.object({
   problem: z.string().min(5, "Please describe your problem"),
-  subject: z.enum(["mathematics", "physics", "chemistry", "biology", "engineering", "computer_science", "statistics"]),
+  subject: z.enum(["mathematics", "physics", "chemistry", "biology", "engineering", "computer_science", "statistics", "finance", "accounting", "economics", "actuarial_science"]),
   showSteps: z.boolean().optional(),
   generateGraph: z.boolean().optional(),
 });
@@ -130,6 +130,10 @@ const SUBJECT_META: Record<string, { label: string; icon: React.ReactNode; color
   engineering: { label: "Engineering", icon: <Layers size={13} />, color: "orange" },
   computer_science: { label: "CS", icon: <Cpu size={13} />, color: "cyan" },
   statistics: { label: "Stats", icon: <BarChart2 size={13} />, color: "rose" },
+  finance: { label: "Finance", icon: <BarChart2 size={13} />, color: "amber" },
+  accounting: { label: "Accounting", icon: <Calculator size={13} />, color: "teal" },
+  economics: { label: "Economics", icon: <BarChart2 size={13} />, color: "indigo" },
+  actuarial_science: { label: "Actuarial", icon: <Layers size={13} />, color: "purple" },
 };
 
 const API = import.meta.env.VITE_API_URL ?? "";

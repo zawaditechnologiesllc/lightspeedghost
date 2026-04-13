@@ -125,6 +125,93 @@ export function parseAndAnalyzeDataset(csvText: string): string {
     vizSuggestions.push(`Summary table: descriptive statistics for all numeric variables`);
   }
 
+  const financialKeywords = /revenue|profit|loss|assets?|liabilities|equity|ebitda|eps|roe|roa|margin|cash\s*flow|income|expense|dividend|debt|capital|interest|depreciation|amortization|inventory|receivable|payable|balance\s*sheet|net\s*worth|gross|operating|retained|earnings|turnover/i;
+  const allHeaders = headers.join(" ");
+  const isFinancialData = financialKeywords.test(allHeaders);
+
+  let financialAnalysis = "";
+  if (isFinancialData) {
+    const financialMetrics: string[] = [];
+
+    const findCol = (pattern: RegExp) => numericCols.find(c => pattern.test(c.header));
+    const revenue = findCol(/revenue|sales|turnover|income/i);
+    const costOrExp = findCol(/cost|expense|cogs/i);
+    const netIncome = findCol(/net\s*(income|profit|earnings)/i);
+    const totalAssets = findCol(/total\s*assets/i);
+    const totalEquity = findCol(/(total\s*)?equity|net\s*worth|shareholder/i);
+    const totalLiab = findCol(/(total\s*)?liabilities|debt/i);
+
+    if (revenue && costOrExp) {
+      const revVals = revenue.values;
+      const costVals = costOrExp.values;
+      const margins = revVals.map((r, i) => i < costVals.length && r !== 0 ? ((r - costVals[i]) / r * 100) : NaN).filter(v => !isNaN(v));
+      if (margins.length > 0) {
+        const avgMargin = margins.reduce((a, b) => a + b, 0) / margins.length;
+        financialMetrics.push(`Gross Margin (avg): ${avgMargin.toFixed(2)}%`);
+      }
+    }
+    if (revenue && netIncome) {
+      const revVals = revenue.values;
+      const niVals = netIncome.values;
+      const npmMargins = revVals.map((r, i) => i < niVals.length && r !== 0 ? (niVals[i] / r * 100) : NaN).filter(v => !isNaN(v));
+      if (npmMargins.length > 0) {
+        const avgNPM = npmMargins.reduce((a, b) => a + b, 0) / npmMargins.length;
+        financialMetrics.push(`Net Profit Margin (avg): ${avgNPM.toFixed(2)}%`);
+      }
+    }
+    if (netIncome && totalAssets) {
+      const niVals = netIncome.values;
+      const taVals = totalAssets.values;
+      const roas = taVals.map((ta, i) => i < niVals.length && ta !== 0 ? (niVals[i] / ta * 100) : NaN).filter(v => !isNaN(v));
+      if (roas.length > 0) {
+        financialMetrics.push(`Return on Assets (avg): ${(roas.reduce((a, b) => a + b, 0) / roas.length).toFixed(2)}%`);
+      }
+    }
+    if (netIncome && totalEquity) {
+      const niVals = netIncome.values;
+      const eqVals = totalEquity.values;
+      const roes = eqVals.map((eq, i) => i < niVals.length && eq !== 0 ? (niVals[i] / eq * 100) : NaN).filter(v => !isNaN(v));
+      if (roes.length > 0) {
+        financialMetrics.push(`Return on Equity (avg): ${(roes.reduce((a, b) => a + b, 0) / roes.length).toFixed(2)}%`);
+      }
+    }
+    if (totalLiab && totalEquity) {
+      const lVals = totalLiab.values;
+      const eVals = totalEquity.values;
+      const deRatios = eVals.map((eq, i) => i < lVals.length && eq !== 0 ? (lVals[i] / eq) : NaN).filter(v => !isNaN(v));
+      if (deRatios.length > 0) {
+        financialMetrics.push(`Debt-to-Equity Ratio (avg): ${(deRatios.reduce((a, b) => a + b, 0) / deRatios.length).toFixed(2)}`);
+      }
+    }
+    if (totalLiab && totalAssets) {
+      const lVals = totalLiab.values;
+      const aVals = totalAssets.values;
+      const daRatios = aVals.map((a, i) => i < lVals.length && a !== 0 ? (lVals[i] / a) : NaN).filter(v => !isNaN(v));
+      if (daRatios.length > 0) {
+        financialMetrics.push(`Debt-to-Assets Ratio (avg): ${(daRatios.reduce((a, b) => a + b, 0) / daRatios.length).toFixed(2)}`);
+      }
+    }
+
+    if (revenue && revenue.values.length >= 2) {
+      const vals = revenue.values;
+      const growthRates: number[] = [];
+      for (let i = 1; i < vals.length; i++) {
+        if (vals[i - 1] !== 0) growthRates.push(((vals[i] - vals[i - 1]) / Math.abs(vals[i - 1])) * 100);
+      }
+      if (growthRates.length > 0) {
+        financialMetrics.push(`Revenue Growth (period-over-period): ${growthRates.map(g => `${g.toFixed(1)}%`).join(", ")}`);
+      }
+    }
+
+    if (financialMetrics.length > 0) {
+      financialAnalysis = `\nFinancial Ratios & Metrics (computed from your data):\n${financialMetrics.join("\n")}\n`;
+    }
+
+    vizSuggestions.push("Waterfall chart: revenue to net income breakdown");
+    vizSuggestions.push("Multi-period bar chart: key financial metrics over time");
+    if (totalLiab && totalEquity) vizSuggestions.push("Stacked bar chart: capital structure (debt vs equity)");
+  }
+
   const previewRows = rows.slice(0, 5);
   const tableHeader = `| ${headers.join(" | ")} |`;
   const tableSep = `| ${headers.map(() => "---").join(" | ")} |`;
@@ -140,7 +227,7 @@ ${tableBody}
 
 Descriptive Statistics:
 ${colStats.join("\n")}
-${correlations.length > 0 ? "\n" + correlations.join("\n") : ""}
+${correlations.length > 0 ? "\n" + correlations.join("\n") : ""}${financialAnalysis}
 
 Suggested Visualisations (describe these in the paper using the actual data values):
 ${vizSuggestions.map((v, i) => `${i + 1}. ${v}`).join("\n")}
@@ -153,5 +240,9 @@ MANDATORY DATA USAGE RULES:
 5. Report trends, patterns, or notable distributions observed in the data
 6. Describe at least one visualisation (chart/graph) in text — explain what it shows using the real data values
 7. If correlations are provided, discuss their strength, direction, and practical significance
-8. Use quartiles and IQR to discuss data spread and identify potential outliers`;
+8. Use quartiles and IQR to discuss data spread and identify potential outliers${isFinancialData ? `
+9. Present ALL computed financial ratios and interpret them against industry benchmarks
+10. Calculate and discuss year-over-year or period-over-period growth rates
+11. Perform horizontal (trend) and vertical (common-size) analysis where applicable
+12. Discuss financial health, solvency, liquidity, and profitability based on the ratios` : ""}`;
 }

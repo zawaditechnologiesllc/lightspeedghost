@@ -1095,24 +1095,27 @@ async function _fetchAllAcademicSources(
     /physics|math|engineer|computer|algorithm|computation|statistics|quantit|mechanic|electr|thermody/i.test(combinedCtx);
 
   const isHumanities =
-    /history|philosoph|literature|art|music|sociol|psychol|anthropol|linguist|politic|economic|law|education|cultural|media|communication/i.test(combinedCtx);
+    /history|philosoph|literature|art|music|sociol|psychol|anthropol|linguist|politic|law|cultural|media|communication/i.test(combinedCtx);
 
   const isEducation =
     /education|teaching|learning|pedagog|curricul|student|classroom|school|universit|college|instructional|assessment/i.test(combinedCtx);
+
+  const isFinanceBusiness =
+    /financ|account|actuari|insurance|credit|banking|invest|econom|business|portfolio|risk\s*manage|audit|tax|ifrs|gaap|ebitda|valuation|derivative|hedge|underwriting|solvency|capital\s*market/i.test(combinedCtx);
 
   // ── Budget allocation (over-request, then de-dup to `limit`) ─────────────────
   // Over-fetch per source so after deduplication we still hit the target limit.
   const budget = Math.ceil(limit * 2.0);   // fetch ~100% more than needed across 13 sources
 
-  const openAlexLimit    = Math.ceil(budget * 0.20);  // backbone — broadest DOI-verified coverage
-  const crossRefLimit    = Math.ceil(budget * 0.12);  // DOI verification layer
-  const ssLimit          = Math.ceil(budget * 0.12);  // citation-ranked quality signal
+  const openAlexLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.22 : 0.20));
+  const crossRefLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.14 : 0.12));
+  const ssLimit          = Math.ceil(budget * (isFinanceBusiness ? 0.14 : 0.12));
   const pmcLimit         = isBiomedical ? Math.ceil(budget * 0.12) : 0;
   const pubmedLimit      = isBiomedical ? Math.ceil(budget * 0.10) : Math.ceil(budget * 0.04);
-  const arxivLimit       = isSTEM       ? Math.ceil(budget * 0.12) : Math.ceil(budget * 0.03);
+  const arxivLimit       = (isSTEM || isFinanceBusiness) ? Math.ceil(budget * 0.12) : Math.ceil(budget * 0.03);
   const ericLimit        = isEducation  ? Math.ceil(budget * 0.12) : Math.ceil(budget * 0.03);
-  const coreLimit        = isHumanities ? Math.ceil(budget * 0.10) : Math.ceil(budget * 0.04);
-  const doajLimit        = isHumanities ? Math.ceil(budget * 0.08) : Math.ceil(budget * 0.03);
+  const coreLimit        = (isHumanities || isFinanceBusiness) ? Math.ceil(budget * 0.10) : Math.ceil(budget * 0.04);
+  const doajLimit        = (isHumanities || isFinanceBusiness) ? Math.ceil(budget * 0.08) : Math.ceil(budget * 0.03);
   const zenodoLimit      = Math.ceil(budget * 0.04);  // general supplement
   const baseLimit        = Math.ceil(budget * 0.08);  // broad humanities/social science coverage
   const dataCiteLimit    = Math.ceil(budget * 0.05);  // datasets and interdisciplinary research

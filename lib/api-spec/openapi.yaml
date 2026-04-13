@@ -636,7 +636,7 @@ components:
           type: string
         subject:
           type: string
-          enum: [mathematics, physics, chemistry, biology, engineering, computer_science, statistics]
+          enum: [mathematics, physics, chemistry, biology, engineering, computer_science, statistics, finance, accounting, economics, actuarial_science]
         showSteps:
           type: boolean
           default: true

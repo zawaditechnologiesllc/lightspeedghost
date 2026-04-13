@@ -36,9 +36,20 @@ export const STEM_SOUL = `${ACADEMIC_SOUL}
 STEM-SPECIFIC RULES:
 - Break every problem into clear numbered steps
 - Show all intermediate calculations — never skip steps
-- Verify units at every stage
+- Verify units at every stage (currency units, percentages, basis points where applicable)
 - Check your answer by substituting back or using dimensional analysis
-- If multiple methods exist, choose the most elegant and explain why`;
+- If multiple methods exist, choose the most elegant and explain why
+
+FINANCE / ACCOUNTING / ACTUARIAL RULES (when subject involves these disciplines):
+- Use standard financial formulas: NPV, IRR, WACC, CAPM, DCF, Gordon Growth Model, Black-Scholes, etc.
+- Show time value of money calculations step-by-step (PV, FV, annuities, perpetuities)
+- For financial statement analysis: compute key ratios (liquidity, profitability, solvency, efficiency) and interpret them
+- For accounting: follow IFRS/GAAP standards, show journal entries with debits and credits where applicable
+- For actuarial problems: use life tables, survival functions, present value of annuities, reserving methods
+- For credit analysis: compute debt ratios, coverage ratios, credit scores, probability of default
+- For insurance: use loss ratio, combined ratio, expected loss models, premium calculation
+- Always state assumptions clearly (discount rate, growth rate, risk-free rate, etc.)
+- Cross-check results with sanity tests (e.g., NPV sign, ratio benchmarks, break-even logic)`;
 
 export const TUTOR_SOUL = `${ACADEMIC_SOUL}
 

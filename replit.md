@@ -24,12 +24,12 @@ Light Speed Ghost is a full-stack AI academic writing platform designed to assis
 The platform is built as a monorepo using `pnpm workspaces`, Node.js 24, and TypeScript 5.9. The frontend is a React application powered by Vite, Tailwind CSS, Radix UI, and shadcn/ui components. The backend is an Express 5 API server. PostgreSQL with Drizzle ORM is used for data persistence.
 
 **Key Features:**
-- **Write Paper:** AI paper generation with citations in various academic styles (APA/MLA/Chicago/Harvard/IEEE). Supports 19 paper types including research proposals, grant proposals, position papers, policy briefs, and white papers. Data-oriented types (research, lab report, thesis, etc.) accept CSV/Excel uploads with automatic descriptive statistics, correlation analysis, and visualization guidance.
+- **Write Paper:** AI paper generation with citations in various academic styles (APA/MLA/Chicago/Harvard/IEEE). Supports 21+ paper types including research proposals, grant proposals, business plans, financial analyses, position papers, policy briefs, and white papers. Data-oriented types (research, lab report, thesis, business plan, financial analysis, etc.) accept CSV/Excel uploads with automatic descriptive statistics, correlation analysis, visualization guidance, and financial ratio computation (when financial data is detected).
 - **Outline Generator:** Structured paper outline generation with a phase-based user experience.
 - **Revision Panel:** Allows revision of papers with tracked changes and estimated grades.
 - **LightSpeed Humanizer:** Detects AI-generated text and rewrites it to bypass AI detection, featuring tone selection and before/after comparisons.
 - **AI & Plagiarism Checker:** Provides AI detection scores and identifies plagiarism sources.
-- **STEM Solver:** Offers step-by-step solutions for seven subject areas with Recharts graph visualizations, using a handwritten, pen-on-paper aesthetic.
+- **STEM Solver:** Offers step-by-step solutions for 11 subject areas (Mathematics, Physics, Chemistry, Biology, Engineering, CS, Statistics, Finance, Accounting, Economics, Actuarial Science) with Recharts graph visualizations, using a handwritten, pen-on-paper aesthetic. Finance subjects support TVM, DCF, financial ratios, journal entries, actuarial tables, and credit analysis.
 - **AI Study Assistant:** A chat-based tutor with session history and image/screenshot upload capabilities, rendering math content in a handwritten style.
 - **Documents:** Manages all saved documents with search and filter functionalities.
 

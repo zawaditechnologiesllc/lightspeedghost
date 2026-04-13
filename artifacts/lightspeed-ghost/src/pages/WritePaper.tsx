@@ -63,6 +63,7 @@ const DATA_PAPER_TYPES = new Set([
   "research", "research paper", "lab report", "report",
   "dissertation", "thesis", "case study", "term paper",
   "research proposal", "grant proposal",
+  "business plan", "financial analysis",
 ]);
 
 const PAPER_TYPES = [
@@ -85,6 +86,8 @@ const PAPER_TYPES = [
   { value: "position paper",         label: "Position Paper" },
   { value: "policy brief",           label: "Policy Brief" },
   { value: "white paper",            label: "White Paper" },
+  { value: "business plan",          label: "Business Plan" },
+  { value: "financial analysis",     label: "Financial Analysis" },
 ];
 
 const CITATION_STYLES = ["apa", "mla", "chicago", "harvard", "ieee"] as const;
