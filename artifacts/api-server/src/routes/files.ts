@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import mammoth from "mammoth";
+import { convert as htmlToText } from "html-to-text";
 import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
@@ -68,17 +69,15 @@ function extractTextFallback(buffer: Buffer): string {
       .trim();
   }
 
-  // HTML saved as .doc: strip tags
   if (/<html[\s>]/i.test(raw) || raw.trimStart().startsWith("<!DOCTYPE")) {
-    return raw
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/\s{2,}/g, " ")
-      .trim();
+    return htmlToText(raw, {
+      wordwrap: false,
+      selectors: [
+        { selector: "img", format: "skip" },
+        { selector: "style", format: "skip" },
+        { selector: "script", format: "skip" },
+      ],
+    }).trim();
   }
 
   // Plain text: strip non-printable bytes (keep tabs, newlines, and printable Unicode)
@@ -117,16 +116,14 @@ router.post("/files/extract", requireAuth, upload.single("file"), async (req, re
     } else if (mimetype === "application/rtf" || mimetype === "text/rtf") {
       text = extractTextFallback(buffer);
     } else if (mimetype === "text/html") {
-      // Strip HTML tags
-      text = buffer.toString("utf-8")
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/&nbsp;/g, " ")
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"');
+      text = htmlToText(buffer.toString("utf-8"), {
+        wordwrap: false,
+        selectors: [
+          { selector: "img", format: "skip" },
+          { selector: "style", format: "skip" },
+          { selector: "script", format: "skip" },
+        ],
+      });
     } else if (mimetype.startsWith("text/")) {
       text = buffer.toString("utf-8");
     } else if (mimetype.startsWith("image/")) {

@@ -10,6 +10,16 @@ import { anthropic } from "./ai";
 import { STEM_SOUL } from "./soul";
 import { recordUsage } from "./apiCost";
 import type { ReActResult } from "./reactLoop";
+import { create, all } from "mathjs";
+
+const math = create(all, { number: "number" });
+
+export interface MathVerification {
+  expression: string;
+  expected: string;
+  computed: string | null;
+  match: boolean;
+}
 
 export interface CoveResult {
   draft: string;
@@ -17,6 +27,41 @@ export interface CoveResult {
   verified: string;
   passedVerification: boolean;
   verifiedLatex: string;
+  mathVerifications?: MathVerification[];
+}
+
+function extractAndVerifyMath(text: string): MathVerification[] {
+  const results: MathVerification[] = [];
+  const patterns = [
+    /(\d[\d\s+\-*/().^]+\d)\s*=\s*([-\d.e+]+)/g,
+    /(?:equals?|is|gives?|yields?|results?\s+in)\s+([-\d.e+,]+)/gi,
+  ];
+
+  const seen = new Set<string>();
+  for (const pattern of patterns) {
+    let m: RegExpExecArray | null;
+    while ((m = pattern.exec(text)) !== null) {
+      if (m[1] && m[2]) {
+        const expr = m[1].trim();
+        const expected = m[2].trim();
+        if (seen.has(expr)) continue;
+        seen.add(expr);
+        try {
+          const computed = math.evaluate(expr);
+          const computedStr = String(computed);
+          const expNum = parseFloat(expected);
+          const compNum = typeof computed === "number" ? computed : parseFloat(computedStr);
+          const match = !isNaN(expNum) && !isNaN(compNum)
+            ? Math.abs(expNum - compNum) / Math.max(Math.abs(expNum), 1) < 0.001
+            : computedStr === expected;
+          results.push({ expression: expr, expected, computed: computedStr, match });
+        } catch {
+          results.push({ expression: expr, expected, computed: null, match: true });
+        }
+      }
+    }
+  }
+  return results;
 }
 
 const CRITIC_SYSTEM = `${STEM_SOUL}
@@ -119,11 +164,23 @@ Critically verify this ${subject} solution for any errors.`;
   const latexMatch = text.match(/VERIFIED_LATEX:\s*([\s\S]+?)$/);
   const verifiedLatex = latexMatch ? latexMatch[1].trim() : draft.latex;
 
+  const mathVerifications = extractAndVerifyMath(verified);
+  const hasMathError = mathVerifications.some((v) => !v.match);
+
+  if (hasMathError) {
+    corrections.push(
+      ...mathVerifications
+        .filter((v) => !v.match)
+        .map((v) => `Math verification: ${v.expression} should be ${v.computed} (answer had ${v.expected})`)
+    );
+  }
+
   return {
     draft: draft.finalAnswer,
     corrections,
     verified,
-    passedVerification: !errorsFound,
+    passedVerification: !errorsFound && !hasMathError,
     verifiedLatex,
+    mathVerifications: mathVerifications.length > 0 ? mathVerifications : undefined,
   };
 }

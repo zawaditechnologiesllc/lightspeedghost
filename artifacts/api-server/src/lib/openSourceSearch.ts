@@ -67,15 +67,20 @@ const STOP_WORDS_SET = new Set([
   "their","they","them","there","here","where","when","which","who","what",
 ]);
 
+import nlp from "compromise";
+
 function splitSentences(text: string): Array<{ text: string; start: number }> {
   const results: Array<{ text: string; start: number }> = [];
-  const re = /[^.!?]+[.!?]+/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    const s = m[0].trim();
-    if (s.split(/\s+/).length >= 8) {
-      results.push({ text: s, start: m.index });
-    }
+  const doc = nlp(text);
+  const sentences = doc.sentences().out("array") as string[];
+  let searchFrom = 0;
+  for (const s of sentences) {
+    const trimmed = s.trim();
+    if (trimmed.split(/\s+/).length < 8) continue;
+    const idx = text.indexOf(trimmed, searchFrom);
+    const start = idx >= 0 ? idx : searchFrom;
+    results.push({ text: trimmed, start });
+    if (idx >= 0) searchFrom = idx + trimmed.length;
   }
   return results;
 }

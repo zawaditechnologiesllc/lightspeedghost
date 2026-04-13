@@ -9,6 +9,7 @@
  */
 
 import { ACADEMIC_CORPUS } from "./academicCorpus";
+import nlp from "compromise";
 
 const STOP_WORDS = new Set([
   "a","an","the","and","or","but","in","on","at","to","for","of","with",
@@ -139,7 +140,7 @@ export function analyseAIContent(text: string): AIAnalysis {
   const uniqueRatio = uniqueWords.size / words.length;
   const lexicalDiversity = uniqueRatio;
 
-  const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 10);
+  const sentences = (nlp(text).sentences().out("array") as string[]).filter((s: string) => s.trim().length > 10);
   const avgSentenceLength =
     sentences.length > 0
       ? sentences.reduce((sum, s) => sum + s.trim().split(/\s+/).length, 0) / sentences.length

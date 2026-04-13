@@ -59,14 +59,14 @@ All 9 pages fully optimized for mobile (390px+):
 - `ai.ts` — Anthropic + OpenAI client initialization (supports Replit proxy or direct keys)
 - `soul.ts` — ACADEMIC/STEM/TUTOR/WRITER/HUMANIZER personas (OpenClaw SOUL.md pattern)
 - `reactLoop.ts` — ReAct THOUGHT→ACTION→OBSERVATION loop for STEM solving (OpenClaw Pi Engine)
-- `cove.ts` — Chain-of-Verification critic agent, error elimination (OpenClaw CoVe pattern)
+- `cove.ts` — Chain-of-Verification critic agent + mathjs independent computation verification (OpenClaw CoVe pattern)
 - `memory.ts` — Student persistent memory CRUD, Jarvis Effect (OpenClaw MEMORY.md + memU)
 - `memvidMemory.ts` — Semantic long-term memory via @memvid/sdk (graceful fallback if unavailable)
 - `learningEngine.ts` — Adaptive source weighting + quality signal recording (OpenClaw self-improving retrieval)
-- `citationVerifier.ts` — Real citations from 6 APIs: Semantic Scholar, OpenAlex, arXiv, Europe PMC, PubMed, CrossRef
+- `citationVerifier.ts` — Real citations from 6 APIs: Semantic Scholar, OpenAlex, arXiv, Europe PMC, PubMed, CrossRef; uses citation-js CSL engine for pixel-perfect APA/MLA/Chicago/Harvard/IEEE formatting
 - `academicSources.ts` — 13-database academic search aggregator (1B+ papers) with RAG context builder
-- `openSourceSearch.ts` — Open-source plagiarism engine: 5 free APIs (Wikipedia, OpenLibrary, Google Books, Internet Archive, CrossRef)
-- `textAnalysis.ts` — Cosine similarity plagiarism + readability + burstiness analysis (ported from Plagiarism-Checker-and-AI-Text-Detection)
+- `openSourceSearch.ts` — Open-source plagiarism engine: 5 free APIs (Wikipedia, OpenLibrary, Google Books, Internet Archive, CrossRef); uses compromise NLP for sentence segmentation
+- `textAnalysis.ts` — Cosine similarity plagiarism + readability + burstiness analysis (ported from Plagiarism-Checker-and-AI-Text-Detection); uses compromise NLP for sentence segmentation
 - `winnow.ts` — Winnowing algorithm for document fingerprinting (ported from copydetect/Stanford MOSS)
 - `aiDetection.ts` — Shared AI detection pipeline: GPT-4o-mini + burstiness blend, retry-with-fallback
 - `datasetAnalysis.ts` — CSV/TSV parsing with descriptive statistics (shared by WritePaper, STEM, Study)
@@ -75,7 +75,7 @@ All 9 pages fully optimized for mobile (390px+):
 - `pricingConfig.ts` — Plan pricing and feature definitions
 - `usageTracker.ts` — Per-user usage limits by plan (starter/pro/campus), daily and monthly periods
 - `apiCost.ts` — Model cost tracking + daily budget guardrails ($5/day default, OpenClaw pattern)
-- `ssRateLimit.ts` — Semantic Scholar rate limiter (shared across citationVerifier + academicSources)
+- `ssRateLimit.ts` — Bottleneck-based rate limiters for all 17 external APIs (Semantic Scholar, OpenAlex, CrossRef, Europe PMC, PubMed, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE, Open Library, Wikipedia, Google Books, Internet Archive)
 - `cache.ts` — Upstash Redis cache layer (graceful no-op when env vars not set)
   - TTLs: citations 6h, academic RAG 2h, STEM papers 6h, outline 24h
   - Env vars required on Render: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`

@@ -14,6 +14,71 @@
 
 import { withCache } from "./cache.js";
 import { ssRateLimit } from "./ssRateLimit.js";
+import Cite from "@citation-js/core";
+import "@citation-js/plugin-csl";
+
+const CSL_STYLE_MAP: Record<string, string> = {
+  apa: "apa",
+  mla: "modern-language-association",
+  chicago: "chicago-author-date",
+  harvard: "harvard1",
+  ieee: "ieee",
+};
+
+function formatCitationCSL(c: VerifiedCitation, style: string, idx: number): string {
+  try {
+    const authorList = c.authors
+      .split(/,\s*(?:and|&)\s*|,\s*/)
+      .map((a) => a.trim())
+      .filter(Boolean)
+      .map((name) => {
+        const parts = name.split(/\s+/);
+        if (parts.length === 1) return { family: parts[0] };
+        return { family: parts[parts.length - 1], given: parts.slice(0, -1).join(" ") };
+      });
+
+    const data = {
+      type: "article-journal",
+      title: c.title,
+      author: authorList,
+      issued: { "date-parts": [[c.year]] },
+      "container-title": c.source,
+      URL: c.url,
+      ...(c.doi ? { DOI: c.doi } : {}),
+    };
+
+    const cite = new Cite(data);
+    const template = CSL_STYLE_MAP[style] || "apa";
+    const result = cite.format("bibliography", {
+      format: "text",
+      template,
+      lang: "en-US",
+    }) as string;
+
+    const trimmed = result.trim().replace(/^\d+\.\s*/, "");
+    if (trimmed.length > 10) {
+      if (style === "ieee") return `[${idx + 1}] ${trimmed}`;
+      return trimmed;
+    }
+  } catch { /* fall through to manual fallback */ }
+
+  return formatCitationFallback(c, style, idx);
+}
+
+function formatCitationFallback(c: VerifiedCitation, style: string, idx: number): string {
+  switch (style) {
+    case "mla":
+      return `${c.authors}. "${c.title}." ${c.source}, ${c.year}, ${c.url}.`;
+    case "chicago":
+      return `${c.authors}. "${c.title}." ${c.source} (${c.year}). ${c.url}.`;
+    case "ieee":
+      return `[${idx + 1}] ${c.authors}, "${c.title}," ${c.source}, ${c.year}. Available: ${c.url}`;
+    case "harvard":
+      return `${c.authors} (${c.year}) '${c.title}', ${c.source}. Available at: ${c.url}.`;
+    default:
+      return `${c.authors} (${c.year}). ${c.title}. ${c.source}. ${c.url}`;
+  }
+}
 
 export interface VerifiedCitation {
   id: string;
@@ -471,7 +536,7 @@ export async function getVerifiedCitations(
 
       return deduped.slice(0, count).map((c, i) => ({
         ...c,
-        formatted: formatCitation(c, style, i),
+        formatted: formatCitationCSL(c, style, i),
       }));
     },
     topic,
@@ -479,19 +544,4 @@ export async function getVerifiedCitations(
     String(count),
     style
   );
-}
-
-function formatCitation(c: VerifiedCitation, style: string, idx: number): string {
-  switch (style) {
-    case "mla":
-      return `${c.authors}. "${c.title}." ${c.source}, ${c.year}, ${c.url}.`;
-    case "chicago":
-      return `${c.authors}. "${c.title}." ${c.source} (${c.year}). ${c.url}.`;
-    case "ieee":
-      return `[${idx + 1}] ${c.authors}, "${c.title}," ${c.source}, ${c.year}. Available: ${c.url}`;
-    case "harvard":
-      return `${c.authors} (${c.year}) '${c.title}', ${c.source}. Available at: ${c.url}.`;
-    default:
-      return `${c.authors} (${c.year}). ${c.title}. ${c.source}. ${c.url}`;
-  }
 }

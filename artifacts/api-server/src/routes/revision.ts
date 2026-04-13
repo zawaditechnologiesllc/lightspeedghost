@@ -11,6 +11,7 @@ import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { computeBurstiness, sampleTextSections, analyseTextPlagiarism } from "../lib/textAnalysis.js";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
 import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection.js";
+import { diffWords } from "diff";
 
 const router = Router();
 
@@ -640,9 +641,20 @@ Return ONLY the rephrased paper content.`,
       ...(wordCountFeedback ? [wordCountFeedback] : []),
     ];
 
+    const wordDiffs = diffWords(body.originalText, revisedText);
+    const trackedChanges = wordDiffs
+      .filter((part) => part.added || part.removed)
+      .map((part) => ({
+        type: part.added ? "added" as const : "removed" as const,
+        value: part.value.trim(),
+      }))
+      .filter((c) => c.value.length > 0)
+      .slice(0, 50);
+
     send("done", {
       revisedText,
       changes: (result.changes ?? []).slice(0, 12),
+      trackedChanges,
       feedback: feedbackItems.join(" "),
       gradeEstimate: verifiedGrade,
       stats: { aiScore, plagiarismScore: finalPlagScore },

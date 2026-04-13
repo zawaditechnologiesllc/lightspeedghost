@@ -12,7 +12,7 @@ interface ExportButtonsProps {
   getHtml: () => string;
   getText: () => string;
   filename: string;
-  /** Ordered list of formats to show. Defaults to ["docx", "doc", "pdf", "copy"]. */
+  title?: string;
   formats?: ExportFormat[];
   className?: string;
 }
@@ -41,6 +41,7 @@ export function ExportButtons({
   getHtml,
   getText,
   filename,
+  title,
   formats = DEFAULT_FORMATS,
   className,
 }: ExportButtonsProps) {
@@ -59,7 +60,7 @@ export function ExportButtons({
   const handle = async (fmt: ExportFormat) => {
     switch (fmt) {
       case "copy":  await copyText(getText()); break;
-      case "docx":  exportAsDocx(getHtml(), filename); break;
+      case "docx":  await exportAsDocx(getText(), filename, title); break;
       case "doc":   exportAsWord(getHtml(), filename); break;
       case "pdf":   exportAsPDF(getHtml()); break;
       case "txt":   exportAsTxt(getText(), filename); break;

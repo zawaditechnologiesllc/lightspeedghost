@@ -1,12 +1,20 @@
 import katex from "katex";
+import MarkdownIt from "markdown-it";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  AlignmentType,
+  BorderStyle,
+  Footer,
+  PageNumber,
+  NumberFormat,
+} from "docx";
 
-// ── Math rendering ─────────────────────────────────────────────────────────────
+const md = new MarkdownIt({ html: true, linkify: true, typographer: true });
 
-/**
- * Converts mixed text containing $...$ (inline) and $$...$$ (block) LaTeX
- * into HTML with KaTeX-rendered math. Plain text is HTML-escaped.
- * The resulting HTML requires the KaTeX CSS to display correctly.
- */
 export function mathToHtml(text: string): string {
   const pattern = /\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g;
   let result = "";
@@ -36,71 +44,18 @@ export function mathToHtml(text: string): string {
   return result;
 }
 
-/**
- * Converts markdown + math mixed text to export-ready HTML.
- * Renders headings, bold, italic, bullet lists, and LaTeX math.
- */
-export function richToHtml(text: string): string {
-  // Split on blank lines to get paragraphs/blocks
-  const blocks = text.split(/\n{2,}/);
-
-  return blocks.map((block) => {
-    const trimmed = block.trim();
-    if (!trimmed) return "";
-
-    // Headings
-    if (/^### /.test(trimmed)) return `<h3>${mathToHtml(trimmed.replace(/^### /, ""))}</h3>`;
-    if (/^## /.test(trimmed)) return `<h2>${mathToHtml(trimmed.replace(/^## /, ""))}</h2>`;
-    if (/^# /.test(trimmed)) return `<h1>${mathToHtml(trimmed.replace(/^# /, ""))}</h1>`;
-
-    // Already-wrapped headings (pass through)
-    if (trimmed.startsWith("<h")) return trimmed;
-
-    // Bullet lists
-    const listLines = trimmed.split("\n").filter((l) => /^[-•*] /.test(l.trim()));
-    if (listLines.length > 0 && listLines.length === trimmed.split("\n").filter(Boolean).length) {
-      const items = trimmed.split("\n").map((l) => {
-        const content = l.trim().replace(/^[-•*] /, "");
-        return `<li>${inlineMathAndMarkdown(content)}</li>`;
-      });
-      return `<ul>${items.join("")}</ul>`;
-    }
-
-    // Numbered lists
-    const numLines = trimmed.split("\n").filter((l) => /^\d+\. /.test(l.trim()));
-    if (numLines.length > 0 && numLines.length === trimmed.split("\n").filter(Boolean).length) {
-      const items = trimmed.split("\n").map((l) => {
-        const content = l.trim().replace(/^\d+\. /, "");
-        return `<li>${inlineMathAndMarkdown(content)}</li>`;
-      });
-      return `<ol>${items.join("")}</ol>`;
-    }
-
-    // Normal paragraph with inline math + markdown
-    const lines = trimmed.split("\n").map((l) => inlineMathAndMarkdown(l));
-    return `<p>${lines.join("<br>")}</p>`;
-  }).filter(Boolean).join("\n");
-}
-
-function inlineMathAndMarkdown(line: string): string {
-  // Bold, italic, then math
-  let out = line
-    .replace(/\*\*\*(.*?)\*\*\*/g, (_, m) => `<strong><em>${mathToHtml(m)}</em></strong>`)
-    .replace(/\*\*(.*?)\*\*/g, (_, m) => `<strong>${mathToHtml(m)}</strong>`)
-    .replace(/\*(.*?)\*/g, (_, m) => `<em>${mathToHtml(m)}</em>`)
-    .replace(/`([^`]+)`/g, (_, m) => `<code>${escHtml(m)}</code>`);
-
-  // Now render remaining math in the plain-text portions
-  // (bold/italic replacements above might have already rendered math inside them,
-  //  so we only run mathToHtml on remaining unprocessed math tokens)
-  out = out.replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g, (full, block, inline) => {
+function renderMathTokens(html: string): string {
+  return html.replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g, (_full, block, inline) => {
     if (block !== undefined) {
       try { return `<div class="math-block">${katex.renderToString(block.trim(), { displayMode: true, throwOnError: false, trust: false })}</div>`; } catch { return `<code>$$${escHtml(block)}$$</code>`; }
     }
     try { return katex.renderToString(inline.trim(), { displayMode: false, throwOnError: false, trust: false }); } catch { return `<code>$${escHtml(inline)}$</code>`; }
   });
+}
 
-  return out;
+export function richToHtml(text: string): string {
+  const html = md.render(text);
+  return renderMathTokens(html);
 }
 
 // ── HTML helpers ───────────────────────────────────────────────────────────────
@@ -109,9 +64,8 @@ export function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-/** Legacy plain-markdown converter (kept for non-math content) */
-export function mdToBodyHtml(md: string): string {
-  return richToHtml(md);
+export function mdToBodyHtml(mdText: string): string {
+  return richToHtml(mdText);
 }
 
 // ── CSS ────────────────────────────────────────────────────────────────────────
@@ -341,14 +295,138 @@ function triggerDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-/** .doc — HTML content with Word MIME type */
 export function exportAsWord(html: string, filename: string): void {
   triggerDownload(new Blob([html], { type: "application/msword" }), `${filename}.doc`);
 }
 
-/** .doc — HTML content with Word MIME type */
-export function exportAsDocx(html: string, filename: string): void {
-  triggerDownload(new Blob([html], { type: "application/msword" }), `${filename}.doc`);
+function markdownToDocxParagraphs(text: string): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+  const lines = text.split("\n");
+  let inList = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      inList = false;
+      continue;
+    }
+
+    if (/^### /.test(trimmed)) {
+      paragraphs.push(new Paragraph({
+        heading: HeadingLevel.HEADING_3,
+        children: parseInlineRuns(trimmed.replace(/^### /, "")),
+        spacing: { before: 240, after: 80 },
+      }));
+    } else if (/^## /.test(trimmed)) {
+      paragraphs.push(new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        children: parseInlineRuns(trimmed.replace(/^## /, "")),
+        spacing: { before: 320, after: 120 },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" } },
+      }));
+    } else if (/^# /.test(trimmed)) {
+      paragraphs.push(new Paragraph({
+        heading: HeadingLevel.HEADING_1,
+        children: parseInlineRuns(trimmed.replace(/^# /, "")),
+        spacing: { before: 360, after: 160 },
+      }));
+    } else if (/^[-•*] /.test(trimmed)) {
+      inList = true;
+      paragraphs.push(new Paragraph({
+        bullet: { level: 0 },
+        children: parseInlineRuns(trimmed.replace(/^[-•*] /, "")),
+        spacing: { before: 40, after: 40 },
+      }));
+    } else if (/^\d+\. /.test(trimmed)) {
+      inList = true;
+      paragraphs.push(new Paragraph({
+        numbering: { reference: "decimal-numbering", level: 0 },
+        children: parseInlineRuns(trimmed.replace(/^\d+\. /, "")),
+        spacing: { before: 40, after: 40 },
+      }));
+    } else {
+      paragraphs.push(new Paragraph({
+        children: parseInlineRuns(trimmed),
+        spacing: { before: inList ? 40 : 120, after: inList ? 40 : 120 },
+      }));
+    }
+  }
+
+  return paragraphs;
+}
+
+function parseInlineRuns(text: string): TextRun[] {
+  const runs: TextRun[] = [];
+  const pattern = /\*\*\*(.*?)\*\*\*|\*\*(.*?)\*\*|\*(.*?)\*|`([^`]+)`|([^*`]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = pattern.exec(text)) !== null) {
+    if (m[1] !== undefined) {
+      runs.push(new TextRun({ text: m[1], bold: true, italics: true, font: "Inter" }));
+    } else if (m[2] !== undefined) {
+      runs.push(new TextRun({ text: m[2], bold: true, font: "Inter" }));
+    } else if (m[3] !== undefined) {
+      runs.push(new TextRun({ text: m[3], italics: true, font: "Inter" }));
+    } else if (m[4] !== undefined) {
+      runs.push(new TextRun({ text: m[4], font: "Courier New", size: 20 }));
+    } else if (m[5] !== undefined) {
+      runs.push(new TextRun({ text: m[5], font: "Inter" }));
+    }
+  }
+  return runs.length > 0 ? runs : [new TextRun({ text, font: "Inter" })];
+}
+
+export async function exportAsDocx(markdownText: string, filename: string, title?: string): Promise<void> {
+  const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+  const headerParagraphs: Paragraph[] = [
+    new Paragraph({
+      children: [new TextRun({ text: "LightSpeed Ghost", font: "Inter", size: 16, color: "6366F1", bold: true })],
+      spacing: { after: 80 },
+    }),
+    new Paragraph({
+      heading: HeadingLevel.TITLE,
+      children: [new TextRun({ text: title || filename, font: "Inter", bold: true })],
+      spacing: { after: 80 },
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: `${date} · lightspeedghost.com`, font: "Inter", size: 18, color: "9CA3AF" })],
+      spacing: { after: 320 },
+      border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: "6366F1" } },
+    }),
+  ];
+
+  const bodyParagraphs = markdownToDocxParagraphs(markdownText);
+
+  const doc = new Document({
+    numbering: {
+      config: [{
+        reference: "decimal-numbering",
+        levels: [{ level: 0, format: NumberFormat.DECIMAL, text: "%1.", alignment: AlignmentType.LEFT }],
+      }],
+    },
+    sections: [{
+      properties: {
+        page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } },
+      },
+      children: [...headerParagraphs, ...bodyParagraphs],
+      footers: {
+        default: new Footer({
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({ text: "LightSpeed Ghost · lightspeedghost.com · Page ", font: "Inter", size: 16, color: "9CA3AF" }),
+                new TextRun({ children: [PageNumber.CURRENT], font: "Inter", size: 16, color: "9CA3AF" }),
+              ],
+            }),
+          ],
+        }),
+      },
+    }],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  triggerDownload(blob, `${filename}.docx`);
 }
 
 /** PDF via browser print dialog — opens a styled window then triggers print */
