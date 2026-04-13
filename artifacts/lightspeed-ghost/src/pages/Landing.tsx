@@ -346,62 +346,45 @@ export default function Landing() {
 
       {/* ── iOS Install Modal ──────────────────────────────────────────── */}
       {showIOSModal && (
-        <div className="fixed inset-0 z-[300] flex items-end justify-center px-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowIOSModal(false)}>
-          <div className="bg-[#0d1426] border border-white/12 rounded-2xl p-5 max-w-sm w-full shadow-2xl mb-6" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <img src="/icon-192.png" alt="Light Speed" className="w-9 h-9 rounded-xl" />
-                <div>
-                  <p className="text-sm font-bold text-white">Light Speed</p>
-                  <p className="text-[10px] text-white/40">Install on iPhone / iPad</p>
-                </div>
-              </div>
-              <button onClick={() => setShowIOSModal(false)} className="p-1.5 text-white/30 hover:text-white/60 rounded-lg hover:bg-white/5">
-                <X size={16} />
-              </button>
-            </div>
-            <ol className="space-y-3">
-              {[
-                <>Tap the <Share size={13} className="inline mx-1 -mt-0.5 text-blue-400" /> <strong className="text-white/85">Share</strong> button at the bottom of the screen</>,
-                <>Scroll down and tap <strong className="text-white/85">Add to Home Screen</strong></>,
-              ].map((step, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm text-white/55">
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowIOSModal(false)}>
+          <div className="bg-[#0d1426] border border-white/12 rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center" onClick={e => e.stopPropagation()}>
+            <img src="/icon-192.png" alt="Light Speed" className="w-16 h-16 rounded-2xl mx-auto mb-3" />
+            <p className="text-base font-bold text-white mb-1">Install Light Speed</p>
+            <p className="text-xs text-white/40 mb-5">Add to your home screen for the full app experience</p>
+            <button
+              onClick={() => setShowIOSModal(false)}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors text-sm"
+            >
+              <Share size={15} />
+              Tap Share then "Add to Home Screen"
+            </button>
+            <button onClick={() => setShowIOSModal(false)} className="mt-3 text-xs text-white/30 hover:text-white/50 transition-colors">
+              Not now
+            </button>
           </div>
         </div>
       )}
 
       {/* ── Android Install Modal (shown when native prompt not ready) ─── */}
       {showAndroidModal && (
-        <div className="fixed inset-0 z-[300] flex items-end justify-center px-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowAndroidModal(false)}>
-          <div className="bg-[#0d1426] border border-white/12 rounded-2xl p-5 max-w-sm w-full shadow-2xl mb-6" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <img src="/icon-192.png" alt="Light Speed" className="w-9 h-9 rounded-xl" />
-                <div>
-                  <p className="text-sm font-bold text-white">Light Speed</p>
-                  <p className="text-[10px] text-white/40">Install on Android</p>
-                </div>
-              </div>
-              <button onClick={() => setShowAndroidModal(false)} className="p-1.5 text-white/30 hover:text-white/60 rounded-lg hover:bg-white/5">
-                <X size={16} />
-              </button>
-            </div>
-            <ol className="space-y-3">
-              {[
-                <>Tap the <strong className="text-white/85">⋮ menu</strong> in the top right corner</>,
-                <>Tap <strong className="text-white/85">Add to Home Screen</strong> or <strong className="text-white/85">Install App</strong></>,
-              ].map((step, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm text-white/55">
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowAndroidModal(false)}>
+          <div className="bg-[#0d1426] border border-white/12 rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center" onClick={e => e.stopPropagation()}>
+            <img src="/icon-192.png" alt="Light Speed" className="w-16 h-16 rounded-2xl mx-auto mb-3" />
+            <p className="text-base font-bold text-white mb-1">Install Light Speed</p>
+            <p className="text-xs text-white/40 mb-5">Add to your home screen for the full app experience</p>
+            <button
+              onClick={() => {
+                if (installState.type === "android") { installState.prompt(); }
+                setShowAndroidModal(false);
+              }}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors text-sm"
+            >
+              Install App
+            </button>
+            <p className="mt-3 text-[10px] text-white/25">Tap ⋮ menu → "Add to Home Screen" if the button above doesn't work</p>
+            <button onClick={() => setShowAndroidModal(false)} className="mt-2 text-xs text-white/30 hover:text-white/50 transition-colors">
+              Not now
+            </button>
           </div>
         </div>
       )}

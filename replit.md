@@ -213,6 +213,18 @@ Frontend: source type badges (Wikipedia/Book/Academic/Archive), sentence-level m
 - Input cleared immediately on send (snapshot taken before clearing, sent to API)
 - Trigger button moved to LEFT side (`left-4 lg:left-6`) to avoid Tidio chat conflict
 - Panel initial position starts at left edge (x: 20) instead of right edge
+- Mode change clears results: switching modes aborts in-flight stream, clears answer/error/detected mode
+
+### Word Count & Citation Policy
+- **Word count includes references** — `computeBodyWordCount` counts body text + reference list
+- **Max words cap**: target + 5% (hard limit)
+- **Correction thresholds**: expand if <92% of target, trim if >105%
+- **Citation ratio**: 1 in-text citation per 150-200 words → `Math.ceil(requestedWords / 175)` (min 3)
+
+### PWA Install UX
+- App Store / Google Play banners on landing page trigger install action directly
+- Android: native `beforeinstallprompt` triggers Chrome install dialog; fallback shows "Install App" button
+- iOS: centered modal with share icon and single CTA (Safari limitation — no native install API)
 
 ## File Upload Feature (Phases 1-2-3)
 

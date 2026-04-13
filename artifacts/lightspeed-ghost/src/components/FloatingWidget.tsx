@@ -285,7 +285,7 @@ export function AssistantPanel({
           return (
             <button
               key={m.key}
-              onClick={() => setMode(m.key)}
+              onClick={() => { abortRef.current?.abort(); setIsLoading(false); setMode(m.key); setAnswer(""); setError(null); setErrorType(null); setDetectedMode(null); setResolvedModeLabel(""); }}
               className={cn(
                 "flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap border transition-all flex-shrink-0",
                 isActive

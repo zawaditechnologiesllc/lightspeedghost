@@ -273,28 +273,19 @@ function getSectionBudgets(paperType: string, targetWords: number): { name: stri
 }
 
 function computeBodyWordCount(content: string): number {
-  // Remove everything from References/Bibliography heading onward
-  const withoutRefs = content.replace(/^#+\s*(references?|bibliography|works cited|further reading)[\s\S]*/im, "");
-  // Remove in-text citations: [1], (Author, 2023), (Author et al., 2023)
-  const withoutCitations = withoutRefs
-    .replace(/\[[\d,\s–-]+\]/g, "")
-    .replace(/\([A-Z][A-Za-z\s&,]+\d{4}[a-z]?(?:,\s*p\.?\s*\d+)?\)/g, "");
-  // Remove markdown syntax and non-body content.
-  // Inspired by quarto-wordcount (Repo 4) which excludes tables, images, figures,
-  // and figure captions from academic word counts.
-  const clean = withoutCitations
-    .replace(/^#+\s*.*/gm, "")                              // headings
-    .replace(/\*\*|__|\*|_/g, "")                           // bold/italic markers
-    .replace(/`[^`]*`/g, "")                                // inline code
-    .replace(/```[\s\S]*?```/gm, "")                        // fenced code blocks
-    .replace(/\$\$[\s\S]*?\$\$/gm, "")                      // block LaTeX equations
-    .replace(/\$[^$\n]+\$/g, "")                            // inline LaTeX equations
-    .replace(/!\[.*?\]\(.*?\)/g, "")                        // images
-    .replace(/\[.*?\]\(.*?\)/g, "")                         // links
-    .replace(/^\|[-:| ]+\|$/gm, "")                         // table separator rows (---|---|---)
-    .replace(/^\|.*\|$/gm, "")                              // table rows
-    .replace(/^\s*[-*+]\s/gm, "")                           // list markers
-    .replace(/^\s*\*\*?(figure|fig\.?|table|appendix)\s+[\d.]+[^*]*\*?\*?/gim, ""); // figure/table captions
+  const clean = content
+    .replace(/^#+\s*.*/gm, "")
+    .replace(/\*\*|__|\*|_/g, "")
+    .replace(/`[^`]*`/g, "")
+    .replace(/```[\s\S]*?```/gm, "")
+    .replace(/\$\$[\s\S]*?\$\$/gm, "")
+    .replace(/\$[^$\n]+\$/g, "")
+    .replace(/!\[.*?\]\(.*?\)/g, "")
+    .replace(/\[.*?\]\(.*?\)/g, "")
+    .replace(/^\|[-:| ]+\|$/gm, "")
+    .replace(/^\|.*\|$/gm, "")
+    .replace(/^\s*[-*+]\s/gm, "")
+    .replace(/^\s*\*\*?(figure|fig\.?|table|appendix)\s+[\d.]+[^*]*\*?\*?/gim, "");
   return clean.split(/\s+/).filter((w) => w.trim().length > 0).length;
 }
 
@@ -351,14 +342,13 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     };
 
     const requestedWords = body.wordCount ?? 1500;
-    // Target = exactly what was requested. Max = requested + 10%. Both are hard limits.
+    // Target = exactly what was requested. Max = requested + 5%. Both are hard limits.
     const targetWords = requestedWords;
-    const maxWords = Math.ceil(requestedWords * 1.10);
+    const maxWords = Math.ceil(requestedWords * 1.05);
     const isAnnotatedBib = body.paperType.toLowerCase().includes("annotated");
-    // Annotated bibliography: each entry ≈ 175 words — need 1 citation per entry
     const citationCount = isAnnotatedBib
       ? Math.max(8, Math.ceil(requestedWords / 175))
-      : requestedWords >= 3000 ? 12 : requestedWords >= 2000 ? 9 : requestedWords >= 1000 ? 6 : 4;
+      : Math.max(3, Math.ceil(requestedWords / 175));
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
     // Token budget: ~1.4 tokens/word for English prose + 2000 overhead for references,
     // citations block, headings, and structure. Floor at 3000; cap at 16000.
@@ -700,11 +690,11 @@ SUBJECT: ${body.subject}
 CITATION STYLE: ${body.citationStyle.toUpperCase()}
 
 WORD COUNT — ALL THREE RULES ARE MANDATORY:
-• Body content: MINIMUM ${targetWords} words · MAXIMUM ${maxWords} words
-• Target exactly ${targetWords} words of body text. Do NOT exceed ${maxWords} words under any circumstances.
+• Total content INCLUDING references: MINIMUM ${targetWords} words · MAXIMUM ${maxWords} words
+• Target exactly ${targetWords} words total (body + references). Do NOT exceed ${maxWords} words under any circumstances.
 • Count your running word total after EVERY section. If you are behind budget, write more in the next section. If ahead, trim.
 • A complete, on-target ${targetWords}-word paper is the goal — neither padded nor truncated.
-• Word count EXCLUDES: abstract, table of contents, reference list, in-text citation parentheses, figure/table captions
+• Word count INCLUDES: body text and reference list. EXCLUDES: abstract, table of contents, figure/table captions
 
 ${isAnnotatedBib ? "" : planSectionWordBudgets(body.paperType, targetWords)}
 
@@ -713,7 +703,7 @@ SOURCE INTEGRITY (CRITICAL — violations mean the paper is useless):
 • Do NOT add Wikipedia, open web, blog, or any other source not in that list
 • Do NOT fabricate any paper, journal, author, or DOI
 • Every in-text citation must match a numbered verified citation exactly
-• Distribute citations evenly — at least one every 200 words throughout the body
+• Distribute citations evenly — one in-text citation every 150–200 words throughout the body
 
 CITATION FORMAT: Use the chosen style (${body.citationStyle.toUpperCase()}) correctly for every in-text citation and the references section. References section lists ONLY the verified citations.
 
@@ -833,7 +823,7 @@ ${body.additionalInstructions}
           role: "user",
           content: isAnnotatedBib
             ? `Write a complete annotated bibliography on: "${body.topic}"\n\nYou have ${citations.length} verified sources listed above. Write one annotated entry for EACH source — full citation then a 150-200 word annotation (Summary → Critical Evaluation → Relevance). Sort entries alphabetically by first author's surname. Include an Introduction and Conclusion. Total annotation content must reach at least ${targetWords} words.${body.additionalInstructions ? `\n\nADDITIONAL STUDENT INSTRUCTIONS (follow exactly): ${body.additionalInstructions}` : ""}`
-            : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Body content: minimum ${targetWords} words, maximum ${maxWords} words. Stop writing once you reach ${maxWords} body words.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
+            : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Total word count (body + references): minimum ${targetWords} words, maximum ${maxWords} words. Stop writing once you reach ${maxWords} total words.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
         }],
       });
 
@@ -849,11 +839,11 @@ ${body.additionalInstructions}
 
       // ── Word count enforcement ────────────────────────────────────────────────
       // Check actual body word count and correct if significantly off-target.
-      // Threshold: expand if <88% of target, trim if >112% of target.
+      // Threshold: expand if <92% of target, trim if >105% of target.
       if (!isAnnotatedBib) {
         const afterGenCount = computeBodyWordCount(content);
-        const expandThreshold = Math.floor(targetWords * 0.88);
-        const trimThreshold   = Math.ceil(targetWords * 1.12);
+        const expandThreshold = Math.floor(targetWords * 0.92);
+        const trimThreshold   = Math.ceil(targetWords * 1.05);
 
         if (afterGenCount < expandThreshold) {
           const deficit = targetWords - afterGenCount;
