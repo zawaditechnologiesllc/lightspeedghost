@@ -13,6 +13,7 @@ import MathRenderer from "@/components/MathRenderer";
 import { ExportButtons } from "@/components/ExportButtons";
 import { wrapDocHtml, mdToBodyHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { renderInlineMd } from "@/lib/renderInline";
+import { ALL_SUBJECTS } from "@/lib/subjects";
 import { apiFetch } from "@/lib/apiFetch";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
@@ -67,15 +68,7 @@ const OUTPUT_TYPES: { key: OutputType; label: string; icon: React.ReactNode; des
   { key: "slides",     label: "Slides",      icon: <Presentation size={15} />,   desc: "Presentation deck" },
 ];
 
-const SUBJECTS = [
-  "Mathematics", "Physics", "Chemistry", "Biology", "History",
-  "English Literature", "Geography", "Computer Science", "Economics",
-  "Psychology", "Sociology", "Business Studies", "Art & Design",
-  "Music", "Languages", "Political Science", "Philosophy",
-  "Environmental Science", "Statistics", "Medicine", "Law",
-  "Finance", "Accounting", "Actuarial Science", "Insurance",
-  "Credit Analysis", "Banking", "Investment", "General",
-];
+const SUBJECTS = ALL_SUBJECTS as readonly string[];
 
 const MODE_DESCRIPTIONS: Record<string, string> = {
   flashcards: "Converts your material into interactive flip cards to help memorise key terms and concepts",

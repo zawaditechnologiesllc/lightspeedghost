@@ -14,10 +14,11 @@ import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone"
 import { detectPaperType, extractTopic, extractSubject } from "@/lib/autofill";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
+import { SubjectSelect } from "@/components/SubjectSelect";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type PaperType = "research" | "essay" | "thesis" | "literature_review" | "report";
+type PaperType = string;
 type Phase = "config" | "generating" | "results";
 
 interface OutlineSection {
@@ -35,11 +36,27 @@ interface OutlineResult {
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const PAPER_TYPES: { value: PaperType; label: string }[] = [
-  { value: "research",          label: "Research Paper" },
-  { value: "essay",             label: "Essay" },
-  { value: "thesis",            label: "Thesis" },
-  { value: "literature_review", label: "Lit. Review" },
-  { value: "report",            label: "Report" },
+  { value: "research",               label: "Research Paper" },
+  { value: "essay",                  label: "Essay" },
+  { value: "argumentative",          label: "Argumentative" },
+  { value: "thesis",                 label: "Thesis" },
+  { value: "dissertation",           label: "Dissertation" },
+  { value: "literature_review",      label: "Lit. Review" },
+  { value: "annotated bibliography", label: "Annotated Bib." },
+  { value: "research proposal",      label: "Research Proposal" },
+  { value: "grant proposal",         label: "Grant Proposal" },
+  { value: "proposal",               label: "General Proposal" },
+  { value: "report",                 label: "Report" },
+  { value: "lab report",             label: "Lab Report" },
+  { value: "case study",             label: "Case Study" },
+  { value: "term paper",             label: "Term Paper" },
+  { value: "critical analysis",      label: "Critical Analysis" },
+  { value: "reflective",             label: "Reflective" },
+  { value: "position paper",         label: "Position Paper" },
+  { value: "policy brief",           label: "Policy Brief" },
+  { value: "white paper",            label: "White Paper" },
+  { value: "business plan",          label: "Business Plan" },
+  { value: "financial analysis",     label: "Financial Analysis" },
 ];
 
 
@@ -379,15 +396,12 @@ export default function Outline() {
             </div>
 
             {/* Subject */}
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Subject *</label>
-              <input
-                value={subject}
-                onChange={e => setSubject(e.target.value)}
-                placeholder="e.g., Computer Science, Medicine"
-                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
+            <SubjectSelect
+              value={subject}
+              onChange={setSubject}
+              label="Subject"
+              required
+            />
 
             {/* Paper type */}
             <div>

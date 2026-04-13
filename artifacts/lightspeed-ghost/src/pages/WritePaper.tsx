@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import { ReadabilityPanel, GrammarPanel, TonePanel, CitationFromUrl } from "@/components/analysis";
+import { SubjectSelect } from "@/components/SubjectSelect";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1013,15 +1014,12 @@ export default function WritePaper() {
               className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          <div>
-            <label className="text-sm font-medium mb-1.5 block">Subject *</label>
-            <input
-              value={subject}
-              onChange={e => setSubject(e.target.value)}
-              placeholder="e.g., Psychology, Computer Science"
-              className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
+          <SubjectSelect
+            value={subject}
+            onChange={setSubject}
+            label="Subject"
+            required
+          />
         </div>
 
         {/* ── Paper type ── */}
