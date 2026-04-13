@@ -243,6 +243,113 @@ export const stemResourcesBySubject: Record<string, StemResourceGroup[]> = {
       ],
     },
   ],
+
+  finance: [
+    {
+      label: "Financial Modelling & Analysis",
+      tools: [
+        { name: "QuantLib", url: "https://www.quantlib.org/", description: "C++/Python library for derivatives pricing, TVM, yield curves, risk", type: "library" },
+        { name: "numpy-financial", url: "https://numpy.org/numpy-financial/", description: "NPV, IRR, PMT, FV — time value of money functions", type: "library" },
+        { name: "OpenBB Terminal", url: "https://openbb.co/", description: "Open-source investment research and financial data terminal", type: "tool" },
+        { name: "Yahoo Finance API", url: "https://finance.yahoo.com/", description: "Free stock quotes, financial statements, historical data", type: "api" },
+      ],
+    },
+    {
+      label: "Risk & Portfolio",
+      tools: [
+        { name: "PyPortfolioOpt", url: "https://github.com/robertmartin8/PyPortfolioOpt", description: "Mean-variance optimisation, Black-Litterman, HRP", type: "library" },
+        { name: "Riskfolio-Lib", url: "https://github.com/dcajasn/Riskfolio-Lib", description: "Portfolio optimisation with risk measures (CVaR, drawdown)", type: "library" },
+        { name: "FRED API", url: "https://fred.stlouisfed.org/docs/api/fred/", description: "Federal Reserve economic & interest rate data", type: "api" },
+      ],
+    },
+    {
+      label: "Literature Search",
+      tools: [
+        { name: "SSRN", url: "https://www.ssrn.com/", description: "Social Science Research Network — finance preprints and working papers", type: "api" },
+        { name: "NBER", url: "https://www.nber.org/papers", description: "National Bureau of Economic Research working papers", type: "api" },
+        { name: "OpenAlex", url: "https://openalex.org/", description: "Open catalog of scholarly papers with citation data", type: "api" },
+      ],
+    },
+  ],
+
+  accounting: [
+    {
+      label: "Financial Statement Analysis",
+      tools: [
+        { name: "SEC EDGAR", url: "https://www.sec.gov/cgi-bin/browse-edgar", description: "Public company filings — 10-K, 10-Q, annual reports (XBRL)", type: "api" },
+        { name: "XBRL International", url: "https://www.xbrl.org/", description: "Structured financial reporting standard used in IFRS/GAAP filings", type: "tool" },
+        { name: "OpenBB Terminal", url: "https://openbb.co/", description: "Pull and analyse financial statements programmatically", type: "tool" },
+      ],
+    },
+    {
+      label: "Standards & Frameworks",
+      tools: [
+        { name: "IFRS Standards", url: "https://www.ifrs.org/issued-standards/", description: "International Financial Reporting Standards — full text access", type: "tool" },
+        { name: "FASB Codification", url: "https://asc.fasb.org/", description: "US GAAP Accounting Standards Codification", type: "tool" },
+        { name: "Deloitte IAS Plus", url: "https://www.iasplus.com/", description: "IFRS summaries, updates, and comparison guides", type: "tool" },
+      ],
+    },
+    {
+      label: "Literature Search",
+      tools: [
+        { name: "SSRN Accounting", url: "https://www.ssrn.com/index.cfm/en/arn/", description: "Accounting Research Network — working papers", type: "api" },
+        { name: "OpenAlex", url: "https://openalex.org/", description: "Open catalog of scholarly papers with citation data", type: "api" },
+      ],
+    },
+  ],
+
+  economics: [
+    {
+      label: "Econometric & Data Tools",
+      tools: [
+        { name: "statsmodels", url: "https://www.statsmodels.org/", description: "Regression, time series, panel data — Python econometrics", type: "library" },
+        { name: "FRED API", url: "https://fred.stlouisfed.org/docs/api/fred/", description: "800k+ economic time series — GDP, CPI, employment, rates", type: "api" },
+        { name: "World Bank Open Data", url: "https://data.worldbank.org/", description: "Development indicators for 200+ countries", type: "api" },
+        { name: "OECD Data", url: "https://data.oecd.org/", description: "OECD economic statistics and country comparisons", type: "api" },
+      ],
+    },
+    {
+      label: "Game Theory & Simulation",
+      tools: [
+        { name: "Nashpy", url: "https://github.com/drvinceknight/Nashpy", description: "Nash equilibrium computation for game theory", type: "library" },
+        { name: "Mesa", url: "https://github.com/projectmesa/mesa", description: "Agent-based modelling framework for economic simulation", type: "framework" },
+      ],
+    },
+    {
+      label: "Literature Search",
+      tools: [
+        { name: "NBER", url: "https://www.nber.org/papers", description: "Economics working papers and research", type: "api" },
+        { name: "IDEAS/RePEc", url: "https://ideas.repec.org/", description: "Largest bibliographic database for economics — 4M+ items", type: "api" },
+        { name: "OpenAlex", url: "https://openalex.org/", description: "Open catalog of scholarly papers with citation data", type: "api" },
+      ],
+    },
+  ],
+
+  actuarial_science: [
+    {
+      label: "Actuarial Computation",
+      tools: [
+        { name: "lifecontingencies (R)", url: "https://cran.r-project.org/web/packages/lifecontingencies/", description: "Life tables, annuities, insurance functions in R", type: "library" },
+        { name: "pyliferisk", url: "https://github.com/franciscogarate/pyliferisk", description: "Python library for actuarial life contingencies and mortality tables", type: "library" },
+        { name: "QuantLib", url: "https://www.quantlib.org/", description: "Interest rate models, yield curves, and financial mathematics", type: "library" },
+      ],
+    },
+    {
+      label: "Mortality & Risk Data",
+      tools: [
+        { name: "Human Mortality Database", url: "https://www.mortality.org/", description: "Detailed mortality and population data for 40+ countries", type: "api" },
+        { name: "SOA Mortality Tables", url: "https://mort.soa.org/", description: "Society of Actuaries — published mortality and morbidity tables", type: "tool" },
+        { name: "CAS Loss Data", url: "https://www.casact.org/publications-research/research/research-resources/loss-reserving-data-pulled-naic-schedule-p", description: "Casualty Actuarial Society — loss reserving datasets", type: "tool" },
+      ],
+    },
+    {
+      label: "Literature Search",
+      tools: [
+        { name: "SOA Research", url: "https://www.soa.org/resources/research-reports/", description: "Society of Actuaries research reports and experience studies", type: "api" },
+        { name: "OpenAlex", url: "https://openalex.org/", description: "Open catalog of scholarly papers with citation data", type: "api" },
+      ],
+    },
+  ],
 };
 
 export const toolTypeColors: Record<string, string> = {

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Sparkles, BookOpen, Zap, ClipboardCheck, Lightbulb,
   ImageIcon, Search, X, ExternalLink, GripHorizontal, Send,
-  Paperclip, RotateCcw, Bot, ChevronDown,
+  Paperclip, RotateCcw, Bot, ChevronDown, FileText,
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
 import MathRenderer from "@/components/MathRenderer";
@@ -68,6 +68,9 @@ export function AssistantPanel({
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageMimeType, setImageMimeType] = useState<string>("image/png");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [docText, setDocText] = useState<string | null>(null);
+  const [docName, setDocName] = useState<string | null>(null);
+  const docFileRef = useRef<HTMLInputElement>(null);
   const [answer, setAnswer] = useState("");
   const [detectedMode, setDetectedMode] = useState<Mode | null>(null);
   const [resolvedModeLabel, setResolvedModeLabel] = useState<string>("");
@@ -90,6 +93,32 @@ export function AssistantPanel({
     if (fileRef.current) fileRef.current.value = "";
   };
 
+  const clearDoc = () => {
+    setDocText(null);
+    setDocName(null);
+    if (docFileRef.current) docFileRef.current.value = "";
+  };
+
+  const handleDocFile = async (file: File) => {
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".csv") || name.endsWith(".tsv") || name.endsWith(".txt")) {
+      const text = await file.text();
+      setDocText(text.slice(0, 12000));
+      setDocName(file.name);
+    } else if (name.endsWith(".pdf") || name.endsWith(".docx") || name.endsWith(".doc")) {
+      const formData = new FormData();
+      formData.append("file", file);
+      try {
+        const res = await apiFetch("/files/extract", { method: "POST", body: formData });
+        if (res.ok) {
+          const data = await res.json() as { text?: string };
+          setDocText((data.text ?? "").slice(0, 12000));
+          setDocName(file.name);
+        }
+      } catch { /* ignore */ }
+    }
+  };
+
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) return;
     setImageMimeType(file.type);
@@ -110,35 +139,41 @@ export function AssistantPanel({
   }, []);
 
   const ask = async () => {
-    if (!question.trim() && !imageBase64) return;
+    if (!question.trim() && !imageBase64 && !docText) return;
     if (isLoading) {
       abortRef.current?.abort();
       return;
     }
 
-    // Snapshot before clearing so the API call still has the text
     const questionSnapshot = question.trim();
     const imageSnapshot = imageBase64;
     const mimeSnapshot = imageMimeType;
+    const docSnapshot = docText;
+    const docNameSnapshot = docName;
 
     setIsLoading(true);
     setError(null);
     setErrorType(null);
     setAnswer("");
-    setQuestion("");   // clear input immediately on send
-    clearImage();      // clear attached image immediately
+    setQuestion("");
+    clearImage();
+    clearDoc();
     setDetectedMode(null);
     setResolvedModeLabel("");
 
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
+    const fullQuestion = docSnapshot
+      ? `${questionSnapshot}\n\n--- Attached document: ${docNameSnapshot ?? "file"} ---\n${docSnapshot}`
+      : questionSnapshot;
+
     try {
       const res = await apiFetch("/assistant/ask-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: questionSnapshot,
+          question: fullQuestion,
           mode,
           imageBase64: imageSnapshot ?? undefined,
           mimeType: imageSnapshot ? mimeSnapshot : undefined,
@@ -209,6 +244,7 @@ export function AssistantPanel({
     setResolvedModeLabel("");
     setQuestion("");
     clearImage();
+    clearDoc();
     textareaRef.current?.focus();
   };
 
@@ -376,22 +412,36 @@ export function AssistantPanel({
         )}
       </div>
 
-      {/* ── Image preview ────────────────────────────────────── */}
-      {imagePreviewUrl && (
-        <div className="px-3 pt-2 flex-shrink-0">
-          <div className="relative inline-block">
-            <img
-              src={imagePreviewUrl}
-              alt="Uploaded"
-              className="h-16 w-auto rounded-lg border border-white/10 object-cover"
-            />
-            <button
-              onClick={clearImage}
-              className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center"
-            >
-              <X size={9} />
-            </button>
-          </div>
+      {/* ── Attachments preview ────────────────────────────── */}
+      {(imagePreviewUrl || docName) && (
+        <div className="px-3 pt-2 flex-shrink-0 flex gap-2 items-center flex-wrap">
+          {imagePreviewUrl && (
+            <div className="relative inline-block">
+              <img
+                src={imagePreviewUrl}
+                alt="Uploaded"
+                className="h-16 w-auto rounded-lg border border-white/10 object-cover"
+              />
+              <button
+                onClick={clearImage}
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center"
+              >
+                <X size={9} />
+              </button>
+            </div>
+          )}
+          {docName && (
+            <div className="relative inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px]">
+              <FileText size={12} />
+              <span className="truncate max-w-[140px]">{docName}</span>
+              <button
+                onClick={clearDoc}
+                className="ml-1 w-3.5 h-3.5 rounded-full bg-red-500 text-white flex items-center justify-center flex-shrink-0"
+              >
+                <X size={8} />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -414,6 +464,7 @@ export function AssistantPanel({
               style={{ minHeight: "52px", maxHeight: "120px" }}
             />
             <div className="flex items-center justify-between px-2 pb-2">
+              <div className="flex items-center gap-0.5">
               {imageEnabled ? (
                 <button
                   onClick={() => fileRef.current?.click()}
@@ -432,6 +483,14 @@ export function AssistantPanel({
                   <span className="text-[9px] text-violet-400/70 font-semibold">PRO</span>
                 </button>
               )}
+              <button
+                onClick={() => docFileRef.current?.click()}
+                title="Upload document (PDF, DOCX, CSV)"
+                className="p-1 rounded text-white/25 hover:text-white/60 hover:bg-white/8 transition-colors"
+              >
+                <FileText size={13} />
+              </button>
+            </div>
               <div className="flex items-center gap-2">
                 {queriesRemaining !== null && (
                   <span className={cn(
@@ -447,12 +506,12 @@ export function AssistantPanel({
           </div>
           <button
             onClick={ask}
-            disabled={!question.trim() && !imageBase64}
+            disabled={!question.trim() && !imageBase64 && !docText}
             className={cn(
               "flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all",
               isLoading
                 ? "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
-                : (question.trim() || imageBase64)
+                : (question.trim() || imageBase64 || docText)
                   ? "bg-violet-500 hover:bg-violet-400 text-white shadow-lg shadow-violet-500/25"
                   : "bg-white/6 text-white/20 cursor-not-allowed",
             )}
@@ -471,6 +530,16 @@ export function AssistantPanel({
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleFile(file);
+        }}
+      />
+      <input
+        ref={docFileRef}
+        type="file"
+        accept=".pdf,.docx,.doc,.csv,.tsv,.txt"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleDocFile(file);
         }}
       />
     </div>

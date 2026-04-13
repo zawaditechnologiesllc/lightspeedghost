@@ -11,7 +11,7 @@ const router = Router();
 type Mode = "learn" | "quick" | "exam" | "simplify" | "diagram" | "research";
 
 const AskBody = z.object({
-  question: z.string().max(6000).default(""),
+  question: z.string().max(16000).default(""),
   mode: z.enum(["learn", "quick", "exam", "simplify", "diagram", "research", "auto"]).default("auto"),
   imageBase64: z.string().optional(),
   mimeType: z.string().optional(),
@@ -208,7 +208,8 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
       return;
     }
 
-    const maxTokens: Record<Mode, number> = {
+    const hasDocument = body.question.includes("--- Attached document:");
+    const baseMaxTokens: Record<Mode, number> = {
       quick: 300,
       exam: 350,
       simplify: 500,
@@ -216,10 +217,13 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
       learn: 1200,
       research: 1400,
     };
+    const maxTokens: Record<Mode, number> = hasDocument
+      ? { quick: 600, exam: 600, simplify: 800, diagram: 800, learn: 2000, research: 2400 }
+      : baseMaxTokens;
 
-    // Diagram mode needs vision (Sonnet). All text modes use Haiku — same quality
-    // for Q&A at ~78% lower cost per query ($0.01 → $0.0022).
-    const model = resolvedMode === "diagram" ? "claude-sonnet-4-5" : "claude-haiku-4-5";
+    const model = (resolvedMode === "diagram" || hasDocument)
+      ? "claude-sonnet-4-5"
+      : "claude-haiku-4-5";
 
     let inputTokens = 0;
     let outputTokens = 0;
