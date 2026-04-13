@@ -16,20 +16,42 @@ export function detectPaperType(text: string): string {
   if (/\breport\b|\btechnical\s*report\b/.test(t)) return "report";
   if (/\bcase\s*stud/i.test(t)) return "case study";
   if (/\bterm\s*paper\b/.test(t)) return "term paper";
+  if (/\bcapstone\s*(project)?\b/.test(t)) return "capstone project";
+  if (/\bcourse\s*work\b|\bcoursework\b/.test(t)) return "coursework";
+  if (/\badmission\s*(essay)?\b|\bcollege\s*application\b|\buniversity\s*application\b/.test(t)) return "admission essay";
+  if (/\bscholarship\s*(essay)?\b/.test(t)) return "scholarship essay";
+  if (/\bpersonal\s*statement\b|\bstatement\s*of\s*purpose\b|\bSOP\b/.test(t)) return "personal statement";
+  if (/\barticle\s*(review|critique)\b/.test(t)) return "article review";
+  if (/\bbook\s*(review|report)\b/.test(t)) return "book review";
+  if (/\b(movie|film)\s*(review|critique|analysis)\b/.test(t)) return "movie review";
+  if (/\bspeech\b|\boration\b/.test(t)) return "speech";
+  if (/\bpresentation\b|\bslide\s*deck\b|\bpower\s*point\b|\bppt\b/.test(t)) return "presentation";
   if (/\bcritical\s*analysis\b/.test(t)) return "critical analysis";
   if (/\breflect/i.test(t)) return "reflective";
+  if (/\bnarrative\b/.test(t)) return "narrative";
+  if (/\bdescriptive\b/.test(t)) return "descriptive";
+  if (/\bexpository\b/.test(t)) return "expository";
   if (/\bargumentative\b/.test(t)) return "argumentative";
-  if (/\bessay\b|\bpersuasive\b/.test(t)) return "essay";
+  if (/\bpersuasive\b/.test(t)) return "persuasive";
+  if (/\bessay\b/.test(t)) return "essay";
   return "research";
 }
 
-export function detectCitationStyle(text: string): "apa" | "mla" | "chicago" | "harvard" | "ieee" {
+export function detectCitationStyle(text: string): string {
   const t = text.toLowerCase();
   if (/\bapa\b/.test(t)) return "apa";
   if (/\bmla\b/.test(t)) return "mla";
-  if (/\bchicago\b/.test(t)) return "chicago";
+  if (/\bchicago\b|\bturabian\b/.test(t)) {
+    if (/\bturabian\b/.test(t)) return "turabian";
+    return "chicago";
+  }
   if (/\bharvard\b/.test(t)) return "harvard";
   if (/\bieee\b/.test(t)) return "ieee";
+  if (/\bvancouver\b/.test(t)) return "vancouver";
+  if (/\bama\b/.test(t)) return "ama";
+  if (/\basa\b/.test(t)) return "asa";
+  if (/\bbluebook\b/.test(t)) return "bluebook";
+  if (/\boscola\b/.test(t)) return "oscola";
   return "apa";
 }
 

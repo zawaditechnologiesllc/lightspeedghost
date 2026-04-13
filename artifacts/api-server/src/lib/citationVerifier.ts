@@ -482,7 +482,7 @@ export async function getVerifiedCitations(
   topic: string,
   subject: string,
   count = 5,
-  style: "apa" | "mla" | "chicago" | "harvard" | "ieee" = "apa"
+  style: string = "apa"
 ): Promise<VerifiedCitation[]> {
   return withCache(
     "citations",

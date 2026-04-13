@@ -59,18 +59,23 @@ const ACADEMIC_LEVELS = [
   { value: "phd",           label: "PhD" },
 ];
 
-// Paper types that have a Results/Findings section — show dataset upload for these
 const DATA_PAPER_TYPES = new Set([
   "research", "research paper", "lab report", "report",
   "dissertation", "thesis", "case study", "term paper",
   "research proposal", "grant proposal",
-  "business plan", "financial analysis",
+  "business plan", "financial analysis", "capstone project",
 ]);
 
 const PAPER_TYPES = [
   { value: "research",               label: "Research Paper" },
   { value: "essay",                  label: "Essay" },
   { value: "argumentative",          label: "Argumentative Essay" },
+  { value: "persuasive",             label: "Persuasive Essay" },
+  { value: "narrative",              label: "Narrative Essay" },
+  { value: "descriptive",            label: "Descriptive Essay" },
+  { value: "expository",             label: "Expository Essay" },
+  { value: "admission essay",        label: "Admission Essay" },
+  { value: "scholarship essay",      label: "Scholarship Essay" },
   { value: "thesis",                 label: "Thesis" },
   { value: "dissertation",           label: "Dissertation" },
   { value: "literature_review",      label: "Lit. Review" },
@@ -82,8 +87,16 @@ const PAPER_TYPES = [
   { value: "lab report",             label: "Lab Report" },
   { value: "case study",             label: "Case Study" },
   { value: "term paper",             label: "Term Paper" },
+  { value: "coursework",             label: "Coursework" },
+  { value: "capstone project",       label: "Capstone Project" },
   { value: "critical analysis",      label: "Critical Analysis" },
+  { value: "article review",         label: "Article Review" },
+  { value: "book review",            label: "Book Review" },
+  { value: "movie review",           label: "Film/Movie Review" },
   { value: "reflective",             label: "Reflective Essay" },
+  { value: "personal statement",     label: "Personal Statement" },
+  { value: "speech",                 label: "Speech" },
+  { value: "presentation",           label: "Presentation" },
   { value: "position paper",         label: "Position Paper" },
   { value: "policy brief",           label: "Policy Brief" },
   { value: "white paper",            label: "White Paper" },
@@ -91,7 +104,19 @@ const PAPER_TYPES = [
   { value: "financial analysis",     label: "Financial Analysis" },
 ];
 
-const CITATION_STYLES = ["apa", "mla", "chicago", "harvard", "ieee"] as const;
+const CITATION_STYLES = ["apa", "mla", "chicago", "harvard", "ieee", "turabian", "vancouver", "ama", "asa", "bluebook", "oscola"] as const;
+
+const SPACING_OPTIONS = [
+  { value: "double", label: "Double" },
+  { value: "1.5",    label: "1.5" },
+  { value: "single", label: "Single" },
+];
+
+const LANGUAGE_OPTIONS = [
+  { value: "us",  label: "US English" },
+  { value: "uk",  label: "UK English" },
+  { value: "au",  label: "Australian English" },
+];
 
 const STEP_ORDER = ["citations", "data", "stem", "writing", "bibliography", "stats"];
 
@@ -259,6 +284,9 @@ export default function WritePaper() {
   const [wordCount, setWordCount] = useState(1000);
   const [academicLevel, setAcademicLevel] = useState("undergrad_3_4");
   const [isStem, setIsStem] = useState(false);
+  const [spacing, setSpacing] = useState("double");
+  const [numSources, setNumSources] = useState<number | "">("");
+  const [language, setLanguage] = useState("us");
   const [topic, setTopic] = useState("");
   const [subject, setSubject] = useState("");
   const [additionalInstructions, setAdditionalInstructions] = useState("");
@@ -388,6 +416,9 @@ export default function WritePaper() {
           citationStyle,
           academicLevel,
           isStem,
+          spacing,
+          numSources: numSources || undefined,
+          language,
           additionalInstructions: additionalInstructions.trim() || undefined,
           rubricText: rubricText.trim() || undefined,
           referenceText: referenceText.trim() || undefined,
@@ -1094,6 +1125,61 @@ export default function WritePaper() {
                 {style}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* ── Spacing, Sources, Language ── */}
+        <div className="grid sm:grid-cols-3 gap-3">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Spacing</label>
+            <div className="flex gap-2">
+              {SPACING_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setSpacing(opt.value)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all flex-1",
+                    spacing === opt.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Min. Sources</label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={numSources}
+              onChange={e => {
+                const v = e.target.value;
+                setNumSources(v === "" ? "" : parseInt(v, 10));
+              }}
+              placeholder="Auto"
+              className="w-full px-3 py-1.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Language</label>
+            <div className="flex gap-2">
+              {LANGUAGE_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setLanguage(opt.value)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all flex-1",
+                    language === opt.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

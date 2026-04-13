@@ -209,6 +209,86 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
       { name: "Implementation & Benefits — steps, timeline, ROI or policy outcome", pct: 0.15 },
       { name: "Conclusion — call to action, next steps, contact/further information", pct: 0.07 },
     ],
+    coursework: [
+      { name: "Introduction — module context, assignment brief interpretation, scope of work", pct: 0.10 },
+      { name: "Literature Review / Background — key theories, frameworks, and scholarly context", pct: 0.20 },
+      { name: "Main Analysis Section 1 — first analytical thread, apply theory to evidence", pct: 0.22 },
+      { name: "Main Analysis Section 2 — second analytical thread, deeper engagement with sources", pct: 0.22 },
+      { name: "Discussion — synthesis of analysis, implications, links to course material", pct: 0.16 },
+      { name: "Conclusion — summary of findings, answer to the brief, reflection on learning", pct: 0.10 },
+    ],
+    "capstone project": [
+      { name: "Abstract — project summary, objectives, methods, key results", pct: 0.05 },
+      { name: "Introduction — background, problem statement, project significance, research questions", pct: 0.12 },
+      { name: "Literature Review — comprehensive review of relevant scholarship and frameworks", pct: 0.18 },
+      { name: "Methodology — research design, data collection, tools, analytical approach", pct: 0.16 },
+      { name: "Results / Deliverables — findings, project outputs, data analysis", pct: 0.20 },
+      { name: "Discussion — interpretation, practical implications, limitations", pct: 0.16 },
+      { name: "Conclusion & Recommendations — summary, actionable recommendations, future work", pct: 0.08 },
+      { name: "Appendices — supplementary data, code, additional materials", pct: 0.05 },
+    ],
+    "movie review": [
+      { name: "Introduction — film title, director, genre, release context, thesis about the film", pct: 0.12 },
+      { name: "Plot Summary — concise, spoiler-aware synopsis of the film's narrative arc", pct: 0.20 },
+      { name: "Cinematic Analysis — direction, cinematography, editing, sound design, mise-en-scène", pct: 0.25 },
+      { name: "Performance & Character Analysis — acting quality, character development, casting choices", pct: 0.20 },
+      { name: "Thematic Evaluation — underlying themes, social commentary, cultural significance", pct: 0.15 },
+      { name: "Conclusion — overall assessment, recommendation, place in genre/director's body of work", pct: 0.08 },
+    ],
+    "article review": [
+      { name: "Introduction — article title, author(s), journal, publication date, purpose of the review", pct: 0.10 },
+      { name: "Summary of the Article — main argument, methodology, key findings in the author's own framework", pct: 0.25 },
+      { name: "Critical Analysis — strengths of methodology and argument, logical coherence, evidence quality", pct: 0.25 },
+      { name: "Weaknesses & Limitations — gaps, biases, methodological flaws, unsupported claims", pct: 0.20 },
+      { name: "Contribution & Relevance — significance to the field, how it advances understanding", pct: 0.12 },
+      { name: "Conclusion — overall assessment, recommendation for target audience", pct: 0.08 },
+    ],
+    "personal statement": [
+      { name: "Opening Hook — compelling personal anecdote or moment that sparked your interest", pct: 0.12 },
+      { name: "Academic & Intellectual Journey — key experiences, coursework, projects that shaped your goals", pct: 0.25 },
+      { name: "Professional Experience & Skills — relevant work, internships, research, transferable skills", pct: 0.22 },
+      { name: "Motivation & Fit — why this programme/institution, what you bring, specific faculty/resources", pct: 0.25 },
+      { name: "Future Vision — career goals, how this programme connects to long-term ambitions", pct: 0.16 },
+    ],
+    "admission essay": [
+      { name: "Opening Hook — attention-grabbing moment, vivid scene, or thought-provoking question", pct: 0.12 },
+      { name: "Personal Story & Growth — formative experience, challenges overcome, lessons learned", pct: 0.30 },
+      { name: "Values & Character — core values, unique perspective, what makes you distinctive", pct: 0.22 },
+      { name: "Academic Interests & Goals — intellectual curiosity, intended area of study, aspirations", pct: 0.20 },
+      { name: "Why This School — specific programmes, opportunities, community fit, how you'll contribute", pct: 0.16 },
+    ],
+    "scholarship essay": [
+      { name: "Opening Hook — powerful personal moment or achievement that frames your narrative", pct: 0.10 },
+      { name: "Background & Challenges — personal circumstances, obstacles faced, community context", pct: 0.22 },
+      { name: "Achievements & Impact — academic accomplishments, leadership, community service, measurable impact", pct: 0.25 },
+      { name: "Goals & Alignment — career objectives, how the scholarship supports them, alignment with award criteria", pct: 0.25 },
+      { name: "Conclusion — gratitude, commitment, vision for giving back, final compelling statement", pct: 0.18 },
+    ],
+    speech: [
+      { name: "Opening & Hook — greeting, attention-grabbing statement, establish credibility and purpose", pct: 0.10 },
+      { name: "Background & Context — define the topic, why it matters to this audience now", pct: 0.15 },
+      { name: "First Main Point — strongest argument or idea, supporting evidence, relatable example", pct: 0.22 },
+      { name: "Second Main Point — second key idea, evidence, transition from first point", pct: 0.20 },
+      { name: "Third Main Point — final argument, most compelling or emotional evidence", pct: 0.18 },
+      { name: "Conclusion & Call to Action — summarise key points, inspire action, memorable closing line", pct: 0.15 },
+    ],
+    presentation: [
+      { name: "Title Slide & Introduction — topic, presenter, purpose statement, agenda overview", pct: 0.08 },
+      { name: "Background & Problem Statement — context, why this matters, key question to address", pct: 0.14 },
+      { name: "Main Content Section 1 — first key topic, data/evidence, visual aid descriptions", pct: 0.22 },
+      { name: "Main Content Section 2 — second key topic, analysis, examples, visual aid descriptions", pct: 0.22 },
+      { name: "Main Content Section 3 — third key topic, synthesis, connections between sections", pct: 0.18 },
+      { name: "Conclusion & Q&A — key takeaways, recommendations, questions for discussion", pct: 0.10 },
+      { name: "Speaker Notes — detailed talking points for each slide, timing guidance", pct: 0.06 },
+    ],
+    descriptive: [
+      { name: "Introduction — establish the subject to be described, thesis or dominant impression", pct: 0.12 },
+      { name: "Sensory Description 1 — visual and spatial details, concrete imagery, figurative language", pct: 0.22 },
+      { name: "Sensory Description 2 — sounds, textures, smells, tastes — immerse the reader", pct: 0.22 },
+      { name: "Emotional & Atmospheric Layer — mood, feelings evoked, personal connection to the subject", pct: 0.22 },
+      { name: "Significance & Reflection — why this subject matters, what it reveals, deeper meaning", pct: 0.14 },
+      { name: "Conclusion — return to dominant impression, leave reader with lasting image", pct: 0.08 },
+    ],
     "research proposal": [
       { name: "Title Page & Abstract — concise summary of the proposed research (problem, method, expected contribution)", pct: 0.06 },
       { name: "Introduction & Problem Statement — define the research gap, why it matters, research questions or hypotheses", pct: 0.14 },
@@ -282,6 +362,18 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
     else if (type.includes("financial") && type.includes("analysis")) sections = plans["financial analysis"];
     else if (type.includes("critical") || type.includes("analysis")) sections = plans["critical analysis"];
     else if (type.includes("white"))                             sections = plans["white paper"];
+    else if (type.includes("coursework"))                        sections = plans.coursework;
+    else if (type.includes("capstone"))                          sections = plans["capstone project"];
+    else if (type.includes("movie") || type.includes("film"))   sections = plans["movie review"];
+    else if (type.includes("article") && type.includes("review")) sections = plans["article review"];
+    else if (type.includes("book"))                              sections = plans["book report"];
+    else if (type.includes("personal") && type.includes("statement")) sections = plans["personal statement"];
+    else if (type.includes("admission"))                         sections = plans["admission essay"];
+    else if (type.includes("scholarship"))                       sections = plans["scholarship essay"];
+    else if (type.includes("speech") || type.includes("oration")) sections = plans.speech;
+    else if (type.includes("presentation") || type.includes("slide")) sections = plans.presentation;
+    else if (type.includes("descriptive"))                       sections = plans.descriptive;
+    else if (type.includes("expository"))                        sections = plans.expository;
     else {
       // Generic fallback — descriptive labels so the AI knows what each section must do
       sections = [
@@ -410,6 +502,9 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       citationStyle: string;
       academicLevel: string;
       isStem: boolean;
+      spacing?: string;
+      numSources?: number;
+      language?: string;
       additionalInstructions?: string;
       rubricText?: string;
       referenceText?: string;
@@ -421,9 +516,10 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     const targetWords = requestedWords;
     const maxWords = Math.ceil(requestedWords * 1.05);
     const isAnnotatedBib = body.paperType.toLowerCase().includes("annotated");
-    const citationCount = isAnnotatedBib
+    const autoCitations = isAnnotatedBib
       ? Math.max(8, Math.ceil(requestedWords / 175))
       : Math.max(3, Math.ceil(requestedWords / 175));
+    const citationCount = body.numSources ? Math.min(Math.max(body.numSources, 3), 50) : autoCitations;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
     // Token budget: ~1.4 tokens/word for English prose + 2000 overhead for references,
     // citations block, headings, and structure. Floor at 3000; cap at 16000.
@@ -522,7 +618,7 @@ Return JSON:
     });
 
     const [citations, ragPapers] = await Promise.all([
-      getVerifiedCitations(body.topic, body.subject, citationCount, body.citationStyle as "apa" | "mla" | "chicago" | "harvard" | "ieee"),
+      getVerifiedCitations(body.topic, body.subject, citationCount, body.citationStyle),
       searchAllAcademicSources(`${body.topic} ${body.subject}`, 12, body.subject),
     ]);
 
@@ -695,22 +791,45 @@ LATEST FORMAT STANDARDS FOR ANNOTATED BIBLIOGRAPHY:
       "book report":    "Introduction (title, author, genre, publication context, thesis about the work) → Summary (concise plot/argument without revealing evaluative stance) → Analysis of Themes & Techniques (major themes, author's craft, narrative choices) → Critical Evaluation (strengths, weaknesses, what the work achieves or fails at) → Conclusion (overall assessment + who should read it and why) → References",
       "white paper":    "Executive Summary (problem, solution, business/policy case in brief) → Introduction (context, why the problem matters now, audience) → Problem Definition (detailed breakdown, data, stakeholder impact) → Current Landscape (existing approaches, why they fall short) → Proposed Solution (detailed solution, methodology, evidence base) → Implementation & Benefits (steps, timeline, ROI or policy outcome) → Conclusion (call to action, next steps) → References",
       narrative:        "Introduction & Scene Setting (establish characters, setting, time, narrative voice) → Rising Action (build conflict, deepen stakes, reveal character) → Climax (peak tension, decisive choice or confrontation) → Falling Action (immediate aftermath, consequences) → Resolution & Reflection (outcome, changed understanding, thematic resonance)",
+      descriptive:     "Introduction (establish subject, dominant impression) → Sensory Description 1 (visual and spatial details) → Sensory Description 2 (sounds, textures, smells) → Emotional & Atmospheric Layer (mood, feelings evoked) → Significance & Reflection (deeper meaning) → Conclusion (lasting image)",
+      "book review":   "Introduction (title, author, genre, publication context, thesis about the work) → Summary (concise plot/argument without revealing evaluative stance) → Analysis of Themes & Techniques (major themes, author's craft, narrative choices) → Critical Evaluation (strengths, weaknesses, what the work achieves or fails at) → Conclusion (overall assessment + who should read it and why) → References",
+      "movie review":  "Introduction (film title, director, genre, release context, thesis) → Plot Summary (spoiler-aware synopsis) → Cinematic Analysis (direction, cinematography, editing, sound design) → Performance & Character Analysis (acting quality, character development) → Thematic Evaluation (underlying themes, social commentary) → Conclusion (overall assessment, recommendation)",
+      "article review": "Introduction (article title, authors, journal, purpose) → Summary (main argument, methodology, key findings) → Critical Analysis (strengths of methodology and argument) → Weaknesses & Limitations (gaps, biases, flaws) → Contribution & Relevance (significance to field) → Conclusion (overall assessment)",
+      coursework:      "Introduction (module context, brief interpretation, scope) → Literature Review / Background → Main Analysis Section 1 → Main Analysis Section 2 → Discussion (synthesis, implications) → Conclusion (answer to brief, reflection)",
+      "capstone project": "Abstract → Introduction (background, problem, research questions) → Literature Review → Methodology → Results / Deliverables → Discussion → Conclusion & Recommendations → Appendices",
+      "personal statement": "Opening Hook (compelling personal anecdote) → Academic & Intellectual Journey → Professional Experience & Skills → Motivation & Fit (why this programme) → Future Vision (career goals)",
+      "admission essay":   "Opening Hook (attention-grabbing moment) → Personal Story & Growth → Values & Character → Academic Interests & Goals → Why This School",
+      "scholarship essay": "Opening Hook (powerful personal moment) → Background & Challenges → Achievements & Impact → Goals & Alignment (how scholarship supports them) → Conclusion (gratitude, commitment, vision)",
+      speech:          "Opening & Hook (greeting, attention-grabbing statement) → Background & Context → First Main Point (evidence + example) → Second Main Point → Third Main Point → Conclusion & Call to Action",
+      presentation:    "Title Slide & Introduction (topic, purpose, agenda) → Background & Problem Statement → Main Content 1 (data, visuals) → Main Content 2 (analysis, examples) → Main Content 3 (synthesis) → Conclusion & Q&A → Speaker Notes",
     };
     function getPaperTypeStructure(type: string): string {
       const key = type.toLowerCase().trim();
       return PAPER_TYPE_STRUCTURES[key]
-        ?? (key.includes("essay")         ? PAPER_TYPE_STRUCTURES.essay
-          : key.includes("argumentative") ? PAPER_TYPE_STRUCTURES.argumentative
-          : key.includes("persuasive")    ? PAPER_TYPE_STRUCTURES.persuasive
-          : key.includes("report")        ? PAPER_TYPE_STRUCTURES.report
-          : key.includes("review")        ? PAPER_TYPE_STRUCTURES["literature review"]
-          : key.includes("thesis")        ? PAPER_TYPE_STRUCTURES.thesis
-          : key.includes("narrative") || key.includes("story") ? PAPER_TYPE_STRUCTURES.narrative
-          : key.includes("reflect")       ? PAPER_TYPE_STRUCTURES.reflective
-          : key.includes("position")      ? PAPER_TYPE_STRUCTURES["position paper"]
-          : key.includes("policy")        ? PAPER_TYPE_STRUCTURES["policy brief"]
-          : key.includes("critical") || key.includes("analysis") ? PAPER_TYPE_STRUCTURES["critical analysis"]
-          : key.includes("white")         ? PAPER_TYPE_STRUCTURES["white paper"]
+        ?? (key.includes("admission")                              ? PAPER_TYPE_STRUCTURES["admission essay"]
+          : key.includes("scholarship")                            ? PAPER_TYPE_STRUCTURES["scholarship essay"]
+          : key.includes("personal") && key.includes("statement")  ? PAPER_TYPE_STRUCTURES["personal statement"]
+          : key.includes("movie") || key.includes("film")         ? PAPER_TYPE_STRUCTURES["movie review"]
+          : key.includes("article") && key.includes("review")     ? PAPER_TYPE_STRUCTURES["article review"]
+          : key.includes("book")                                   ? PAPER_TYPE_STRUCTURES["book review"]
+          : key.includes("capstone")                               ? PAPER_TYPE_STRUCTURES["capstone project"]
+          : key.includes("coursework")                             ? PAPER_TYPE_STRUCTURES.coursework
+          : key.includes("speech") || key.includes("oration")     ? PAPER_TYPE_STRUCTURES.speech
+          : key.includes("presentation") || key.includes("slide") ? PAPER_TYPE_STRUCTURES.presentation
+          : key.includes("descriptive")                            ? PAPER_TYPE_STRUCTURES.descriptive
+          : key.includes("argumentative")                          ? PAPER_TYPE_STRUCTURES.argumentative
+          : key.includes("persuasive")                             ? PAPER_TYPE_STRUCTURES.persuasive
+          : key.includes("expository")                             ? PAPER_TYPE_STRUCTURES.expository
+          : key.includes("narrative") || key.includes("story")    ? PAPER_TYPE_STRUCTURES.narrative
+          : key.includes("reflect")                                ? PAPER_TYPE_STRUCTURES.reflective
+          : key.includes("essay")                                  ? PAPER_TYPE_STRUCTURES.essay
+          : key.includes("report")                                 ? PAPER_TYPE_STRUCTURES.report
+          : key.includes("review")                                 ? PAPER_TYPE_STRUCTURES["literature review"]
+          : key.includes("thesis") || key.includes("dissertation") ? PAPER_TYPE_STRUCTURES.thesis
+          : key.includes("position")                               ? PAPER_TYPE_STRUCTURES["position paper"]
+          : key.includes("policy")                                 ? PAPER_TYPE_STRUCTURES["policy brief"]
+          : key.includes("critical") || key.includes("analysis")  ? PAPER_TYPE_STRUCTURES["critical analysis"]
+          : key.includes("white")                                  ? PAPER_TYPE_STRUCTURES["white paper"]
           : "Abstract → Introduction → Literature Review / Background → Core Analysis (first analytical thread) → Extended Analysis (second analytical thread) → Discussion (synthesis + implications) → Conclusion → References");
     }
 
@@ -721,8 +840,14 @@ LATEST FORMAT STANDARDS FOR ANNOTATED BIBLIOGRAPHY:
 - APA: 7th edition (2020) — APA Publication Manual, American Psychological Association
 - MLA: 9th edition (2021) — MLA Handbook, Modern Language Association
 - Chicago: 17th edition (2017) — The Chicago Manual of Style
+- Turabian: 9th edition (2018) — A Manual for Writers (Chicago-based, simplified for students)
 - Harvard: Most recent institutional Harvard Referencing Guide (2023)
 - IEEE: IEEE Author's Guide (2023) — Institute of Electrical and Electronics Engineers
+- Vancouver: ICMJE Recommendations (2023) — numbered references in order of first citation
+- AMA: AMA Manual of Style, 11th edition (2020) — numbered superscript references
+- ASA: American Sociological Association Style Guide, 7th edition (2019)
+- Bluebook: The Bluebook: A Uniform System of Citation, 21st edition (2020) — legal citations
+- OSCOLA: Oxford Standard for Citation of Legal Authorities, 4th edition (2012) — UK legal citations
 REQUIRED STRUCTURE for a ${body.paperType}: ${getPaperTypeStructure(body.paperType)}
 Follow this structure exactly — every section must be present and properly developed.`;
 
@@ -763,7 +888,9 @@ ACADEMIC LEVEL: ${academicLevelPrompt(body.academicLevel)}
 PAPER TYPE: ${body.paperType}
 SUBJECT: ${body.subject}
 CITATION STYLE: ${body.citationStyle.toUpperCase()}
-
+SPACING: ${body.spacing === "single" ? "Single-spaced" : body.spacing === "1.5" ? "1.5 line spacing" : "Double-spaced"}
+LANGUAGE: ${body.language === "uk" ? "British English (use British spelling: colour, analyse, organisation, behaviour, centre, programme, defence)" : body.language === "au" ? "Australian English (use Australian spelling: colour, analyse, organisation, behaviour, centre, but program for computing)" : "American English (use US spelling: color, analyze, organization, behavior, center, program, defense)"}
+${body.numSources ? `MINIMUM SOURCES: Use at least ${body.numSources} sources in the paper` : ""}
 WORD COUNT — ALL THREE RULES ARE MANDATORY:
 • Body content (introduction through conclusion): MINIMUM ${targetWords} words · MAXIMUM ${maxWords} words
 • Target exactly ${targetWords} words of body text. Do NOT exceed ${maxWords} words under any circumstances.
@@ -1442,9 +1569,17 @@ router.put("/writing/save/:id", async (req, res) => {
 router.post("/writing/outline", requireAuth, async (req, res) => {
   try {
     if (req.userId) trackUsage(req.userId, "outline").catch(() => {});
-    const body = GenerateOutlineBody.parse(req.body);
-    const instructionsText = (req.body.instructionsText as string | undefined) ?? "";
-    const referenceText = (req.body.referenceText as string | undefined) ?? "";
+    const rawBody = req.body as { topic?: string; subject?: string; paperType?: string; instructionsText?: string; referenceText?: string };
+    const body = {
+      topic: rawBody.topic ?? "",
+      subject: rawBody.subject ?? "",
+      paperType: rawBody.paperType ?? "research",
+    };
+    if (!body.topic || !body.subject) {
+      return res.status(400).json({ error: "topic and subject are required" });
+    }
+    const instructionsText = rawBody.instructionsText ?? "";
+    const referenceText = rawBody.referenceText ?? "";
 
     const qualityRules = `QUALITY REQUIREMENTS FOR THIS OUTLINE:
 - Structure must be 100% original — zero plagiarism risk.
