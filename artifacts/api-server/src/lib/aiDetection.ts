@@ -102,7 +102,7 @@ export async function detectAIScore(
       stdDev,
     };
   } catch {
-    return { score: 30, indicators: [], burstiness: 50, stdDev: 8 };
+    return { score: 50, indicators: ["detection_failed_assume_high"], burstiness: 0, stdDev: 0 };
   }
 }
 
@@ -138,7 +138,7 @@ export async function humanizeTextOnce(
     max_tokens: 8000,
     system: `${WRITER_SOUL}
 
-You are the LightSpeed Humanizer. Your output must score below 5% on all major AI detectors.
+You are the LightSpeed Humanizer. Your output must score 0% on all major AI detectors — completely undetectable.
 
 TARGET TONE: ${toneGuide[tone] ?? toneGuide.academic}
 WORD COUNT TARGET: ~${wordCount} words (±5%)${focusNote}

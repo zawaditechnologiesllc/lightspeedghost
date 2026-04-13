@@ -20,7 +20,7 @@ async function humanizePass(
   passNumber: number,
   remainingIndicators: string[]
 ): Promise<string> {
-  const targetScore = 3;
+  const targetScore = 0;
   const focusNote =
     passNumber > 1 && remainingIndicators.length > 0
       ? `\nFOCUS FOR THIS PASS — fix these specific remaining AI patterns:\n${remainingIndicators.map((i) => `• ${i}`).join("\n")}`
@@ -31,7 +31,7 @@ async function humanizePass(
   const systemPrompt = `${WRITER_SOUL}
 
 You are the LightSpeed Humanizer — the most advanced AI-to-human text transformation engine in existence.
-Your output must score below ${targetScore}% on ALL major AI detectors: Turnitin, GPTZero, Originality.AI, ZeroGPT, Winston AI, Copyleaks AI Detector.
+Your output must score 0% on ALL major AI detectors: Turnitin, GPTZero, Originality.AI, ZeroGPT, Winston AI, Copyleaks AI Detector — completely undetectable.
 
 TARGET TONE: ${toneGuide}
 WORD COUNT TARGET: ~${wordCount} words (±5%)${focusNote}
@@ -255,7 +255,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
 
     send("step", {
       id: "verify-1",
-      message: `Pass 1 result: ${score1}% AI score. ${score1 <= 5 ? "Target achieved." : `Still above 5% — running Pass 2 to fix: ${indicators1.slice(0, 2).join(", ") || "residual patterns"}`}`,
+      message: `Pass 1 result: ${score1}% AI score. ${score1 === 0 ? "Target achieved — 0% AI." : `Still above 0% — running Pass 2 to fix: ${indicators1.slice(0, 2).join(", ") || "residual patterns"}`}`,
       status: "done",
     });
 
@@ -263,8 +263,8 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
     let currentScore = score1;
     let currentIndicators = indicators1;
 
-    // ── Step 4: Pass 2 if still above threshold ──────────────────────────────
-    if (currentScore > 5) {
+    // ── Step 4: Pass 2 if still above 0% ──────────────────────────────────────
+    if (currentScore > 0) {
       send("step", {
         id: "humanize-2",
         message: `Pass 2 — targeting specific residual patterns: ${currentIndicators.slice(0, 2).join(", ") || "sentence uniformity"}. Applying deeper structural variation…`,
@@ -295,7 +295,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
 
       send("step", {
         id: "verify-2",
-        message: `Pass 2 result: ${score2}% AI score. ${score2 <= 5 ? "Target achieved." : `Running Pass 3 (final) to address: ${indicators2.slice(0, 2).join(", ") || "remaining patterns"}`}`,
+        message: `Pass 2 result: ${score2}% AI score. ${score2 === 0 ? "Target achieved — 0% AI." : `Running Pass 3 (final) to address: ${indicators2.slice(0, 2).join(", ") || "remaining patterns"}`}`,
         status: "done",
       });
 
@@ -303,8 +303,8 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       currentScore = score2;
       currentIndicators = indicators2;
 
-      // ── Step 5: Pass 3 (final, only if still above 5%) ──────────────────
-      if (currentScore > 5) {
+      // ── Step 5: Pass 3 (final, only if still above 0%) ──────────────────
+      if (currentScore > 0) {
         send("step", {
           id: "humanize-3",
           message: `Pass 3 (final) — deep restructuring pass targeting: ${currentIndicators.slice(0, 2).join(", ") || "persistent patterns"}…`,
@@ -335,7 +335,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
 
         send("step", {
           id: "verify-3",
-          message: `Final score: ${score3}%. ${score3 <= 5 ? "Target achieved — text is highly human." : score3 <= 10 ? "Near-target — text reads as predominantly human." : "Maximum humanization applied — 3 passes completed."}`,
+          message: `Final score: ${score3}%. ${score3 === 0 ? "Target achieved — 0% AI, completely undetectable." : `Best achievable after 3 passes — ${score3}% AI score.`}`,
           status: "done",
         });
 
@@ -348,7 +348,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
     // ── Final verification step ──────────────────────────────────────────────
     send("step", {
       id: "verify",
-      message: `Humanization complete — final AI detection score: ${currentScore}%. ${currentScore <= 5 ? "Excellent: well below the 5% internal threshold." : currentScore <= 10 ? "Good: text reads as predominantly human-authored." : "Best achievable: 3-pass maximum humanization applied."}`,
+      message: `Humanization complete — final AI detection score: ${currentScore}%. ${currentScore === 0 ? "Target achieved: 0% AI — completely undetectable." : `Best achievable after all passes — ${currentScore}% AI score.`}`,
       status: "done",
     });
 

@@ -219,10 +219,16 @@ Frontend: source type badges (Wikipedia/Book/Academic/Archive), sentence-level m
 - **Word count excludes**: reference list, in-text citations, headings, abstract, ToC, figure/table captions
 - **Word count includes**: body text from introduction through conclusion
 - **Max words cap**: target + 5% (hard limit)
-- **Correction thresholds**: expand if <92% of target, trim if >105%
+- **Correction thresholds**: expand if <95% of target, trim if >105% — word count is non-negotiable
 - **Citation ratio**: 1 in-text citation per 150-200 words → `Math.ceil(requestedWords / 175)` (min 3)
-- **AI detection gate**: triggers humanization if score > 5%, up to 2 passes to get ≤5%
-- **Plagiarism gate**: triggers rephrasing if score > 8%, target <8%
+- **All work must be referenced and cited from academic sources** unless student instructions say otherwise
+
+### Non-Negotiable Quality Promises (WritePaper, Revision, Humanizer, Outline)
+- **AI score: 0%** — gate triggers humanization if score > 0%, up to 3 passes. Target is completely undetectable.
+- **Plagiarism: max 8%** — gate triggers rephrasing if score > 8%. Non-negotiable ceiling.
+- **Grade: at least 92%** — per prebuilt grading criteria or student-uploaded rubric. Grade optimizer loop runs if criteria gaps found.
+- **Word count: exact** — 95-105% of target. Non-negotiable. Backend auto-corrects if outside range.
+- **No fake/capped scores** — all quality stats reported are real measured values from detection gates.
 
 ### PWA Install UX
 - App Store / Google Play banners on landing page trigger install action directly

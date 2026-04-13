@@ -145,14 +145,14 @@ function buildReportHtml(result: PlagiarismResult, text: string): string {
 
 <h1>AI &amp; Plagiarism Check Report</h1>
 <p class="meta"><strong>Generated:</strong> ${date} &nbsp;|&nbsp; <strong>Words analysed:</strong> ${wordCount.toLocaleString()}</p>
-<p class="threshold">Safe thresholds: AI ≤ 5% &nbsp;·&nbsp; Plagiarism ≤ 8%</p>
+<p class="threshold">Target: AI 0% &nbsp;·&nbsp; Plagiarism ≤ 8%</p>
 
 <h2>Scores</h2>
 <div class="score-grid">
   <div class="score-card">
-    <div class="score-value" style="color:${result.aiScore <= 5 ? "#059669" : "#dc2626"}">${result.aiScore.toFixed(0)}%</div>
+    <div class="score-value" style="color:${result.aiScore === 0 ? "#059669" : "#dc2626"}">${result.aiScore.toFixed(0)}%</div>
     <div class="score-label">AI Detection</div>
-    <span class="badge ${result.aiScore <= 5 ? "safe" : result.aiScore <= 15 ? "warn" : "danger"}">${result.aiScore <= 5 ? "Excellent" : result.aiScore <= 15 ? "Borderline" : "Above Threshold"}</span>
+    <span class="badge ${result.aiScore === 0 ? "safe" : result.aiScore <= 5 ? "warn" : "danger"}">${result.aiScore === 0 ? "Undetectable" : result.aiScore <= 5 ? "Low" : "Flagged"}</span>
   </div>
   <div class="score-card">
     <div class="score-value" style="color:${result.plagiarismScore <= 8 ? "#059669" : "#dc2626"}">${result.plagiarismScore.toFixed(0)}%</div>
@@ -374,7 +374,7 @@ function ActionButtons({
   onRevise: () => void;
   onHumanize: () => void;
 }) {
-  const aiSafe = aiScore <= 5;
+  const aiSafe = aiScore === 0;
   const plagSafe = plagiarismScore <= 8;
   const bothSafe = aiSafe && plagSafe;
   const bothUnsafe = !aiSafe && !plagSafe;
@@ -387,7 +387,7 @@ function ActionButtons({
     return (
       <div className="space-y-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Both thresholds passed — choose what to do next:</p>
-        {aiScore > 2 && (
+        {aiScore > 0 && (
           <button
             onClick={onHumanize}
             className="w-full flex items-center justify-between gap-3 bg-primary text-primary-foreground px-4 py-3.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-primary/20 group"
@@ -477,7 +477,7 @@ function ActionButtons({
       <div className="space-y-3">
         <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-400">
           <div className="font-semibold flex items-center gap-2">
-            <ShieldAlert size={14} /> AI content at {aiScore.toFixed(0)}% — above the 5% safe threshold
+            <ShieldAlert size={14} /> AI content detected at {aiScore.toFixed(0)}% — must be 0%
           </div>
           <p className="text-xs mt-0.5 opacity-80">Humanize your text to instantly bring AI detection to 0% — guaranteed undetectable.</p>
         </div>
@@ -799,13 +799,13 @@ export default function PlagiarismChecker() {
 
                   {/* Score cards */}
                   <div className="grid grid-cols-2 gap-3">
-                    <ScoreRing score={result.aiScore} label="AI Detection" safe={result.aiScore <= 5} />
+                    <ScoreRing score={result.aiScore} label="AI Detection" safe={result.aiScore === 0} />
                     <ScoreRing score={result.plagiarismScore} label="Plagiarism Risk" safe={result.plagiarismScore <= 8} />
                   </div>
 
                   {/* Threshold reminder */}
                   <p className="text-[10px] text-muted-foreground text-center">
-                    Safe threshold: AI ≤ 5% · Plagiarism ≤ 8% for submission
+                    Target: AI 0% · Plagiarism ≤ 8% for submission
                   </p>
 
                   {/* ── ACTION BUTTONS ── */}

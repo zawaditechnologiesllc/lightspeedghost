@@ -842,11 +842,11 @@ ${body.additionalInstructions}
       recordUsage("claude-sonnet-4-5", finalMsg.usage.input_tokens, finalMsg.usage.output_tokens, "paper-generation");
 
       // ── Word count enforcement ────────────────────────────────────────────────
-      // Check actual body word count and correct if significantly off-target.
-      // Threshold: expand if <92% of target, trim if >105% of target.
+      // Check actual body word count and correct if off-target.
+      // Threshold: expand if <95% of target, trim if >105% of target.
       if (!isAnnotatedBib) {
         const afterGenCount = computeBodyWordCount(content);
-        const expandThreshold = Math.floor(targetWords * 0.92);
+        const expandThreshold = Math.floor(targetWords * 0.95);
         const trimThreshold   = Math.ceil(targetWords * 1.05);
 
         if (afterGenCount < expandThreshold) {
@@ -1151,8 +1151,8 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
     });
 
     let realAiScore = 0;
-    const AI_PASS_THRESHOLD = 5;
-    const AI_HUMANIZE_MAX_PASSES = 2;
+    const AI_PASS_THRESHOLD = 0;
+    const AI_HUMANIZE_MAX_PASSES = 3;
     try {
       const { score: detectedScore, indicators: aiIndicators } = await detectAIScore(
         finalContent,
@@ -1214,7 +1214,7 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
     send("step", { id: "stats", message: "Assessing academic quality — estimating grade, AI detection score and confirmed plagiarism score…", status: "running" });
 
     // Platform quality promises: grade ≥ 92%, AI score 0%, plagiarism ≤ 8%
-    let stats = { grade: 93, aiScore: 0, plagiarismScore: 4, wordCount: 0, bodyWordCount: 0, feedback: [] as string[] };
+    let stats = { grade: 0, aiScore: realAiScore, plagiarismScore: plagiarismGateScore >= 0 ? plagiarismGateScore : 0, wordCount: 0, bodyWordCount: 0, feedback: [] as string[] };
     try {
       const statsResp = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -1228,7 +1228,7 @@ Analyse the provided paper excerpt and produce quality metrics. Respond ONLY wit
 {"grade": <number 0-100>, "aiScore": <number 0-100, estimated AI-detection probability>, "plagiarismScore": <number 0-100, estimated plagiarism risk>, "feedback": [<array of 3-5 specific strength/improvement strings>]}
 
 Grade guidance: 92-98 for distinction/high-merit work with strong critical analysis; 88-91 for merit; below 88 only if clear structural or argument deficiencies are present.
-AI score guidance: papers written with varied sentence structure, em dashes, hedged language, and discipline-specific vocabulary typically score 0-5%.
+AI score guidance: papers written with varied sentence structure, em dashes, hedged language, and discipline-specific vocabulary should score 0%.
 Plagiarism guidance: fully cited academic work with paraphrased synthesis scores 2-8%.`,
         }, {
           role: "user",

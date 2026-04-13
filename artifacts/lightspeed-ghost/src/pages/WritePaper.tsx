@@ -616,9 +616,10 @@ export default function WritePaper() {
     const targetWords = targetWordCountRef.current;
     const maxWords     = Math.ceil(targetWords * 1.05);
     const gradePassing = stats.grade >= 92;
-    const aiPassing    = stats.aiScore <= 5;
+    const aiPassing    = stats.aiScore === 0;
     const plagPassing  = stats.plagiarismScore <= 8;
-    const wordsPassing = stats.bodyWordCount >= targetWords && stats.bodyWordCount <= maxWords;
+    const minWords     = Math.floor(targetWords * 0.95);
+    const wordsPassing = stats.bodyWordCount >= minWords && stats.bodyWordCount <= maxWords;
     const citePassing  = result.citations.length >= 5;
     const gradeColor = gradePassing
       ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400"
@@ -634,7 +635,7 @@ export default function WritePaper() {
             <StatCard label="Est. Grade" value={`${stats.grade}%`} color={gradeColor} sublabel="Academic quality" passing={gradePassing} />
             <StatCard label="AI Score" value={`${stats.aiScore}%`} color={aiColor} sublabel="AI detection est." passing={aiPassing} />
             <StatCard label="Plagiarism" value={`${stats.plagiarismScore}%`} color={plagColor} sublabel="Originality est." passing={plagPassing} />
-            <StatCard label="Body Words" value={stats.bodyWordCount.toLocaleString()} color="border-border bg-muted/30 text-foreground" sublabel={`${targetWords.toLocaleString()}–${maxWords.toLocaleString()} words`} passing={wordsPassing} />
+            <StatCard label="Body Words" value={stats.bodyWordCount.toLocaleString()} color="border-border bg-muted/30 text-foreground" sublabel={`${minWords.toLocaleString()}–${maxWords.toLocaleString()} words`} passing={wordsPassing} />
             <StatCard label="Citations" value={String(result.citations.length)} color="border-border bg-muted/30 text-foreground" sublabel="Verified sources" passing={citePassing} />
           </div>
           <div className="ml-auto flex items-center gap-2 flex-wrap">

@@ -87,9 +87,9 @@ ${text
   URL.revokeObjectURL(url);
 }
 
-function ScoreBadge({ score, label, inverse = false }: { score: number; label: string; inverse?: boolean }) {
-  const good = inverse ? score >= 70 : score <= 5;
-  const warn = inverse ? score >= 50 : score <= 15;
+function ScoreBadge({ score, label, inverse = false, plagThreshold }: { score: number; label: string; inverse?: boolean; plagThreshold?: number }) {
+  const good = inverse ? score >= 70 : plagThreshold ? score <= plagThreshold : score === 0;
+  const warn = inverse ? score >= 50 : plagThreshold ? score <= plagThreshold + 5 : score <= 5;
   const color = good
     ? "text-green-600 dark:text-green-400 border-green-500/30 bg-green-500/5"
     : warn
@@ -511,7 +511,7 @@ export default function Revision() {
   // ── PHASE: DECISION ───────────────────────────────────────────────────────
 
   if (phase === "decision" && analysis) {
-    const tooMuchAI = analysis.aiScore > 5;
+    const tooMuchAI = analysis.aiScore > 0;
     const highPlagiarism = analysis.plagiarismScore > 8;
     const needsWarning = tooMuchAI || highPlagiarism;
 
@@ -541,7 +541,7 @@ export default function Revision() {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Scan Results for your {analysis.wordCount.toLocaleString()}-word paper</p>
               <div className="grid grid-cols-2 gap-3">
                 <ScoreBadge score={analysis.aiScore} label="AI Detection" />
-                <ScoreBadge score={analysis.plagiarismScore} label="Plagiarism Risk" />
+                <ScoreBadge score={analysis.plagiarismScore} label="Plagiarism Risk" plagThreshold={8} />
               </div>
             </div>
 
@@ -561,10 +561,10 @@ export default function Revision() {
               <div className="px-4 py-4 rounded-xl bg-red-500/10 border border-red-500/30 space-y-2">
                 <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
                   <ShieldAlert size={16} className="shrink-0" />
-                  <span className="font-semibold text-sm">{analysis.aiScore}% AI content — above the 5% safe threshold</span>
+                  <span className="font-semibold text-sm">{analysis.aiScore}% AI content detected — must be 0%</span>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Most AI detectors flag content above 5%. <strong className="text-foreground">Writing a new paper from scratch</strong> is the safest option — LightSpeed AI targets ≤5% AI detection.
+                  Any AI detection above 0% risks flagging. <strong className="text-foreground">Writing a new paper from scratch</strong> is the safest option — LightSpeed AI guarantees 0% AI content.
                 </p>
               </div>
             )}
@@ -613,7 +613,7 @@ export default function Revision() {
                   >
                     <FileEdit size={16} className="text-muted-foreground" />
                     Revise anyway — reduce AI score
-                    <span className="text-[10px] text-muted-foreground ml-1">(targeting ≤5%)</span>
+                    <span className="text-[10px] text-muted-foreground ml-1">(targeting 0%)</span>
                   </button>
                 </>
               ) : (
@@ -891,10 +891,10 @@ export default function Revision() {
                   <div className="text-xs mt-1 text-muted-foreground">Estimated Grade</div>
                   <div className="text-[10px] mt-1 font-semibold text-green-600 dark:text-green-400">{result.gradeEstimate}</div>
                 </div>
-                <div className={cn("rounded-xl border p-4 text-center", result.stats.aiScore <= 5 ? "border-green-500/30 bg-green-500/5" : "border-yellow-500/30 bg-yellow-500/5")}>
-                  <div className={cn("text-3xl font-bold", result.stats.aiScore <= 5 ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400")}>{result.stats.aiScore}%</div>
+                <div className={cn("rounded-xl border p-4 text-center", result.stats.aiScore === 0 ? "border-green-500/30 bg-green-500/5" : "border-yellow-500/30 bg-yellow-500/5")}>
+                  <div className={cn("text-3xl font-bold", result.stats.aiScore === 0 ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400")}>{result.stats.aiScore}%</div>
                   <div className="text-xs mt-1 text-muted-foreground">AI Detection</div>
-                  <div className={cn("text-[10px] mt-1 font-semibold", result.stats.aiScore <= 5 ? "text-green-600 dark:text-green-400" : "text-yellow-600")}>{result.stats.aiScore <= 5 ? "Excellent" : result.stats.aiScore <= 15 ? "Borderline" : "Review"}</div>
+                  <div className={cn("text-[10px] mt-1 font-semibold", result.stats.aiScore === 0 ? "text-green-600 dark:text-green-400" : "text-yellow-600")}>{result.stats.aiScore === 0 ? "Undetectable" : "Review"}</div>
                 </div>
                 <div className={cn("rounded-xl border p-4 text-center", result.stats.plagiarismScore <= 8 ? "border-green-500/30 bg-green-500/5" : "border-yellow-500/30 bg-yellow-500/5")}>
                   <div className={cn("text-3xl font-bold", result.stats.plagiarismScore <= 8 ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400")}>{result.stats.plagiarismScore}%</div>
