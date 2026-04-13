@@ -14,6 +14,7 @@ import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { renderInlineMd } from "@/lib/renderInline";
 import { apiFetch } from "@/lib/apiFetch";
 import { useWakeLock } from "@/hooks/useWakeLock";
+import { ScoreComparison } from "@/components/analysis";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -477,6 +478,33 @@ export default function Humanizer() {
               </div>
             </div>
 
+            {/* Intensity selector */}
+            <div className="rounded-xl border border-border bg-card/50 p-4">
+              <p className="text-xs font-semibold text-foreground mb-3">Humanization intensity</p>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { value: "light", label: "Light", desc: "Minor edits — preserves your voice", color: "text-green-500" },
+                  { value: "medium", label: "Medium", desc: "Balanced rewrite — new phrasing", color: "text-yellow-500" },
+                  { value: "aggressive", label: "Aggressive", desc: "Full rewrite — maximum stealth", color: "text-red-500" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setInstructions(opt.value === "light" ? "Minimal changes, keep original voice" : opt.value === "aggressive" ? "Full rewrite, maximum humanization" : "")}
+                    className={cn(
+                      "py-2.5 px-3 rounded-lg text-xs border transition-all text-left",
+                      instructions === (opt.value === "light" ? "Minimal changes, keep original voice" : opt.value === "aggressive" ? "Full rewrite, maximum humanization" : "")
+                        ? "bg-primary/10 text-primary border-primary/30 shadow-sm"
+                        : "border-border text-muted-foreground hover:border-primary/40"
+                    )}
+                  >
+                    <span className={cn("font-semibold block", opt.color)}>{opt.label}</span>
+                    <span className="text-[10px] opacity-60 leading-tight block mt-0.5">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Error from humanize attempt */}
             {apiError && (
               <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-500">
@@ -642,15 +670,15 @@ export default function Humanizer() {
 
             {resultTab === "changes" && (
               <div className="space-y-3">
+                <ScoreComparison
+                  beforeScore={detectionResult?.aiScore ?? 0}
+                  afterScore={estimatedAiScore}
+                  label="AI Detection — Before vs After"
+                />
                 <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-4 mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle size={14} className="text-green-500" />
                     <span className="text-xs font-semibold text-green-600 dark:text-green-400">Humanization complete — {changesSummary.length} improvements applied</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 mt-3">
-                    <RiskBadge score={detectionResult?.aiScore ?? 0} label="Original AI score" />
-                    <div className="flex items-center justify-center text-2xl text-muted-foreground/30 font-bold">→</div>
-                    <RiskBadge score={estimatedAiScore} label="After humanizing" />
                   </div>
                 </div>
                 <ul className="space-y-2">

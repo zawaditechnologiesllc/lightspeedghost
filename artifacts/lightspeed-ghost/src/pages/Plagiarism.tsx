@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { ExportButtons } from "@/components/ExportButtons";
 import { makeLsgFilename } from "@/lib/exportUtils";
 import { extractTopic, extractSubject } from "@/lib/autofill";
+import { SentenceHighlighter, ReadabilityPanel } from "@/components/analysis";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import { useWakeLock } from "@/hooks/useWakeLock";
@@ -959,6 +960,16 @@ export default function PlagiarismChecker() {
                         ))}
                       </div>
                     </div>
+                  )}
+
+                  {/* Sentence-Level AI Highlighting */}
+                  {text && result.aiScore > 0 && (
+                    <SentenceHighlighter text={text} aiScore={result.aiScore} />
+                  )}
+
+                  {/* Readability Analysis */}
+                  {text && (
+                    <ReadabilityPanel text={text} />
                   )}
 
                   {/* Matched words */}

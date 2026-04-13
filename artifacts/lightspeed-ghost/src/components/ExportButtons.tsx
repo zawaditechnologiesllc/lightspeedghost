@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Copy, CheckCheck, FileDown, Printer, FileText, FileCode2 } from "lucide-react";
+import { Copy, CheckCheck, FileDown, Printer, FileText, FileCode2, BookOpen } from "lucide-react";
 import {
   exportAsWord, exportAsDocx, exportAsPDF,
   exportAsTxt, exportAsMd, copyText,
 } from "@/lib/exportUtils";
 import { cn } from "@/lib/utils";
 
-export type ExportFormat = "copy" | "docx" | "doc" | "pdf" | "txt" | "md";
+export type ExportFormat = "copy" | "docx" | "doc" | "pdf" | "txt" | "md" | "bib";
 
 interface ExportButtonsProps {
   getHtml: () => string;
@@ -24,6 +24,7 @@ const FORMAT_LABELS: Record<ExportFormat, string> = {
   pdf:   "PDF",
   txt:   ".txt",
   md:    ".md",
+  bib:   "BibTeX",
 };
 
 const FORMAT_ICONS: Record<ExportFormat, React.ReactNode> = {
@@ -33,6 +34,7 @@ const FORMAT_ICONS: Record<ExportFormat, React.ReactNode> = {
   pdf:   <Printer size={12} />,
   txt:   <FileText size={12} />,
   md:    <FileCode2 size={12} />,
+  bib:   <BookOpen size={12} />,
 };
 
 const DEFAULT_FORMATS: ExportFormat[] = ["docx", "pdf", "copy"];
@@ -65,6 +67,16 @@ export function ExportButtons({
       case "pdf":   exportAsPDF(getHtml()); break;
       case "txt":   exportAsTxt(getText(), filename); break;
       case "md":    exportAsMd(getText(), filename); break;
+      case "bib": {
+        const blob = new Blob([getText()], { type: "application/x-bibtex" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${filename}.bib`;
+        a.click();
+        URL.revokeObjectURL(url);
+        break;
+      }
     }
     markDone(fmt);
   };

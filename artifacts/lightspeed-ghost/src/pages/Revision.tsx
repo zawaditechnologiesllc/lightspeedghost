@@ -15,6 +15,7 @@ import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { renderInlineMd } from "@/lib/renderInline";
 import { apiFetch } from "@/lib/apiFetch";
 import { useWakeLock } from "@/hooks/useWakeLock";
+import { GrammarPanel, TonePanel, StyleConsistencyPanel, ReadabilityPanel } from "@/components/analysis";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -907,6 +908,15 @@ export default function Revision() {
                 <BarChart3 size={14} className="text-primary shrink-0 mt-0.5" />
                 <span>These are AI-estimated scores. For final submission, run through Turnitin or Copyleaks for authoritative results. Our revision targets guarantee both scores will be well within institutional limits.</span>
               </div>
+
+              {result.revisedText && (
+                <>
+                  <GrammarPanel text={result.revisedText} />
+                  <TonePanel text={result.revisedText} />
+                  <StyleConsistencyPanel text={result.revisedText} />
+                  <ReadabilityPanel text={result.revisedText} />
+                </>
+              )}
 
               <Link href="/write">
                 <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-5 py-4 hover:bg-primary/10 transition-colors cursor-pointer group">

@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
+import { ReadabilityPanel, GrammarPanel, TonePanel, CitationFromUrl } from "@/components/analysis";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -818,6 +819,15 @@ export default function WritePaper() {
                     ))}
                   </ul>
                 </div>
+              )}
+
+              {result.content && (
+                <>
+                  <GrammarPanel text={result.content} />
+                  <TonePanel text={result.content} />
+                  <ReadabilityPanel text={result.content} />
+                  <CitationFromUrl />
+                </>
               )}
 
               <div className="bg-muted/20 border border-border rounded-xl p-4 text-xs text-muted-foreground">
