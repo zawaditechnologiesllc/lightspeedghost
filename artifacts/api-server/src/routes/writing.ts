@@ -209,6 +209,35 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
       { name: "Implementation & Benefits — steps, timeline, ROI or policy outcome", pct: 0.15 },
       { name: "Conclusion — call to action, next steps, contact/further information", pct: 0.07 },
     ],
+    "research proposal": [
+      { name: "Title Page & Abstract — concise summary of the proposed research (problem, method, expected contribution)", pct: 0.06 },
+      { name: "Introduction & Problem Statement — define the research gap, why it matters, research questions or hypotheses", pct: 0.14 },
+      { name: "Literature Review — theoretical background, what is known, what gap this proposal fills", pct: 0.22 },
+      { name: "Research Design & Methodology — approach, data collection methods, sample/population, analytical framework", pct: 0.22 },
+      { name: "Expected Results & Significance — anticipated findings, contribution to the field, practical implications", pct: 0.14 },
+      { name: "Timeline & Work Plan — milestones, phases, deliverables with estimated dates", pct: 0.08 },
+      { name: "Budget & Resources (if applicable) — funding requirements, equipment, personnel, justification", pct: 0.06 },
+      { name: "Conclusion & Feasibility — summary of why this research is needed, viable, and impactful", pct: 0.08 },
+    ],
+    proposal: [
+      { name: "Executive Summary — problem, proposed solution, and expected outcomes in brief", pct: 0.08 },
+      { name: "Introduction & Background — context, stakeholders, why this proposal is needed now", pct: 0.14 },
+      { name: "Problem Analysis — detailed breakdown of the issue, evidence, scope, impact", pct: 0.18 },
+      { name: "Proposed Solution / Approach — what will be done, methodology, activities, deliverables", pct: 0.24 },
+      { name: "Implementation Plan — timeline, milestones, responsible parties, resources needed", pct: 0.14 },
+      { name: "Budget & Justification — cost breakdown, funding sources, value for money", pct: 0.10 },
+      { name: "Evaluation & Expected Outcomes — success metrics, monitoring plan, anticipated impact", pct: 0.12 },
+    ],
+    "grant proposal": [
+      { name: "Project Summary / Abstract — concise overview of objectives, methods, and significance", pct: 0.06 },
+      { name: "Statement of Need — the problem, who is affected, evidence of urgency", pct: 0.14 },
+      { name: "Literature Review & Background — prior work, theoretical grounding, research gap", pct: 0.18 },
+      { name: "Goals, Objectives & Hypotheses — specific, measurable aims", pct: 0.10 },
+      { name: "Methodology & Research Design — detailed approach, data collection, analysis plan", pct: 0.22 },
+      { name: "Timeline & Milestones — phased work plan with deliverables", pct: 0.08 },
+      { name: "Budget & Budget Narrative — itemised costs, justification for each line item", pct: 0.10 },
+      { name: "Expected Outcomes & Broader Impact — anticipated results, dissemination plan, significance", pct: 0.12 },
+    ],
   };
 
   let sections: SectionBudget[] | undefined = plans[type];
@@ -220,6 +249,9 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
     else if (type.includes("report"))                            sections = plans.report;
     else if (type.includes("review"))                            sections = plans["literature review"];
     else if (type.includes("thesis") || type.includes("dissertation")) sections = plans.thesis;
+    else if (type.includes("grant") && type.includes("proposal")) sections = plans["grant proposal"];
+    else if (type.includes("research") && type.includes("proposal")) sections = plans["research proposal"];
+    else if (type.includes("proposal"))                          sections = plans.proposal;
     else if (type.includes("research"))                          sections = plans.research;
     else if (type.includes("narrative") || type.includes("story"))    sections = plans.narrative;
     else if (type.includes("reflect"))                           sections = plans.reflective;

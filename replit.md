@@ -24,7 +24,7 @@ Light Speed Ghost is a full-stack AI academic writing platform designed to assis
 The platform is built as a monorepo using `pnpm workspaces`, Node.js 24, and TypeScript 5.9. The frontend is a React application powered by Vite, Tailwind CSS, Radix UI, and shadcn/ui components. The backend is an Express 5 API server. PostgreSQL with Drizzle ORM is used for data persistence.
 
 **Key Features:**
-- **Write Paper:** AI paper generation with citations in various academic styles (APA/MLA/Chicago/Harvard/IEEE).
+- **Write Paper:** AI paper generation with citations in various academic styles (APA/MLA/Chicago/Harvard/IEEE). Supports 19 paper types including research proposals, grant proposals, position papers, policy briefs, and white papers. Data-oriented types (research, lab report, thesis, etc.) accept CSV/Excel uploads with automatic descriptive statistics, correlation analysis, and visualization guidance.
 - **Outline Generator:** Structured paper outline generation with a phase-based user experience.
 - **Revision Panel:** Allows revision of papers with tracked changes and estimated grades.
 - **LightSpeed Humanizer:** Detects AI-generated text and rewrites it to bypass AI detection, featuring tone selection and before/after comparisons.

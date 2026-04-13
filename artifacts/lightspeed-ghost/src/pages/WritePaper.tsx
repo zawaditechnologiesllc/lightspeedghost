@@ -62,6 +62,7 @@ const ACADEMIC_LEVELS = [
 const DATA_PAPER_TYPES = new Set([
   "research", "research paper", "lab report", "report",
   "dissertation", "thesis", "case study", "term paper",
+  "research proposal", "grant proposal",
 ]);
 
 const PAPER_TYPES = [
@@ -72,12 +73,18 @@ const PAPER_TYPES = [
   { value: "dissertation",           label: "Dissertation" },
   { value: "literature_review",      label: "Lit. Review" },
   { value: "annotated bibliography", label: "Annotated Bibliography" },
+  { value: "research proposal",      label: "Research Proposal" },
+  { value: "grant proposal",         label: "Grant Proposal" },
+  { value: "proposal",               label: "General Proposal" },
   { value: "report",                 label: "Report" },
   { value: "lab report",             label: "Lab Report" },
   { value: "case study",             label: "Case Study" },
   { value: "term paper",             label: "Term Paper" },
   { value: "critical analysis",      label: "Critical Analysis" },
   { value: "reflective",             label: "Reflective Essay" },
+  { value: "position paper",         label: "Position Paper" },
+  { value: "policy brief",           label: "Policy Brief" },
+  { value: "white paper",            label: "White Paper" },
 ];
 
 const CITATION_STYLES = ["apa", "mla", "chicago", "harvard", "ieee"] as const;

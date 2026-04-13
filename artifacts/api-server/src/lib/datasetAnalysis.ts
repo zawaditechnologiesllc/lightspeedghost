@@ -3,6 +3,45 @@
  * Used by Write Paper, Study Assistant, and STEM Solver backends.
  */
 
+function percentile(sorted: number[], p: number): number {
+  const idx = (p / 100) * (sorted.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+function skewness(values: number[], mean: number, stdDev: number): number {
+  if (stdDev === 0) return 0;
+  const n = values.length;
+  const m3 = values.reduce((a, v) => a + ((v - mean) / stdDev) ** 3, 0) / n;
+  return m3;
+}
+
+function pearsonCorrelation(x: number[], y: number[]): number {
+  const n = Math.min(x.length, y.length);
+  if (n < 3) return 0;
+  const mx = x.slice(0, n).reduce((a, b) => a + b, 0) / n;
+  const my = y.slice(0, n).reduce((a, b) => a + b, 0) / n;
+  let num = 0, dx = 0, dy = 0;
+  for (let i = 0; i < n; i++) {
+    const xi = x[i] - mx, yi = y[i] - my;
+    num += xi * yi;
+    dx += xi * xi;
+    dy += yi * yi;
+  }
+  const denom = Math.sqrt(dx * dy);
+  return denom === 0 ? 0 : num / denom;
+}
+
+interface ColAnalysis {
+  header: string;
+  isNumeric: boolean;
+  numericValues?: number[];
+  rawValues: string[];
+  stats?: string;
+}
+
 export function parseAndAnalyzeDataset(csvText: string): string {
   const lines = csvText.trim().split("\n").filter(l => l.trim().length > 0);
   if (lines.length < 2) return "";
@@ -15,10 +54,14 @@ export function parseAndAnalyzeDataset(csvText: string): string {
   const rows = lines.slice(1).map(parseRow);
   const totalRows = rows.length;
 
+  const columns: ColAnalysis[] = [];
   const colStats: string[] = [];
+  const numericCols: { header: string; values: number[] }[] = [];
+
   headers.forEach((header, colIdx) => {
     const rawValues = rows.map(r => r[colIdx] ?? "").filter(v => v.length > 0);
     const numericValues = rawValues.map(v => parseFloat(v.replace(/,/g, ""))).filter(v => !isNaN(v));
+
     if (numericValues.length >= rawValues.length * 0.7 && numericValues.length >= 3) {
       const n = numericValues.length;
       const mean = numericValues.reduce((a, b) => a + b, 0) / n;
@@ -26,16 +69,61 @@ export function parseAndAnalyzeDataset(csvText: string): string {
       const median = n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
       const variance = numericValues.reduce((a, b) => a + (b - mean) ** 2, 0) / n;
       const stdDev = Math.sqrt(variance);
-      colStats.push(
-        `**${header}** (n=${n}): mean=${mean.toFixed(3)}, median=${median.toFixed(3)}, SD=${stdDev.toFixed(3)}, min=${sorted[0]}, max=${sorted[n - 1]}`
-      );
+      const q1 = percentile(sorted, 25);
+      const q3 = percentile(sorted, 75);
+      const iqr = q3 - q1;
+      const skew = skewness(numericValues, mean, stdDev);
+
+      const statLine = `**${header}** (numeric, n=${n}): mean=${mean.toFixed(3)}, median=${median.toFixed(3)}, SD=${stdDev.toFixed(3)}, min=${sorted[0]}, Q1=${q1.toFixed(2)}, Q3=${q3.toFixed(2)}, IQR=${iqr.toFixed(2)}, max=${sorted[n - 1]}, skewness=${skew.toFixed(3)}`;
+      colStats.push(statLine);
+      numericCols.push({ header, values: numericValues });
+      columns.push({ header, isNumeric: true, numericValues, rawValues, stats: statLine });
     } else {
       const counts: Record<string, number> = {};
       rawValues.forEach(v => { counts[v] = (counts[v] ?? 0) + 1; });
-      const topCats = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-      colStats.push(`**${header}** (categorical, n=${rawValues.length}): ${topCats.map(([v, c]) => `${v}=${c}`).join(", ")}`);
+      const topCats = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      const uniqueCount = Object.keys(counts).length;
+      const statLine = `**${header}** (categorical, n=${rawValues.length}, ${uniqueCount} unique): ${topCats.map(([v, c]) => `${v}=${c}`).join(", ")}${uniqueCount > 8 ? ` … and ${uniqueCount - 8} more` : ""}`;
+      colStats.push(statLine);
+      columns.push({ header, isNumeric: false, rawValues, stats: statLine });
     }
   });
+
+  const correlations: string[] = [];
+  if (numericCols.length >= 2) {
+    const pairs: { a: string; b: string; r: number }[] = [];
+    for (let i = 0; i < numericCols.length; i++) {
+      for (let j = i + 1; j < numericCols.length; j++) {
+        const r = pearsonCorrelation(numericCols[i].values, numericCols[j].values);
+        pairs.push({ a: numericCols[i].header, b: numericCols[j].header, r });
+      }
+    }
+    pairs.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+    const notable = pairs.filter(p => Math.abs(p.r) >= 0.3).slice(0, 6);
+    if (notable.length > 0) {
+      correlations.push("Correlations (Pearson r, notable |r| ≥ 0.3):");
+      for (const p of notable) {
+        const strength = Math.abs(p.r) >= 0.7 ? "strong" : Math.abs(p.r) >= 0.5 ? "moderate" : "weak";
+        const dir = p.r > 0 ? "positive" : "negative";
+        correlations.push(`  ${p.a} × ${p.b}: r=${p.r.toFixed(3)} (${strength} ${dir})`);
+      }
+    }
+  }
+
+  const vizSuggestions: string[] = [];
+  if (numericCols.length >= 2) {
+    vizSuggestions.push(`Scatter plot: ${numericCols[0].header} vs ${numericCols[1].header}`);
+  }
+  if (numericCols.length >= 1) {
+    vizSuggestions.push(`Bar chart / histogram: distribution of ${numericCols[0].header}`);
+  }
+  const catCol = columns.find(c => !c.isNumeric);
+  if (catCol && numericCols.length >= 1) {
+    vizSuggestions.push(`Grouped bar chart: ${numericCols[0].header} by ${catCol.header}`);
+  }
+  if (numericCols.length >= 3) {
+    vizSuggestions.push(`Summary table: descriptive statistics for all numeric variables`);
+  }
 
   const previewRows = rows.slice(0, 5);
   const tableHeader = `| ${headers.join(" | ")} |`;
@@ -52,11 +140,18 @@ ${tableBody}
 
 Descriptive Statistics:
 ${colStats.join("\n")}
+${correlations.length > 0 ? "\n" + correlations.join("\n") : ""}
+
+Suggested Visualisations (describe these in the paper using the actual data values):
+${vizSuggestions.map((v, i) => `${i + 1}. ${v}`).join("\n")}
 
 MANDATORY DATA USAGE RULES:
 1. Present and discuss the ACTUAL statistics above — never invent alternative numbers
 2. Include at least one properly formatted markdown table showing key statistics
-3. Reference specific values (means, SD, ranges) with precision
+3. Reference specific values (means, SD, ranges, correlations) with precision
 4. Interpret what the specific results mean in context of the question or subject
-5. Report trends, patterns, or notable distributions observed in the data`;
+5. Report trends, patterns, or notable distributions observed in the data
+6. Describe at least one visualisation (chart/graph) in text — explain what it shows using the real data values
+7. If correlations are provided, discuss their strength, direction, and practical significance
+8. Use quartiles and IQR to discuss data spread and identify potential outliers`;
 }
