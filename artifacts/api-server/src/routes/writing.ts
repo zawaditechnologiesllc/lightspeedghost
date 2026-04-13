@@ -273,10 +273,11 @@ function getSectionBudgets(paperType: string, targetWords: number): { name: stri
 }
 
 function computeBodyWordCount(content: string): number {
-  const withoutRefs = content.replace(/^#+\s*(references?|bibliography|works cited|further reading)[\s\S]*/im, "");
+  const withoutRefs = content.replace(/^#{1,3}\s*(references?|bibliography|works?\s*cited|further\s*reading|reference\s*list)\b[\s\S]*/im, "");
   const withoutCitations = withoutRefs
-    .replace(/\[[\d,\s–-]+\]/g, "")
-    .replace(/\([A-Z][A-Za-z\s&,]+\d{4}[a-z]?(?:,\s*p\.?\s*\d+)?\)/g, "");
+    .replace(/\[[\d,;\s–-]+\]/g, "")
+    .replace(/\([A-Z][A-Za-z\s&.,]+(?:et\s+al\.?)?,?\s*\d{4}[a-z]?(?:,\s*pp?\.?\s*[\d–-]+)?\)/g, "")
+    .replace(/\([A-Z][A-Za-z\s&.,]+\d{4}[a-z]?\)/g, "");
   const clean = withoutCitations
     .replace(/^#+\s*.*/gm, "")
     .replace(/\*\*|__|\*|_/g, "")
@@ -289,8 +290,23 @@ function computeBodyWordCount(content: string): number {
     .replace(/^\|[-:| ]+\|$/gm, "")
     .replace(/^\|.*\|$/gm, "")
     .replace(/^\s*[-*+]\s/gm, "")
-    .replace(/^\s*\*\*?(figure|fig\.?|table|appendix)\s+[\d.]+[^*]*\*?\*?/gim, "");
+    .replace(/^\s*\*\*?(figure|fig\.?|table|appendix)\s+[\d.]+[^*]*\*?\*?/gim, "")
+    .replace(/^\s*\*\*?abstract\*?\*?$/gim, "");
   return clean.split(/\s+/).filter((w) => w.trim().length > 0).length;
+}
+
+function countInTextCitations(content: string, citationCount: number): { cited: number[]; uncited: number[] } {
+  const cited = new Set<number>();
+  const bracketMatches = content.matchAll(/\[(\d[\d,;\s–-]*)\]/g);
+  for (const m of bracketMatches) {
+    const nums = m[1].replace(/[–-]/g, ",").split(/[,;\s]+/).map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+    for (const n of nums) cited.add(n);
+  }
+  const uncited: number[] = [];
+  for (let i = 1; i <= citationCount; i++) {
+    if (!cited.has(i)) uncited.push(i);
+  }
+  return { cited: [...cited].sort((a, b) => a - b), uncited };
 }
 
 function hasTableOfContents(instructions: string): boolean {
@@ -1272,7 +1288,14 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
       stats.plagiarismScore = plagiarismGateScore;
     }
 
-    send("step", { id: "stats", message: `Quality assessment complete — estimated grade ${stats.grade}%, AI score ${stats.aiScore}%, plagiarism ${stats.plagiarismScore}% (verified)`, status: "done" });
+    const citationCheck = countInTextCitations(finalContent, citations.length);
+    const citedCount = citationCheck.cited.length;
+    const uncitedCount = citationCheck.uncited.length;
+    const citationMsg = uncitedCount > 0
+      ? ` | ${citedCount}/${citations.length} citations used in-text (${uncitedCount} unused: [${citationCheck.uncited.join(", ")}])`
+      : ` | All ${citations.length} citations used in-text`;
+
+    send("step", { id: "stats", message: `Quality assessment complete — estimated grade ${stats.grade}%, AI score ${stats.aiScore}%, plagiarism ${stats.plagiarismScore}% (verified) | Body: ${bodyWordCount.toLocaleString()} words (target: ${targetWords.toLocaleString()})${citationMsg}`, status: "done" });
 
     // ── Fire quality signals into the learning engine (fire-and-forget) ───────
     // These accumulate over time so the admin dashboard can track platform-wide
@@ -1302,6 +1325,11 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
       })),
       bibliography,
       stats,
+      citationIntegrity: {
+        totalCitations: citations.length,
+        citedInText: citedCount,
+        uncitedIndices: citationCheck.uncited,
+      },
     });
 
     // ── Save to DB in background — failure does NOT affect what the user sees ─
