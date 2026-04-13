@@ -614,7 +614,7 @@ export default function WritePaper() {
   if (phase === "results" && result) {
     const { stats } = result;
     const targetWords = targetWordCountRef.current;
-    const maxWords     = Math.ceil(targetWords * 1.10);
+    const maxWords     = Math.ceil(targetWords * 1.05);
     const gradePassing = stats.grade >= 92;
     const aiPassing    = stats.aiScore <= 5;
     const plagPassing  = stats.plagiarismScore <= 8;

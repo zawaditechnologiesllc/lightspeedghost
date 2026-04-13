@@ -318,7 +318,7 @@ router.post("/plagiarism/humanize", requireAuth, async (req, res) => {
       ? "professional"
       : "academic";
 
-    const TARGET_SCORE = 10;
+    const TARGET_SCORE = 5;
     const MAX_PASSES = 3;
 
     const { score: initialScore, indicators: initialIndicators } = await detectAIScore(

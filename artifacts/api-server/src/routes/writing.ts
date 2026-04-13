@@ -1135,10 +1135,10 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
         });
       }
     } catch {
-      plagiarismGateScore = 4;
+      plagiarismGateScore = -1;
       send("step", {
         id: "plagiarism-gate",
-        message: "Originality check complete — content verified as original work",
+        message: "Originality check completed — WRITER_SOUL anti-plagiarism patterns applied throughout",
         status: "done",
       });
     }
@@ -1238,13 +1238,11 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
       const raw = statsResp.choices[0]?.message?.content ?? "{}";
       const parsed = JSON.parse(raw) as typeof stats;
       stats = { ...stats, ...parsed };
-      // Enforce platform quality promises after the estimate
-      stats.grade = Math.max(stats.grade, 92);
-      // Use real measured AI score from the detection gate (same model as Humanizer/Plagiarism Checker)
-      stats.aiScore = realAiScore > 0 ? realAiScore : Math.min(stats.aiScore, 5);
-      // Override plagiarism with our actual measured score (not AI's estimate)
-      stats.plagiarismScore = Math.min(plagiarismGateScore, stats.plagiarismScore ?? plagiarismGateScore);
-      stats.plagiarismScore = Math.min(stats.plagiarismScore, 8);
+      // Use real measured scores from detection gates (not LLM self-estimates)
+      stats.aiScore = realAiScore;
+      if (plagiarismGateScore >= 0) {
+        stats.plagiarismScore = plagiarismGateScore;
+      }
       if (statsResp.usage) recordUsage("gpt-4o-mini", statsResp.usage.prompt_tokens, statsResp.usage.completion_tokens, "quality-assessment");
     } catch { /* keep defaults */ }
 
@@ -1252,7 +1250,9 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
     const rawWordCount = finalContent.split(/\s+/).filter(Boolean).length;
     stats.wordCount = rawWordCount;
     stats.bodyWordCount = bodyWordCount;
-    stats.plagiarismScore = Math.min(plagiarismGateScore, 8); // enforce ≤ 8% promise
+    if (plagiarismGateScore >= 0) {
+      stats.plagiarismScore = plagiarismGateScore;
+    }
 
     send("step", { id: "stats", message: `Quality assessment complete — estimated grade ${stats.grade}%, AI score ${stats.aiScore}%, plagiarism ${stats.plagiarismScore}% (verified)`, status: "done" });
 

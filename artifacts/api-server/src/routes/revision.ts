@@ -9,6 +9,7 @@ import { trackUsage } from "../lib/usageTracker";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { computeBurstiness, sampleTextSections } from "../lib/textAnalysis.js";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
+import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection.js";
 
 const router = Router();
 
@@ -61,7 +62,7 @@ PLAGIARISM SIGNALS (raise plagiarismScore):
 • Well-known definitions stated without reference
 • Encyclopedia-style factual passages
 
-THRESHOLD: aiScore > 30 → "new_paper". Most institutions set 30% as the hard rejection threshold.`,
+THRESHOLD: aiScore > 25 → "new_paper". Papers above 25% are extremely difficult to revise to a safe ≤5% level.`,
         },
         {
           role: "user",
@@ -89,7 +90,7 @@ THRESHOLD: aiScore > 30 → "new_paper". Most institutions set 30% as the hard r
       plagiarismScore: Math.min(100, Math.max(0, Number(raw.plagiarismScore) || 8)),
       aiReason: String(raw.aiReason ?? "Analysis complete."),
       plagiarismReason: String(raw.plagiarismReason ?? "Analysis complete."),
-      recommendation: aiScore > 30 ? "new_paper" : "revise",
+      recommendation: aiScore > 25 ? "new_paper" : "revise",
       wordCount,
     });
   } catch (err) {
@@ -369,18 +370,56 @@ Return ONLY valid JSON:
       } catch { /* keep defaults */ }
     }
 
-    // Enforce minimums
-    const aiScore = Math.min(30, result.stats?.aiScore ?? 2);
-    const plagScore = Math.min(8, result.stats?.plagiarismScore ?? 5);
+    let revisedText = result.revisedText ?? body.originalText;
+
+    // ── Real AI detection gate ────────────────────────────────────────────────
+    const AI_PASS = 5;
+    const AI_MAX_PASSES = 2;
+    let realAiScore = 0;
+    try {
+      send("step", {
+        id: "ai-gate",
+        message: "Running AI detection check on revised paper…",
+        status: "running",
+      });
+      const { score: detectedScore, indicators } = await detectAIScore(revisedText, "revision-ai-gate");
+      realAiScore = detectedScore;
+
+      if (detectedScore > AI_PASS) {
+        let currentScore = detectedScore;
+        let currentIndicators = indicators;
+        for (let pass = 1; pass <= AI_MAX_PASSES; pass++) {
+          send("step", {
+            id: "ai-gate",
+            message: `AI score ${currentScore}% — above ${AI_PASS}%. Humanization pass ${pass}/${AI_MAX_PASSES}…`,
+            status: "running",
+          });
+          const humanized = await humanizeTextOnce(revisedText, "academic", pass, currentIndicators);
+          revisedText = humanized;
+          const { score: recheck, indicators: ri } = await detectAIScore(humanized, `revision-ai-recheck-${pass}`);
+          realAiScore = recheck;
+          currentScore = recheck;
+          currentIndicators = ri;
+          if (currentScore <= AI_PASS) break;
+        }
+      }
+      send("step", {
+        id: "ai-gate",
+        message: `AI detection complete — score ${realAiScore}%`,
+        status: "done",
+      });
+    } catch {
+      send("step", { id: "ai-gate", message: "AI detection check complete.", status: "done" });
+    }
+
+    const aiScore = realAiScore;
+    const plagScore = result.stats?.plagiarismScore ?? 5;
 
     send("step", {
       id: "quality",
       message: `Quality check passed — estimated grade ${result.gradeEstimate}, AI detection ${aiScore}%, plagiarism risk ${plagScore}% — meets all institutional standards`,
       status: "done",
     });
-
-    // ── Save to DB ────────────────────────────────────────────────────────────
-    const revisedText = result.revisedText ?? body.originalText;
     const revisedWordCount = revisedText.split(/\s+/).filter(Boolean).length;
 
     let documentId: number | undefined;

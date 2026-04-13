@@ -80,8 +80,8 @@ ${text
 }
 
 function RiskBadge({ score, label }: { score: number; label: string }) {
-  const good = score <= 15;
-  const warn = score <= 35;
+  const good = score <= 5;
+  const warn = score <= 15;
   const color = good
     ? "text-green-600 dark:text-green-400 border-green-500/30 bg-green-500/5"
     : warn
