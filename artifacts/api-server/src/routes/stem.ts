@@ -7,6 +7,7 @@ import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { reactSolve } from "../lib/reactLoop";
 import { chainOfVerification } from "../lib/cove";
 import { searchSemanticScholar } from "../lib/citationVerifier";
+import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { recordUsage } from "../lib/apiCost";
 import { anthropic } from "../lib/ai";
 import { ACADEMIC_SOUL } from "../lib/soul";
@@ -34,8 +35,24 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
     if (req.userId) trackUsage(req.userId, "stem").catch(() => {});
     const body = SolveStemBody.parse(req.body);
 
+    // 0. Pre-fetch academic RAG context + parse dataset (same as streaming route)
+    let academicContext: string | undefined;
+    try {
+      const ragPapers = await searchAllAcademicSources(
+        `${body.problem.slice(0, 120)} ${body.subject}`.trim(), 6, body.subject
+      );
+      if (ragPapers.length > 0) {
+        academicContext = buildRAGContext(ragPapers);
+      }
+    } catch { /* non-fatal — proceed without RAG */ }
+
+    const datasetBlock = body.datasetText?.trim() ? parseAndAnalyzeDataset(body.datasetText) : "";
+    const augmentedProblem = datasetBlock
+      ? `${body.problem}\n\n---\n\n${datasetBlock}`
+      : body.problem;
+
     // 1. ReAct Loop — Pi Engine pattern: Think → Act → Observe → Reflect
-    const reactResult = await reactSolve(body.problem, body.subject);
+    const reactResult = await reactSolve(augmentedProblem, body.subject, undefined, academicContext);
 
     // 2. Chain-of-Verification — Critic Agent checks for errors (Gauth-killer pattern)
     const coveResult = await chainOfVerification(body.problem, body.subject, reactResult);

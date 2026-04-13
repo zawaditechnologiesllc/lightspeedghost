@@ -56,26 +56,40 @@ All 9 pages fully optimized for mobile (390px+):
 - `gpt-4o-mini` — Cheap tasks: bibliography formatting, AI detection checks, data extraction
 
 ### Core Libs (`artifacts/api-server/src/lib/`)
-- `ai.ts` — Anthropic + OpenAI client initialization
-- `modelRouter.ts` — Multi-model routing (ClawRouter pattern)
-- `soul.ts` — ACADEMIC/STEM/TUTOR/WRITER/HUMANIZER personas (SOUL.md pattern)
-- `reactLoop.ts` — ReAct THOUGHT→ACTION→OBSERVATION loop for STEM solving
-- `cove.ts` — Chain-of-Verification critic agent (error elimination)
-- `contextManager.ts` — Sliding window context for long documents
-- `memory.ts` — Student persistent memory CRUD (Jarvis Effect)
-- `citationVerifier.ts` — Real citations from Semantic Scholar + arXiv APIs (cache-wrapped)
-- `academicSources.ts` — 10-database academic search aggregator (cache-wrapped)
+- `ai.ts` — Anthropic + OpenAI client initialization (supports Replit proxy or direct keys)
+- `soul.ts` — ACADEMIC/STEM/TUTOR/WRITER/HUMANIZER personas (OpenClaw SOUL.md pattern)
+- `reactLoop.ts` — ReAct THOUGHT→ACTION→OBSERVATION loop for STEM solving (OpenClaw Pi Engine)
+- `cove.ts` — Chain-of-Verification critic agent, error elimination (OpenClaw CoVe pattern)
+- `memory.ts` — Student persistent memory CRUD, Jarvis Effect (OpenClaw MEMORY.md + memU)
+- `memvidMemory.ts` — Semantic long-term memory via @memvid/sdk (graceful fallback if unavailable)
+- `learningEngine.ts` — Adaptive source weighting + quality signal recording (OpenClaw self-improving retrieval)
+- `citationVerifier.ts` — Real citations from 6 APIs: Semantic Scholar, OpenAlex, arXiv, Europe PMC, PubMed, CrossRef
+- `academicSources.ts` — 13-database academic search aggregator (1B+ papers) with RAG context builder
+- `openSourceSearch.ts` — Open-source plagiarism engine: 5 free APIs (Wikipedia, OpenLibrary, Google Books, Internet Archive, CrossRef)
+- `textAnalysis.ts` — Cosine similarity plagiarism + readability + burstiness analysis (ported from Plagiarism-Checker-and-AI-Text-Detection)
+- `winnow.ts` — Winnowing algorithm for document fingerprinting (ported from copydetect/Stanford MOSS)
+- `aiDetection.ts` — Shared AI detection pipeline: GPT-4o-mini + burstiness blend, retry-with-fallback
+- `datasetAnalysis.ts` — CSV/TSV parsing with descriptive statistics (shared by WritePaper, STEM, Study)
+- `gradeStandards.ts` — Built-in A-grade criteria by academic level (high-school/undergrad/masters/PhD)
+- `geoGateway.ts` — Geographic payment routing (Stripe/Paystack/IntaSend/mobile money by country)
+- `pricingConfig.ts` — Plan pricing and feature definitions
+- `usageTracker.ts` — Per-user usage limits by plan (starter/pro/campus), daily and monthly periods
+- `apiCost.ts` — Model cost tracking + daily budget guardrails ($5/day default, OpenClaw pattern)
+- `ssRateLimit.ts` — Semantic Scholar rate limiter (shared across citationVerifier + academicSources)
 - `cache.ts` — Upstash Redis cache layer (graceful no-op when env vars not set)
   - TTLs: citations 6h, academic RAG 2h, STEM papers 6h, outline 24h
   - Env vars required on Render: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
   - `withCache(op, compute, ...keyParts)` — generic get-or-compute helper
   - Cache status exposed at `GET /api/healthz` → `{ cache: "redis:upstash" | "disabled" }`
-- `apiCost.ts` — Usage tracking + daily budget guardrails ($5/day default)
+- `docLabels.ts` — Document numbering and title formatting (LSG-WP01, LSG-SS03, etc.)
+- `systemSettings.ts` — Maintenance mode + signup toggle, cached from PostgreSQL
+- `requestLogger.ts` — Pino-based request logging middleware
 
 ### STEM Pipeline
-1. ReAct loop: Think → Act → Observe (Claude 3.5 Sonnet)
-2. Chain-of-Verification: Critic Agent checks for math/logic errors
-3. KaTeX rendering of all LaTeX output in frontend
+1. Academic RAG prefetch: Semantic Scholar + 13-database network for grounding context
+2. ReAct loop: Think → Act → Observe (Claude Sonnet 4.5, streamed)
+3. Chain-of-Verification: Critic Agent checks for math/logic errors (Claude Haiku 4.5)
+4. KaTeX rendering of all LaTeX output in frontend
 
 ## Frontend Infrastructure
 

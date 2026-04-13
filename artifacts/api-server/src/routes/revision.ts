@@ -6,6 +6,7 @@ import { anthropic, openai } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage } from "../lib/usageTracker";
+import { recordQualitySignal } from "../lib/learningEngine";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { computeBurstiness, sampleTextSections, analyseTextPlagiarism } from "../lib/textAnalysis.js";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
@@ -611,14 +612,19 @@ Return ONLY the rephrased paper content.`,
       ? `Word count changed significantly: ${wordCount} → ${revisedWordCount} (${wcDeviation > 0 ? "+" : ""}${Math.round((revisedWordCount - wordCount) / wordCount * 100)}%). Review for unintended expansion or trimming.`
       : null;
 
+    const uid = req.userId ?? null;
+    if (uid) {
+      recordQualitySignal({ userId: uid, type: "ai_detection",  score: aiScore,       paperWordCount: revisedWordCount }).catch(() => {});
+      recordQualitySignal({ userId: uid, type: "plagiarism",    score: finalPlagScore, paperWordCount: revisedWordCount }).catch(() => {});
+    }
+
     let documentId: number | undefined;
     try {
-      const userId = req.userId ?? null;
-      const docNum = await getNextDocNumber(userId, "revision");
+      const docNum = await getNextDocNumber(uid, "revision");
       const [doc] = await db
         .insert(documentsTable)
         .values({
-          userId,
+          userId: uid,
           title: formatDocTitle({ type: "revision", docNumber: docNum }),
           content: revisedText,
           type: "revision",
