@@ -33,8 +33,7 @@ export default function PaymentSuccess() {
           if (attempts < maxAttempts) {
             setTimeout(tryVerify, 3000);
           } else {
-            setStatus("success");
-            setPlan(result.plan);
+            setStatus("failed");
           }
         }
       }).catch(() => {

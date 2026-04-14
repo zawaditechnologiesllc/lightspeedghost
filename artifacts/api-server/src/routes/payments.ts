@@ -809,7 +809,7 @@ router.get("/payments/verify", async (req: Request, res: Response) => {
 
       if (payment?.type === "subscription" && payment.plan) {
         const billing = payment.plan.endsWith("annual") ? "annual" : "monthly";
-        const planName = payment.plan.startsWith("campus") ? "campus" : "pro";
+        const planName = payment.plan.startsWith("campus") ? "campus" : payment.plan.startsWith("starter") ? "starter" : "pro";
         const periodEnd = billing === "annual"
           ? new Date(Date.now() + 365 * 86400000)
           : new Date(Date.now() + 31 * 86400000);

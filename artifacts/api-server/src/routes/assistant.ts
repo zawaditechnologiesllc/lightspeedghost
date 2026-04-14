@@ -121,6 +121,16 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
     const hasDocument = body.question.includes("--- Attached document:");
     const incrementBy = hasDocument ? 2 : 1;
 
+    const userPlan = await getUserPlan(userId);
+
+    if (hasImage && userPlan === "starter") {
+      send("error", {
+        type: "plan_gate",
+        message: "Image and diagram reading is available on the Pro plan. Upgrade to unlock it.",
+      });
+      return;
+    }
+
     const quota = await enforceLimit(userId, "assistant", incrementBy);
     if (!quota.allowed) {
       send("error", {
@@ -133,15 +143,6 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
     const resolvedMode: Mode = body.mode === "auto"
       ? detectMode(body.question, hasImage)
       : (body.mode as Mode);
-
-    // ── Image gate — Pro/Campus only ─────────────────────────────────────────
-    if (hasImage && quota.plan === "starter") {
-      send("error", {
-        type: "plan_gate",
-        message: "Image and diagram reading is available on the Pro plan. Upgrade to unlock it.",
-      });
-      return;
-    }
 
     const planLimit = quota.limit;
     const queriesRemaining = planLimit !== null ? Math.max(0, planLimit - quota.used) : null;
