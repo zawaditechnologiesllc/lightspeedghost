@@ -85,17 +85,10 @@ const SECTION_COLORS = [
   "border-l-indigo-400 bg-indigo-400/5",
 ];
 
-function getProgressSteps(topic: string, subj: string): string[] {
-  const t = topic.trim() || "your topic";
-  const s = subj.trim() || "this subject";
-  return [
-    `Analysing scope and academic depth for "${t}" in ${s}`,
-    `Designing argument flow and section hierarchy for ${s}`,
-    `Writing section headings and sub-headings for "${t}"`,
-    `Mapping thesis statement and conclusion arc`,
-    `Adding specific evidence points and research angles per section`,
-    `Finalising your outline — ready to write`,
-  ];
+interface Step {
+  id: string;
+  message: string;
+  status: "pending" | "running" | "done";
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -115,7 +108,7 @@ export default function Outline() {
   const [referenceWordCount, setReferenceWordCount] = useState(0);
 
   const [phase, setPhase] = useState<Phase>("config");
-  const [activeStep, setActiveStep] = useState(0);
+  const [steps, setSteps] = useState<Step[]>([]);
   const [error, setError] = useState("");
   const [result, setResult] = useState<OutlineResult | null>(null);
   const [copied, setCopied] = useState(false);
@@ -178,26 +171,26 @@ export default function Outline() {
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const updateStep = (id: string, patch: Partial<Step>) => {
+    setSteps((prev) => {
+      const exists = prev.find((s) => s.id === id);
+      if (exists) return prev.map((s) => (s.id === id ? { ...s, ...patch } : s));
+      return [...prev, { id, message: "", status: "pending", ...patch }];
+    });
+  };
+
   const handleGenerate = async () => {
     if (!topic.trim() || !subject.trim()) return;
     if (isAtLimit("outline")) { guard("outline", () => {}); return; }
 
     setPhase("generating");
     setError("");
-    setActiveStep(0);
-
-    // Animate through progress steps while the API call is in flight
-    const steps = getProgressSteps(topic.trim(), subject.trim());
-    const stepInterval = setInterval(() => {
-      setActiveStep(prev => (prev < steps.length - 1 ? prev + 1 : prev));
-    }, 1000);
+    setSteps([]);
 
     try {
       const resp = await apiFetch(`/writing/outline`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic: topic.trim(),
           subject: subject.trim(),
@@ -208,18 +201,45 @@ export default function Outline() {
         }),
       });
 
-      clearInterval(stepInterval);
-
-      if (!resp.ok) {
-        const errBody = await resp.json().catch(() => null);
-        throw new Error(errBody?.message ?? "Failed to generate outline — please try again");
+      if (!resp.ok || !resp.body) {
+        throw new Error("Failed to generate outline — please try again");
       }
-      const data: OutlineResult = await resp.json();
-      setResult(data);
-      setExpandedSections(new Set(data.sections.map((_, i) => i)));
-      setPhase("results");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let event = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            event = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (event === "step") {
+                updateStep(data.id, { message: data.message, status: data.status });
+              } else if (event === "done") {
+                setResult(data as OutlineResult);
+                setExpandedSections(new Set((data as OutlineResult).sections.map((_: unknown, i: number) => i)));
+                setPhase("results");
+              } else if (event === "error") {
+                setError(data.message ?? "Outline generation failed");
+                setPhase("config");
+              }
+            } catch { /* ignore parse errors */ }
+            event = "";
+          }
+        }
+      }
     } catch (err) {
-      clearInterval(stepInterval);
       setError(err instanceof Error ? err.message : "Something went wrong");
       setPhase("config");
     }
@@ -268,6 +288,11 @@ export default function Outline() {
   // ── PHASE: GENERATING ─────────────────────────────────────────────────────
 
   if (phase === "generating") {
+    const doneCount = steps.filter(s => s.status === "done").length;
+    const total = steps.length || 1;
+    const pct = Math.round((doneCount / total) * 100);
+    const runningStep = steps.find(s => s.status === "running");
+
     return (
       <div className="h-full flex flex-col items-center justify-center bg-background px-6 gap-8">
         <div className="text-center space-y-3">
@@ -277,47 +302,51 @@ export default function Outline() {
           </div>
           <h2 className="text-xl font-bold">Generating your outline…</h2>
           <p className="text-sm text-muted-foreground max-w-xs">
-            Building a structured plan for <span className="text-foreground font-medium">{topic}</span> in {subject}
+            {runningStep?.message || `Building a structured plan for "${topic}" in ${subject}`}
           </p>
         </div>
 
-        {/* Progress bar */}
         <div className="w-full max-w-sm">
           <div className="h-1.5 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-primary rounded-full transition-all duration-700"
-              style={{ width: `${Math.round(((activeStep + 1) / getProgressSteps(topic, subject).length) * 100)}%` }}
+              style={{ width: `${Math.max(pct, 8)}%` }}
             />
           </div>
           <p className="text-[10px] text-muted-foreground/60 text-right mt-1.5 tabular-nums">
-            {Math.round(((activeStep + 1) / getProgressSteps(topic, subject).length) * 100)}%
+            {pct}%
           </p>
         </div>
 
-        {/* Step list */}
         <div className="w-full max-w-sm space-y-2">
-          {getProgressSteps(topic, subject).map((step, i) => (
+          {steps.map((step) => (
             <div
-              key={i}
+              key={step.id}
               className={cn(
                 "flex items-center gap-3 px-4 py-2.5 rounded-lg border transition-all duration-500",
-                i < activeStep
+                step.status === "done"
                   ? "bg-primary/5 border-primary/20 text-foreground"
-                  : i === activeStep
+                  : step.status === "running"
                     ? "bg-card border-border text-foreground shadow-sm"
                     : "bg-muted/30 border-transparent text-muted-foreground/40"
               )}
             >
-              {i < activeStep ? (
+              {step.status === "done" ? (
                 <CheckCircle size={13} className="text-primary shrink-0" />
-              ) : i === activeStep ? (
+              ) : step.status === "running" ? (
                 <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shrink-0" />
               ) : (
                 <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20 shrink-0" />
               )}
-              <span className="text-xs">{step}</span>
+              <span className="text-xs">{step.message}</span>
             </div>
           ))}
+          {steps.length === 0 && (
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border bg-card border-border text-foreground shadow-sm">
+              <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shrink-0" />
+              <span className="text-xs">Connecting to LightSpeed AI…</span>
+            </div>
+          )}
         </div>
       </div>
     );

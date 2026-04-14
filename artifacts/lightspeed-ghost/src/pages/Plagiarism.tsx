@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useCheckPlagiarism, useHumanizeText, compareCode } from "@workspace/api-client-react";
+import { useHumanizeText, compareCode } from "@workspace/api-client-react";
 import type { PlagiarismResult, CodeCompareResult } from "@workspace/api-client-react";
+import { apiFetch } from "@/lib/apiFetch";
 import {
   ShieldCheck, ShieldAlert, Zap, AlertTriangle, Code2, FileText,
   ExternalLink, Info, Download, Copy, CheckCheck, FileEdit,
@@ -580,12 +581,21 @@ export default function PlagiarismChecker() {
   const [codePhase, setCodePhase] = useState<CodePhase>("idle");
   const [codeResult, setCodeResult] = useState<CodeCompareResult | null>(null);
 
-  const checkPlagiarism = useCheckPlagiarism();
+  const [checkSteps, setCheckSteps] = useState<Array<{ id: string; message: string; status: "pending" | "running" | "done" }>>([]);
+
   const humanizeText = useHumanizeText();
   const compareCodeMutation = useMutation({
     mutationFn: (body: { doc1: string; doc2: string; language?: string }) =>
       compareCode({ doc1: body.doc1, doc2: body.doc2, language: body.language === "auto" ? undefined : body.language }),
   });
+
+  const updateCheckStep = (id: string, message: string, status: "pending" | "running" | "done") => {
+    setCheckSteps(prev => {
+      const exists = prev.some(s => s.id === id);
+      if (exists) return prev.map(s => s.id === id ? { ...s, message, status } : s);
+      return [...prev, { id, message, status }];
+    });
+  };
 
   const handleCheck = async () => {
     if (!text.trim()) return;
@@ -594,10 +604,55 @@ export default function PlagiarismChecker() {
     setTextPhase("checking");
     setResult(null);
     setHumanizedText(null);
+    setCheckSteps([]);
     try {
-      const res = await checkPlagiarism.mutateAsync({ data: { text, checkAi: true, checkPlagiarism: true } });
-      setResult(res);
-      setTextPhase("results");
+      const resp = await apiFetch("/plagiarism/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, checkAi: true, checkPlagiarism: true }),
+      });
+
+      if (!resp.ok || !resp.body) throw new Error("Analysis failed — please try again");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let event = "";
+      let terminal = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (terminal) continue;
+          if (line.startsWith("event: ")) {
+            event = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (event === "step") {
+                updateCheckStep(data.id, data.message, data.status);
+              } else if (event === "done") {
+                setResult(data as PlagiarismResult);
+                setTextPhase("results");
+                terminal = true;
+              } else if (event === "error") {
+                setCheckError(data.message ?? "Analysis failed");
+                setTextPhase("idle");
+                terminal = true;
+              }
+            } catch { /* ignore parse errors */ }
+            event = "";
+          }
+        }
+      }
+
+      if (!terminal) {
+        throw new Error("Analysis failed — connection interrupted");
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Analysis failed — please try again";
       setCheckError(msg.startsWith("{") ? "Analysis failed — please try again" : msg);
@@ -686,19 +741,68 @@ export default function PlagiarismChecker() {
         {/* ════════════════════ TEXT CHECK TAB ════════════════════ */}
         {pageTab === "text" && (
           textPhase === "checking" ? (
-            <FullscreenLoader
-              icon={<ShieldCheck size={32} />}
-              title="Running full check…"
-              subtitle={`Analysing ${wordCount.toLocaleString()} words across multiple detection layers`}
-              steps={[
-                "Tokenising document and building word frequency map",
-                "Detecting AI-generated patterns — lexical diversity & sentence flow",
-                "Analysing sentence structure and variation",
-                "Scanning against academic corpus for plagiarism sources",
-                "Computing writing quality metrics and readability scores",
-                "Generating your full diagnostic report",
-              ]}
-            />
+            <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 bg-background min-h-0 overflow-y-auto">
+              <div className="w-full max-w-md space-y-8">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: "1.8s" }} />
+                    <div className="relative w-20 h-20 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                      <ShieldCheck size={32} />
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <h2 className="text-xl font-bold tracking-tight">Running full check…</h2>
+                    <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+                      Analysing {wordCount.toLocaleString()} words across multiple detection layers
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  {checkSteps.map((step) => (
+                    <div
+                      key={step.id}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-500",
+                        step.status === "done"
+                          ? "bg-green-500/5 border-green-500/20 opacity-80"
+                          : step.status === "running"
+                          ? "bg-primary/5 border-primary/25 shadow-sm"
+                          : "bg-muted/20 border-border/40 opacity-35"
+                      )}
+                    >
+                      <div className="shrink-0 w-5 h-5 flex items-center justify-center">
+                        {step.status === "done" ? (
+                          <CheckCheck size={13} className="text-green-500" />
+                        ) : step.status === "running" ? (
+                          <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-muted-foreground/25" />
+                        )}
+                      </div>
+                      <span className={cn(
+                        "text-xs leading-snug transition-colors duration-300",
+                        step.status === "done" ? "text-green-700 dark:text-green-400"
+                          : step.status === "running" ? "text-foreground font-medium"
+                          : "text-muted-foreground/50"
+                      )}>
+                        {step.message}
+                      </span>
+                    </div>
+                  ))}
+                  {checkSteps.length === 0 && (
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl border bg-primary/5 border-primary/25 shadow-sm">
+                      <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
+                      <span className="text-xs text-foreground font-medium">Connecting to detection engine…</span>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-center text-[10px] text-muted-foreground/50 tracking-wide">
+                  LightSpeed AI is working — this usually takes a few seconds
+                </p>
+              </div>
+            </div>
           ) : (
           <div className={cn("flex-1 min-h-0", textPhase === "results" ? "flex flex-col md:flex-row overflow-y-auto md:overflow-hidden" : "overflow-y-auto")}>
 

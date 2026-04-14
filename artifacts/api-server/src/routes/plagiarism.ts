@@ -159,16 +159,34 @@ async function fetchLiveAcademicMatches(
  *     returning real paper titles and DOI links users can actually verify.
  */
 router.post("/plagiarism/check", requireAuth, async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  const send = (event: string, data: unknown) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
   try {
     const quota = await enforceLimit(req.userId!, "plagiarism");
     if (!quota.allowed) {
-      return res.status(429).json({
-        error: "quota",
+      send("error", {
         message: `You've used all ${quota.limit} plagiarism checks for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
       });
+      return res.end();
     }
     const body = CheckPlagiarismBody.parse(req.body);
     const text = body.text;
+
+    send("step", { id: "tokenise", message: "Tokenising document and building word frequency map…", status: "running" });
+
+    const localAnalysisPromise = Promise.resolve(analyseTextPlagiarism(text));
+    const readabilityPromise = Promise.resolve(computeReadabilityScores(text));
+
+    send("step", { id: "tokenise", message: "Document tokenised", status: "done" });
+    send("step", { id: "ai-detect", message: "Detecting AI-generated patterns — lexical diversity & sentence flow…", status: "running" });
+    send("step", { id: "plag-scan", message: "Scanning against academic corpus for plagiarism sources…", status: "running" });
 
     const [
       { plagiarismScore, matchedWords, sourceMatches },
@@ -177,11 +195,11 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       liveMatches,
       openSourceResult,
     ] = await Promise.all([
-      Promise.resolve(analyseTextPlagiarism(text)),
-      detectAIScore(text, "plagiarism-check"),
-      Promise.resolve(computeReadabilityScores(text)),
+      localAnalysisPromise,
+      detectAIScore(text, "plagiarism-check").then(r => { send("step", { id: "ai-detect", message: `AI detection complete — score: ${r.score >= 0 ? r.score + "%" : "unavailable"}`, status: "done" }); return r; }),
+      readabilityPromise,
       fetchLiveAcademicMatches(text),
-      runOpenSourcePlagiarismCheck(text),
+      runOpenSourcePlagiarismCheck(text).then(r => { send("step", { id: "plag-scan", message: `Plagiarism scan complete — ${r.totalSentencesChecked} sentences checked`, status: "done" }); return r; }),
     ]);
 
     const sentenceList = text.split(/(?<=[.!?])\s+/).filter((s) => s.length > 20);
@@ -273,7 +291,11 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       /* non-fatal */
     }
 
-    res.json({
+    send("step", { id: "report", message: "Computing writing quality metrics and generating report…", status: "running" });
+
+    send("step", { id: "report", message: "Full diagnostic report ready", status: "done" });
+
+    send("done", {
       aiScore: effectiveAiScore !== null ? effectiveAiScore : 0,
       aiDetectionAvailable: effectiveAiScore !== null,
       plagiarismScore: blendedPlagiarismScore,
@@ -303,9 +325,11 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
         "PubMed NCBI", "Europe PMC", "arXiv", "CORE", "Zenodo", "DOAJ",
       ],
     });
+    res.end();
   } catch (err) {
     req.log.error({ err }, "Error checking plagiarism");
-    res.status(500).json({ error: "Internal server error" });
+    send("error", { message: "Internal server error" });
+    res.end();
   }
 });
 

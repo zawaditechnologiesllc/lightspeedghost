@@ -530,11 +530,8 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       : Math.max(3, Math.ceil(requestedWords / 175));
     const citationCount = body.numSources ? Math.min(Math.max(body.numSources, 3), 50) : autoCitations;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
-    // Token budget: ~1.4 tokens/word for English prose + 2000 overhead for references,
-    // citations block, headings, and structure. Floor at 3000; cap at 16000.
-    // Previous cap of 12000 was too low — a 5000-word paper needs ~9000 tokens for body
-    // alone, leaving no room for references and structure.
-    const maxTokens = Math.min(16000, Math.max(3000, Math.ceil(maxWords * 1.45) + 2000));
+    const refsOverhead = Math.min(2000, Math.max(400, citationCount * 120));
+    const maxTokens = Math.min(16000, Math.ceil(maxWords * 1.5) + refsOverhead);
 
     // Keep-alive ping so the SSE connection stays open during slow citation/DB calls
     send("ping", { t: Date.now() });
@@ -1364,10 +1361,14 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
     const AI_PASS_THRESHOLD = 0;
     const AI_HUMANIZE_MAX_PASSES = 3;
     try {
+      send("step", { id: "ai-gate-scan", message: "Scanning paper for AI-generated patterns…", status: "running" });
+
       const { score: detectedScore, indicators: aiIndicators } = await detectAIScore(
         finalContent,
         "writer-ai-gate",
       );
+
+      send("step", { id: "ai-gate-scan", message: `Initial AI scan complete — detected score: ${detectedScore >= 0 ? detectedScore + "%" : "unavailable"}`, status: "done" });
 
       if (detectedScore < 0) {
         realAiScore = 0;
@@ -1382,18 +1383,24 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
         let currentIndicators = aiIndicators;
         for (let pass = 1; pass <= AI_HUMANIZE_MAX_PASSES; pass++) {
           send("step", {
-            id: "ai-gate",
-            message: `AI score ${currentScore}% detected — above ${AI_PASS_THRESHOLD}% threshold. Humanization pass ${pass}/${AI_HUMANIZE_MAX_PASSES}: restructuring sentence rhythm, removing AI clichés, injecting authentic voice…`,
+            id: `ai-humanize-${pass}`,
+            message: `Humanization pass ${pass}/${AI_HUMANIZE_MAX_PASSES}: rewriting to reduce AI score from ${currentScore}%… (this may take 30–60 seconds)`,
             status: "running",
           });
 
           const humanized = await humanizeTextOnce(finalContent, "academic", 1, currentIndicators);
           finalContent = humanized;
 
+          send("step", {
+            id: `ai-humanize-${pass}`,
+            message: `Pass ${pass} rewrite complete — re-scanning for AI patterns…`,
+            status: "running",
+          });
+
           const { score: recheck, indicators: recheckIndicators } = await detectAIScore(humanized, `writer-ai-recheck-${pass}`);
           if (recheck < 0) {
             send("step", {
-              id: "ai-gate",
+              id: `ai-humanize-${pass}`,
               message: `Humanization pass ${pass} complete — AI detection unavailable for re-check.`,
               status: "done",
             });
@@ -1405,25 +1412,23 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
 
           if (currentScore <= AI_PASS_THRESHOLD) {
             send("step", {
-              id: "ai-gate",
-              message: `Humanization pass ${pass} complete — AI score reduced to ${currentScore}% (target: ≤${AI_PASS_THRESHOLD}%). Paper reads as human-authored.`,
+              id: `ai-humanize-${pass}`,
+              message: `Pass ${pass} complete — AI score reduced to ${currentScore}%. Paper reads as human-authored.`,
               status: "done",
             });
             break;
           }
 
-          if (pass === AI_HUMANIZE_MAX_PASSES) {
-            send("step", {
-              id: "ai-gate",
-              message: `Humanization complete after ${pass} passes — AI score at ${currentScore}%. Best achievable with current content.`,
-              status: "done",
-            });
-          }
+          send("step", {
+            id: `ai-humanize-${pass}`,
+            message: `Pass ${pass} complete — AI score now ${currentScore}%${pass < AI_HUMANIZE_MAX_PASSES ? ", starting next pass…" : " (best achievable)"}`,
+            status: "done",
+          });
         }
       } else {
         send("step", {
           id: "ai-gate",
-          message: `AI detection passed — score ${detectedScore}% ≤ ${AI_PASS_THRESHOLD}% (WRITER_SOUL anti-AI rules effective). No humanization needed.`,
+          message: `AI detection passed — score ${detectedScore}% (WRITER_SOUL anti-AI rules effective). No humanization needed.`,
           status: "done",
         });
       }
@@ -1580,13 +1585,22 @@ router.put("/writing/save/:id", requireAuth, async (req, res) => {
 // ── Outline generation (kept) ─────────────────────────────────────────────────
 
 router.post("/writing/outline", requireAuth, async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  const send = (event: string, data: unknown) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
   try {
     const quota = await enforceLimit(req.userId!, "outline");
     if (!quota.allowed) {
-      return res.status(429).json({
-        error: "quota",
+      send("error", {
         message: `You've used all ${quota.limit} outline generations for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
       });
+      return res.end();
     }
     const rawBody = req.body as { topic?: string; subject?: string; paperType?: string; instructionsText?: string; referenceText?: string };
     const body = {
@@ -1595,10 +1609,13 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
       paperType: rawBody.paperType ?? "research",
     };
     if (!body.topic || !body.subject) {
-      return res.status(400).json({ error: "topic and subject are required" });
+      send("error", { message: "topic and subject are required" });
+      return res.end();
     }
     const instructionsText = rawBody.instructionsText ?? "";
     const referenceText = rawBody.referenceText ?? "";
+
+    send("step", { id: "analyse", message: `Analysing scope and academic depth for "${body.topic}" in ${body.subject}…`, status: "running" });
 
     const qualityRules = `QUALITY REQUIREMENTS FOR THIS OUTLINE:
 - Structure must be 100% original — zero plagiarism risk.
@@ -1611,6 +1628,9 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
       referenceText ? `REFERENCE MATERIALS (use to inform section depth and emphasis):\n${referenceText.slice(0, 5000)}` : "",
     ].filter(Boolean).join("\n\n");
 
+    send("step", { id: "analyse", message: "Scope analysis complete", status: "done" });
+    send("step", { id: "structure", message: `Designing argument flow and section hierarchy for ${body.subject}…`, status: "running" });
+
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: 2500,
@@ -1622,6 +1642,9 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
     });
 
     recordUsage("claude-sonnet-4-5", response.usage.input_tokens, response.usage.output_tokens, "outline-generation");
+
+    send("step", { id: "structure", message: "Section hierarchy designed", status: "done" });
+    send("step", { id: "headings", message: "Writing section headings and sub-headings…", status: "running" });
 
     const text = response.content[0].type === "text" ? response.content[0].text : "{}";
     let outline: { title: string; sections: Array<{ heading: string; subsections: string[] }> };
@@ -1707,10 +1730,15 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
       (section, i) => ({ ...section, wordTarget: wordTargets[i] })
     );
 
-    res.json({ ...outline, sections: enrichedSections, totalWordTarget: targetWordCount });
+    send("step", { id: "headings", message: "Section headings and sub-headings complete", status: "done" });
+    send("step", { id: "finalise", message: "Adding evidence points and research angles per section…", status: "running" });
+    send("step", { id: "finalise", message: "Outline finalised — ready to write", status: "done" });
+    send("done", { ...outline, sections: enrichedSections, totalWordTarget: targetWordCount });
+    res.end();
   } catch (err) {
     req.log.error({ err }, "Error generating outline");
-    res.status(500).json({ error: "Internal server error" });
+    send("error", { message: "Internal server error" });
+    res.end();
   }
 });
 
