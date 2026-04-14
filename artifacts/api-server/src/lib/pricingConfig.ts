@@ -12,7 +12,7 @@ export interface PlanPrice {
 
 export const SUBSCRIPTION_PLANS: Record<PlanId, PlanPrice> = {
   starter_monthly: {
-    amountCents: 150,
+    amountCents: 499,
     currency: "USD",
     interval: "month",
     label: "Starter — Monthly",
@@ -26,7 +26,7 @@ export const SUBSCRIPTION_PLANS: Record<PlanId, PlanPrice> = {
     description: "Full access to all LightSpeed Ghost tools",
   },
   pro_annual: {
-    amountCents: 12900,
+    amountCents: 13900,
     currency: "USD",
     interval: "year",
     label: "Pro — Annual",

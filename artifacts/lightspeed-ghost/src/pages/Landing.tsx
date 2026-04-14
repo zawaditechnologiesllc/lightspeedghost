@@ -134,11 +134,11 @@ const faqs = [
   },
   {
     q: "What's the cheapest plan?",
-    a: "The Starter plan is $1.50/month — less than a coffee and the cheapest academic writing platform you'll find anywhere. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves per month, 20 study sessions per month, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
+    a: "The Starter plan is $4.99/month — the cheapest academic writing platform you'll find anywhere. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves per month, 20 study sessions per month, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
   },
   {
     q: "What's the difference between Pro monthly and annual?",
-    a: "Same features, different price. Monthly is $14.99/month. Annual is $129/year — that works out to $10.75/month, saving you 28%. Most students buy annual at the start of a semester. You can cancel anytime and keep access until the billing period ends.",
+    a: "Same features, different price. Monthly is $14.99/month. Annual is $139/year — that works out to $11.58/month, saving you 23%. Most students buy annual at the start of a semester. You can cancel anytime and keep access until the billing period ends.",
   },
   {
     q: "How does Pay-As-You-Go work?",
@@ -149,8 +149,8 @@ const faqs = [
 const pricingPlans = [
   {
     name: "Starter",
-    priceMonthly: "$1.50",
-    priceAnnual: "$1.50",
+    priceMonthly: "$4.99",
+    priceAnnual: "$4.99",
     perMonthly: "/ month",
     perAnnual: "/ month",
     desc: "All core tools. Low commitment. No hidden gotchas.",
@@ -164,7 +164,7 @@ const pricingPlans = [
       "7-day document history",
     ],
     locked: ["LightSpeed Humanizer", "Priority AI processing", "Citation export (BibTeX / RIS)"],
-    cta: "Start for $1.50",
+    cta: "Start for $4.99",
     ctaLink: "/auth",
     highlight: false,
     badge: null,
@@ -172,9 +172,9 @@ const pricingPlans = [
   {
     name: "Pro",
     priceMonthly: "$14.99",
-    priceAnnual: "$10.75",
+    priceAnnual: "$11.58",
     perMonthly: "/ month",
-    perAnnual: "/ month  ·  billed $129 / year",
+    perAnnual: "/ month  ·  billed $139 / year",
     desc: "Every cap lifted. Every tool unlocked. One flat price.",
     features: [
       "15 papers / month (all types)",
@@ -492,7 +492,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Link href="/auth">
               <span className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-100 text-sm sm:text-base">
-                Try for $1.50 / month
+                Try for $4.99 / month
                 <ArrowRight size={16} />
               </span>
             </Link>
@@ -502,7 +502,7 @@ export default function Landing() {
             </a>
           </div>
 
-          <p className="mt-4 text-xs text-white/30">Starter at $1.50/mo · Or pay per use · No expiry on PAYG charges</p>
+          <p className="mt-4 text-xs text-white/30">Starter at $4.99/mo · Or pay per use · No expiry on PAYG charges</p>
 
           {/* ── App Store Badges ── */}
           <div className="mt-8 flex flex-col items-center gap-3">
@@ -1010,12 +1010,12 @@ export default function Landing() {
                 </div>
                 <div>
                   <p className="text-white font-semibold text-sm">Subscribe</p>
-                  <p className="text-blue-400/70 text-[11px]">From $1.50 / month</p>
+                  <p className="text-blue-400/70 text-[11px]">From $4.99 / month</p>
                 </div>
               </div>
               <div className="space-y-6">
                 {[
-                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter plan at $1.50/month or Pro at $14.99/month. Cancel any time." },
+                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter plan at $4.99/month or Pro at $14.99/month. Cancel any time." },
                   { num: "02", title: "Upload your brief or describe your task", body: "Drag in your assignment PDF, paste the rubric, or just type what you need. The platform detects citation style, length, and subject automatically." },
                   { num: "03", title: "Generate, revise, humanize, and submit", body: "Run any tool in sequence — paper → plagiarism check → LightSpeed Humanizer → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
                 ].map(({ num, title, body }) => (
@@ -1030,7 +1030,7 @@ export default function Landing() {
               </div>
               <Link href="/auth">
                 <span className="mt-7 block text-center py-2.5 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer">
-                  Start for $1.50 / month
+                  Start for $4.99 / month
                 </span>
               </Link>
             </div>
@@ -1219,7 +1219,7 @@ export default function Landing() {
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Honest pricing. No dark patterns.</h2>
             <p className="text-white/45 text-sm sm:text-base max-w-xl mx-auto">
-              Starter at $1.50/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
+              Starter at $4.99/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
             </p>
             <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
               <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-white" : "text-white/35"}`}>Monthly</span>
@@ -1230,7 +1230,7 @@ export default function Landing() {
                 <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200 ${billingAnnual ? "left-6" : "left-1"}`} />
               </button>
               <span className={`text-sm font-medium transition-colors ${billingAnnual ? "text-white" : "text-white/35"}`}>Annual</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-semibold">Save 28%</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-semibold">Save 23%</span>
             </div>
           </div>
 
@@ -1411,12 +1411,12 @@ export default function Landing() {
             Stop staring at midnight.<br />Start with a draft.
           </h2>
           <p className="text-white/50 mb-8 sm:mb-10 text-base sm:text-lg">
-            Subscribe from $1.50/month — or pay once per task. No lock-in.
+            Subscribe from $4.99/month — or pay once per task. No lock-in.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link href="/auth">
               <span className="inline-flex items-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:scale-[1.02] active:scale-100 text-base sm:text-lg">
-                Subscribe — from $1.50/mo
+                Subscribe — from $4.99/mo
                 <ArrowRight size={18} />
               </span>
             </Link>

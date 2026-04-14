@@ -104,7 +104,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                 </div>
                 {!planLoading && resolvedPlan === "starter" && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20 font-medium">
-                    $1.50/mo
+                    $4.99/mo
                   </span>
                 )}
                 {!planLoading && resolvedPlan === "pro" && (
@@ -181,7 +181,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                     onClick={() => setCheckoutPlan("pro_annual")}
                     className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
                   >
-                    $129/yr · Save 28% <ChevronRight size={12} />
+                    $139/yr · Save 23% <ChevronRight size={12} />
                   </button>
                 </div>
               </div>

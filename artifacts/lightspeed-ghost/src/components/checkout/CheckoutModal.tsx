@@ -50,9 +50,9 @@ const GATEWAY_ICONS: Record<string, React.ElementType> = {
 };
 
 const PLAN_AMOUNTS: Record<PlanId, number> = {
-  starter_monthly:   150,
+  starter_monthly:   499,
   pro_monthly:      1499,
-  pro_annual:       12900,
+  pro_annual:       13900,
   campus_annual:     900,
 };
 
@@ -230,7 +230,7 @@ export function CheckoutModal({
             )}
             {mode === "subscription" && plan === "pro_annual" && (
               <div className="mt-1.5 text-xs text-green-400/80">
-                Save 28% vs monthly billing
+                Save 23% vs monthly billing
               </div>
             )}
           </div>

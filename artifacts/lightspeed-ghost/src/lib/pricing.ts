@@ -15,9 +15,9 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: "starter_monthly",
     name: "Starter — Monthly",
-    amountCents: 150,
+    amountCents: 499,
     interval: "month",
-    displayPrice: "$1.50/mo",
+    displayPrice: "$4.99/mo",
     description: "Essential access to LightSpeed Ghost tools",
   },
   {
@@ -31,10 +31,10 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: "pro_annual",
     name: "Pro — Annual",
-    amountCents: 12900,
+    amountCents: 13900,
     interval: "year",
-    displayPrice: "$129/yr ($10.75/mo)",
-    description: "Best value — save 28% vs monthly",
+    displayPrice: "$139/yr ($11.58/mo)",
+    description: "Best value — save 23% vs monthly",
   },
   {
     id: "campus_annual",

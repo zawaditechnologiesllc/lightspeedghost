@@ -123,7 +123,7 @@ export default function Auth() {
                 <p className="text-white/40 text-sm mb-6">
                   {tab === "login"
                     ? "Sign in to your Light Speed Ghost account"
-                    : "Starter plan from $1.50/month — cancel any time"}
+                    : "Starter plan from $4.99/month — cancel any time"}
                 </p>
 
                 <form
