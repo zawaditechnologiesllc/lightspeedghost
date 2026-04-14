@@ -5,7 +5,7 @@ import { documentsTable } from "@workspace/db";
 import { anthropic } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
-import { trackUsage } from "../lib/usageTracker";
+import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { detectAIScore } from "../lib/aiDetection.js";
 
@@ -189,7 +189,16 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
   const heartbeat = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* ignore */ } }, 10_000);
 
   try {
-    if (req.userId) trackUsage(req.userId, "humanizer").catch(() => {});
+    const quota = await enforceLimit(req.userId!, "humanizer");
+    if (!quota.allowed) {
+      send("error", {
+        type: "quota",
+        message: `You've used all ${quota.limit} humanizer uses for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+      });
+      res.end();
+      clearInterval(heartbeat);
+      return;
+    }
 
     const body = req.body as {
       text: string;

@@ -12,7 +12,7 @@ import { recordSearchResults, recordTopicSearch } from "../lib/learningEngine";
 import { indexStudyExchange, recallStudyContext } from "../lib/memvidMemory";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { recordUsage } from "../lib/apiCost";
-import { trackUsage } from "../lib/usageTracker";
+import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
 import { z } from "zod";
 
@@ -77,7 +77,13 @@ router.post("/study/ask", requireAuth, async (req, res) => {
   // Disable socket idle timeout — Claude tutoring + RAG can take 30-60 s
   req.socket?.setTimeout(0);
   try {
-    if (req.userId) trackUsage(req.userId, "study").catch(() => {});
+    const quota = await enforceLimit(req.userId!, "study");
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: "quota",
+        message: `You've used all ${quota.limit} study sessions for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+      });
+    }
     const body = AskStudyAssistantBody.parse(req.body);
 
     let sessionId = body.sessionId;
@@ -356,6 +362,13 @@ Return ONLY valid JSON, exactly this format:
 router.post("/study/generate", requireAuth, async (req, res) => {
   req.socket?.setTimeout(0);
   try {
+    const quota = await enforceLimit(req.userId!, "study");
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: "quota",
+        message: `You've used all ${quota.limit} study sessions for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+      });
+    }
     const body = GenerateBody.parse(req.body);
     const subject = body.subject ?? "General";
 

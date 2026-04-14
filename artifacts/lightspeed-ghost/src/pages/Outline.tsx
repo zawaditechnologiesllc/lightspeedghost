@@ -210,7 +210,10 @@ export default function Outline() {
 
       clearInterval(stepInterval);
 
-      if (!resp.ok) throw new Error("Failed to generate outline — please try again");
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => null);
+        throw new Error(errBody?.message ?? "Failed to generate outline — please try again");
+      }
       const data: OutlineResult = await resp.json();
       setResult(data);
       setExpandedSections(new Set(data.sections.map((_, i) => i)));

@@ -5,7 +5,7 @@ import { documentsTable } from "@workspace/db";
 import { anthropic, openai } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
-import { trackUsage } from "../lib/usageTracker";
+import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { recordQualitySignal } from "../lib/learningEngine";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { computeBurstiness, sampleTextSections, analyseTextPlagiarism } from "../lib/textAnalysis.js";
@@ -121,7 +121,16 @@ router.post("/revision/submit-stream", requireAuth, async (req, res) => {
   const heartbeat = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* ignore */ } }, 10_000);
 
   try {
-    if (req.userId) trackUsage(req.userId, "revision").catch(() => {});
+    const quota = await enforceLimit(req.userId!, "revision");
+    if (!quota.allowed) {
+      send("error", {
+        type: "quota",
+        message: `You've used all ${quota.limit} revisions for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+      });
+      res.end();
+      clearInterval(heartbeat);
+      return;
+    }
     const body = req.body as {
       originalText: string;
       targetGrade?: string;

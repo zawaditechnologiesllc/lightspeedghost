@@ -4,7 +4,7 @@ import { CheckPlagiarismBody, HumanizeTextBody } from "@workspace/api-zod";
 import { compareDocuments } from "../lib/winnow";
 import { analyseTextPlagiarism, computeReadabilityScores } from "../lib/textAnalysis";
 import { recordUsage } from "../lib/apiCost";
-import { trackUsage } from "../lib/usageTracker";
+import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
@@ -160,7 +160,13 @@ async function fetchLiveAcademicMatches(
  */
 router.post("/plagiarism/check", requireAuth, async (req, res) => {
   try {
-    if (req.userId) trackUsage(req.userId, "plagiarism").catch(() => {});
+    const quota = await enforceLimit(req.userId!, "plagiarism");
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: "quota",
+        message: `You've used all ${quota.limit} plagiarism checks for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+      });
+    }
     const body = CheckPlagiarismBody.parse(req.body);
     const text = body.text;
 
@@ -311,7 +317,13 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
  */
 router.post("/plagiarism/humanize", requireAuth, async (req, res) => {
   try {
-    if (req.userId) trackUsage(req.userId, "humanizer").catch(() => {});
+    const quota = await enforceLimit(req.userId!, "humanizer");
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: "quota",
+        message: `You've used all ${quota.limit} humanizer uses for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+      });
+    }
     const body = HumanizeTextBody.parse(req.body);
     const text = body.text;
     const intensity = body.intensity ?? "medium";

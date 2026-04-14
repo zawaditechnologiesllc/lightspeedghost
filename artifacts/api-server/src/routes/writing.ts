@@ -12,7 +12,7 @@ import { analyseTextPlagiarism } from "../lib/textAnalysis";
 import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection.js";
 import { recordUsage } from "../lib/apiCost";
 import { eq, desc, and, isNotNull } from "drizzle-orm";
-import { trackUsage } from "../lib/usageTracker";
+import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { recordSearchResults, recordQualitySignal } from "../lib/learningEngine";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
@@ -492,7 +492,16 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
   const heartbeat = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* ignore */ } }, 10_000);
 
   try {
-    if (req.userId) trackUsage(req.userId, "paper").catch(() => {});
+    const quota = await enforceLimit(req.userId!, "paper");
+    if (!quota.allowed) {
+      send("error", {
+        type: "quota",
+        message: `You've used all ${quota.limit} paper generations for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+      });
+      res.end();
+      clearInterval(heartbeat);
+      return;
+    }
 
     const body = req.body as {
       topic: string;
@@ -1547,7 +1556,7 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
 
 // ── Save paper edits ──────────────────────────────────────────────────────────
 
-router.put("/writing/save/:id", async (req, res) => {
+router.put("/writing/save/:id", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { content } = req.body as { content: string };
@@ -1555,8 +1564,12 @@ router.put("/writing/save/:id", async (req, res) => {
 
     const [doc] = await db.update(documentsTable)
       .set({ content, wordCount: bodyWordCount, updatedAt: new Date() })
-      .where(eq(documentsTable.id, id))
+      .where(and(eq(documentsTable.id, id), eq(documentsTable.userId, req.userId!)))
       .returning();
+
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found" });
+    }
 
     res.json({ ok: true, wordCount: bodyWordCount, updatedAt: doc.updatedAt.toISOString() });
   } catch (err) {
@@ -1568,7 +1581,13 @@ router.put("/writing/save/:id", async (req, res) => {
 
 router.post("/writing/outline", requireAuth, async (req, res) => {
   try {
-    if (req.userId) trackUsage(req.userId, "outline").catch(() => {});
+    const quota = await enforceLimit(req.userId!, "outline");
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: "quota",
+        message: `You've used all ${quota.limit} outline generations for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+      });
+    }
     const rawBody = req.body as { topic?: string; subject?: string; paperType?: string; instructionsText?: string; referenceText?: string };
     const body = {
       topic: rawBody.topic ?? "",

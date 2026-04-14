@@ -608,8 +608,13 @@ export default function PlagiarismChecker() {
   const handleHumanize = async () => {
     const textToHumanize = humanizedText ?? text;
     if (!textToHumanize.trim()) return;
-    const res = await humanizeText.mutateAsync({ data: { text: textToHumanize, intensity: humanizeIntensity } });
-    setHumanizedText(res.humanizedText);
+    try {
+      const res = await humanizeText.mutateAsync({ data: { text: textToHumanize, intensity: humanizeIntensity } });
+      setHumanizedText(res.humanizedText);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Humanization failed — please try again";
+      setCheckError(msg.startsWith("{") ? "Humanization failed — please try again" : msg);
+    }
   };
 
   const handleCodeCompare = async () => {

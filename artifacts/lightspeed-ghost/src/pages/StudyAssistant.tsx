@@ -144,7 +144,10 @@ async function callGenerate(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content, type, subject, weakTopics, images, datasetText: datasetText?.trim() || undefined }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => null);
+    throw new Error(errBody?.message ?? "Failed to generate — please try again");
+  }
   return res.json();
 }
 

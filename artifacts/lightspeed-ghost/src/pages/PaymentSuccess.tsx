@@ -20,16 +20,34 @@ export default function PaymentSuccess() {
       return;
     }
 
-    verifyPayment(gateway, sessionId).then((result) => {
-      if (result.confirmed) {
-        setStatus("success");
-        setPlan(result.plan);
-      } else {
-        // Might still be processing — show success optimistically for redirect gateways
-        setStatus("success");
-        setPlan(result.plan);
-      }
-    });
+    let attempts = 0;
+    const maxAttempts = 6;
+
+    const tryVerify = () => {
+      verifyPayment(gateway, sessionId).then((result) => {
+        if (result.confirmed) {
+          setStatus("success");
+          setPlan(result.plan);
+        } else {
+          attempts++;
+          if (attempts < maxAttempts) {
+            setTimeout(tryVerify, 3000);
+          } else {
+            setStatus("success");
+            setPlan(result.plan);
+          }
+        }
+      }).catch(() => {
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(tryVerify, 3000);
+        } else {
+          setStatus("failed");
+        }
+      });
+    };
+
+    tryVerify();
   }, [verifyPayment]);
 
   return (
@@ -65,7 +83,7 @@ export default function PaymentSuccess() {
             </div>
             <button
               onClick={() => setLocation("/app")}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white font-semibold rounded-xl transition-all text-sm"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all text-sm"
             >
               Go to Dashboard
               <ArrowRight size={14} />

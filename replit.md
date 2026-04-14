@@ -47,6 +47,9 @@ The platform is built as a monorepo using `pnpm workspaces`, Node.js 24, and Typ
 - **Frontend Infrastructure:**
     - **Service Worker:** Provides offline support with a cache-first strategy for static assets and network-first for navigation.
     - **Offline Banner:** Displays an amber banner when offline and a green banner upon reconnection.
+- **Quota Enforcement:** All AI tool routes enforce usage limits server-side via `enforceLimit()` in `usageTracker.ts`. Returns quota errors before any AI processing starts. Tools enforced: paper, outline, stem, study, revision, humanizer, plagiarism, assistant. Frontend paywall guards provide UX-level enforcement; backend enforcement is the security layer.
+- **Document Ownership:** All document CRUD operations scope queries by `userId` to prevent cross-user access.
+- **Payment Security:** All amounts calculated server-side from `SUBSCRIPTION_PLANS` / `getPaygPrice()` — never from client input. Credit spending validates amount against server-side pricing.
 - **Memory System:** Combines short-term conversational context with long-term student profiles stored in PostgreSQL, leveraging semantic memory for recall.
 - **File Upload Feature:** Supports server-side extraction from PDF, DOCX, and text files, client-side OCR for images, and smart autofill for various input fields across services.
 - **Shared AI Detection Pipeline:** A critical architecture ensuring consistent AI detection across all tools (Plagiarism Checker, Humanizer, Paper Writer, Revision) using GPT-4o-mini and burstiness blend with retry mechanisms.

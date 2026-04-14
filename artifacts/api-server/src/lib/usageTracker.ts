@@ -108,3 +108,41 @@ export async function isAtLimit(userId: string, tool: ToolName): Promise<boolean
   const usage = await getUsage(userId);
   return (usage[tool] ?? 0) >= limit;
 }
+
+export async function enforceLimit(
+  userId: string,
+  tool: ToolName,
+  incrementBy = 1,
+): Promise<{ allowed: boolean; plan: string; used: number; limit: number | null }> {
+  const plan = await getUserPlan(userId);
+  const limits = PLAN_LIMITS[plan];
+  const limit = limits?.[tool] ?? null;
+
+  if (limit === null || limit === undefined) {
+    for (let i = 0; i < incrementBy; i++) await trackUsage(userId, tool);
+    return { allowed: true, plan, used: 0, limit };
+  }
+
+  const period = getPeriod(tool);
+
+  const { rows } = await pool.query<{ count: number }>(
+    `INSERT INTO user_usage (user_id, tool, period, count)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (user_id, tool, period)
+     DO UPDATE SET count = user_usage.count + $4
+     WHERE user_usage.count + $4 <= $5
+     RETURNING count`,
+    [userId, tool, period, incrementBy, limit],
+  );
+
+  if (rows.length === 0) {
+    const cur = await pool.query<{ count: number }>(
+      `SELECT count FROM user_usage WHERE user_id = $1 AND tool = $2 AND period = $3`,
+      [userId, tool, period],
+    );
+    const used = cur.rows[0]?.count ?? 0;
+    return { allowed: false, plan, used, limit };
+  }
+
+  return { allowed: true, plan, used: rows[0].count, limit };
+}

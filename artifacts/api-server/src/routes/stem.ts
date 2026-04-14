@@ -11,7 +11,7 @@ import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSource
 import { recordUsage } from "../lib/apiCost";
 import { anthropic } from "../lib/ai";
 import { ACADEMIC_SOUL } from "../lib/soul";
-import { trackUsage } from "../lib/usageTracker";
+import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
 
 const router = Router();
@@ -36,7 +36,13 @@ router.get("/stem/subjects", async (req, res) => {
 
 router.post("/stem/solve", requireAuth, async (req, res) => {
   try {
-    if (req.userId) trackUsage(req.userId, "stem").catch(() => {});
+    const quota = await enforceLimit(req.userId!, "stem");
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: "quota",
+        message: `You've used all ${quota.limit} STEM solves for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+      });
+    }
     const body = SolveStemBody.parse(req.body);
 
     // 0. Pre-fetch academic RAG context + parse dataset (same as streaming route)
@@ -156,7 +162,16 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
   const heartbeat = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* ignore */ } }, 10_000);
 
   try {
-    if (req.userId) trackUsage(req.userId, "stem").catch(() => {});
+    const quota = await enforceLimit(req.userId!, "stem");
+    if (!quota.allowed) {
+      send("error", {
+        type: "quota",
+        message: `You've used all ${quota.limit} STEM solves for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+      });
+      res.end();
+      clearInterval(heartbeat);
+      return;
+    }
 
     let body: ReturnType<typeof SolveStemBody.parse>;
     try {
