@@ -134,11 +134,11 @@ const faqs = [
   },
   {
     q: "What's the cheapest plan?",
-    a: "The Starter plan is $1.50/month — less than a coffee and the cheapest academic writing platform you'll find anywhere. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 5 STEM queries per day, 20 study messages per month, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
+    a: "The Starter plan is $1.50/month — less than a coffee and the cheapest academic writing platform you'll find anywhere. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves per month, 20 study sessions per month, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
   },
   {
     q: "What's the difference between Pro monthly and annual?",
-    a: "Same features, different price. Monthly is $14.99/month. Annual is $99/year — that works out to $8.25/month, saving you 45%. Most students buy annual at the start of a semester. You can cancel anytime and keep access until the billing period ends.",
+    a: "Same features, different price. Monthly is $14.99/month. Annual is $129/year — that works out to $10.75/month, saving you 28%. Most students buy annual at the start of a semester. You can cancel anytime and keep access until the billing period ends.",
   },
   {
     q: "How does Pay-As-You-Go work?",
@@ -157,7 +157,7 @@ const pricingPlans = [
     features: [
       "3 paper generations / month (any type)",
       "5 plagiarism + AI detection checks / month",
-      "5 STEM solver queries / day",
+      "15 STEM solver queries / month",
       "20 study messages / month",
       "1 revision / month",
       "5 outline generations / month",
@@ -172,14 +172,14 @@ const pricingPlans = [
   {
     name: "Pro",
     priceMonthly: "$14.99",
-    priceAnnual: "$8.25",
+    priceAnnual: "$10.75",
     perMonthly: "/ month",
-    perAnnual: "/ month  ·  billed $99 / year",
+    perAnnual: "/ month  ·  billed $129 / year",
     desc: "Every cap lifted. Every tool unlocked. One flat price.",
     features: [
       "15 papers / month (all types)",
       "20 revisions / month",
-      "10 STEM solver problems / day",
+      "60 STEM solver problems / month",
       "150 study messages / month",
       "20 plagiarism + AI detection checks / month",
       "LightSpeed Humanizer — 20 jobs / month",
@@ -204,7 +204,7 @@ const pricingPlans = [
       "5 papers / seat / month",
       "8 revisions / seat / month",
       "8 humanizer jobs / seat / month",
-      "5 STEM problems / seat / day",
+      "30 STEM problems / seat / month",
       "75 study messages / seat / month",
       "Minimum 5 seats — single invoice",
       "Shared document library + admin dashboard",
@@ -1230,7 +1230,7 @@ export default function Landing() {
                 <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200 ${billingAnnual ? "left-6" : "left-1"}`} />
               </button>
               <span className={`text-sm font-medium transition-colors ${billingAnnual ? "text-white" : "text-white/35"}`}>Annual</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-semibold">Save 45%</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-semibold">Save 28%</span>
             </div>
           </div>
 

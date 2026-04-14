@@ -45,7 +45,7 @@ const PRO_PERKS: Record<PaygTool, string[]> = {
   paper:      ["50 papers/month", "All paper types", "Verified citations", "Priority queue"],
   revision:   ["50 revisions/month", "Full AI+plagiarism analysis", "Grade targeting"],
   humanizer:  ["50 humanizations/month", "Ghost Writer mode", "Style presets"],
-  stem:       ["30 STEM solves/day", "All subjects", "Step-by-step + graphs"],
+  stem:       ["60 STEM solves/month", "All subjects", "Step-by-step + graphs"],
   study:      ["Unlimited study sessions", "Flashcards + quizzes", "Multi-file upload"],
   plagiarism: ["Unlimited plagiarism checks", "AI detection", "Code compare"],
   outline:    ["Unlimited outlines", "Auto-detect paper type", "Reference integration"],

@@ -181,7 +181,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                     onClick={() => setCheckoutPlan("pro_annual")}
                     className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
                   >
-                    $99/yr · Save 45% <ChevronRight size={12} />
+                    $129/yr · Save 28% <ChevronRight size={12} />
                   </button>
                 </div>
               </div>

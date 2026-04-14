@@ -31,10 +31,10 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: "pro_annual",
     name: "Pro — Annual",
-    amountCents: 9900,
+    amountCents: 12900,
     interval: "year",
-    displayPrice: "$99/yr ($8.25/mo)",
-    description: "Best value — save 45% vs monthly",
+    displayPrice: "$129/yr ($10.75/mo)",
+    description: "Best value — save 28% vs monthly",
   },
   {
     id: "campus_annual",

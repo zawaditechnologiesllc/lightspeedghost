@@ -145,8 +145,10 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
       return;
     }
 
-    // Track AFTER passing all gates so quota is never burned on a blocked request
+    const hasDocument = body.question.includes("--- Attached document:");
+    // Doc uploads use Sonnet (10x costlier than Haiku) — count as 2 uses
     trackUsage(userId, "assistant").catch(() => {});
+    if (hasDocument) trackUsage(userId, "assistant").catch(() => {});
 
     // Compute remaining quota so frontend can display it to Starter users
     const planLimit = PLAN_LIMITS[plan]?.assistant ?? null;
@@ -208,7 +210,6 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
       return;
     }
 
-    const hasDocument = body.question.includes("--- Attached document:");
     const baseMaxTokens: Record<Mode, number> = {
       quick: 300,
       exam: 350,
