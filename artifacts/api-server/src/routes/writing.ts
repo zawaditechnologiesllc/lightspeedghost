@@ -971,8 +971,8 @@ SPACING: ${body.spacing === "single" ? "Single-spaced" : body.spacing === "1.5" 
 LANGUAGE: ${body.language === "uk" ? "British English (use British spelling: colour, analyse, organisation, behaviour, centre, programme, defence)" : body.language === "au" ? "Australian English (use Australian spelling: colour, analyse, organisation, behaviour, centre, but program for computing)" : "American English (use US spelling: color, analyze, organization, behavior, center, program, defense)"}
 ${body.numSources ? `MINIMUM SOURCES: Use at least ${body.numSources} sources in the paper` : ""}
 WORD COUNT — ALL THREE RULES ARE MANDATORY:
-• Body content (introduction through conclusion): MINIMUM ${targetWords} words · MAXIMUM ${maxWords} words
-• Target exactly ${targetWords} words of body text. Do NOT exceed ${maxWords} words under any circumstances.
+• Body content (introduction through conclusion): MINIMUM ${minWords} words · MAXIMUM ${maxWords} words
+• Target ${targetWords} words of body text, with allowed tolerance ${minWords}-${maxWords}. Do NOT exceed ${maxWords} words under any circumstances.
 • Count your running word total after EVERY section. If you are behind budget, write more in the next section. If ahead, trim.
 • A complete, on-target ${targetWords}-word paper is the goal — neither padded nor truncated.
 • Word count EXCLUDES: reference list, in-text citation parentheses, headings, abstract, table of contents, figure/table captions
