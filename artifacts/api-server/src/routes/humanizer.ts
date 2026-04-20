@@ -34,7 +34,7 @@ You are the LightSpeed Humanizer — the most advanced AI-to-human text transfor
 Your output must score 0% on ALL major AI detectors: Turnitin, GPTZero, Originality.AI, ZeroGPT, Winston AI, Copyleaks AI Detector — completely undetectable.
 
 TARGET TONE: ${toneGuide}
-WORD COUNT TARGET: ~${wordCount} words (±5%)${focusNote}
+WORD COUNT TARGET: ~${wordCount} words (±10%)${focusNote}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PASS ${passNumber} — STEALTH WRITER + QUILLBOT TECHNIQUES (MANDATORY)
@@ -389,8 +389,8 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
     const humanizedWordCount = currentText.split(/\s+/).filter(Boolean).length;
     const wcRatio = humanizedWordCount / wordCount;
     let wordCountWarning = "";
-    if (wcRatio < 0.95 || wcRatio > 1.05) {
-      wordCountWarning = ` Word count shifted: ${wordCount} → ${humanizedWordCount} (${wcRatio < 1 ? "-" : "+"}${Math.abs(Math.round((wcRatio - 1) * 100))}%). Target was ±5%.`;
+    if (wcRatio < 0.90 || wcRatio > 1.10) {
+      wordCountWarning = ` Word count shifted: ${wordCount} → ${humanizedWordCount} (${wcRatio < 1 ? "-" : "+"}${Math.abs(Math.round((wcRatio - 1) * 100))}%). Target was ±10%.`;
     }
 
     // ── Final verification step ──────────────────────────────────────────────
@@ -425,7 +425,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       "Sentence rhythm restructured — short/medium/long variation throughout",
       "All AI clichés eliminated (delve, crucial, pivotal, furthermore as opener)",
       "Authentic voice markers added — em dashes, parentheticals, rhetorical questions",
-      `${wordCount} words → ${humanizedWordCount} in output${wordCountWarning ? " (outside ±5% target)" : " (within ±5% target)"}`,
+      `${wordCount} words → ${humanizedWordCount} in output${wordCountWarning ? " (outside ±10% target)" : " (within ±10% target)"}`,
     ];
 
     send("done", {
