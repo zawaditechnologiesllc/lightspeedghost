@@ -26,6 +26,7 @@ export interface AIDetectionResult {
   indicators: string[];
   burstiness: number;
   stdDev: number;
+  mode?: "blended" | "burstiness_fallback";
 }
 
 const DETECTION_SYSTEM = (burstiness: number, stdDev: number) => `\
@@ -102,12 +103,23 @@ export async function detectAIScore(
         indicators: Array.isArray(raw.indicators) ? raw.indicators : [],
         burstiness,
         stdDev,
+        mode: "blended",
       };
     } catch {
       if (attempt < MAX_RETRIES) continue;
     }
   }
-  return { score: -1, indicators: ["detection_unavailable"], burstiness, stdDev };
+
+  // Deterministic fallback (no guessing): derive score from measured burstiness only.
+  // Lower burstiness => more likely AI-like rhythmic uniformity.
+  const fallbackScore = Math.min(98, Math.max(0, Math.round((100 - burstiness) * 0.8)));
+  return {
+    score: fallbackScore,
+    indicators: ["burstiness_only_fallback:model_unavailable"],
+    burstiness,
+    stdDev,
+    mode: "burstiness_fallback",
+  };
 }
 
 /**

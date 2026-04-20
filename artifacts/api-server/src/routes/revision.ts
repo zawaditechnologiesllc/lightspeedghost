@@ -15,6 +15,58 @@ import { diffWords } from "diff";
 
 const router = Router();
 
+function countWords(text: string): number {
+  return text.split(/\s+/).filter(Boolean).length;
+}
+
+async function enforceRevisionWordCount(
+  revisedText: string,
+  targetWords: number,
+): Promise<string> {
+  const minTarget = Math.floor(targetWords * 0.95);
+  const maxTarget = Math.ceil(targetWords * 1.05);
+  let current = revisedText;
+
+  for (let pass = 1; pass <= 3; pass++) {
+    const currentWords = countWords(current);
+    if (currentWords >= minTarget && currentWords <= maxTarget) return current;
+
+    const expand = currentWords < minTarget;
+    const adjusted = await anthropic.messages.create({
+      model: "claude-sonnet-4-5",
+      max_tokens: Math.min(16000, Math.ceil(Math.max(targetWords, Math.abs(targetWords - currentWords)) * 1.8) + 1800),
+      system: `${WRITER_SOUL}
+
+You are the LightSpeed Revision Word Count Controller.
+Current words: ${currentWords}
+Target words: ${targetWords}
+Allowed range: ${minTarget}-${maxTarget}
+
+Rules:
+- Keep all citations, evidence, equations, and markdown structure.
+- If expanding, add real analytical depth and evidence (no filler).
+- If trimming, remove redundancy while preserving argument integrity.
+- Return ONLY the revised paper.`,
+      messages: [
+        {
+          role: "user",
+          content: `${expand ? "Expand" : "Trim"} this revised paper so total words land in ${minTarget}-${maxTarget} (target ${targetWords}):\n\n${current}`,
+        },
+      ],
+    });
+    recordUsage(
+      "claude-sonnet-4-5",
+      adjusted.usage.input_tokens,
+      adjusted.usage.output_tokens,
+      expand ? "revision-wordcount-expand" : "revision-wordcount-trim",
+    );
+
+    current = adjusted.content[0].type === "text" ? adjusted.content[0].text : current;
+  }
+
+  return current;
+}
+
 // ── Quick AI + plagiarism analysis ────────────────────────────────────────────
 
 router.post("/revision/analyse", requireAuth, async (req, res) => {
@@ -146,7 +198,7 @@ router.post("/revision/submit-stream", requireAuth, async (req, res) => {
     // Use uploaded rubric or fall back to built-in A-grade criteria for this academic level
     const effectiveGradingCriteria = body.gradingCriteria?.trim()
       || buildGradeCriteria(body.academicLevel);
-    const wordCount = body.originalText.split(/\s+/).filter(Boolean).length;
+    const wordCount = countWords(body.originalText);
 
     // ── Step 1: Section-level analysis ───────────────────────────────────────
     send("step", {
@@ -485,6 +537,25 @@ RULES:
     }
 
     // ── Plagiarism gate (runs on final text after grade improvement) ──────────
+    send("step", {
+      id: "word-count-lock",
+      message: "Locking revised paper to requested word-count range (95-105%)…",
+      status: "running",
+    });
+    try {
+      const adjusted = await enforceRevisionWordCount(revisedText, wordCount);
+      const adjustedWords = countWords(adjusted);
+      revisedText = adjusted;
+      send("step", {
+        id: "word-count-lock",
+        message: `Word count locked at ${adjustedWords.toLocaleString()} words (target ${wordCount.toLocaleString()})`,
+        status: "done",
+      });
+    } catch {
+      send("step", { id: "word-count-lock", message: "Word count lock skipped due to adjustment error.", status: "done" });
+    }
+
+    // ── Plagiarism gate (runs on final text after grade improvement) ──────────
     let plagScore = 0;
     try {
       send("step", {
@@ -614,7 +685,7 @@ Return ONLY the rephrased paper content.`,
       status: "done",
     });
 
-    const revisedWordCount = revisedText.split(/\s+/).filter(Boolean).length;
+    const revisedWordCount = countWords(revisedText);
 
     // ── Word count deviation check ────────────────────────────────────────────
     const wcDeviation = Math.abs(revisedWordCount - wordCount) / wordCount;
