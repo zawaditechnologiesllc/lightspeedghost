@@ -24,7 +24,7 @@ async function enforceRevisionWordCount(
   targetWords: number,
 ): Promise<string> {
   const minTarget = Math.floor(targetWords * 0.90);
-  const maxTarget = Math.ceil(targetWords * 1.10);
+  const maxTarget = targetWords;
   let current = revisedText;
 
   for (let pass = 1; pass <= 3; pass++) {
@@ -506,7 +506,7 @@ ${gv.gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}
 RULES:
 - Keep all existing citations, facts, and arguments
 - Add evidence, analysis, or depth where criteria are missing
-- Maintain the same approximate word count (±10%)
+- Keep final word count within 90-100% of the original (never exceed original length)
 - Preserve all markdown formatting
 - Return ONLY the improved paper`,
           messages: [{
@@ -539,7 +539,7 @@ RULES:
     // ── Plagiarism gate (runs on final text after grade improvement) ──────────
     send("step", {
       id: "word-count-lock",
-      message: "Locking revised paper to requested word-count range (90-110%)…",
+      message: "Locking revised paper to requested word-count range (90-100%)…",
       status: "running",
     });
     try {
@@ -581,7 +581,7 @@ RULES:
 You are the LightSpeed Originality Engine. Rephrase flagged sections of this academic paper to reduce textual similarity below 8% while preserving:
 • All facts, arguments, conclusions, and in-text citations EXACTLY
 • The same academic level and tone
-• The same word count (±10%)
+• Keep final word count within 90-100% of the original (never exceed original length)
 • All LaTeX equations and markdown formatting
 
 Rephrase by:

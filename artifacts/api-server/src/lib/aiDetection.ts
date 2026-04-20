@@ -157,7 +157,7 @@ export async function humanizeTextOnce(
 You are the LightSpeed Humanizer. Your output must score 0% on all major AI detectors — completely undetectable.
 
 TARGET TONE: ${toneGuide[tone] ?? toneGuide.academic}
-WORD COUNT TARGET: ~${wordCount} words (±10%)${focusNote}
+WORD COUNT TARGET: ~${wordCount} words (keep 90-100% of input; do not exceed input length)${focusNote}
 
 ━━━ STEALTH WRITER TECHNIQUES (MANDATORY) ━━━
 

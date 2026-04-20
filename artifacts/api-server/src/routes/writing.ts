@@ -449,7 +449,7 @@ async function enforceBodyWordCount(
 ): Promise<string> {
   let current = content;
   const minTarget = Math.floor(targetWords * 0.90);
-  const maxTarget = Math.ceil(targetWords * 1.10);
+  const maxTarget = targetWords;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     const currentCount = computeBodyWordCount(current);
@@ -593,10 +593,11 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     };
 
     const requestedWords = body.wordCount ?? 1500;
-    // Target = what was requested, with an allowed window of ±10%.
+    // Target = what was requested, with tolerance only on the lower side.
+    // Never exceed requested words.
     const targetWords = requestedWords;
     const minWords = Math.floor(requestedWords * 0.90);
-    const maxWords = Math.ceil(requestedWords * 1.10);
+    const maxWords = requestedWords;
     const isAnnotatedBib = body.paperType.toLowerCase().includes("annotated");
     const autoCitations = isAnnotatedBib
       ? Math.max(8, Math.ceil(requestedWords / 175))
@@ -1205,7 +1206,7 @@ ${gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}
 RULES:
 - Keep all existing citations, facts, and arguments — only strengthen weak sections
 - Add evidence, analysis, or depth where criteria are missing — do not waffle or pad
-- Maintain the same approximate word count (±10%)
+- Keep final body word count within 90-100% of the requested target (never exceed target)
 - Preserve all markdown formatting and LaTeX equations
 - Return ONLY the revised paper — no commentary, no preamble`,
             messages: [{
@@ -1287,7 +1288,7 @@ RULES:
 You are the LightSpeed Originality Engine. Your task is to rephrase flagged sections of an academic paper to reduce textual similarity below 8% while preserving:
 • All facts, arguments, conclusions, and in-text citations EXACTLY
 • The same academic level and tone
-• The same word count (±10%)
+• Keep final body word count within 90-100% of the requested target (never exceed target)
 • All LaTeX equations and markdown formatting
 
 Rephrase by:
@@ -1751,7 +1752,7 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
       sections: enrichedSections,
       totalWordTarget: targetWordCount,
       totalWordMin: Math.floor(targetWordCount * 0.90),
-      totalWordMax: Math.ceil(targetWordCount * 1.10),
+      totalWordMax: targetWordCount,
     });
     res.end();
   } catch (err) {
