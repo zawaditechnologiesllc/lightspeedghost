@@ -442,6 +442,78 @@ function computeBodyWordCount(content: string): number {
   return clean.split(/\s+/).filter((w) => w.trim().length > 0).length;
 }
 
+async function enforceBodyWordCount(
+  content: string,
+  targetWords: number,
+  send: (event: string, data: object) => void,
+): Promise<string> {
+  let current = content;
+  const minTarget = Math.floor(targetWords * 0.90);
+  const maxTarget = Math.ceil(targetWords * 1.10);
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const currentCount = computeBodyWordCount(current);
+    if (currentCount >= minTarget && currentCount <= maxTarget) {
+      if (attempt > 1) {
+        send("step", {
+          id: "word-count-fix",
+          message: `Word count locked after pass ${attempt - 1}: ${currentCount.toLocaleString()} words (target ${targetWords.toLocaleString()})`,
+          status: "done",
+        });
+      }
+      return current;
+    }
+
+    const isExpand = currentCount < minTarget;
+    const delta = Math.abs(targetWords - currentCount);
+    send("step", {
+      id: "word-count-fix",
+      message: isExpand
+        ? `Body count ${currentCount.toLocaleString()} words — ${delta} short. Word-count pass ${attempt}/3…`
+        : `Body count ${currentCount.toLocaleString()} words — ${delta} over. Word-count pass ${attempt}/3…`,
+      status: "running",
+    });
+
+    const adjustResp = await anthropic.messages.create({
+      model: "claude-sonnet-4-5",
+      max_tokens: Math.min(16000, Math.ceil(Math.max(targetWords, delta) * 1.8) + 1800),
+      system: `${WRITER_SOUL}
+
+You are the LightSpeed Word Count Optimizer.
+Current body word count: ${currentCount}
+Required target body word count: ${targetWords}
+Allowed range: ${minTarget} to ${maxTarget} words
+
+RULES:
+1) Adjust ONLY body sections; references/bibliography must not be expanded.
+2) Keep citations, factual claims, equations, and markdown intact.
+3) If expanding, add substantive analysis/evidence (no filler).
+4) If trimming, remove redundancy first (no loss of core argument/evidence).
+5) Return ONLY the full revised paper content.`,
+      messages: [{
+        role: "user",
+        content: `${isExpand ? "Expand" : "Trim"} this paper so the body text lands in ${minTarget}-${maxTarget} words (target ${targetWords}):\n\n${current}`,
+      }],
+    });
+
+    recordUsage(
+      "claude-sonnet-4-5",
+      adjustResp.usage.input_tokens,
+      adjustResp.usage.output_tokens,
+      isExpand ? "word-count-expand" : "word-count-trim",
+    );
+    current = adjustResp.content[0].type === "text" ? adjustResp.content[0].text : current;
+  }
+
+  const finalCount = computeBodyWordCount(current);
+  send("step", {
+    id: "word-count-fix",
+    message: `Word-count optimization ended at ${finalCount.toLocaleString()} words (target ${targetWords.toLocaleString()}).`,
+    status: "done",
+  });
+  return current;
+}
+
 function countInTextCitations(content: string, citationCount: number): { cited: number[]; uncited: number[] } {
   const cited = new Set<number>();
   const bracketMatches = content.matchAll(/\[(\d[\d,;\s–-]*)\]/g);
@@ -521,9 +593,10 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     };
 
     const requestedWords = body.wordCount ?? 1500;
-    // Target = exactly what was requested. Max = requested + 5%. Both are hard limits.
+    // Target = what was requested, with an allowed window of ±10%.
     const targetWords = requestedWords;
-    const maxWords = Math.ceil(requestedWords * 1.05);
+    const minWords = Math.floor(requestedWords * 0.90);
+    const maxWords = Math.ceil(requestedWords * 1.10);
     const isAnnotatedBib = body.paperType.toLowerCase().includes("annotated");
     const autoCitations = isAnnotatedBib
       ? Math.max(8, Math.ceil(requestedWords / 175))
@@ -1031,7 +1104,7 @@ ${body.additionalInstructions}
           role: "user",
           content: isAnnotatedBib
             ? `Write a complete annotated bibliography on: "${body.topic}"\n\nYou have ${citations.length} verified sources listed above. Write one annotated entry for EACH source — full citation then a 150-200 word annotation (Summary → Critical Evaluation → Relevance). Sort entries alphabetically by first author's surname. Include an Introduction and Conclusion. Total annotation content must reach at least ${targetWords} words.${body.additionalInstructions ? `\n\nADDITIONAL STUDENT INSTRUCTIONS (follow exactly): ${body.additionalInstructions}` : ""}`
-            : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Body word count (introduction through conclusion, excluding references and in-text citations): minimum ${targetWords} words, maximum ${maxWords} words. Stop writing body content once you reach ${maxWords} words, then add the references section.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
+            : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Body word count (introduction through conclusion, excluding references and in-text citations): minimum ${minWords} words, maximum ${maxWords} words. Aim for ${targetWords} words. Stop writing body content once you reach ${maxWords} words, then add the references section.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
         }],
       });
 
@@ -1045,108 +1118,19 @@ ${body.additionalInstructions}
       const finalMsg = await stream.finalMessage();
       recordUsage("claude-sonnet-4-5", finalMsg.usage.input_tokens, finalMsg.usage.output_tokens, "paper-generation");
 
-      // ── Word count enforcement ────────────────────────────────────────────────
-      // Check actual body word count and correct if off-target.
-      // Threshold: expand if <95% of target, trim if >105% of target.
-      if (!isAnnotatedBib) {
-        const afterGenCount = computeBodyWordCount(content);
-        const expandThreshold = Math.floor(targetWords * 0.95);
-        const trimThreshold   = Math.ceil(targetWords * 1.05);
-
-        if (afterGenCount < expandThreshold) {
-          const deficit = targetWords - afterGenCount;
-          send("step", {
-            id: "word-count-fix",
-            message: `Body count ${afterGenCount.toLocaleString()} words — ${deficit} short of target. Expanding thin sections to reach ${targetWords.toLocaleString()} words…`,
-            status: "running",
-          });
-
-          try {
-            const expandResp = await anthropic.messages.create({
-              model: "claude-sonnet-4-5",
-              max_tokens: Math.min(16000, Math.ceil(deficit * 2.0) + 1500),
-              system: `${WRITER_SOUL}
-
-You are the LightSpeed Word Count Optimizer. The paper below is ${afterGenCount} words but must reach ${targetWords} words (currently ${deficit} words short).
-
-EXPANSION RULES — read carefully before writing:
-1. Add ${deficit} words of genuine academic content — NOT padding or repetition
-2. Expand the BODY sections only (introduction, main body, discussion, conclusion). Do NOT extend the references
-3. In each thin section: add another paragraph of analysis, introduce an additional piece of evidence from the verified citations, or deepen the existing argument with critical commentary
-4. Every added paragraph must follow the 4-part structure: Topic Sentence → Evidence (with citation) → Analysis → Transition
-5. Preserve all existing citations, LaTeX equations, and markdown structure exactly
-6. Maintain the same academic level and anti-AI writing style
-7. Return ONLY the complete revised paper — no commentary, no preamble`,
-              messages: [{
-                role: "user",
-                content: `Expand this ${afterGenCount}-word paper by adding ${deficit} words of genuine academic content to reach ${targetWords} words total:\n\n${content}`,
-              }],
-            });
-
-            const expanded = expandResp.content[0].type === "text" ? expandResp.content[0].text : content;
-            recordUsage("claude-sonnet-4-5", expandResp.usage.input_tokens, expandResp.usage.output_tokens, "word-count-expand");
-            const newCount = computeBodyWordCount(expanded);
-            content = expanded;
-
-            send("step", {
-              id: "word-count-fix",
-              message: `Expansion complete — body now ${newCount.toLocaleString()} words (target: ${targetWords.toLocaleString()})`,
-              status: "done",
-            });
-          } catch {
-            send("step", { id: "word-count-fix", message: "Word count optimisation complete", status: "done" });
-          }
-
-        } else if (afterGenCount > trimThreshold) {
-          const excess = afterGenCount - targetWords;
-          send("step", {
-            id: "word-count-fix",
-            message: `Body count ${afterGenCount.toLocaleString()} words — ${excess} over target. Trimming to ${targetWords.toLocaleString()} words…`,
-            status: "running",
-          });
-
-          try {
-            const trimResp = await anthropic.messages.create({
-              model: "claude-sonnet-4-5",
-              max_tokens: Math.min(16000, Math.ceil(targetWords * 1.5) + 2000),
-              system: `${WRITER_SOUL}
-
-You are the LightSpeed Word Count Optimizer. The paper below is ${afterGenCount} words but must be trimmed to ${targetWords} words (currently ${excess} words over).
-
-TRIMMING RULES — read carefully before writing:
-1. Remove ${excess} words from the body — cut the LEAST important sentences first
-2. Priority for cutting: redundant transitions, repetitive points, overly long preambles in each section, unnecessary hedging phrases
-3. DO NOT cut citations, evidence sentences, or the conclusion
-4. DO NOT remove any section entirely — trim each section proportionally
-5. Preserve all LaTeX equations, citation formatting, and markdown structure
-6. Return ONLY the complete trimmed paper — no commentary, no preamble`,
-              messages: [{
-                role: "user",
-                content: `Trim this ${afterGenCount}-word paper by removing ${excess} words to reach exactly ${targetWords} words:\n\n${content}`,
-              }],
-            });
-
-            const trimmed = trimResp.content[0].type === "text" ? trimResp.content[0].text : content;
-            recordUsage("claude-sonnet-4-5", trimResp.usage.input_tokens, trimResp.usage.output_tokens, "word-count-trim");
-            const newCount = computeBodyWordCount(trimmed);
-            content = trimmed;
-
-            send("step", {
-              id: "word-count-fix",
-              message: `Trimming complete — body now ${newCount.toLocaleString()} words (target: ${targetWords.toLocaleString()})`,
-              status: "done",
-            });
-          } catch {
-            send("step", { id: "word-count-fix", message: "Word count optimisation complete", status: "done" });
-          }
-        }
-      }
-
       send("step", {
         id: "writing",
         message: `Paper complete — body written with citations distributed throughout`,
         status: "done",
       });
+    }
+
+    if (!isAnnotatedBib) {
+      try {
+        content = await enforceBodyWordCount(content, targetWords, send);
+      } catch {
+        send("step", { id: "word-count-fix", message: "Word-count optimization skipped due to adjustment error.", status: "done" });
+      }
     }
 
     // ── Step 3.5: A-grade criteria verification (if rubric uploaded) ──────────
@@ -1221,7 +1205,7 @@ ${gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}
 RULES:
 - Keep all existing citations, facts, and arguments — only strengthen weak sections
 - Add evidence, analysis, or depth where criteria are missing — do not waffle or pad
-- Maintain the same approximate word count (±5%)
+- Maintain the same approximate word count (±10%)
 - Preserve all markdown formatting and LaTeX equations
 - Return ONLY the revised paper — no commentary, no preamble`,
             messages: [{
@@ -1303,7 +1287,7 @@ RULES:
 You are the LightSpeed Originality Engine. Your task is to rephrase flagged sections of an academic paper to reduce textual similarity below 8% while preserving:
 • All facts, arguments, conclusions, and in-text citations EXACTLY
 • The same academic level and tone
-• The same word count (±5%)
+• The same word count (±10%)
 • All LaTeX equations and markdown formatting
 
 Rephrase by:
@@ -1602,7 +1586,7 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
       });
       return res.end();
     }
-    const rawBody = req.body as { topic?: string; subject?: string; paperType?: string; instructionsText?: string; referenceText?: string };
+    const rawBody = req.body as { topic?: string; subject?: string; paperType?: string; instructionsText?: string; referenceText?: string; wordCount?: number };
     const body = {
       topic: rawBody.topic ?? "",
       subject: rawBody.subject ?? "",
@@ -1696,7 +1680,10 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
     //   Main Body     70–80%  (remainder, split evenly among body sections)
     //   Conclusion    10–15%  (midpoint 12%)
     //   References / Appendix → 0 (excluded from word count)
-    const targetWordCount = Number(req.body.wordCount) || 2000;
+    const requestedWordCount = Number(rawBody.wordCount);
+    const targetWordCount = Number.isFinite(requestedWordCount) && requestedWordCount > 0
+      ? Math.round(requestedWordCount)
+      : 2000;
 
     const classifySection = (heading: string): "intro" | "body" | "conclusion" | "none" => {
       const h = heading.toLowerCase();
@@ -1726,6 +1713,32 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
       }
     });
 
+    // Rounding can drift; force exact total match to requested target.
+    const allocated = wordTargets.reduce((a, b) => a + b, 0);
+    let delta = targetWordCount - allocated;
+    if (delta !== 0) {
+      const adjustableIdx = types
+        .map((t, i) => ({ t, i }))
+        .filter(({ t }) => t !== "none")
+        .map(({ i }) => i);
+      if (adjustableIdx.length > 0) {
+        let ptr = 0;
+        while (delta !== 0) {
+          const idx = adjustableIdx[ptr % adjustableIdx.length];
+          if (delta > 0) {
+            wordTargets[idx] += 1;
+            delta -= 1;
+          } else if (wordTargets[idx] > 1) {
+            wordTargets[idx] -= 1;
+            delta += 1;
+          } else {
+            break;
+          }
+          ptr += 1;
+        }
+      }
+    }
+
     const enrichedSections = (outline.sections as Array<{ heading: string; subsections: string[] }>).map(
       (section, i) => ({ ...section, wordTarget: wordTargets[i] })
     );
@@ -1733,7 +1746,13 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
     send("step", { id: "headings", message: "Section headings and sub-headings complete", status: "done" });
     send("step", { id: "finalise", message: "Adding evidence points and research angles per section…", status: "running" });
     send("step", { id: "finalise", message: "Outline finalised — ready to write", status: "done" });
-    send("done", { ...outline, sections: enrichedSections, totalWordTarget: targetWordCount });
+    send("done", {
+      ...outline,
+      sections: enrichedSections,
+      totalWordTarget: targetWordCount,
+      totalWordMin: Math.floor(targetWordCount * 0.90),
+      totalWordMax: Math.ceil(targetWordCount * 1.10),
+    });
     res.end();
   } catch (err) {
     req.log.error({ err }, "Error generating outline");
