@@ -19,22 +19,26 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
+function tokenBudgetFromWords(words: number, extra = 0): number {
+  return Math.max(1200, Math.ceil(words * 2.2) + extra);
+}
+
 async function enforceRevisionWordCount(
   revisedText: string,
   targetWords: number,
 ): Promise<string> {
-  const minTarget = Math.floor(targetWords * 0.90);
+  const minTarget = targetWords;
   const maxTarget = targetWords;
   let current = revisedText;
 
   for (let pass = 1; pass <= 3; pass++) {
     const currentWords = countWords(current);
-    if (currentWords >= minTarget && currentWords <= maxTarget) return current;
+    if (currentWords === targetWords) return current;
 
     const expand = currentWords < minTarget;
     const adjusted = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: Math.min(16000, Math.ceil(Math.max(targetWords, Math.abs(targetWords - currentWords)) * 1.8) + 1800),
+      max_tokens: tokenBudgetFromWords(Math.max(targetWords, Math.abs(targetWords - currentWords)), 1600),
       system: `${WRITER_SOUL}
 
 You are the LightSpeed Revision Word Count Controller.
@@ -50,7 +54,7 @@ Rules:
       messages: [
         {
           role: "user",
-          content: `${expand ? "Expand" : "Trim"} this revised paper so total words land in ${minTarget}-${maxTarget} (target ${targetWords}):\n\n${current}`,
+          content: `${expand ? "Expand" : "Trim"} this revised paper so total words are exactly ${targetWords}:\n\n${current}`,
         },
       ],
     });
@@ -64,6 +68,10 @@ Rules:
     current = adjusted.content[0].type === "text" ? adjusted.content[0].text : current;
   }
 
+  if (countWords(current) > targetWords) {
+    const words = current.split(/\s+/).filter(Boolean);
+    current = words.slice(0, targetWords).join(" ");
+  }
   return current;
 }
 
@@ -361,7 +369,7 @@ Return ONLY valid JSON:
 
     const revisionResp = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: 12000,
+      max_tokens: tokenBudgetFromWords(wordCount, 2200),
       system: revisionSystemPrompt,
       messages: [
         {
@@ -492,7 +500,7 @@ ${effectiveGradingCriteria}`,
 
         const improvResp = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
-          max_tokens: 12000,
+          max_tokens: tokenBudgetFromWords(wordCount, 1800),
           system: `${WRITER_SOUL}
 
 You are the LightSpeed Grade Optimizer for a revised paper. Strengthen the paper to reach at least 92%.
@@ -506,7 +514,7 @@ ${gv.gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}
 RULES:
 - Keep all existing citations, facts, and arguments
 - Add evidence, analysis, or depth where criteria are missing
-- Keep final word count within 90-100% of the original (never exceed original length)
+- Keep final word count equal to the original word count
 - Preserve all markdown formatting
 - Return ONLY the improved paper`,
           messages: [{
@@ -539,7 +547,7 @@ RULES:
     // ── Plagiarism gate (runs on final text after grade improvement) ──────────
     send("step", {
       id: "word-count-lock",
-      message: "Locking revised paper to requested word-count range (90-100%)…",
+      message: "Locking revised paper to exact requested word count…",
       status: "running",
     });
     try {
@@ -575,13 +583,13 @@ RULES:
 
         const rephrasedResp = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
-          max_tokens: 12000,
+          max_tokens: tokenBudgetFromWords(wordCount, 1800),
           system: `${WRITER_SOUL}
 
 You are the LightSpeed Originality Engine. Rephrase flagged sections of this academic paper to reduce textual similarity below 8% while preserving:
 • All facts, arguments, conclusions, and in-text citations EXACTLY
 • The same academic level and tone
-• Keep final word count within 90-100% of the original (never exceed original length)
+• Keep final word count equal to the original word count
 • All LaTeX equations and markdown formatting
 
 Rephrase by:

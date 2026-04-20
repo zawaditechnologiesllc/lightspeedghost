@@ -11,6 +11,10 @@ import { detectAIScore } from "../lib/aiDetection.js";
 
 const router = Router();
 
+function tokenBudgetFromWords(words: number, extra = 0): number {
+  return Math.max(1200, Math.ceil(words * 2.2) + extra);
+}
+
 // ── Humanize pass helper ──────────────────────────────────────────────────────
 
 async function humanizePass(
@@ -34,7 +38,7 @@ You are the LightSpeed Humanizer — the most advanced AI-to-human text transfor
 Your output must score 0% on ALL major AI detectors: Turnitin, GPTZero, Originality.AI, ZeroGPT, Winston AI, Copyleaks AI Detector — completely undetectable.
 
 TARGET TONE: ${toneGuide}
-WORD COUNT TARGET: ~${wordCount} words (keep 90-100% of input; do not exceed input length)${focusNote}
+WORD COUNT TARGET: exactly ${wordCount} words (match input length)${focusNote}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PASS ${passNumber} — STEALTH WRITER + QUILLBOT TECHNIQUES (MANDATORY)
@@ -104,7 +108,7 @@ Return ONLY the humanized text. No commentary, no JSON wrapper, no preamble, no 
 
   const resp = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
-    max_tokens: 8000,
+    max_tokens: tokenBudgetFromWords(wordCount, 1400),
     system: systemPrompt,
     messages: [
       {
@@ -389,8 +393,8 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
     const humanizedWordCount = currentText.split(/\s+/).filter(Boolean).length;
     const wcRatio = humanizedWordCount / wordCount;
     let wordCountWarning = "";
-    if (wcRatio < 0.90 || wcRatio > 1.00) {
-      wordCountWarning = ` Word count shifted: ${wordCount} → ${humanizedWordCount} (${wcRatio < 1 ? "-" : "+"}${Math.abs(Math.round((wcRatio - 1) * 100))}%). Target is 90-100% of input (never exceed input length).`;
+    if (humanizedWordCount !== wordCount) {
+      wordCountWarning = ` Word count shifted: ${wordCount} → ${humanizedWordCount} (${humanizedWordCount < wordCount ? "-" : "+"}${Math.abs(humanizedWordCount - wordCount)} words). Target is exact word-count match.`;
     }
 
     // ── Final verification step ──────────────────────────────────────────────
@@ -425,7 +429,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       "Sentence rhythm restructured — short/medium/long variation throughout",
       "All AI clichés eliminated (delve, crucial, pivotal, furthermore as opener)",
       "Authentic voice markers added — em dashes, parentheticals, rhetorical questions",
-      `${wordCount} words → ${humanizedWordCount} in output${wordCountWarning ? " (outside 90-100% target)" : " (within 90-100% target)"}`,
+      `${wordCount} words → ${humanizedWordCount} in output${wordCountWarning ? " (outside exact-match target)" : " (exact-match achieved)"}`,
     ];
 
     send("done", {

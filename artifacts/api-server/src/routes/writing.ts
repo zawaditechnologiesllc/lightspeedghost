@@ -442,18 +442,22 @@ function computeBodyWordCount(content: string): number {
   return clean.split(/\s+/).filter((w) => w.trim().length > 0).length;
 }
 
+function tokenBudgetFromWords(words: number, extra = 0): number {
+  return Math.max(1200, Math.ceil(words * 2.2) + extra);
+}
+
 async function enforceBodyWordCount(
   content: string,
   targetWords: number,
   send: (event: string, data: object) => void,
 ): Promise<string> {
   let current = content;
-  const minTarget = Math.floor(targetWords * 0.90);
+  const minTarget = targetWords;
   const maxTarget = targetWords;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     const currentCount = computeBodyWordCount(current);
-    if (currentCount >= minTarget && currentCount <= maxTarget) {
+    if (currentCount === targetWords) {
       if (attempt > 1) {
         send("step", {
           id: "word-count-fix",
@@ -464,7 +468,7 @@ async function enforceBodyWordCount(
       return current;
     }
 
-    const isExpand = currentCount < minTarget;
+    const isExpand = currentCount < targetWords;
     const delta = Math.abs(targetWords - currentCount);
     send("step", {
       id: "word-count-fix",
@@ -476,7 +480,7 @@ async function enforceBodyWordCount(
 
     const adjustResp = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: Math.min(16000, Math.ceil(Math.max(targetWords, delta) * 1.8) + 1800),
+      max_tokens: tokenBudgetFromWords(Math.max(targetWords, delta), 1600),
       system: `${WRITER_SOUL}
 
 You are the LightSpeed Word Count Optimizer.
@@ -492,7 +496,7 @@ RULES:
 5) Return ONLY the full revised paper content.`,
       messages: [{
         role: "user",
-        content: `${isExpand ? "Expand" : "Trim"} this paper so the body text lands in ${minTarget}-${maxTarget} words (target ${targetWords}):\n\n${current}`,
+        content: `${isExpand ? "Expand" : "Trim"} this paper so the body text is exactly ${targetWords} words:\n\n${current}`,
       }],
     });
 
@@ -505,7 +509,12 @@ RULES:
     current = adjustResp.content[0].type === "text" ? adjustResp.content[0].text : current;
   }
 
-  const finalCount = computeBodyWordCount(current);
+  let finalCount = computeBodyWordCount(current);
+  if (finalCount > targetWords) {
+    const words = current.split(/\s+/).filter(Boolean);
+    current = words.slice(0, targetWords).join(" ");
+    finalCount = computeBodyWordCount(current);
+  }
   send("step", {
     id: "word-count-fix",
     message: `Word-count optimization ended at ${finalCount.toLocaleString()} words (target ${targetWords.toLocaleString()}).`,
@@ -593,10 +602,9 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     };
 
     const requestedWords = body.wordCount ?? 1500;
-    // Target = what was requested, with tolerance only on the lower side.
-    // Never exceed requested words.
+    // Target must match exactly what the user requested.
     const targetWords = requestedWords;
-    const minWords = Math.floor(requestedWords * 0.90);
+    const minWords = requestedWords;
     const maxWords = requestedWords;
     const isAnnotatedBib = body.paperType.toLowerCase().includes("annotated");
     const autoCitations = isAnnotatedBib
@@ -605,7 +613,7 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     const citationCount = body.numSources ? Math.min(Math.max(body.numSources, 3), 50) : autoCitations;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
     const refsOverhead = Math.min(2000, Math.max(400, citationCount * 120));
-    const maxTokens = Math.min(16000, Math.ceil(maxWords * 1.5) + refsOverhead);
+    const maxTokens = tokenBudgetFromWords(maxWords, refsOverhead);
 
     // Keep-alive ping so the SSE connection stays open during slow citation/DB calls
     send("ping", { t: Date.now() });
@@ -1046,7 +1054,7 @@ ${body.additionalInstructions}
       for (let secIdx = 0; secIdx < sectionPlan.length; secIdx++) {
         const section = sectionPlan[secIdx];
         const isFirst = secIdx === 0;
-        const sectionMaxTokens = Math.min(16000, Math.ceil(section.targetWords * 1.7) + 800);
+        const sectionMaxTokens = tokenBudgetFromWords(section.targetWords, 800);
         const headingName = section.name.split("—")[0].trim();
 
         send("step", {
@@ -1206,7 +1214,7 @@ ${gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}
 RULES:
 - Keep all existing citations, facts, and arguments — only strengthen weak sections
 - Add evidence, analysis, or depth where criteria are missing — do not waffle or pad
-- Keep final body word count within 90-100% of the requested target (never exceed target)
+- Keep final body word count exactly at the requested target
 - Preserve all markdown formatting and LaTeX equations
 - Return ONLY the revised paper — no commentary, no preamble`,
             messages: [{
@@ -1288,7 +1296,7 @@ RULES:
 You are the LightSpeed Originality Engine. Your task is to rephrase flagged sections of an academic paper to reduce textual similarity below 8% while preserving:
 • All facts, arguments, conclusions, and in-text citations EXACTLY
 • The same academic level and tone
-• Keep final body word count within 90-100% of the requested target (never exceed target)
+• Keep final body word count exactly at the requested target
 • All LaTeX equations and markdown formatting
 
 Rephrase by:
@@ -1751,7 +1759,7 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
       ...outline,
       sections: enrichedSections,
       totalWordTarget: targetWordCount,
-      totalWordMin: Math.floor(targetWordCount * 0.90),
+      totalWordMin: targetWordCount,
       totalWordMax: targetWordCount,
     });
     res.end();
