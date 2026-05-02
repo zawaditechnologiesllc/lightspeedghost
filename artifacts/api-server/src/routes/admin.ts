@@ -4,6 +4,7 @@ import { documentsTable, studySessionsTable } from "@workspace/db";
 import { desc, sql, eq, ilike, and } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { invalidateSettingsCache } from "../lib/systemSettings";
+import { getUsageLog, checkBudget } from "../lib/apiCost";
 import crypto from "node:crypto";
 
 const router = Router();
@@ -1148,6 +1149,80 @@ router.get("/documents/all", async (req: Request, res: Response) => {
     console.error("[admin] Failed to fetch all documents:", err);
     return res.status(500).json({ error: "Failed to fetch documents" });
   }
+});
+
+// ── GET /admin/api-costs — Claude Code Usage Monitor pattern ──────────────────
+// Exposes the in-process API cost log so admins can see exactly which operations
+// are burning budget. Groups usage by model and operation for easy diagnosis.
+// Technique: Claude Code Usage Monitor (github.com/Macawls/claude-code-usage-monitor)
+// applied server-side — track token spend per task type in real time.
+
+router.get("/admin/api-costs", (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const log   = getUsageLog();
+  const budget = checkBudget();
+
+  // Aggregate by operation
+  const byOperation: Record<string, { calls: number; inputTokens: number; outputTokens: number; costUsd: number; model: string }> = {};
+  const byModel:     Record<string, { calls: number; inputTokens: number; outputTokens: number; costUsd: number }> = {};
+
+  for (const r of log) {
+    // By operation
+    if (!byOperation[r.operation]) {
+      byOperation[r.operation] = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, model: r.model };
+    }
+    byOperation[r.operation].calls++;
+    byOperation[r.operation].inputTokens  += r.inputTokens;
+    byOperation[r.operation].outputTokens += r.outputTokens;
+    byOperation[r.operation].costUsd      += r.costUsd;
+
+    // By model
+    if (!byModel[r.model]) {
+      byModel[r.model] = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0 };
+    }
+    byModel[r.model].calls++;
+    byModel[r.model].inputTokens  += r.inputTokens;
+    byModel[r.model].outputTokens += r.outputTokens;
+    byModel[r.model].costUsd      += r.costUsd;
+  }
+
+  // Sort operations by cost descending (highest burning first)
+  const topOperations = Object.entries(byOperation)
+    .sort(([, a], [, b]) => b.costUsd - a.costUsd)
+    .map(([operation, data]) => ({
+      operation,
+      ...data,
+      costUsd: parseFloat(data.costUsd.toFixed(6)),
+    }));
+
+  const modelSummary = Object.entries(byModel)
+    .sort(([, a], [, b]) => b.costUsd - a.costUsd)
+    .map(([model, data]) => ({
+      model,
+      ...data,
+      costUsd: parseFloat(data.costUsd.toFixed(6)),
+    }));
+
+  return res.json({
+    budget: {
+      sessionCostUsd:  parseFloat(budget.sessionCost.toFixed(6)),
+      dailyBudgetUsd:  budget.dailyBudget,
+      percentUsed:     parseFloat(budget.percentUsed.toFixed(2)),
+      warning:         budget.warning,
+      ok:              budget.ok,
+    },
+    totalCalls:   log.length,
+    topOperations,
+    byModel:      modelSummary,
+    recentLog:    log.slice(-50).reverse().map(r => ({
+      ...r,
+      costUsd:   parseFloat(r.costUsd.toFixed(6)),
+      timestamp: r.timestamp.toISOString(),
+    })),
+  });
 });
 
 export default router;

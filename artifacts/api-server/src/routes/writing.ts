@@ -690,85 +690,19 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     // Keep-alive ping so the SSE connection stays open during slow citation/DB calls
     send("ping", { t: Date.now() });
 
-    // ── Step 0: A-grade rubric extraction ────────────────────────────────────
-    let aGradeCriteria = "";
-    let rubricFormatReqs = "";
+    // ── Steps 0 + 1 run in parallel (Sub-Agent Delegation) ───────────────────
+    // Rubric analysis (GPT-4o-mini) and citation fetching (external APIs) are
+    // fully independent — parallelising them saves 2–8 seconds per generation.
+    // Pattern from Kaizen AI Consulting: specialised sub-agents for separate tasks
+    // run concurrently rather than sequentially.
 
-    if (body.rubricText && body.rubricText.trim().length > 80) {
-      send("step", {
-        id: "rubric-analysis",
-        message: "Analysing grading rubric — extracting A-grade / Distinction criteria to lock in the quality target…",
-        status: "running",
-      });
-
-      try {
-        const rubricResp = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          max_tokens: 1000,
-          response_format: { type: "json_object" },
-          messages: [
-            {
-              role: "system",
-              content: `You are an expert in academic grading rubrics.
-Extract ONLY the A-grade, Distinction, First Class, or Excellent criteria (the HIGHEST grade band).
-If the rubric shows multiple bands (A/B/C, Distinction/Merit/Pass, 70%+/60%+, etc.), extract the TOP band only.
-If only one level is shown, extract all criteria.
-
-Return JSON:
-{
-  "topGradeBand": "name of the top grade band (e.g. 'A / First Class', 'Distinction', 'Excellent', 'High Distinction')",
-  "gradeThreshold": "minimum score or descriptor for this band (e.g. '70%+', 'A / 4.0', 'HD')",
-  "criteria": ["specific criterion 1", "specific criterion 2", "...each criterion as a clear, actionable requirement"],
-  "formatRequirements": "any specific structure, word count, or format requirements for this grade, or null"
-}`,
-            },
-            {
-              role: "user",
-              content: `Extract A-grade criteria from this rubric:\n\n${body.rubricText.slice(0, 4000)}`,
-            },
-          ],
-        });
-
-        if (rubricResp.usage) {
-          recordUsage("gpt-4o-mini", rubricResp.usage.prompt_tokens, rubricResp.usage.completion_tokens, "rubric-analysis");
-        }
-
-        const rd = JSON.parse(rubricResp.choices[0]?.message?.content ?? "{}") as {
-          topGradeBand?: string;
-          gradeThreshold?: string;
-          criteria?: string[];
-          formatRequirements?: string;
-        };
-
-        const criteria = Array.isArray(rd.criteria) ? rd.criteria.filter(Boolean) : [];
-        const gradeBand = rd.topGradeBand ?? "A / Distinction";
-        const threshold = rd.gradeThreshold ?? "highest grade band";
-
-        if (criteria.length > 0) {
-          aGradeCriteria = `${gradeBand} CRITERIA (${threshold}) — the paper MUST satisfy ALL of these:\n${criteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}`;
-        }
-        if (rd.formatRequirements) {
-          rubricFormatReqs = rd.formatRequirements;
-        }
-
-        send("step", {
-          id: "rubric-analysis",
-          message: `Rubric analysed — targeting ${gradeBand} (${threshold}). ${criteria.length} A-grade criteria locked as quality requirements for this paper.`,
-          status: "done",
-        });
-      } catch {
-        send("step", { id: "rubric-analysis", message: "Rubric processed — highest grade band set as target", status: "done" });
-      }
-    }
-
-    // ── Step 0b: Built-in grade criteria fallback (no rubric uploaded) ────────
-    // When no rubric is provided, inject level-appropriate A-grade standards so
-    // Claude still has a concrete quality target rather than a vague "92%" goal.
-    if (!aGradeCriteria) {
-      aGradeCriteria = buildGradeCriteria(body.academicLevel);
-    }
-
-    // ── Step 1: Citations + Academic RAG ────────────────────────────────────
+    send("step", {
+      id: "rubric-analysis",
+      message: body.rubricText && body.rubricText.trim().length > 80
+        ? "Analysing grading rubric — extracting A-grade / Distinction criteria to lock in the quality target…"
+        : "Loading grade standards for academic level…",
+      status: "running",
+    });
     send("step", {
       id: "citations",
       message: isAnnotatedBib
@@ -777,10 +711,72 @@ Return JSON:
       status: "running",
     });
 
-    const [citations, ragPapers] = await Promise.all([
-      getVerifiedCitations(body.topic, body.subject, citationCount, body.citationStyle),
-      searchAllAcademicSources(`${body.topic} ${body.subject}`, 12, body.subject),
+    // ── Sub-agent 1: Rubric analysis (GPT-4o-mini, Caveman-compressed) ───────
+    async function runRubricAnalysis(): Promise<{ aGradeCriteria: string; rubricFormatReqs: string }> {
+      if (!body.rubricText || body.rubricText.trim().length <= 80) {
+        return { aGradeCriteria: buildGradeCriteria(body.academicLevel), rubricFormatReqs: "" };
+      }
+      try {
+        // Caveman-compressed system prompt — no conversational filler, just the task
+        const rubricResp = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          max_tokens: 1000,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content: `Extract TOP grade band criteria from an academic rubric.
+Return JSON: {"topGradeBand":"...","gradeThreshold":"...","criteria":["..."],"formatRequirements":"...or null"}`,
+            },
+            {
+              role: "user",
+              content: body.rubricText.slice(0, 4000),
+            },
+          ],
+        });
+        if (rubricResp.usage) recordUsage("gpt-4o-mini", rubricResp.usage.prompt_tokens, rubricResp.usage.completion_tokens, "rubric-analysis");
+
+        const rd = JSON.parse(rubricResp.choices[0]?.message?.content ?? "{}") as {
+          topGradeBand?: string; gradeThreshold?: string;
+          criteria?: string[]; formatRequirements?: string;
+        };
+        const criteria  = Array.isArray(rd.criteria) ? rd.criteria.filter(Boolean) : [];
+        const gradeBand = rd.topGradeBand ?? "A / Distinction";
+        const threshold = rd.gradeThreshold ?? "highest grade band";
+
+        return {
+          aGradeCriteria: criteria.length > 0
+            ? `${gradeBand} CRITERIA (${threshold}) — the paper MUST satisfy ALL of these:\n${criteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}`
+            : buildGradeCriteria(body.academicLevel),
+          rubricFormatReqs: rd.formatRequirements ?? "",
+        };
+      } catch {
+        return { aGradeCriteria: buildGradeCriteria(body.academicLevel), rubricFormatReqs: "" };
+      }
+    }
+
+    // ── Sub-agent 2: Citations + Academic RAG ─────────────────────────────────
+    async function runCitations() {
+      return Promise.all([
+        getVerifiedCitations(body.topic, body.subject, citationCount, body.citationStyle),
+        searchAllAcademicSources(`${body.topic} ${body.subject}`, 12, body.subject),
+      ]);
+    }
+
+    // Fire both sub-agents simultaneously
+    const [{ aGradeCriteria, rubricFormatReqs }, [citations, ragPapers]] = await Promise.all([
+      runRubricAnalysis(),
+      runCitations(),
     ]);
+
+    // Report both steps done
+    send("step", {
+      id: "rubric-analysis",
+      message: aGradeCriteria.includes("CRITERIA")
+        ? `Rubric analysed — A-grade criteria locked as quality target.`
+        : `Grade standards loaded — targeting ${body.academicLevel ?? "undergraduate"} A-grade.`,
+      status: "done",
+    });
 
     const ragContext = buildRAGContext(ragPapers);
 

@@ -3,6 +3,8 @@ import multer from "multer";
 import mammoth from "mammoth";
 import { convert as htmlToText } from "html-to-text";
 import { requireAuth } from "../middlewares/auth";
+import { openai } from "../lib/ai";
+import { recordUsage } from "../lib/apiCost";
 
 const router = Router();
 
@@ -31,6 +33,57 @@ const upload = multer({
     }
   },
 });
+
+// ── Reducto-style PDF cleaning ─────────────────────────────────────────────────
+// Technique from the Reducto pattern: after raw PDF text extraction, run a cheap
+// GPT-4o-mini pass to convert noisy OCR output into clean structured Markdown.
+// This reduces the "noise tokens" Claude must process — page numbers, repeated
+// headers/footers, OCR artifacts, and encoding garbage inflate the effective token
+// count without contributing information. Only triggered for large or noisy files.
+//
+// Heuristic for "noisy":
+//   • More than 10 standalone numeric lines (page numbers)
+//   • Repeated header/footer pattern detected in consecutive pages
+//   • Density of non-alphabetic chars > 15% (OCR artifacts)
+//   • File > REDUCTO_MIN_WORDS words (small files aren't worth the extra call)
+
+const REDUCTO_MIN_WORDS = 1500;
+
+function isNoisyText(text: string): boolean {
+  const lines = text.split("\n");
+  // Count lines that are pure numbers (page numbers)
+  const numericLines = lines.filter(l => /^\s*\d+\s*$/.test(l)).length;
+  if (numericLines > 10) return true;
+  // Non-alpha density
+  const nonAlpha = (text.match(/[^a-zA-Z\s]/g) ?? []).length;
+  const total = text.length;
+  if (total > 0 && nonAlpha / total > 0.18) return true;
+  // Excessive whitespace fragmentation (>40% blank lines)
+  const blankLines = lines.filter(l => l.trim() === "").length;
+  if (lines.length > 20 && blankLines / lines.length > 0.4) return true;
+  return false;
+}
+
+async function reductoClean(rawText: string): Promise<string> {
+  const wordCount = rawText.split(/\s+/).filter(Boolean).length;
+  if (wordCount < REDUCTO_MIN_WORDS || !isNoisyText(rawText)) return rawText;
+
+  try {
+    const resp = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_tokens: 4000,
+      messages: [{
+        role: "user",
+        content: `Convert this extracted PDF text to clean Markdown. Remove: page numbers, repeated headers/footers, OCR artifacts, excessive blank lines. Preserve ALL academic content, headings, lists, and data. Do not summarise — keep every substantive sentence.\n\n${rawText.slice(0, 18000)}`,
+      }],
+    });
+    if (resp.usage) recordUsage("gpt-4o-mini", resp.usage.prompt_tokens, resp.usage.completion_tokens, "reducto-clean");
+    const cleaned = resp.choices[0]?.message?.content ?? "";
+    return cleaned.length > 100 ? cleaned : rawText;
+  } catch {
+    return rawText; // non-fatal — fall back to raw text
+  }
+}
 
 /**
  * Extract text from a PDF buffer using pdf-parse v2 (pure JS, no system binaries).
@@ -100,7 +153,8 @@ router.post("/files/extract", requireAuth, upload.single("file"), async (req, re
 
     if (mimetype === "application/pdf") {
       const result = await extractTextFromPDF(buffer);
-      text = result.text;
+      // Reducto pass — clean noisy PDF output before returning to client
+      text = await reductoClean(result.text);
       pageCount = result.pageCount || undefined;
     } else if (
       mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||

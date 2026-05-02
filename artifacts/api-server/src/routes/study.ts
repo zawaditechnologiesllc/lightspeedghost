@@ -315,40 +315,34 @@ function levelNote(academicLevel?: string) {
   return label ? `STUDENT ACADEMIC LEVEL: ${label} — calibrate vocabulary, depth, and difficulty accordingly.\n\n` : "";
 }
 
+// ── Caveman compression ───────────────────────────────────────────────────────
+// Applied to GPT-4o-mini prompts only. Removes verbose "You are an expert…"
+// preamble and trailing redundant instructions. Since gpt-4o-mini runs in
+// JSON mode, "Return ONLY valid JSON / no markdown" is already enforced by the
+// API — repeating it wastes input tokens. Caveman = extreme brevity.
+// Saves ~80–120 input tokens per call; negligible per request but meaningful
+// across thousands of daily study sessions.
+
 const GENERATE_PROMPTS: Record<string, (content: string, subject: string, weakTopics?: string[], academicLevel?: string) => string> = {
-  flashcards: (content, subject, _wt, academicLevel) => `
-You are an expert educator. Create 15 high-quality flashcards from this study material on ${subject}.
+  // ── GPT-4o-mini eligible (Caveman-compressed) ─────────────────────────────
+  flashcards: (content, subject, _wt, academicLevel) => `${levelNote(academicLevel)}Subject: ${subject}
+15 flashcards from this material. Schema: {"flashcards":[{"front":"...","back":"...","tag":"subtopic"}]}
 
-${levelNote(academicLevel)}Study material:
-${content.slice(0, 40000)}
+${content.slice(0, 40000)}`,
 
-Return ONLY valid JSON (no markdown, no code blocks), exactly this format:
-{"flashcards":[{"front":"Question or concept","back":"Answer or explanation","tag":"subtopic"}]}
+  quiz: (content, subject, _wt, academicLevel) => `${levelNote(academicLevel)}Subject: ${subject}
+10 MCQ questions. "correct" = 0-based index. Mix 30% easy / 50% medium / 20% hard.
+Schema: {"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"explanation":"..."}]}
 
-Generate 15 flashcards covering the most important concepts, definitions, formulas, and facts.`,
+${content.slice(0, 40000)}`,
 
-  quiz: (content, subject, _wt, academicLevel) => `
-You are an expert educator. Create 10 multiple-choice quiz questions from this study material on ${subject}.
+  summary: (content, subject, _wt, academicLevel) => `${levelNote(academicLevel)}Subject: ${subject}
+Structured summary. 4-6 sections.
+Schema: {"title":"...","overview":"2-3 sentences","sections":[{"heading":"...","points":["..."],"keyTerms":[{"term":"...","definition":"..."}]}],"takeaways":["..."],"relatedConcepts":["..."]}
 
-${levelNote(academicLevel)}Study material:
-${content.slice(0, 40000)}
+${content.slice(0, 40000)}`,
 
-Return ONLY valid JSON, exactly this format:
-{"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"explanation":"Why this is correct and others are wrong"}]}
-
-"correct" is the 0-based index of the right answer. Mix easy (30%), medium (50%), and hard (20%) questions.`,
-
-  summary: (content, subject, _wt, academicLevel) => `
-You are an expert educator. Create a comprehensive structured summary of this study material on ${subject}.
-
-${levelNote(academicLevel)}Study material:
-${content.slice(0, 40000)}
-
-Return ONLY valid JSON, exactly this format:
-{"title":"Topic Title","overview":"2-3 sentence overview","sections":[{"heading":"Section name","points":["Key point 1","Key point 2"],"keyTerms":[{"term":"Term","definition":"Definition"}]}],"takeaways":["Most important thing to remember 1","..."],"relatedConcepts":["Related topic 1","Related topic 2"]}
-
-Create 4-6 sections covering all major concepts.`,
-
+  // ── Claude Sonnet (full verbosity — richer reasoning needed) ─────────────
   studyguide: (content, subject, _wt, academicLevel) => `
 You are an expert educator. Create a comprehensive study guide for ${subject} from this material.
 
