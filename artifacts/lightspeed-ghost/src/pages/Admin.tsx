@@ -366,7 +366,7 @@ export default function Admin() {
     setAuthError("");
     setAuthLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/admin/verify`, {
+      const res = await fetch(`${API_BASE}/mwaramuriuki-login/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: inputPassword }),
@@ -393,14 +393,14 @@ export default function Admin() {
   const loadStats = useCallback(async () => {
     setLoading(true);
     setStatsError(null);
-    try { setStats(await adminFetch("/admin/stats", password) as AdminStats); }
+    try { setStats(await adminFetch("/mwaramuriuki-login/stats", password) as AdminStats); }
     catch (e) { setStats(null); setStatsError(e instanceof Error ? e.message : "Failed to load stats"); }
     finally { setLoading(false); }
   }, [password]);
 
   const loadTools = useCallback(async () => {
     setLoading(true);
-    try { setAdminTools((await adminFetch("/admin/tools", password) as { tools: AdminTool[] }).tools); }
+    try { setAdminTools((await adminFetch("/mwaramuriuki-login/tools", password) as { tools: AdminTool[] }).tools); }
     catch { setAdminTools([]); }
     finally { setLoading(false); }
   }, [password]);
@@ -409,7 +409,7 @@ export default function Admin() {
     setTogglingTool(key);
     setToggleError(null);
     try {
-      await adminFetch(`/admin/tools/${key}/toggle`, password, {
+      await adminFetch(`/mwaramuriuki-login/tools/${key}/toggle`, password, {
         method: "PATCH",
         body: JSON.stringify({ enabled }),
       });
@@ -423,7 +423,7 @@ export default function Admin() {
 
   async function quickSaveSetting(key: string, value: string) {
     try {
-      await adminFetch("/admin/settings", password, {
+      await adminFetch("/mwaramuriuki-login/settings", password, {
         method: "POST",
         body: JSON.stringify({ settings: { [key]: value } }),
       });
@@ -433,7 +433,7 @@ export default function Admin() {
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/admin/users", password) as { users: AdminUser[]; hasEmailData: boolean; supabaseError: string | null };
+      const data = await adminFetch("/mwaramuriuki-login/users", password) as { users: AdminUser[]; hasEmailData: boolean; supabaseError: string | null };
       setUsers(data.users); setHasEmailData(data.hasEmailData); setSupabaseError(data.supabaseError ?? null);
     } catch { setUsers([]); }
     finally { setLoading(false); }
@@ -441,20 +441,20 @@ export default function Admin() {
 
   const loadGateways = useCallback(async () => {
     setLoading(true);
-    try { setGateways((await adminFetch("/admin/gateways", password) as { gateways: GatewaySetting[] }).gateways); } catch { setGateways([]); }
+    try { setGateways((await adminFetch("/mwaramuriuki-login/gateways", password) as { gateways: GatewaySetting[] }).gateways); } catch { setGateways([]); }
     finally { setLoading(false); }
   }, [password]);
 
   const loadPayments = useCallback(async () => {
     setLoading(true);
-    try { setPayments((await adminFetch("/admin/payments", password) as { payments: Payment[] }).payments); } catch { setPayments([]); }
+    try { setPayments((await adminFetch("/mwaramuriuki-login/payments", password) as { payments: Payment[] }).payments); } catch { setPayments([]); }
     finally { setLoading(false); }
   }, [password]);
 
   const loadCredits = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/admin/credits", password) as {
+      const data = await adminFetch("/mwaramuriuki-login/credits", password) as {
         users: CreditUser[]; recentTransactions: CreditTransaction[];
         totals: typeof creditTotals;
       };
@@ -465,7 +465,7 @@ export default function Admin() {
 
   const loadRevenue = useCallback(async () => {
     setLoading(true);
-    try { setRevenue(await adminFetch("/admin/revenue", password) as RevenueData); } catch { setRevenue(null); }
+    try { setRevenue(await adminFetch("/mwaramuriuki-login/revenue", password) as RevenueData); } catch { setRevenue(null); }
     finally { setLoading(false); }
   }, [password]);
 
@@ -476,7 +476,7 @@ export default function Admin() {
       if (docTypeFilter && docTypeFilter !== "all") params.set("type", docTypeFilter);
       if (docSearch && docSearch.trim()) params.set("search", docSearch.trim());
       const qs = params.toString() ? `?${params.toString()}` : "";
-      const data = await adminFetch(`/admin/documents${qs}`, password) as { documents: AdminDocument[]; total: number };
+      const data = await adminFetch(`/mwaramuriuki-login/documents${qs}`, password) as { documents: AdminDocument[]; total: number };
       setDocuments(data.documents);
       setDocTotal(data.total);
     } catch { setDocuments([]); setDocTotal(0); }
@@ -486,7 +486,7 @@ export default function Admin() {
   const loadSubscriptions = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/admin/subscriptions", password) as { subscriptions: Subscription[]; counts: Record<string, number> };
+      const data = await adminFetch("/mwaramuriuki-login/subscriptions", password) as { subscriptions: Subscription[]; counts: Record<string, number> };
       setSubscriptions(data.subscriptions); setSubCounts(data.counts);
     } catch { setSubscriptions([]); }
     finally { setLoading(false); }
@@ -494,24 +494,24 @@ export default function Admin() {
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
-    try { setSettings((await adminFetch("/admin/settings", password) as { settings: SystemSettings }).settings); } catch {}
+    try { setSettings((await adminFetch("/mwaramuriuki-login/settings", password) as { settings: SystemSettings }).settings); } catch {}
     finally { setLoading(false); }
   }, [password]);
 
   const loadTraffic = useCallback(async () => {
     setLoading(true);
-    try { setTraffic(await adminFetch("/admin/traffic", password) as TrafficData); } catch { setTraffic(null); }
+    try { setTraffic(await adminFetch("/mwaramuriuki-login/traffic", password) as TrafficData); } catch { setTraffic(null); }
     finally { setLoading(false); }
   }, [password]);
 
   const loadPwaStats = useCallback(async () => {
-    try { setPwaStats(await adminFetch("/admin/pwa/stats", password) as typeof pwaStats); } catch { setPwaStats(null); }
+    try { setPwaStats(await adminFetch("/mwaramuriuki-login/pwa/stats", password) as typeof pwaStats); } catch { setPwaStats(null); }
   }, [password]);
 
   const loadLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch(`/admin/logs?filter=${logFilter}`, password) as {
+      const data = await adminFetch(`/mwaramuriuki-login/logs?filter=${logFilter}`, password) as {
         logs: LogEntry[]; errors: LogEntry[]; summary: LogSummary;
       };
       setRequestLogs(data.logs); setErrorLogs(data.errors); setLogSummary(data.summary);
@@ -522,7 +522,7 @@ export default function Admin() {
   const loadAnnouncements = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/admin/announcements", password) as { announcements: Announcement[] };
+      const data = await adminFetch("/mwaramuriuki-login/announcements", password) as { announcements: Announcement[] };
       setAnnouncements(data.announcements);
     } catch { setAnnouncements([]); }
     finally { setLoading(false); }
@@ -531,7 +531,7 @@ export default function Admin() {
   const loadMessages = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/admin/messages", password) as { messages: ContactMessage[] };
+      const data = await adminFetch("/mwaramuriuki-login/messages", password) as { messages: ContactMessage[] };
       setContactMessages(data.messages);
     } catch { setContactMessages([]); }
     finally { setLoading(false); }
@@ -539,7 +539,7 @@ export default function Admin() {
 
   const loadFeedback = useCallback(async () => {
     try {
-      const data = await adminFetch("/admin/feedback", password) as { feedback: FeedbackStat[] };
+      const data = await adminFetch("/mwaramuriuki-login/feedback", password) as { feedback: FeedbackStat[] };
       setFeedbackStats(data.feedback);
     } catch { setFeedbackStats([]); }
   }, [password]);
@@ -547,7 +547,7 @@ export default function Admin() {
   const loadReferrals = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/admin/referrals", password) as typeof referralData;
+      const data = await adminFetch("/mwaramuriuki-login/referrals", password) as typeof referralData;
       setReferralData(data);
     } catch { setReferralData(null); }
     finally { setLoading(false); }
@@ -555,7 +555,7 @@ export default function Admin() {
 
   const loadEbooks = useCallback(async () => {
     setLoading(true);
-    try { setEbookData(await adminFetch("/admin/ebooks", password) as typeof ebookData); }
+    try { setEbookData(await adminFetch("/mwaramuriuki-login/ebooks", password) as typeof ebookData); }
     catch { setEbookData(null); }
     finally { setLoading(false); }
   }, [password]);
@@ -582,7 +582,7 @@ export default function Admin() {
   async function wakeBackend() {
     setWaking(true); setWakeResult(null);
     try {
-      const data = await adminFetch("/admin/ping", password) as { ok: boolean; uptimeSeconds: number };
+      const data = await adminFetch("/mwaramuriuki-login/ping", password) as { ok: boolean; uptimeSeconds: number };
       setWakeResult(data);
     } catch { setWakeResult({ ok: false }); }
     finally { setWaking(false); }
@@ -623,7 +623,7 @@ export default function Admin() {
   async function toggleGateway(gateway: string, paused: boolean) {
     setTogglingGateway(gateway);
     try {
-      await adminFetch(`/admin/gateways/${gateway}`, password, { method: "PATCH", body: JSON.stringify({ paused }) });
+      await adminFetch(`/mwaramuriuki-login/gateways/${gateway}`, password, { method: "PATCH", body: JSON.stringify({ paused }) });
       setGateways((prev) => prev.map((g) => g.gateway === gateway ? { ...g, paused } : g));
     } catch {} finally { setTogglingGateway(null); }
   }
@@ -632,7 +632,7 @@ export default function Admin() {
     setDeleteError("");
     setDeleteTarget(userId);
     try {
-      await adminFetch(`/admin/users/${userId}`, password, { method: "DELETE" });
+      await adminFetch(`/mwaramuriuki-login/users/${userId}`, password, { method: "DELETE" });
       setUsers((prev) => prev.filter((u) => u.id !== userId));
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : "Failed to delete");
@@ -642,7 +642,7 @@ export default function Admin() {
   async function toggleBan(user: AdminUser) {
     setBanTogglingId(user.id);
     try {
-      await adminFetch(`/admin/users/${user.id}/ban`, password, {
+      await adminFetch(`/mwaramuriuki-login/users/${user.id}/ban`, password, {
         method: "PATCH",
         body: JSON.stringify({ banned: !user.banned, reason: "Admin action" }),
       });
@@ -656,7 +656,7 @@ export default function Admin() {
     try {
       const amt = parseInt(creditAdjustAmt, 10);
       if (isNaN(amt) || amt === 0) return;
-      await adminFetch(`/admin/users/${creditAdjustUser.id}/credits`, password, {
+      await adminFetch(`/mwaramuriuki-login/users/${creditAdjustUser.id}/credits`, password, {
         method: "POST",
         body: JSON.stringify({ amountCents: amt, reason: creditAdjustNote || "Admin adjustment" }),
       });
@@ -673,7 +673,7 @@ export default function Admin() {
     if (!planEditUser) return;
     setPlanEditing(true);
     try {
-      await adminFetch(`/admin/users/${planEditUser.id}/plan`, password, {
+      await adminFetch(`/mwaramuriuki-login/users/${planEditUser.id}/plan`, password, {
         method: "PATCH",
         body: JSON.stringify({ plan: planEditValue }),
       });
@@ -686,7 +686,7 @@ export default function Admin() {
     if (!settings) return;
     setSettingsSaving(true);
     try {
-      await adminFetch("/admin/settings", password, {
+      await adminFetch("/mwaramuriuki-login/settings", password, {
         method: "POST",
         body: JSON.stringify({ settings }),
       });
@@ -718,7 +718,7 @@ export default function Admin() {
     if (!newAnnouncement.message.trim()) { setAnnouncementError("Message is required"); return; }
     setAnnouncementSaving(true); setAnnouncementError("");
     try {
-      await adminFetch("/admin/announcements", password, {
+      await adminFetch("/mwaramuriuki-login/announcements", password, {
         method: "POST", body: JSON.stringify(newAnnouncement),
       });
       setNewAnnouncement({ title: "", message: "", link: "", link_text: "Learn more", color: "blue" });
@@ -729,7 +729,7 @@ export default function Admin() {
 
   async function toggleAnnouncement(id: number, is_active: boolean) {
     try {
-      await adminFetch(`/admin/announcements/${id}`, password, {
+      await adminFetch(`/mwaramuriuki-login/announcements/${id}`, password, {
         method: "PATCH", body: JSON.stringify({ is_active }),
       });
       setAnnouncements((prev) => prev.map((a) => a.id === id ? { ...a, is_active } : a));
@@ -738,7 +738,7 @@ export default function Admin() {
 
   async function deleteAnnouncement(id: number) {
     try {
-      await adminFetch(`/admin/announcements/${id}`, password, { method: "DELETE" });
+      await adminFetch(`/mwaramuriuki-login/announcements/${id}`, password, { method: "DELETE" });
       setAnnouncements((prev) => prev.filter((a) => a.id !== id));
     } catch {}
   }
@@ -747,7 +747,7 @@ export default function Admin() {
     if (!editingAnnouncement) return;
     setAnnouncementSaving(true);
     try {
-      await adminFetch(`/admin/announcements/${editingAnnouncement.id}`, password, {
+      await adminFetch(`/mwaramuriuki-login/announcements/${editingAnnouncement.id}`, password, {
         method: "PATCH", body: JSON.stringify(editingAnnouncement),
       });
       setAnnouncements((prev) => prev.map((a) => a.id === editingAnnouncement.id ? editingAnnouncement : a));
@@ -2218,7 +2218,7 @@ export default function Admin() {
                                         onClick={async () => {
                                           setApplyingDiscountId(d.id);
                                           try {
-                                            await adminFetch(`/admin/referrals/discount/${d.id}/apply`, password, { method: "POST" });
+                                            await adminFetch(`/mwaramuriuki-login/referrals/discount/${d.id}/apply`, password, { method: "POST" });
                                             await loadReferrals();
                                           } catch { /* ignore */ }
                                           finally { setApplyingDiscountId(null); }
@@ -2303,7 +2303,7 @@ export default function Admin() {
                               {!msg.read && (
                                 <button
                                   onClick={async () => {
-                                    await adminFetch(`/admin/messages/${msg.id}/mark-read`, password, { method: "PATCH" });
+                                    await adminFetch(`/mwaramuriuki-login/messages/${msg.id}/mark-read`, password, { method: "PATCH" });
                                     setContactMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, read: true } : m));
                                   }}
                                   className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 border border-white/8 transition-all"
@@ -2315,7 +2315,7 @@ export default function Admin() {
                                 href={`mailto:${msg.email}?subject=Re: Your LightSpeed Ghost Institution Inquiry`}
                                 onClick={async () => {
                                   if (!msg.replied) {
-                                    await adminFetch(`/admin/messages/${msg.id}/mark-replied`, password, { method: "PATCH" });
+                                    await adminFetch(`/mwaramuriuki-login/messages/${msg.id}/mark-replied`, password, { method: "PATCH" });
                                     setContactMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, read: true, replied: true } : m));
                                   }
                                 }}

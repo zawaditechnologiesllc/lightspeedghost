@@ -27,7 +27,7 @@ const tools = [
   {
     icon: PenLine,
     name: "AI Paper Writer",
-    desc: "Papers grounded in 10 live academic databases (1B+ papers). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
+    desc: "Papers grounded in 15 live academic databases (1B+ papers: OpenAlex, CrossRef, PubMed, Semantic Scholar, arXiv, Europe PMC, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE, Sci-Net, Unpaywall). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
     badge: "Most used",
     href: "/auth",
     color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -35,7 +35,7 @@ const tools = [
   {
     icon: BookOpen,
     name: "Outline Builder",
-    desc: "Structure your argument before writing a single sentence. Upload your assignment brief and get a complete hierarchical outline built for your topic in seconds.",
+    desc: "Structure your argument before writing a single sentence. Upload your assignment brief and get a complete hierarchical outline built for your topic in seconds. Every section is graded-rubric-aware when you upload one.",
     badge: null,
     href: "/auth",
     color: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
@@ -49,9 +49,17 @@ const tools = [
     color: "bg-violet-500/10 text-violet-400 border-violet-500/20",
   },
   {
+    icon: Sparkles,
+    name: "LightSpeed Humanizer",
+    desc: "Runs a real detect → rewrite → re-detect loop using an actual AI detection model between each pass — not self-reporting. Up to five passes until the AI score drops below 5%. Each pass targets the specific patterns the detector flagged. Sounds like you on a good day.",
+    badge: "Bypass detection",
+    href: "/auth",
+    color: "bg-pink-500/10 text-pink-400 border-pink-500/20",
+  },
+  {
     icon: ShieldCheck,
     name: "AI & Plagiarism Check",
-    desc: "Detect AI patterns and similarity before your professor does. One click humanizes flagged sections while keeping your argument intact.",
+    desc: "Detect AI patterns and similarity before your professor does. One click humanizes flagged sections while keeping your argument intact. Code submissions get structural fingerprint analysis that catches reformatted or reshuffled plagiarism.",
     badge: null,
     href: "/auth",
     color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
@@ -59,7 +67,7 @@ const tools = [
   {
     icon: FlaskConical,
     name: "STEM Solver",
-    desc: "Photograph your problem set or upload a dataset. Get full step-by-step solutions with equations, graphs, and linked research papers — Math, Physics, Chemistry, CS, and more. Drop in lab data and it analyses it for you.",
+    desc: "Photograph your problem set or upload a dataset. Get full step-by-step solutions with equations, graphs, and linked research papers — Math, Physics, Chemistry, CS, Biology, Engineering, and more. Drop in lab data and it analyses it for you.",
     badge: "Photo upload",
     href: "/auth",
     color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
@@ -67,7 +75,7 @@ const tools = [
   {
     icon: GraduationCap,
     name: "AI Study Assistant",
-    desc: "Ask anything, upload lecture notes, or drop in a dataset. LightSpeed AI builds a personal memory of everything you've studied — recalling past struggles, past topics, and past sessions to tutor you better every time.",
+    desc: "Ask anything, upload lecture notes, paste a YouTube link, or drop in a URL. Generate flashcards, quizzes, summaries, study guides, and slides from any material. LightSpeed AI builds a personal memory of everything you've studied — recalling past struggles and topics to tutor you better every session.",
     badge: "Long-term memory",
     href: "/auth",
     color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
@@ -122,7 +130,7 @@ const faqs = [
   },
   {
     q: "How is the paper quality? I've tried AI writers before and they're terrible.",
-    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 10 live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, and Europe PMC — pulling over a billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop until the AI score is below 5%. That is the pipeline on every single output.",
+    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 15 live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, arXiv, CORE, DOAJ, ERIC, Zenodo, Europe PMC, BASE, DataCite, OpenAIRE, Sci-Net, and Unpaywall — pulling over a billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop — up to five passes — until the AI score is below 5%. That is the pipeline on every single output.",
   },
   {
     q: "Does file upload work with PDFs from my university portal?",
@@ -340,7 +348,7 @@ export default function Landing() {
     setInstSubmitting(true);
     try {
       const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
-      const res = await fetch(`${API_BASE}/admin/contact`, {
+      const res = await fetch(`${API_BASE}/mwaramuriuki-login/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1021,8 +1029,8 @@ export default function Landing() {
               },
               {
                 icon: "📚",
-                title: "50,000+ Database Knowledge Base",
-                desc: "Every paper searches OpenAlex (250M+ papers), CrossRef (145M+ DOIs), Semantic Scholar, arXiv, and Europe PMC in parallel. Real abstracts are fed as grounding context — so the AI answers from verified peer-reviewed content, not guesswork. No Wikipedia.",
+                title: "15-Database Knowledge Base",
+                desc: "Every paper simultaneously queries 15 live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, arXiv, CORE, DOAJ, ERIC, Zenodo, Europe PMC, BASE, DataCite, OpenAIRE, Sci-Net, and Unpaywall. Over 1 billion papers worth of real verified abstracts fed as grounding context. No Wikipedia, no hallucinated citations.",
                 color: "border-violet-500/20 bg-violet-500/5",
                 tag: "Paper Writer · Study Assistant",
               },
@@ -1183,11 +1191,11 @@ export default function Landing() {
               <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-4 sm:mb-5">Paper Writer</p>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4 sm:mb-5 leading-tight">A draft you can actually submit. Not cringe at.</h2>
               <p className="text-white/55 leading-relaxed mb-6 sm:mb-8 text-sm sm:text-base">
-                Upload your rubric and we extract the A-grade criteria first — before writing a single word. The paper is then grounded in 50,000+ peer-reviewed databases, plagiarism-gated below 8%, and cross-checked against your rubric before delivery.
+                Upload your rubric and we extract the A-grade criteria first — before writing a single word. The paper is then grounded in 15 live academic databases (1B+ papers), plagiarism-gated below 8%, and cross-checked against your rubric before delivery.
               </p>
               <ul className="space-y-3">
                 {[
-                  "50,000+ peer-reviewed databases searched per paper",
+                  "15 live academic databases searched per paper (1B+ papers)",
                   "A-grade rubric extraction + cross-check on every output",
                   "Plagiarism enforced below 8% — not estimated, measured",
                   "STEM mode: equations mapped to the right section (Methods, Results, etc.)",

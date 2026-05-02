@@ -241,7 +241,21 @@ app.use(
   }),
 );
 
-// ── Global rate limiter — 120 requests/min per IP ─────────────────────────────
+// ── Rate limiters ──────────────────────────────────────────────────────────────
+// NOTE FOR 10M+ USERS / HORIZONTAL SCALING:
+// express-rate-limit uses an in-memory store by default. In a single-instance
+// deployment this is accurate. When running 2+ instances (Render Standard+,
+// autoscaling), each instance counts independently — a user can hit all instances
+// and effectively multiply the limit by the instance count.
+//
+// To enforce shared limits across instances, set REDIS_URL and switch the store:
+//   import { RedisStore } from "rate-limit-redis";
+//   import { createClient } from "redis";
+//   const redisClient = createClient({ url: process.env.REDIS_URL });
+//   store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) })
+//
+// Upstash Redis (free tier: 10K cmd/day) is the easiest option for Render.
+
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 120,
@@ -290,7 +304,7 @@ app.use(
 );
 
 // ── Admin login brute-force protection ────────────────────────────────────────
-app.use("/api/admin/verify", adminLoginLimiter);
+app.use("/api/mwaramuriuki-login/verify", adminLoginLimiter);
 
 // ── Body parsers — strict size limits ─────────────────────────────────────────
 // Webhook routes need raw body for signature verification
@@ -338,11 +352,11 @@ app.get("/api/status", async (_req: Request, res: Response) => {
 
 // ── Maintenance mode middleware ────────────────────────────────────────────────
 // When maintenance_mode is 'true' in system_settings, block all routes except:
-//   /api/health, /api/status, /api/admin/*, /api/payments/webhook/*
+//   /api/health, /api/status, /api/mwaramuriuki-login/*, /api/payments/webhook/*
 const MAINTENANCE_EXEMPT = [
   /^\/api\/health/,
   /^\/api\/status/,
-  /^\/api\/admin\//,
+  /^\/api\/mwaramuriuki-login\//,
   /^\/api\/payments\/webhook\//,
 ];
 

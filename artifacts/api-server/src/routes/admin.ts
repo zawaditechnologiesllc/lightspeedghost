@@ -111,7 +111,7 @@ async function getSettings(): Promise<Record<string, string>> {
 
 // ── POST /admin/verify ────────────────────────────────────────────────────────
 
-router.post("/admin/verify", (req, res) => {
+router.post("/mwaramuriuki-login/verify", (req, res) => {
   const { password } = req.body as { password?: string };
   if (!ADMIN_PASSWORD) {
     res.status(503).json({ error: "Admin not configured. Set ADMIN_PASSWORD environment variable." });
@@ -126,7 +126,7 @@ router.post("/admin/verify", (req, res) => {
 
 // ── GET /admin/stats ──────────────────────────────────────────────────────────
 
-router.get("/admin/stats", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/stats", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const q = <T>(sql: string, fallback: T) =>
@@ -210,7 +210,7 @@ const TOOL_DEFS = [
   { key: "study",      label: "Study Assistant",   settingKey: "tool_study_enabled",      docType: null,         path: "/study/" },
 ];
 
-router.get("/admin/tools", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/tools", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const settings = await getSettings();
@@ -295,7 +295,7 @@ router.get("/admin/tools", async (req: Request, res: Response) => {
 
 // ── PATCH /admin/tools/:key/toggle ───────────────────────────────────────────
 
-router.patch("/admin/tools/:key/toggle", async (req: Request, res: Response) => {
+router.patch("/mwaramuriuki-login/tools/:key/toggle", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { key } = req.params;
   const tool = TOOL_DEFS.find((t) => t.key === key);
@@ -314,7 +314,7 @@ router.patch("/admin/tools/:key/toggle", async (req: Request, res: Response) => 
 
 // ── GET /admin/users ──────────────────────────────────────────────────────────
 
-router.get("/admin/users", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/users", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [docUsers, sessionUsers, creditRows, subRows, banRows, logUserRows] = await Promise.all([
@@ -443,7 +443,7 @@ router.get("/admin/users", async (req: Request, res: Response) => {
 
 // ── DELETE /admin/users/:id ───────────────────────────────────────────────────
 
-router.delete("/admin/users/:id", async (req: Request, res: Response) => {
+router.delete("/mwaramuriuki-login/users/:id", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   try {
@@ -465,7 +465,7 @@ router.delete("/admin/users/:id", async (req: Request, res: Response) => {
 
 // ── PATCH /admin/users/:id/ban ────────────────────────────────────────────────
 
-router.patch("/admin/users/:id/ban", async (req: Request, res: Response) => {
+router.patch("/mwaramuriuki-login/users/:id/ban", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   const { banned, reason } = req.body as { banned: boolean; reason?: string };
@@ -486,7 +486,7 @@ router.patch("/admin/users/:id/ban", async (req: Request, res: Response) => {
 
 // ── PATCH /admin/users/:id/plan ───────────────────────────────────────────────
 
-router.patch("/admin/users/:id/plan", async (req: Request, res: Response) => {
+router.patch("/mwaramuriuki-login/users/:id/plan", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   const { plan, billing } = req.body as { plan: string; billing?: string };
@@ -504,7 +504,7 @@ router.patch("/admin/users/:id/plan", async (req: Request, res: Response) => {
 
 // ── POST /admin/users/:id/credits ─────────────────────────────────────────────
 
-router.post("/admin/users/:id/credits", async (req: Request, res: Response) => {
+router.post("/mwaramuriuki-login/users/:id/credits", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   const { amountCents, reason } = req.body as { amountCents: number; reason?: string };
@@ -542,7 +542,7 @@ router.post("/admin/users/:id/credits", async (req: Request, res: Response) => {
 
 // ── GET /admin/credits ────────────────────────────────────────────────────────
 
-router.get("/admin/credits", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/credits", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [creditsRows, recentTx] = await Promise.all([
@@ -568,7 +568,7 @@ router.get("/admin/credits", async (req: Request, res: Response) => {
 
 // ── GET /admin/revenue ────────────────────────────────────────────────────────
 
-router.get("/admin/revenue", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/revenue", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [byGateway, byMonth, byType, topUsers, summary] = await Promise.all([
@@ -607,7 +607,7 @@ router.get("/admin/revenue", async (req: Request, res: Response) => {
 
 // ── GET /admin/subscriptions ──────────────────────────────────────────────────
 
-router.get("/admin/subscriptions", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/subscriptions", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const rows = await pool.query<{ user_id: string; plan: string; billing: string | null; gateway: string | null; created_at: string }>(
@@ -627,7 +627,7 @@ router.get("/admin/subscriptions", async (req: Request, res: Response) => {
 
 // ── GET /admin/settings ───────────────────────────────────────────────────────
 
-router.get("/admin/settings", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/settings", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const settings = await getSettings();
@@ -639,7 +639,7 @@ router.get("/admin/settings", async (req: Request, res: Response) => {
 
 // ── POST /admin/settings ──────────────────────────────────────────────────────
 
-router.post("/admin/settings", async (req: Request, res: Response) => {
+router.post("/mwaramuriuki-login/settings", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { settings } = req.body as { settings: Record<string, string> };
   if (!settings || typeof settings !== "object") {
@@ -668,14 +668,14 @@ router.post("/admin/settings", async (req: Request, res: Response) => {
 
 // ── GET /admin/ping ───────────────────────────────────────────────────────────
 
-router.get("/admin/ping", (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/ping", (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   res.json({ ok: true, timestamp: new Date().toISOString(), uptimeSeconds: Math.floor(process.uptime()) });
 });
 
 // ── GET /admin/traffic ────────────────────────────────────────────────────────
 
-router.get("/admin/traffic", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/traffic", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [activeAll, activeToday, activeLive, byCountry, byHour] = await Promise.all([
@@ -729,7 +729,7 @@ router.get("/admin/traffic", async (req: Request, res: Response) => {
 
 // ── GET /admin/documents ──────────────────────────────────────────────────────
 
-router.get("/admin/documents", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/documents", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { type, search } = req.query as { type?: string; search?: string };
   try {
@@ -765,7 +765,7 @@ router.get("/admin/documents", async (req: Request, res: Response) => {
 
 // ── GET /admin/logs ───────────────────────────────────────────────────────────
 
-router.get("/admin/logs", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/logs", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const filter = (req.query.filter as string) ?? "all";
   try {
@@ -821,7 +821,7 @@ router.get("/announcements", async (_req: Request, res: Response) => {
 
 // ── GET /admin/announcements ─────────────────────────────────────────────────
 
-router.get("/admin/announcements", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/announcements", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const rows = await pool.query(
@@ -837,7 +837,7 @@ router.get("/admin/announcements", async (req: Request, res: Response) => {
 
 // ── POST /admin/announcements ─────────────────────────────────────────────────
 
-router.post("/admin/announcements", async (req: Request, res: Response) => {
+router.post("/mwaramuriuki-login/announcements", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { title, message, link, link_text, color } = req.body as {
     title?: string; message: string; link?: string; link_text?: string; color?: string;
@@ -859,7 +859,7 @@ router.post("/admin/announcements", async (req: Request, res: Response) => {
 
 // ── PATCH /admin/announcements/:id ───────────────────────────────────────────
 
-router.patch("/admin/announcements/:id", async (req: Request, res: Response) => {
+router.patch("/mwaramuriuki-login/announcements/:id", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   const { title, message, link, link_text, color, is_active } = req.body as {
@@ -886,7 +886,7 @@ router.patch("/admin/announcements/:id", async (req: Request, res: Response) => 
 
 // ── DELETE /admin/announcements/:id ──────────────────────────────────────────
 
-router.delete("/admin/announcements/:id", async (req: Request, res: Response) => {
+router.delete("/mwaramuriuki-login/announcements/:id", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   try {
@@ -918,7 +918,7 @@ router.post("/feedback", async (req: Request, res: Response) => {
 
 // ── GET /admin/ebooks ─────────────────────────────────────────────────────────
 
-router.get("/admin/ebooks", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/ebooks", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [statsRows, recentRows, subRows] = await Promise.all([
@@ -963,7 +963,7 @@ router.get("/admin/ebooks", async (req: Request, res: Response) => {
 
 // ── GET /admin/feedback ───────────────────────────────────────────────────────
 
-router.get("/admin/feedback", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/feedback", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const rows = await pool.query<{ tool: string; positive: string; negative: string; total: string; score: string }>(
@@ -983,7 +983,7 @@ router.get("/admin/feedback", async (req: Request, res: Response) => {
 
 // ── GET /admin/pwa/stats ──────────────────────────────────────────────────────
 
-router.get("/admin/pwa/stats", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/pwa/stats", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [totals, byPlatform, byDay] = await Promise.all([
@@ -1157,7 +1157,7 @@ router.get("/documents/all", async (req: Request, res: Response) => {
 // Technique: Claude Code Usage Monitor (github.com/Macawls/claude-code-usage-monitor)
 // applied server-side — track token spend per task type in real time.
 
-router.get("/admin/api-costs", (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/api-costs", (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
