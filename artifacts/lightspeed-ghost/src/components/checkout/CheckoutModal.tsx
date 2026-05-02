@@ -54,6 +54,7 @@ const PLAN_AMOUNTS: Record<PlanId, number> = {
   pro_monthly:      1499,
   pro_annual:       13900,
   campus_annual:     900,
+  ebooks_monthly:   2999,
 };
 
 export function CheckoutModal({
@@ -100,6 +101,7 @@ export function CheckoutModal({
     : mode === "subscription" && plan
       ? plan === "pro_monthly" ? "Pro — Monthly"
         : plan === "pro_annual" ? "Pro — Annual"
+        : plan === "ebooks_monthly" ? "Ebooks — $29.99/mo"
         : `Campus (${seats} seats)`
       : (tool ? getPaygLabel(tool, tier) : "");
 

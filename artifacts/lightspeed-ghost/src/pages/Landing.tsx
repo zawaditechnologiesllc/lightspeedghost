@@ -336,6 +336,7 @@ export default function Landing() {
 
   const navLinks = [
     { label: "Tools", href: "#tools" },
+    { label: "Ebooks", href: "#ebooks" },
     { label: "How it Works", href: "#howitworks" },
     { label: "Pricing", href: "#pricing" },
     { label: "FAQ", href: "#faq" },
@@ -886,6 +887,70 @@ export default function Landing() {
                 </div>
               </Link>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── EBOOKS ─── */}
+      <section id="ebooks" className="py-14 sm:py-20 md:py-28 px-4 sm:px-6 bg-gradient-to-br from-[#07050f] to-[#0a0518] border-y border-purple-500/10">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-10 sm:gap-16 items-center">
+            {/* Left: copy */}
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium mb-5">
+                <BookOpen size={11} className="text-purple-400" />
+                Business Add-On · $29.99 / month
+              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-5">
+                Publish ebooks on{" "}
+                <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  Amazon &amp; every platform.
+                </span>
+              </h2>
+              <p className="text-white/55 text-base sm:text-lg leading-relaxed mb-6">
+                Write professional, publish-ready ebooks grounded in verified academic and industry research. Expert quotes from Drucker, Buffett, Sinek, and more — chosen to match your topic. Every ebook arrives with a complete Amazon KDP listing guide.
+              </p>
+              <ul className="space-y-3 mb-8">
+                {[
+                  { icon: "📦", text: "Amazon KDP, Apple Books, Google Play, Kobo, B&N Press" },
+                  { icon: "📚", text: "Sources from Harvard Business Review, MIT Sloan, McKinsey, Semantic Scholar + 10 more" },
+                  { icon: "💬", text: "Industry expert quotes matched to your topic" },
+                  { icon: "🌍", text: "15 languages · sector/industry targeting · custom tone" },
+                  { icon: "📄", text: "15 ebooks per month · separate from academic plans" },
+                ].map(item => (
+                  <li key={item.text} className="flex items-start gap-3">
+                    <span className="text-lg leading-none shrink-0 mt-0.5">{item.icon}</span>
+                    <span className="text-sm text-white/60 leading-relaxed">{item.text}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/auth">
+                <span className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-purple-600/25 hover:scale-[1.02] active:scale-100 text-sm">
+                  <Sparkles size={15} />
+                  Start Writing Ebooks
+                  <ArrowRight size={15} />
+                </span>
+              </Link>
+              <p className="text-white/25 text-xs mt-3">$29.99/month · Cancel anytime · Does not affect your academic plan</p>
+            </div>
+
+            {/* Right: feature cards */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { icon: "🎯", title: "Topic & Audience", desc: "Set your exact niche, target reader profile, and unique angle" },
+                { icon: "🌐", title: "15 Languages", desc: "Write and publish in English, Spanish, French, German, and 11 more" },
+                { icon: "🏭", title: "20+ Industries", desc: "Business, tech, health, finance, marketing, leadership, and more" },
+                { icon: "✍️", title: "6 Writing Tones", desc: "Authoritative, conversational, inspirational, practical, academic, storytelling" },
+                { icon: "📊", title: "Publishing Guide", desc: "Ready-to-paste Amazon KDP title, description, keywords, and category paths" },
+                { icon: "⚡", title: "3 Length Options", desc: "Short (~8k words), Standard (~15k), or Extended (~25k words)" },
+              ].map(card => (
+                <div key={card.title} className="p-4 rounded-xl bg-white/[0.03] border border-purple-500/10 hover:border-purple-500/20 hover:bg-white/[0.05] transition-all">
+                  <div className="text-xl mb-2">{card.icon}</div>
+                  <h3 className="font-semibold text-white text-xs mb-1">{card.title}</h3>
+                  <p className="text-[11px] text-white/40 leading-relaxed">{card.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

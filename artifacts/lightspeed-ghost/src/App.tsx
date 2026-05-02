@@ -36,6 +36,7 @@ import RefundPolicy from "@/pages/RefundPolicy";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import NotFound from "@/pages/not-found";
 import FloatingAssistant from "@/pages/FloatingAssistant";
+import Ebooks from "@/pages/Ebooks";
 import { Loader2, Wrench } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { Logo } from "@/components/Logo";
@@ -170,6 +171,7 @@ function AppRoutes() {
               <Route path="/plagiarism" component={Plagiarism} />
               <Route path="/stem" component={StemSolver} />
               <Route path="/study" component={StudyAssistant} />
+              <Route path="/ebooks" component={Ebooks} />
               <Route path="/documents" component={Documents} />
               <Route path="/billing" component={Billing} />
               <Route component={NotFound} />

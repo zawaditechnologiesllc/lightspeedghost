@@ -19,6 +19,7 @@ import {
   Wallet,
   ShoppingCart,
   ChevronDown,
+  BookMarked,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useTheme } from "next-themes";
@@ -45,10 +46,11 @@ const navItems = [
   { path: "/write",      label: "Write Paper",          icon: PenLine },
   { path: "/outline",    label: "Outline",              icon: BookOpen },
   { path: "/revision",   label: "Revision",             icon: Files },
-  { path: "/humanizer",  label: "Humanizer", icon: Wand2 },
+  { path: "/humanizer",  label: "Humanizer",            icon: Wand2 },
   { path: "/plagiarism", label: "AI & Plagiarism",      icon: ShieldCheck },
   { path: "/stem",       label: "STEM Solver",          icon: FlaskConical },
   { path: "/study",      label: "AI Study Assistant",   icon: GraduationCap },
+  { path: "/ebooks",     label: "Ebooks",               icon: BookMarked, badge: "Business" },
   { path: "/documents",  label: "History",              icon: Files },
 ];
 
@@ -64,6 +66,7 @@ function NavItem({
   path,
   label,
   icon: Icon,
+  badge,
   collapsed,
   forceExpanded,
   onClick,
@@ -85,7 +88,14 @@ function NavItem({
         )}
       >
         <Icon size={17} className="shrink-0" />
-        {showLabel && <span className="truncate">{label}</span>}
+        {showLabel && (
+          <span className="truncate flex-1">{label}</span>
+        )}
+        {showLabel && badge && (
+          <span className="px-1.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[9px] font-bold leading-none shrink-0">
+            {badge}
+          </span>
+        )}
         {!showLabel && (
           <div className="absolute left-full ml-2.5 px-2.5 py-1.5 bg-popover border border-border text-popover-foreground text-xs font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
             {label}
