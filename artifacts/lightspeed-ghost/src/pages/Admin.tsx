@@ -1811,51 +1811,6 @@ export default function Admin() {
                   </>
                 ) : <Empty text="No revenue data yet" />}
 
-                {/* ── Revenue Projections ───────────────────────────────── */}
-                {(() => {
-                  const ARPU = 20.98;
-                  const scenarios = [
-                    { label: "6 Months", users: 80, hosting: 95 },
-                    { label: "12 Months", users: 300, hosting: 95 },
-                    { label: "24 Months", users: 1200, hosting: 200 },
-                    { label: "36 Months", users: 4000, hosting: 500 },
-                  ].map(({ label, users, hosting }) => {
-                    const mrr = Math.round(users * ARPU);
-                    const apiCost = Math.round(users * 0.7 * 1.50);
-                    const netMrr = mrr - apiCost - hosting;
-                    return { label, users, mrr, apiCost, hosting, netMrr, arr: mrr * 12 };
-                  });
-                  return (
-                    <div>
-                      <h3 className="text-sm font-semibold text-white/70 mb-1 flex items-center gap-2">
-                        <TrendingUp size={13} className="text-indigo-400" /> Revenue Projections
-                      </h3>
-                      <p className="text-[11px] text-white/30 mb-3">
-                        Conservative model — ARPU $20.98 (55% Starter $9.99 · 30% Pro Monthly $29.99 · 10% Pro Annual $19.92/mo · 5% Institution $90/mo avg).
-                        Variable costs: AI API $1.50/active user/mo (70% MAU). Hosting scales with traffic.
-                      </p>
-                      <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                        <div className="grid grid-cols-[110px_1fr_1fr_1fr_1fr_1fr_1fr] gap-2 px-4 py-2.5 border-b border-white/6">
-                          {["Period", "Paid Users", "MRR", "ARR", "AI API Cost", "Hosting", "Net MRR"].map((h) => (
-                            <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
-                          ))}
-                        </div>
-                        {scenarios.map((s, i) => (
-                          <div key={s.label} className={`grid grid-cols-[110px_1fr_1fr_1fr_1fr_1fr_1fr] gap-2 items-center px-4 py-3 ${i < scenarios.length - 1 ? "border-b border-white/6" : ""}`}>
-                            <span className="text-sm font-semibold text-white/80">{s.label}</span>
-                            <span className="text-sm text-white/55 tabular-nums">{s.users.toLocaleString()}</span>
-                            <span className="text-sm font-semibold text-emerald-400 tabular-nums">${s.mrr.toLocaleString()}</span>
-                            <span className="text-xs text-white/45 tabular-nums">${s.arr.toLocaleString()}</span>
-                            <span className="text-xs text-red-400/70 tabular-nums">−${s.apiCost.toLocaleString()}</span>
-                            <span className="text-xs text-amber-400/70 tabular-nums">−${s.hosting.toLocaleString()}</span>
-                            <span className={`text-sm font-bold tabular-nums ${s.netMrr > 0 ? "text-emerald-400" : "text-red-400"}`}>${s.netMrr.toLocaleString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-white/20 mt-2 px-0.5">Projections are estimates for planning purposes only. Actual results depend on conversion rate, churn, and pricing. Institution accounts counted as single users here; actual seat revenue is higher.</p>
-                    </div>
-                  );
-                })()}
               </div>
             )}
 
