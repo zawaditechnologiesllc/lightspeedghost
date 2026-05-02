@@ -4,7 +4,7 @@ import {
   Loader2, Wand2, Download, Save, CheckCircle, XCircle, ExternalLink,
   FileText, ListOrdered, BookMarked, Zap, BarChart3, Edit3,
   Eye, RotateCcw, ChevronDown, Upload, X, Check, AlertTriangle,
-  GraduationCap, FlaskConical,
+  GraduationCap, FlaskConical, TrendingUp,
 } from "lucide-react";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
@@ -66,6 +66,15 @@ const DATA_PAPER_TYPES = new Set([
   "research proposal", "grant proposal",
   "business plan", "financial analysis", "capstone project",
 ]);
+
+const FINANCIAL_STATEMENT_TYPES = [
+  { value: "income_statement", label: "Income Statement (P&L)" },
+  { value: "balance_sheet",    label: "Balance Sheet" },
+  { value: "cash_flow",        label: "Cash Flow Statement" },
+  { value: "all",              label: "Full Statements" },
+];
+
+const FINANCE_SUBJECT_RE = /finance|accounting|economics|banking|investment|insurance|actuarial|business\s*studies|credit\s*anal/i;
 
 interface StatTest {
   value: string;
@@ -368,6 +377,9 @@ export default function WritePaper() {
   const [analysisTool, setAnalysisTool] = useState<string>("r");
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
   const [includeAssumptionsCheck, setIncludeAssumptionsCheck] = useState(true);
+  const [financialStatements, setFinancialStatements]       = useState("");
+  const [financialStatementType, setFinancialStatementType] = useState("all");
+  const [includeInterpretiveCommentary, setIncludeInterpretiveCommentary] = useState(false);
 
   // ── citation confirmation
   const [detectedStyle, setDetectedStyle] = useState<string | null>(null);
@@ -469,7 +481,7 @@ export default function WritePaper() {
     setGenError("");
     const initialSteps: Step[] = STEP_ORDER
       .filter(id => id !== "stem" || isStem)
-      .filter(id => id !== "data" || !!datasetText.trim())
+      .filter(id => id !== "data" || !!datasetText.trim() || !!financialStatements.trim())
       .map(id => ({ id, message: "", status: "pending" }));
     setSteps(initialSteps);
 
@@ -499,6 +511,9 @@ export default function WritePaper() {
           analysisTool: datasetText.trim() ? analysisTool : undefined,
           selectedTests: datasetText.trim() && selectedTests.length > 0 ? selectedTests : undefined,
           includeAssumptionsCheck: datasetText.trim() ? includeAssumptionsCheck : undefined,
+          financialStatements: financialStatements.trim() || undefined,
+          financialStatementType: financialStatements.trim() ? financialStatementType : undefined,
+          includeInterpretiveCommentary: (datasetText.trim() || financialStatements.trim()) ? includeInterpretiveCommentary : undefined,
         }),
       });
 
@@ -1288,6 +1303,75 @@ export default function WritePaper() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Financial Statements (finance/accounting/economics subjects) ── */}
+        {FINANCE_SUBJECT_RE.test(subject) && (
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block flex items-center gap-1.5">
+              <TrendingUp size={11} />
+              Financial Statements
+              <span className="text-[10px] font-normal lowercase tracking-normal ml-1 text-muted-foreground/60">— AI computes all profitability, liquidity, solvency &amp; efficiency ratios</span>
+            </label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {FINANCIAL_STATEMENT_TYPES.map(st => (
+                <button
+                  key={st.value}
+                  type="button"
+                  onClick={() => setFinancialStatementType(st.value)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                    financialStatementType === st.value
+                      ? "border-amber-500/60 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400"
+                      : "border-border text-muted-foreground hover:border-amber-400/40 hover:text-foreground"
+                  )}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={financialStatements}
+              onChange={e => setFinancialStatements(e.target.value)}
+              rows={4}
+              placeholder={"Paste your financial statement data here…\n\nRevenue:            $2,450,000\nCOGS:               $1,200,000\nGross Profit:       $1,250,000\nNet Income:         $416,500\nTotal Assets:       $5,800,000\nTotal Equity:       $2,100,000\nCurrent Assets:     $1,200,000\nCurrent Liabilities:$650,000"}
+              className="w-full px-3 py-2 font-mono text-xs rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            />
+            {financialStatements.trim() && (
+              <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                <CheckCircle size={10} /> Financial statements loaded — AI will compute &amp; interpret all key ratios in the analysis
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ── Interpretive Commentary toggle (when dataset or financial statements present) ── */}
+        {(datasetText.trim() || financialStatements.trim()) && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setIncludeInterpretiveCommentary(v => !v)}
+              className={cn(
+                "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl border transition-all text-left",
+                includeInterpretiveCommentary ? "border-primary/40 bg-primary/5" : "border-border hover:border-primary/20"
+              )}
+            >
+              <div className={cn("relative w-8 h-4 rounded-full transition-colors shrink-0", includeInterpretiveCommentary ? "bg-primary" : "bg-muted")}>
+                <div className={cn("absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform", includeInterpretiveCommentary ? "translate-x-4" : "")} />
+              </div>
+              <div className="min-w-0">
+                <p className={cn("text-xs font-medium leading-tight", includeInterpretiveCommentary ? "text-primary" : "text-foreground")}>
+                  Include Interpretive Commentary
+                </p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">
+                  {includeInterpretiveCommentary
+                    ? "AI will add plain-English explanations after every statistic and ratio — each number gets a practical interpretation"
+                    : "Enable to get plain-English explanations after every statistic, p-value, and financial ratio"}
+                </p>
+              </div>
+              {includeInterpretiveCommentary && <CheckCircle size={12} className="text-primary shrink-0 ml-auto" />}
+            </button>
           </div>
         )}
 

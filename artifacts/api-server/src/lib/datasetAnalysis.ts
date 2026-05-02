@@ -608,6 +608,23 @@ ${checkLines}
 CRITICAL RULE: Do NOT present any inferential test result (t, F, χ², r, B, OR, etc.) before first reporting the relevant assumption checks for that test in the Assumptions Testing subsection.`;
 }
 
+export function buildInterpretiveContext(includeInterpretiveCommentary: boolean): string {
+  if (!includeInterpretiveCommentary) return "";
+  return `
+INTERPRETIVE COMMENTARY — MANDATORY:
+After EVERY statistical result presented in the Results / Findings section, add a plain-English interpretation sentence immediately following the statistic. The interpretation must explain what the number means in the context of the research question — not just restate it.
+
+Required format examples:
+• After "t(48) = 2.34, p = .023, d = 0.67" → add: "This indicates that [Group A] scored significantly higher than [Group B], and the moderate effect size (d = 0.67) suggests the difference is practically meaningful beyond statistical chance alone."
+• After "F(2, 87) = 8.12, p < .001, η² = .157" → add: "The ANOVA revealed a significant effect of [factor], with group membership explaining approximately 15.7% of the variance in [outcome] — a medium-to-large effect by Cohen's (1988) benchmarks."
+• After "r = .542, p = .003" → add: "There is a moderate positive relationship between [X] and [Y]: as [X] increases, [Y] tends to increase proportionally, though substantial unexplained variance remains."
+• After "B = 0.45, β = .31, t = 3.21, p = .002, 95% CI [0.17, 0.73]" → add: "For every one-unit increase in [predictor], [outcome] increases by 0.45 units on average (holding all other predictors constant), a statistically reliable effect whose confidence interval excludes zero."
+• After a financial ratio (e.g., "Current Ratio: 1.8x") → add: "A current ratio of 1.8x indicates the company can comfortably cover its short-term obligations, sitting above the generally accepted threshold of 1.5x, though the specific adequacy depends on industry norms."
+• After a regression R² → add: "The model explains [X]% of variance in [outcome], which is [small/moderate/large] by Cohen's guidelines, suggesting that [predictors] account for [most/some/little] of the variation in [outcome]."
+
+RULE: No statistical value, ratio, coefficient, or p-value in the Results section may appear without an immediately following plain-English interpretation. A professor reading this paper must be able to understand the practical significance of every number without consulting any external resource.`;
+}
+
 function buildTestsContext(selectedTests: string[]): string {
   if (!selectedTests || selectedTests.length === 0) return "";
 

@@ -30,7 +30,9 @@ The platform is built as a monorepo using `pnpm workspaces`, Node.js 24, and Typ
 - **LightSpeed Humanizer:** Detects AI-generated text and rewrites it to bypass AI detection, featuring tone selection and before/after comparisons.
 - **AI & Plagiarism Checker:** Provides AI detection scores and identifies plagiarism sources.
 - **STEM Solver:** Offers step-by-step solutions for 11 subject areas (Mathematics, Physics, Chemistry, Biology, Engineering, CS, Statistics, Finance, Accounting, Economics, Actuarial Science) with Recharts graph visualizations, using a handwritten, pen-on-paper aesthetic. Finance subjects support TVM, DCF, financial ratios, journal entries, actuarial tables, and credit analysis.
-- **AI Study Assistant:** A chat-based tutor with session history and image/screenshot upload capabilities, rendering math content in a handwritten style.
+- **AI Study Assistant:** A chat-based tutor with session history and image/screenshot upload capabilities, rendering math content in a handwritten style. Finance/economics subjects show a financial statements panel (amber theme) to inject ratio-computation context into generated study materials.
+- **Financial Statements Analysis Engine:** `financialStatements.ts` parses Income Statement / Balance Sheet / Cash Flow text, computes 25+ ratios (profitability, liquidity, solvency, efficiency, DuPont, FCF) and injects a structured AI instruction block. Available in Write Paper (finance subjects), STEM Solver (finance/accounting/economics/actuarial subjects), and Study Assistant. Statement type selector (Income / Balance Sheet / Cash Flow / Full) controls the analysis scope.
+- **Interpretive Commentary:** Toggle in Write Paper that adds plain-English explanations after every statistic, p-value, and financial ratio when dataset or financial statements are present.
 - **Documents:** Manages all saved documents with search and filter functionalities.
 
 **UI/UX Decisions:**

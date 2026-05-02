@@ -14,6 +14,7 @@ import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSource
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
+import { buildFinancialStatementsContext } from "../lib/financialStatements";
 import { z } from "zod";
 
 const router = Router();
@@ -168,7 +169,8 @@ router.post("/study/ask", requireAuth, async (req, res) => {
 
     const modeInstruction = modeInstructions[body.mode ?? "tutor"] ?? modeInstructions.tutor;
 
-    const datasetAnalysis = body.datasetText?.trim() ? parseAndAnalyzeDataset(body.datasetText) : "";
+    const datasetAnalysis  = body.datasetText?.trim()         ? parseAndAnalyzeDataset(body.datasetText) : "";
+    const financialContext = body.financialStatements?.trim() ? buildFinancialStatementsContext(body.financialStatements, body.financialStatementType ?? "all") : "";
 
     const systemPrompt = `${TUTOR_SOUL}
 
@@ -181,6 +183,9 @@ INSTRUCTION: The student has uploaded their own notes/materials above. Base your
 
 ` : ""}${datasetAnalysis ? `
 ${datasetAnalysis}
+
+` : ""}${financialContext ? `
+${financialContext}
 
 ` : ""}${ragContext ? `${ragContext}\n\n` : ""}ANSWER QUALITY STANDARDS:
 • Accuracy target: 92%+ — ground every claim in the student's materials or the verified sources above
@@ -288,6 +293,8 @@ const GenerateBody = z.object({
   weakTopics: z.array(z.string()).optional(),
   datasetText: z.string().optional(),
   academicLevel: z.string().optional(),
+  financialStatements: z.string().optional(),
+  financialStatementType: z.string().optional(),
   images: z.array(z.object({
     base64: z.string().max(10_000_000),
     mimeType: z.string(),
@@ -390,10 +397,13 @@ router.post("/study/generate", requireAuth, async (req, res) => {
     const promptFn = GENERATE_PROMPTS[body.type];
     if (!promptFn) return res.status(400).json({ error: "Invalid type" });
 
-    const datasetAnalysis = body.datasetText?.trim() ? parseAndAnalyzeDataset(body.datasetText) : "";
-    const enrichedContent = datasetAnalysis
-      ? `${body.content}\n\n---\n\n${datasetAnalysis}`
-      : body.content;
+    const datasetAnalysis      = body.datasetText?.trim()         ? parseAndAnalyzeDataset(body.datasetText) : "";
+    const financialCtx         = body.financialStatements?.trim() ? buildFinancialStatementsContext(body.financialStatements, body.financialStatementType ?? "all") : "";
+    const enrichedContent = [
+      body.content,
+      datasetAnalysis && `---\n\n${datasetAnalysis}`,
+      financialCtx    && `---\n\n${financialCtx}`,
+    ].filter(Boolean).join("\n\n");
 
     const prompt = promptFn(enrichedContent, subject, body.weakTopics, body.academicLevel);
 

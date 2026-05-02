@@ -6,7 +6,7 @@ import {
   Presentation, ChevronDown, ChevronUp,
   Star, Target, BookMarked, FlipHorizontal2,
   Image as ImageIcon, Plus, Sparkles, Database, CheckCircle,
-  Brain, X,
+  Brain, X, TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
@@ -149,11 +149,19 @@ async function callGenerate(
   weakTopics?: string[],
   datasetText?: string,
   academicLevel?: string,
+  financialStatements?: string,
+  financialStatementType?: string,
 ) {
   const res = await apiFetch(`/study/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, type, subject, weakTopics, images, datasetText: datasetText?.trim() || undefined, academicLevel }),
+    body: JSON.stringify({
+      content, type, subject, weakTopics, images,
+      datasetText: datasetText?.trim() || undefined,
+      academicLevel,
+      financialStatements: financialStatements?.trim() || undefined,
+      financialStatementType: financialStatements?.trim() ? financialStatementType : undefined,
+    }),
   });
   if (!res.ok) {
     const errBody = await res.json().catch(() => null);
@@ -187,6 +195,19 @@ export default function StudyAssistant() {
   const [datasetText,    setDatasetText]    = useState("");
   const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
   const [showDataset,    setShowDataset]    = useState(false);
+
+  // Financial Statements
+  const [financialStatements,    setFinancialStatements]    = useState("");
+  const [financialStatementType, setFinancialStatementType] = useState("all");
+  const [showFinancials,         setShowFinancials]         = useState(false);
+
+  const STUDY_FINANCIAL_STATEMENT_TYPES = [
+    { value: "income_statement", label: "Income Statement" },
+    { value: "balance_sheet",    label: "Balance Sheet" },
+    { value: "cash_flow",        label: "Cash Flow" },
+    { value: "all",              label: "Full Statements" },
+  ];
+  const isFinanceSubjectForStudy = /finance|accounting|economics|banking|investment|insurance|actuarial|business\s*studies|credit\s*anal/i.test(selectedSubject);
 
   // Generation state
   const [isGenerating,  setIsGenerating]  = useState(false);
@@ -328,6 +349,8 @@ export default function StudyAssistant() {
         type === "weakpoints" ? wrongTopics : undefined,
         datasetText,
         academicLevel,
+        financialStatements,
+        financialStatementType,
       );
       if (type === "flashcards") { setFlashcards(r.data?.flashcards ?? []); setCardIdx(0); setCardFlipped(false); setMasteredCards(new Set()); }
       if (type === "quiz")       { setQuiz(r.data?.questions ?? []); setQuizAnswers([]); setQuizSubmitted(false); setCurrentQ(0); }
@@ -340,7 +363,7 @@ export default function StudyAssistant() {
       setGenerateError(e instanceof Error ? e.message : "Generation failed. Please try again.");
       setActiveView(null);
     } finally { setIsGenerating(false); }
-  }, [topic, sources, selectedType, selectedSubject, wrongTopics, datasetText, academicLevel]);
+  }, [topic, sources, selectedType, selectedSubject, wrongTopics, datasetText, academicLevel, financialStatements, financialStatementType]);
 
   // ── Quiz helpers ──────────────────────────────────────────────────────
 
@@ -511,6 +534,20 @@ export default function StudyAssistant() {
                 <Database size={14} className="shrink-0" />
                 <span className="text-xs">{datasetText ? "Dataset ✓" : "Dataset"}</span>
               </button>
+              {isFinanceSubjectForStudy && (
+                <button
+                  onClick={() => setShowFinancials(v => !v)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
+                    showFinancials || financialStatements
+                      ? "border-amber-400/60 text-amber-600 dark:text-amber-400 bg-amber-50/10 dark:bg-amber-900/20"
+                      : "border-border text-muted-foreground hover:border-amber-400/40 hover:text-amber-500"
+                  )}
+                >
+                  <TrendingUp size={14} className="shrink-0" />
+                  <span className="text-xs">{financialStatements ? "Statements ✓" : "Financials"}</span>
+                </button>
+              )}
             </div>
 
             {/* Dataset panel */}
@@ -556,6 +593,43 @@ export default function StudyAssistant() {
                       </tbody>
                     </table>
                   </div>
+                )}
+              </div>
+
+            {/* ── Financial Statements panel ── */}
+            {isFinanceSubjectForStudy && showFinancials && (
+              <div className="rounded-xl border border-amber-400/30 bg-amber-50/10 dark:bg-amber-900/10 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                    Financial Statements <span className="font-normal text-muted-foreground ml-1">(AI computes all ratios — profitability, liquidity, solvency &amp; efficiency)</span>
+                  </p>
+                  {financialStatements && (
+                    <button onClick={() => setFinancialStatements("")}
+                      className="text-[10px] text-muted-foreground hover:text-destructive transition-colors">Clear</button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {STUDY_FINANCIAL_STATEMENT_TYPES.map(st => (
+                    <button key={st.value} onClick={() => setFinancialStatementType(st.value)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md border text-[10px] font-medium transition-all",
+                        financialStatementType === st.value
+                          ? "border-amber-500/60 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400"
+                          : "border-border text-muted-foreground hover:border-amber-400/40"
+                      )}>{st.label}</button>
+                  ))}
+                </div>
+                <textarea
+                  value={financialStatements}
+                  onChange={e => setFinancialStatements(e.target.value)}
+                  rows={4}
+                  placeholder={"Paste financial statements…\n\nRevenue:       $2,450,000\nCOGS:          $1,200,000\nNet Income:    $416,500\nTotal Assets:  $5,800,000\nTotal Equity:  $2,100,000"}
+                  className="w-full px-2.5 py-1.5 font-mono text-xs rounded-lg border border-amber-200 dark:border-amber-800 bg-background focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
+                />
+                {financialStatements.trim() && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <CheckCircle size={10} /> Statements loaded — AI will compute &amp; integrate all key ratios into the study materials
+                  </p>
                 )}
               </div>
             )}

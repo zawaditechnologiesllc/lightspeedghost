@@ -4,6 +4,7 @@ import { anthropic } from "../lib/ai";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage, isAtLimit, getUserPlan, getUsage, PLAN_LIMITS, enforceLimit } from "../lib/usageTracker";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
+import { buildFinancialStatementsContext } from "../lib/financialStatements";
 import { z } from "zod";
 
 const router = Router();
@@ -16,6 +17,8 @@ const AskBody = z.object({
   imageBase64: z.string().optional(),
   mimeType: z.string().optional(),
   subject: z.string().optional(),
+  financialStatements: z.string().optional(),
+  financialStatementType: z.string().optional(),
 });
 
 function detectMode(question: string, hasImage: boolean): Mode {
@@ -186,10 +189,15 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
       });
     }
 
+    const financialContext = body.financialStatements?.trim()
+      ? buildFinancialStatementsContext(body.financialStatements, body.financialStatementType ?? "all")
+      : "";
+
     const questionText = [
+      financialContext ? financialContext : "",
       body.question.trim(),
       ragContext ? `\n\nAcademic reference context:\n${ragContext}` : "",
-    ].filter(Boolean).join("");
+    ].filter(Boolean).join("\n\n");
 
     if (questionText) userContent.push({ type: "text", text: questionText });
 

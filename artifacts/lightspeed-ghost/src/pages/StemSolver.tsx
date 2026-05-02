@@ -10,7 +10,7 @@ import {
   AlertTriangle, XCircle, Copy, CheckCheck,
   Download, Loader2, RotateCcw, Camera, FileText, Zap,
   BookOpen, Atom, Calculator, Cpu, BarChart2, Layers,
-  Database, GraduationCap,
+  Database, GraduationCap, TrendingUp,
 } from "lucide-react";
 import type { StemSolution } from "@workspace/api-client-react";
 import StemImageOcr from "@/components/StemImageOcr";
@@ -159,6 +159,16 @@ export default function StemSolver() {
   const [datasetText, setDatasetText] = useState("");
   const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
   const [showDataset, setShowDataset] = useState(false);
+  const [financialStatements, setFinancialStatements] = useState("");
+  const [financialStatementType, setFinancialStatementType] = useState("all");
+  const [showFinancials, setShowFinancials] = useState(false);
+
+  const STEM_FINANCIAL_STATEMENT_TYPES = [
+    { value: "income_statement", label: "Income Statement" },
+    { value: "balance_sheet",    label: "Balance Sheet" },
+    { value: "cash_flow",        label: "Cash Flow" },
+    { value: "all",              label: "Full Statements" },
+  ];
   const [result, setResult] = useState<StemSolution | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [papersLoading, setPapersLoading] = useState(false);
@@ -197,6 +207,7 @@ export default function StemSolver() {
   });
 
   const selectedSubject = form.watch("subject");
+  const isFinanceSubjectForStem = ["finance", "accounting", "economics", "actuarial_science"].includes(selectedSubject);
   const resources = stemResourcesBySubject[selectedSubject] ?? [];
   const showBioModels = selectedSubject === "biology" || selectedSubject === "chemistry";
   const showMolecule = selectedSubject === "chemistry";
@@ -284,7 +295,13 @@ export default function StemSolver() {
       const resp = await apiFetch(`/stem/solve-stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, datasetText: datasetText.trim() || undefined, academicLevel: academicLevel || undefined }),
+        body: JSON.stringify({
+          ...data,
+          datasetText: datasetText.trim() || undefined,
+          academicLevel: academicLevel || undefined,
+          financialStatements: financialStatements.trim() || undefined,
+          financialStatementType: financialStatements.trim() ? financialStatementType : undefined,
+        }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -555,6 +572,21 @@ export default function StemSolver() {
             <Database size={12} />
             {datasetText ? "Dataset loaded" : "Add dataset"}
           </button>
+          {isFinanceSubjectForStem && (
+            <button
+              type="button"
+              onClick={() => setShowFinancials(v => !v)}
+              className={cn(
+                "flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all",
+                showFinancials || financialStatements
+                  ? "border-amber-400/60 text-amber-600 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-900/20"
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-amber-400/40 bg-card"
+              )}
+            >
+              <TrendingUp size={12} />
+              {financialStatements ? "Statements loaded" : "Financial statements"}
+            </button>
+          )}
           {fileExtractError && (
             <span className="text-xs text-destructive">{fileExtractError}</span>
           )}
@@ -604,6 +636,41 @@ export default function StemSolver() {
                   </tbody>
                 </table>
               </div>
+            )}
+          </div>
+        )}
+        {/* ── Financial Statements panel ── */}
+        {isFinanceSubjectForStem && showFinancials && (
+          <div className="mx-4 mt-2 rounded-xl border border-amber-400/30 bg-amber-50/20 dark:bg-amber-900/10 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                Financial Statements <span className="font-normal text-muted-foreground">(AI computes all ratios — profitability, liquidity, solvency, efficiency)</span>
+              </p>
+              <button type="button" onClick={() => { setFinancialStatements(""); }}
+                className="text-[10px] text-muted-foreground hover:text-destructive transition-colors">Clear</button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {STEM_FINANCIAL_STATEMENT_TYPES.map(st => (
+                <button key={st.value} type="button" onClick={() => setFinancialStatementType(st.value)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md border text-[10px] font-medium transition-all",
+                    financialStatementType === st.value
+                      ? "border-amber-500/60 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400"
+                      : "border-border text-muted-foreground hover:border-amber-400/40"
+                  )}>{st.label}</button>
+              ))}
+            </div>
+            <textarea
+              value={financialStatements}
+              onChange={e => setFinancialStatements(e.target.value)}
+              rows={4}
+              placeholder={"Paste financial statements…\n\nRevenue:       $2,450,000\nCOGS:          $1,200,000\nNet Income:    $416,500\nTotal Assets:  $5,800,000\nTotal Equity:  $2,100,000"}
+              className="w-full px-2.5 py-1.5 font-mono text-xs rounded-lg border border-amber-200 dark:border-amber-800 bg-background focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
+            />
+            {financialStatements.trim() && (
+              <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <CheckCircle size={10} /> Statements loaded — AI will compute all key ratios automatically
+              </p>
             )}
           </div>
         )}

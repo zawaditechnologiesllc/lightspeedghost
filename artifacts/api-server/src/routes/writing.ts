@@ -15,7 +15,8 @@ import { eq, desc, and, isNotNull } from "drizzle-orm";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { recordSearchResults, recordQualitySignal } from "../lib/learningEngine";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
-import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
+import { parseAndAnalyzeDataset, buildInterpretiveContext } from "../lib/datasetAnalysis";
+import { buildFinancialStatementsContext, isFinanceSubject } from "../lib/financialStatements";
 
 const router = Router();
 
@@ -640,6 +641,9 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       analysisTool?: string;
       selectedTests?: string[];
       includeAssumptionsCheck?: boolean;
+      financialStatements?: string;
+      financialStatementType?: string;
+      includeInterpretiveCommentary?: boolean;
     };
 
     const requestedWords = body.wordCount ?? 1500;
@@ -826,6 +830,28 @@ Return JSON:
       }
     }
 
+    // ── Step 1.6: Financial Statements analysis (finance/accounting subjects) ──
+    let financialContext = "";
+    if (body.financialStatements?.trim()) {
+      send("step", {
+        id: "data",
+        message: "Analysing financial statements — computing ratios (profitability, liquidity, solvency, efficiency, cash flow) and preparing financial analysis framework…",
+        status: "running",
+      });
+      try {
+        financialContext = buildFinancialStatementsContext(body.financialStatements, body.financialStatementType ?? "all");
+        const stType = body.financialStatementType ?? "all";
+        const stLabel = stType === "income_statement" ? "Income Statement" : stType === "balance_sheet" ? "Balance Sheet" : stType === "cash_flow" ? "Cash Flow Statement" : "Full Financial Statements";
+        send("step", {
+          id: "data",
+          message: `${stLabel} analysed — key ratios computed, analysis framework prepared for ${isFinanceSubject(body.subject) ? body.subject : "financial"} paper`,
+          status: "done",
+        });
+      } catch {
+        send("step", { id: "data", message: "Financial statements processed — injecting analysis framework", status: "done" });
+      }
+    }
+
     // ── Step 2: STEM pre-pass (if STEM) — section-tagged content ─────────────
     interface StemSections {
       introduction?: string;
@@ -1005,7 +1031,7 @@ DO NOT write a generic paper body — the entire body IS the annotated entries.
 
     const systemPrompt = `${WRITER_SOUL}
 
-${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
+${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${financialContext ? `${financialContext}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
 
 ${stemBlock ? `${stemBlock}\n` : ""}${aGradeCriteria ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GRADING TARGET — ${aGradeCriteria}
@@ -1061,6 +1087,7 @@ PLAGIARISM PREVENTION:
 • Run a mental originality check on every paragraph — would this pass Turnitin? If not, rewrite.
 
 GRADE TARGET: ${targetWords <= 600 ? `This short paper must demonstrate sharp, focused thinking within its tight word limit. Quality is shown through precision and concision — a 200-word paper that lands exactly on target and argues clearly scores higher than a 600-word paper that ignores the brief. Do NOT write more than ${maxWords} words.` : `This paper MUST score 92% or higher. Every section must demonstrate critical analysis, strong argumentation, precise evidence handling, and discipline-specific depth that earns distinction-level marks.`}
+${body.includeInterpretiveCommentary ? `\n${buildInterpretiveContext(true)}\n` : ""}
 ${body.additionalInstructions ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STUDENT'S ADDITIONAL INSTRUCTIONS — MANDATORY COMPLIANCE

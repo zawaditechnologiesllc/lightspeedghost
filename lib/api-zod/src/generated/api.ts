@@ -300,6 +300,8 @@ export const SolveStemBody = zod.object({
     .default(solveStemBodyExportFormatDefault),
   datasetText: zod.string().optional(),
   academicLevel: zod.string().optional(),
+  financialStatements: zod.string().optional(),
+  financialStatementType: zod.string().optional(),
 });
 
 export const SolveStemResponse = zod.object({
@@ -357,6 +359,8 @@ export const AskStudyAssistantBody = zod.object({
     .default(askStudyAssistantBodyModeDefault),
   subject: zod.string().optional(),
   academicLevel: zod.string().optional(),
+  financialStatements: zod.string().optional(),
+  financialStatementType: zod.string().optional(),
 });
 
 export const AskStudyAssistantResponse = zod.object({
