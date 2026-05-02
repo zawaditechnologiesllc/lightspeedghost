@@ -33,11 +33,11 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
 
   const plans: Record<string, SectionBudget[]> = {
     essay: [
-      { name: "Introduction", pct: 0.12 },
-      { name: "Body Paragraph 1", pct: 0.22 },
-      { name: "Body Paragraph 2", pct: 0.22 },
-      { name: "Body Paragraph 3", pct: 0.22 },
-      { name: "Conclusion", pct: 0.12 },
+      { name: "Introduction — hook (compelling opening), background context, and a clear, arguable thesis statement that previews the three main points", pct: 0.13 },
+      { name: "Body Paragraph 1 — topic sentence (first supporting claim) + specific evidence from sources + critical analysis explaining WHY the evidence supports the thesis + transition", pct: 0.25 },
+      { name: "Body Paragraph 2 — topic sentence (second distinct claim, different from paragraph 1) + evidence + deeper analytical commentary + transition to next idea", pct: 0.25 },
+      { name: "Body Paragraph 3 — topic sentence (third claim, often the strongest or most nuanced) + evidence + analysis linking back to thesis + build toward conclusion", pct: 0.25 },
+      { name: "Conclusion — synthesise all three arguments (not a summary), restate the evolved thesis, broader implication or call to reflection — no new arguments", pct: 0.12 },
     ],
     argumentative: [
       { name: "Introduction — hook, context, and clear arguable thesis", pct: 0.10 },
@@ -55,12 +55,12 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
       { name: "Conclusion — summary of what was explained, significance, what reader now understands", pct: 0.11 },
     ],
     analytical: [
-      { name: "Introduction", pct: 0.10 },
-      { name: "Analysis Section 1", pct: 0.22 },
-      { name: "Analysis Section 2", pct: 0.22 },
-      { name: "Analysis Section 3", pct: 0.20 },
-      { name: "Synthesis", pct: 0.14 },
-      { name: "Conclusion", pct: 0.07 },
+      { name: "Introduction — introduce the subject/text/data, state the analytical lens or framework (e.g. theoretical, comparative, critical), and present the central analytical claim or question", pct: 0.12 },
+      { name: "Analysis Section 1 — first analytical dimension: identify the element under analysis, examine its mechanisms and patterns, provide specific evidence, interpret its significance within the broader argument", pct: 0.22 },
+      { name: "Analysis Section 2 — second analytical dimension: a different angle or contrasting element, comparative evidence, deeper layer of interpretation that complicates or enriches Section 1", pct: 0.22 },
+      { name: "Analysis Section 3 — third analytical dimension: most complex or nuanced finding, challenge the obvious reading, connect to broader theoretical or contextual framework", pct: 0.20 },
+      { name: "Synthesis — draw all analytical threads together, explain what the combined analysis reveals, address tensions or contradictions between sections, articulate the unified insight", pct: 0.17 },
+      { name: "Conclusion — state the analytical contribution, identify limitations of the chosen framework, implications for understanding the subject or field", pct: 0.07 },
     ],
     persuasive: [
       { name: "Introduction — compelling hook, emotional/logical appeal, and clear position statement", pct: 0.10 },
@@ -71,12 +71,12 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
       { name: "Conclusion — reinforce position, call to action, leave reader with clear next step", pct: 0.11 },
     ],
     report: [
-      { name: "Executive Summary / Abstract", pct: 0.08 },
-      { name: "Introduction", pct: 0.10 },
-      { name: "Methodology", pct: 0.18 },
-      { name: "Findings / Results", pct: 0.25 },
-      { name: "Discussion", pct: 0.22 },
-      { name: "Conclusions & Recommendations", pct: 0.12 },
+      { name: "Executive Summary / Abstract — standalone overview: purpose of the report, key findings, and main recommendations in 1–2 paragraphs; a reader who reads only this must understand the full picture", pct: 0.08 },
+      { name: "Introduction — background context, the problem or question the report addresses, scope (what is and is not covered), methodology overview, and how the report is structured", pct: 0.12 },
+      { name: "Methodology — how data was gathered (surveys, interviews, observation, secondary research), analytical tools used, sample size and selection rationale, and limitations of the approach", pct: 0.18 },
+      { name: "Findings / Results — present data objectively and systematically: use subsections per theme, describe quantitative results in text (tables and charts referenced but described verbally), identify key trends and patterns", pct: 0.27 },
+      { name: "Discussion — interpret the findings, explain what they mean in context, link to existing literature or industry standards, discuss unexpected results, and identify implications for the organisation or field", pct: 0.23 },
+      { name: "Conclusions & Recommendations — clear, numbered conclusions drawn directly from findings; followed by specific, actionable recommendations listed in priority order with responsible parties or timelines where possible", pct: 0.12 },
     ],
     "lab report": [
       { name: "Abstract", pct: 0.07 },
@@ -95,20 +95,20 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
       { name: "Conclusion", pct: 0.09 },
     ],
     "literature review": [
-      { name: "Introduction", pct: 0.10 },
-      { name: "Thematic Section 1", pct: 0.22 },
-      { name: "Thematic Section 2", pct: 0.22 },
-      { name: "Thematic Section 3", pct: 0.20 },
-      { name: "Synthesis of Findings", pct: 0.15 },
-      { name: "Gaps & Future Research + Conclusion", pct: 0.09 },
+      { name: "Introduction — state the scope and purpose of the review, the research question or objective it addresses, the databases and search terms used, and the organisational structure chosen (thematic/chronological/methodological)", pct: 0.10 },
+      { name: "Thematic Section 1 — first major theme: synthesise what multiple authors say on this theme, identify points of agreement and disagreement, critically evaluate the strength of evidence, do NOT simply annotate sources one by one", pct: 0.23 },
+      { name: "Thematic Section 2 — second theme (distinct conceptual angle): critique methodologies across studies, highlight scholarly debates, show how this theme relates to the first", pct: 0.22 },
+      { name: "Thematic Section 3 — third theme or emerging sub-field: conflicting findings, theoretical tensions, how recent work challenges older consensus", pct: 0.20 },
+      { name: "Synthesis of Findings — cross-thematic patterns and contradictions, what the literature collectively establishes, where scholarly consensus exists and where it breaks down", pct: 0.14 },
+      { name: "Gaps & Future Research + Conclusion — under-researched areas, methodological limitations across the field, specific directions for future inquiry, overall conclusion on the state of knowledge", pct: 0.11 },
     ],
     "literature_review": [
-      { name: "Introduction", pct: 0.10 },
-      { name: "Thematic Section 1", pct: 0.22 },
-      { name: "Thematic Section 2", pct: 0.22 },
-      { name: "Thematic Section 3", pct: 0.20 },
-      { name: "Synthesis of Findings", pct: 0.15 },
-      { name: "Gaps & Future Research + Conclusion", pct: 0.09 },
+      { name: "Introduction — state the scope and purpose of the review, the research question or objective it addresses, the databases and search terms used, and the organisational structure chosen (thematic/chronological/methodological)", pct: 0.10 },
+      { name: "Thematic Section 1 — first major theme: synthesise what multiple authors say on this theme, identify points of agreement and disagreement, critically evaluate the strength of evidence, do NOT simply annotate sources one by one", pct: 0.23 },
+      { name: "Thematic Section 2 — second theme (distinct conceptual angle): critique methodologies across studies, highlight scholarly debates, show how this theme relates to the first", pct: 0.22 },
+      { name: "Thematic Section 3 — third theme or emerging sub-field: conflicting findings, theoretical tensions, how recent work challenges older consensus", pct: 0.20 },
+      { name: "Synthesis of Findings — cross-thematic patterns and contradictions, what the literature collectively establishes, where scholarly consensus exists and where it breaks down", pct: 0.14 },
+      { name: "Gaps & Future Research + Conclusion — under-researched areas, methodological limitations across the field, specific directions for future inquiry, overall conclusion on the state of knowledge", pct: 0.11 },
     ],
     "research paper": [
       { name: "Abstract", pct: 0.06 },
@@ -1124,6 +1124,45 @@ ${body.additionalInstructions}
 
         const secFinalMsg = await sectionStream.finalMessage();
         recordUsage("claude-sonnet-4-5", secFinalMsg.usage.input_tokens, secFinalMsg.usage.output_tokens, "paper-generation");
+
+        // ── Per-section word count check ───────────────────────────────────────
+        // If a section lands >20% off its target, do one targeted correction pass.
+        // This prevents shortfalls from compounding across sections in large papers.
+        const secRawWordCount = sectionContent.split(/\s+/).filter(Boolean).length;
+        const secDeviation = Math.abs(secRawWordCount - section.targetWords) / section.targetWords;
+        if (secDeviation > 0.20 && section.targetWords >= 200) {
+          const secIsExpand = secRawWordCount < section.targetWords;
+          const secWordsNeeded = Math.abs(section.targetWords - secRawWordCount);
+          send("step", {
+            id: "writing",
+            message: `Chapter ${secIdx + 1} (${headingName}): ${secRawWordCount} words — ${secWordsNeeded} ${secIsExpand ? "short" : "over"} target. Adjusting…`,
+            status: "running",
+          });
+
+          try {
+            const correctionResp = await anthropic.messages.create({
+              model: "claude-sonnet-4-5",
+              max_tokens: Math.min(16000, Math.ceil(section.targetWords * 1.75) + 600),
+              system: systemPrompt,
+              messages: [{
+                role: "user",
+                content: `The "${headingName}" section you just wrote is ${secRawWordCount} words but must be exactly ${section.targetWords} words (±5%). ${secIsExpand ? `Expand it by adding ~${secWordsNeeded} more words of substantive content — deepen the analysis, add supporting evidence, develop the argument further.` : `Trim it by removing ~${secWordsNeeded} words — cut redundancy and over-explained points while keeping all core arguments and evidence.`}\n\nReturn ONLY the revised "${headingName}" section (start with ## ${headingName}). Do not add other sections.\n\nCurrent content:\n${sectionContent}`,
+              }],
+            });
+
+            recordUsage("claude-sonnet-4-5", correctionResp.usage.input_tokens, correctionResp.usage.output_tokens, "section-word-fix");
+
+            const corrected = correctionResp.content[0].type === "text" ? correctionResp.content[0].text : sectionContent;
+            // Replace the streamed section in the full content with the corrected version
+            content = content.slice(0, content.length - sectionContent.length) + corrected;
+            // Stream the correction delta to the client
+            const correctionDelta = corrected.slice(sectionContent.length);
+            if (correctionDelta.length > 0) send("token", { text: correctionDelta });
+            sectionContent = corrected;
+          } catch {
+            /* non-fatal — proceed with original section */
+          }
+        }
 
         previousContext += "\n\n" + sectionContent;
       }
