@@ -62,6 +62,17 @@ async function initAdminTables() {
       comment TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      institution TEXT,
+      message TEXT NOT NULL,
+      seats INTEGER,
+      read BOOLEAN NOT NULL DEFAULT false,
+      replied BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
     INSERT INTO system_settings (key, value) VALUES
       ('maintenance_mode',        'false'),
       ('allow_signups',           'true'),
@@ -1026,6 +1037,61 @@ router.get("/admin/pwa/stats", async (req: Request, res: Response) => {
     });
   } catch {
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /admin/contact (no auth — public form submission) ───────────────────
+router.post("/contact", async (req: Request, res: Response) => {
+  try {
+    const { name, email, institution, message, seats } = req.body as {
+      name?: string; email?: string; institution?: string; message?: string; seats?: number;
+    };
+    if (!name?.trim() || !email?.trim() || !message?.trim()) {
+      return res.status(400).json({ error: "name, email, and message are required" });
+    }
+    await pool.query(
+      `INSERT INTO contact_messages (name, email, institution, message, seats) VALUES ($1,$2,$3,$4,$5)`,
+      [name.trim(), email.trim(), institution?.trim() ?? null, message.trim(), seats ?? null]
+    );
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ error: "Failed to submit message" });
+  }
+});
+
+// ── GET /admin/messages ──────────────────────────────────────────────────────
+router.get("/messages", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const { rows } = await pool.query<{
+      id: string; name: string; email: string; institution: string | null;
+      message: string; seats: string | null; read: boolean; replied: boolean; created_at: string;
+    }>(`SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 200`);
+    return res.json({ messages: rows });
+  } catch {
+    return res.status(500).json({ error: "Failed to load messages" });
+  }
+});
+
+// ── PATCH /admin/messages/:id/mark-read ─────────────────────────────────────
+router.patch("/messages/:id/mark-read", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    await pool.query(`UPDATE contact_messages SET read = true WHERE id = $1`, [req.params.id]);
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ error: "Failed to update" });
+  }
+});
+
+// ── PATCH /admin/messages/:id/mark-replied ───────────────────────────────────
+router.patch("/messages/:id/mark-replied", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    await pool.query(`UPDATE contact_messages SET read = true, replied = true WHERE id = $1`, [req.params.id]);
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ error: "Failed to update" });
   }
 });
 

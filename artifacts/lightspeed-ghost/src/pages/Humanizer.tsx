@@ -145,11 +145,29 @@ export default function Humanizer() {
     });
   }
 
+  // ── PAYG-only tier helper
+  function getWordCountTier(words: number): "discussion" | "essay" | "research" | "proposal" | "dissertation" {
+    if (words < 500) return "discussion";
+    if (words < 1500) return "essay";
+    if (words < 3500) return "research";
+    if (words < 6000) return "proposal";
+    return "dissertation";
+  }
+
   // ── Detection ────────────────────────────────────────────────────────────────
 
   async function handleDetect(overrideText?: string) {
     const text = (overrideText ?? inputText).trim();
     if (!text) return;
+
+    // Proposal / Dissertation tiers are PAYG-only
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+    const tier = getWordCountTier(wordCount);
+    if (tier === "proposal" || tier === "dissertation") {
+      openBuy("humanizer", tier);
+      return;
+    }
+
     guard("humanizer", async () => {
       setApiError(null);
       setPhase("detecting");

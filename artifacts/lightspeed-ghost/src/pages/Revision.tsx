@@ -221,9 +221,25 @@ export default function Revision() {
     }
   };
 
+  // ── PAYG-only tier helper
+  function getWordCountTier(words: number): "discussion" | "essay" | "research" | "proposal" | "dissertation" {
+    if (words < 500) return "discussion";
+    if (words < 1500) return "essay";
+    if (words < 3500) return "research";
+    if (words < 6000) return "proposal";
+    return "dissertation";
+  }
+
   // ── PHASE 3 → 4: Start streaming revision ─────────────────────────────────
 
   const handleRevise = async () => {
+    // Proposal / Dissertation tiers are PAYG-only
+    const tier = getWordCountTier(paperWordCount);
+    if (tier === "proposal" || tier === "dissertation") {
+      openBuy("revision", tier);
+      return;
+    }
+
     if (isAtLimit("revision")) { guard("revision", () => {}); return; }
     setPhase("revising");
     setError("");

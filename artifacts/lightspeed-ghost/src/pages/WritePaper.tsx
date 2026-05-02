@@ -609,9 +609,26 @@ export default function WritePaper() {
     }
   }, []);
 
+  // ── PAYG-only tier helper
+  function getWordCountTier(words: number): "discussion" | "essay" | "research" | "proposal" | "dissertation" {
+    if (words < 500) return "discussion";
+    if (words < 1500) return "essay";
+    if (words < 3500) return "research";
+    if (words < 6000) return "proposal";
+    return "dissertation";
+  }
+
   // ── generate
   const handleGenerate = async () => {
     if (!topic.trim() || !subject.trim()) return;
+
+    // Proposal / Dissertation tiers are PAYG-only — subscribers must still pay per use
+    const tier = getWordCountTier(wordCount);
+    if (tier === "proposal" || tier === "dissertation") {
+      openBuy("paper", tier);
+      return;
+    }
+
     if (isAtLimit("paper")) { guard("paper", () => {}); return; }
 
     targetWordCountRef.current = wordCount;

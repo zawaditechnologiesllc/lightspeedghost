@@ -134,23 +134,23 @@ const faqs = [
   },
   {
     q: "What's the cheapest plan?",
-    a: "The Starter plan is $4.99/month — the cheapest academic writing platform you'll find anywhere. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves per month, 20 study sessions per month, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
+    a: "The Starter plan is $9.99/month — competitive pricing for a full academic writing suite. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves per month, 20 study sessions per month, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
   },
   {
     q: "What's the difference between Pro monthly and annual?",
-    a: "Same features, different price. Monthly is $14.99/month. Annual is $139/year — that works out to $11.58/month, saving you 23%. Most students buy annual at the start of a semester. You can cancel anytime and keep access until the billing period ends.",
+    a: "Same features, different price. Monthly is $29.99/month. Annual is $239/year — that works out to $19.92/month, saving you 34%. Most students buy annual at the start of a semester. You can cancel anytime and keep access until the billing period ends.",
   },
   {
     q: "How does Pay-As-You-Go work?",
-    a: "No subscription needed. You pay per job at the time of use. Paper generation is priced by document type — from $3.99 for a short discussion post up to $59.99 for a full dissertation. Plagiarism checks are $1.99 per submission (Scribbr charges $19.95 for the same thing). Credits never expire. If you write even one research paper a month on PAYG ($14.99), Pro at the same price becomes the smarter deal.",
+    a: "No subscription needed. You pay per job at the time of use. Paper generation is priced by document type — from $3.99 for a short discussion post up to $59.99 for a full dissertation. Plagiarism checks are $1.99 per submission (Scribbr charges $19.95 for the same thing). Credits never expire. If you write even one research paper a month on PAYG ($14.99), Pro quickly becomes the smarter deal.",
   },
 ];
 
 const pricingPlans = [
   {
     name: "Starter",
-    priceMonthly: "$4.99",
-    priceAnnual: "$4.99",
+    priceMonthly: "$9.99",
+    priceAnnual: "$9.99",
     perMonthly: "/ month",
     perAnnual: "/ month",
     desc: "All core tools. Low commitment. No hidden gotchas.",
@@ -164,20 +164,20 @@ const pricingPlans = [
       "7-day document history",
     ],
     locked: ["LightSpeed Humanizer", "Priority AI processing", "Citation export (BibTeX / RIS)"],
-    cta: "Start for $4.99",
+    cta: "Start for $9.99",
     ctaLink: "/auth",
     highlight: false,
     badge: null,
   },
   {
     name: "Pro",
-    priceMonthly: "$14.99",
-    priceAnnual: "$11.58",
+    priceMonthly: "$29.99",
+    priceAnnual: "$19.92",
     perMonthly: "/ month",
-    perAnnual: "/ month  ·  billed $139 / year",
+    perAnnual: "/ month  ·  billed $239 / year",
     desc: "Every cap lifted. Every tool unlocked. One flat price.",
     features: [
-      "15 papers / month (all types)",
+      "15 papers / month (essay & research types)",
       "20 revisions / month",
       "60 STEM solver problems / month",
       "150 study messages / month",
@@ -194,27 +194,25 @@ const pricingPlans = [
     badge: "Most popular",
   },
   {
-    name: "Campus",
+    name: "Institution",
     priceMonthly: null,
-    priceAnnual: "$9",
+    priceAnnual: "Custom",
     perMonthly: "",
-    perAnnual: "/ seat / month  ·  min 5 seats  ·  annual",
-    desc: "For study groups, tutoring centers, and institutions. Annual billing only.",
+    perAnnual: "pricing for your institution",
+    desc: "For universities, tutoring centers, and research departments. Custom seat pricing, single invoice.",
     features: [
-      "5 papers / seat / month",
-      "8 revisions / seat / month",
-      "8 humanizer jobs / seat / month",
-      "30 STEM problems / seat / month",
-      "75 study messages / seat / month",
-      "Minimum 5 seats — single invoice",
+      "Unlimited seats — custom pricing",
+      "All Pro features per seat",
       "Shared document library + admin dashboard",
       "Academic integrity reporting + SLA support",
+      "Dedicated onboarding & account manager",
+      "Custom API access available",
     ],
     locked: [],
     cta: "Contact Us",
     ctaLink: "/contact",
     highlight: false,
-    badge: "Annual only",
+    badge: "Custom pricing",
   },
 ];
 
@@ -308,6 +306,15 @@ export default function Landing() {
   const { state: installState } = useInstallPrompt();
   const [showIOSModal, setShowIOSModal] = useState(false);
   const [showAndroidModal, setShowAndroidModal] = useState(false);
+  const [showInstitutionModal, setShowInstitutionModal] = useState(false);
+  const [instName, setInstName] = useState("");
+  const [instEmail, setInstEmail] = useState("");
+  const [instOrg, setInstOrg] = useState("");
+  const [instSeats, setInstSeats] = useState("");
+  const [instMessage, setInstMessage] = useState("");
+  const [instSubmitting, setInstSubmitting] = useState(false);
+  const [instSent, setInstSent] = useState(false);
+  const [instError, setInstError] = useState("");
 
   function handleIOSInstall() { setShowIOSModal(true); }
   function handleAndroidInstall() {
@@ -321,6 +328,36 @@ export default function Landing() {
   function handleBuyPayg(tool: PaygTool, tier?: DocumentTier) {
     if (!user) { setLocation("/auth"); return; }
     setPaygCheckout({ tool, tier });
+  }
+
+  async function handleInstitutionSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setInstError("");
+    if (!instName.trim() || !instEmail.trim() || !instMessage.trim()) {
+      setInstError("Please fill in your name, email, and message.");
+      return;
+    }
+    setInstSubmitting(true);
+    try {
+      const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
+      const res = await fetch(`${API_BASE}/admin/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: instName.trim(),
+          email: instEmail.trim(),
+          institution: instOrg.trim() || undefined,
+          message: instMessage.trim(),
+          seats: instSeats ? Number(instSeats) : undefined,
+        }),
+      });
+      if (!res.ok) throw new Error("Submission failed");
+      setInstSent(true);
+    } catch {
+      setInstError("Failed to send — please try emailing us directly at info@lightspeedghost.com");
+    } finally {
+      setInstSubmitting(false);
+    }
   }
 
   useEffect(() => {
@@ -493,7 +530,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Link href="/auth">
               <span className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-100 text-sm sm:text-base">
-                Try for $4.99 / month
+                Try for $9.99 / month
                 <ArrowRight size={16} />
               </span>
             </Link>
@@ -503,7 +540,7 @@ export default function Landing() {
             </a>
           </div>
 
-          <p className="mt-4 text-xs text-white/30">Starter at $4.99/mo · Or pay per use · No expiry on PAYG charges</p>
+          <p className="mt-4 text-xs text-white/30">Starter at $9.99/mo · Or pay per use · No expiry on PAYG charges</p>
 
           {/* ── App Store Badges ── */}
           <div className="mt-8 flex flex-col items-center gap-3">
@@ -1075,12 +1112,12 @@ export default function Landing() {
                 </div>
                 <div>
                   <p className="text-white font-semibold text-sm">Subscribe</p>
-                  <p className="text-blue-400/70 text-[11px]">From $4.99 / month</p>
+                  <p className="text-blue-400/70 text-[11px]">From $9.99 / month</p>
                 </div>
               </div>
               <div className="space-y-6">
                 {[
-                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter plan at $4.99/month or Pro at $14.99/month. Cancel any time." },
+                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter plan at $9.99/month or Pro at $29.99/month. Cancel any time." },
                   { num: "02", title: "Upload your brief or describe your task", body: "Drag in your assignment PDF, paste the rubric, or just type what you need. The platform detects citation style, length, and subject automatically." },
                   { num: "03", title: "Generate, revise, humanize, and submit", body: "Run any tool in sequence — paper → plagiarism check → LightSpeed Humanizer → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
                 ].map(({ num, title, body }) => (
@@ -1095,7 +1132,7 @@ export default function Landing() {
               </div>
               <Link href="/auth">
                 <span className="mt-7 block text-center py-2.5 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer">
-                  Start for $4.99 / month
+                  Start for $9.99 / month
                 </span>
               </Link>
             </div>
@@ -1284,7 +1321,7 @@ export default function Landing() {
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Honest pricing. No dark patterns.</h2>
             <p className="text-white/45 text-sm sm:text-base max-w-xl mx-auto">
-              Starter at $4.99/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
+              Starter at $9.99/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
             </p>
             <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
               <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-white" : "text-white/35"}`}>Monthly</span>
@@ -1305,7 +1342,7 @@ export default function Landing() {
               const showAnnual = billingAnnual || priceMonthly === null;
               const price = showAnnual ? priceAnnual : priceMonthly;
               const per   = showAnnual ? perAnnual   : perMonthly;
-              const isCampus = name === "Campus";
+              const isCampus = name === "Institution";
               return (
                 <div key={name} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col ${highlight ? "bg-blue-600/10 border-blue-500/40 shadow-xl shadow-blue-900/20" : "bg-white/[0.02] border-white/8"}`}>
                   {badge && (
@@ -1337,8 +1374,8 @@ export default function Landing() {
                     ))}
                   </ul>
 
-                  {isCampus && !billingAnnual && (
-                    <p className="text-[10px] text-white/30 italic mb-3">Campus plan requires annual billing. Toggle above.</p>
+                  {name === "Institution" && (
+                    <p className="text-[10px] text-white/30 italic mb-3">Custom pricing — we'll get back to you within 1 business day.</p>
                   )}
 
                   {name === "Pro" ? (
@@ -1348,12 +1385,12 @@ export default function Landing() {
                     >
                       {cta}
                     </button>
-                  ) : name === "Campus" ? (
+                  ) : name === "Institution" ? (
                     <button
-                      onClick={() => billingAnnual ? setCheckoutPlan("campus_annual") : setBillingAnnual(true)}
-                      className={`w-full block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5`}
+                      onClick={() => { setShowInstitutionModal(true); setInstSent(false); setInstError(""); }}
+                      className="w-full block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5"
                     >
-                      {billingAnnual ? "Get Campus" : "Switch to Annual"}
+                      Contact Us
                     </button>
                   ) : (
                     <Link href={ctaLink}>
@@ -1476,12 +1513,12 @@ export default function Landing() {
             Stop staring at midnight.<br />Start with a draft.
           </h2>
           <p className="text-white/50 mb-8 sm:mb-10 text-base sm:text-lg">
-            Subscribe from $4.99/month — or pay once per task. No lock-in.
+            Subscribe from $9.99/month — or pay once per task. No lock-in.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link href="/auth">
               <span className="inline-flex items-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:scale-[1.02] active:scale-100 text-base sm:text-lg">
-                Subscribe — from $4.99/mo
+                Subscribe — from $9.99/mo
                 <ArrowRight size={18} />
               </span>
             </Link>
@@ -1755,6 +1792,92 @@ export default function Landing() {
           plan={checkoutPlan}
           onSuccess={() => { setCheckoutPlan(null); setLocation("/app"); }}
         />
+      )}
+
+      {/* ── Institution Contact Modal ── */}
+      {showInstitutionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setShowInstitutionModal(false); }}>
+          <div className="w-full max-w-lg bg-[#0a1020] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/8">
+              <div>
+                <h2 className="text-base font-bold text-white">Institution Inquiry</h2>
+                <p className="text-xs text-white/40 mt-0.5">We'll get back to you within 1 business day</p>
+              </div>
+              <button onClick={() => setShowInstitutionModal(false)} className="text-white/30 hover:text-white/70 transition-colors text-xl leading-none">&times;</button>
+            </div>
+
+            {instSent ? (
+              <div className="px-6 py-10 text-center">
+                <div className="w-14 h-14 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle size={24} className="text-green-400" />
+                </div>
+                <h3 className="text-base font-semibold text-white mb-2">Message sent!</h3>
+                <p className="text-sm text-white/45">We'll review your inquiry and reach out to <span className="text-white/70">{instEmail}</span> shortly.</p>
+                <button onClick={() => setShowInstitutionModal(false)} className="mt-6 px-6 py-2.5 rounded-xl bg-white/8 hover:bg-white/12 text-white/70 text-sm font-medium transition-colors">
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleInstitutionSubmit} className="px-6 py-5 space-y-4">
+                {instError && (
+                  <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">{instError}</div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/50 mb-1.5">Your name *</label>
+                    <input
+                      type="text" value={instName} onChange={e => setInstName(e.target.value)}
+                      placeholder="Jane Smith"
+                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-white/50 mb-1.5">Work email *</label>
+                    <input
+                      type="email" value={instEmail} onChange={e => setInstEmail(e.target.value)}
+                      placeholder="jane@university.edu"
+                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/50"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/50 mb-1.5">Institution / Organization</label>
+                    <input
+                      type="text" value={instOrg} onChange={e => setInstOrg(e.target.value)}
+                      placeholder="State University"
+                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-white/50 mb-1.5">Approx. seats needed</label>
+                    <input
+                      type="number" min="1" value={instSeats} onChange={e => setInstSeats(e.target.value)}
+                      placeholder="e.g. 200"
+                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/50"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-white/50 mb-1.5">Message *</label>
+                  <textarea
+                    value={instMessage} onChange={e => setInstMessage(e.target.value)}
+                    rows={4}
+                    placeholder="Tell us about your use case, timeline, and any questions you have…"
+                    className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/50 resize-none"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={instSubmitting}
+                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold text-sm transition-colors"
+                >
+                  {instSubmitting ? "Sending…" : "Send Inquiry"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

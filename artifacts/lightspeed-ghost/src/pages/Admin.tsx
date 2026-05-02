@@ -9,7 +9,7 @@ import {
   Radio, ServerCrash, Database, Clock, CheckCheck, XCircle, Signal,
   Megaphone, Link2, Eye, EyeOff, ThumbsUp, ThumbsDown,
   Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
-  BookOpen,
+  BookOpen, Inbox, MailOpen, MailCheck, Building2,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
@@ -29,7 +29,19 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "tools" | "documents" | "ebooks" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings";
+type Tab = "overview" | "users" | "tools" | "documents" | "ebooks" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings" | "messages";
+
+interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  institution: string | null;
+  message: string;
+  seats: string | null;
+  read: boolean;
+  replied: boolean;
+  created_at: string;
+}
 
 interface AdminTool {
   key: string;
@@ -340,6 +352,7 @@ export default function Admin() {
     }>;
   } | null>(null);
   const [applyingDiscountId, setApplyingDiscountId] = useState<number | null>(null);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [ebookData, setEbookData] = useState<{
     total: number; thisMonth: number; thisWeek: number; avgWords: number;
     recent: Array<{ id: number; user_id: string | null; title: string; word_count: number; created_at: string }>;
@@ -515,6 +528,15 @@ export default function Admin() {
     finally { setLoading(false); }
   }, [password]);
 
+  const loadMessages = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch("/admin/messages", password) as { messages: ContactMessage[] };
+      setContactMessages(data.messages);
+    } catch { setContactMessages([]); }
+    finally { setLoading(false); }
+  }, [password]);
+
   const loadFeedback = useCallback(async () => {
     try {
       const data = await adminFetch("/admin/feedback", password) as { feedback: FeedbackStat[] };
@@ -587,6 +609,7 @@ export default function Admin() {
     if (activeTab === "announcements") loadAnnouncements();
     if (activeTab === "referrals") loadReferrals();
     if (activeTab === "ebooks") loadEbooks();
+    if (activeTab === "messages") loadMessages();
   }, [isAuthed, activeTab]);
 
   useEffect(() => {
@@ -830,6 +853,7 @@ export default function Admin() {
     { id: "finance",        label: "Finance",        icon: BarChart3 },
     { id: "announcements",  label: "Announcements",  icon: Megaphone },
     { id: "referrals",      label: "Referrals",      icon: Share2 },
+    { id: "messages",       label: "Messages",       icon: Inbox },
     { id: "settings",       label: "Settings",       icon: Settings },
   ];
 
@@ -2220,6 +2244,91 @@ export default function Admin() {
                       The discount is applied automatically at checkout — no manual payouts needed. Status updates to <em>applied</em> once used.
                     </div>
                   </>
+                )}
+              </div>
+            )}
+
+            {/* ── Messages ─────────────────────────────────────────────── */}
+            {activeTab === "messages" && (
+              <div className="space-y-5 max-w-4xl">
+                <div className="flex items-center justify-between">
+                  <SectionHeader title="Institution Messages" sub="Inquiries submitted via the Institution contact form" />
+                  <button onClick={loadMessages} disabled={loading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-all disabled:opacity-40">
+                    <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Refresh
+                  </button>
+                </div>
+                {loading && !contactMessages.length ? <Spinner /> : contactMessages.length === 0 ? (
+                  <Empty text="No institution messages yet" />
+                ) : (
+                  <div className="space-y-3">
+                    {contactMessages.map((msg) => (
+                      <div key={msg.id} className={`bg-white/[0.02] border rounded-xl overflow-hidden transition-all ${msg.replied ? "border-green-500/20" : msg.read ? "border-white/8" : "border-blue-500/30"}`}>
+                        <div className="px-5 py-4">
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-7 h-7 rounded-full bg-white/8 flex items-center justify-center text-xs font-bold text-white/60">
+                                  {msg.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-sm font-semibold text-white">{msg.name}</span>
+                              </div>
+                              <span className="text-[11px] text-white/35">·</span>
+                              <a href={`mailto:${msg.email}`} className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors font-mono">{msg.email}</a>
+                              {msg.institution && (
+                                <>
+                                  <span className="text-[11px] text-white/35">·</span>
+                                  <span className="flex items-center gap-1 text-[11px] text-white/50"><Building2 size={10} />{msg.institution}</span>
+                                </>
+                              )}
+                              {msg.seats && (
+                                <>
+                                  <span className="text-[11px] text-white/35">·</span>
+                                  <span className="text-[11px] text-white/50">{msg.seats} seats</span>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {msg.replied
+                                ? <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 border rounded-full bg-green-500/12 text-green-400 border-green-500/20"><MailCheck size={9} /> Replied</span>
+                                : msg.read
+                                ? <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 border rounded-full bg-white/8 text-white/35 border-white/10"><MailOpen size={9} /> Read</span>
+                                : <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 border rounded-full bg-blue-500/12 text-blue-400 border-blue-500/20">New</span>
+                              }
+                            </div>
+                          </div>
+                          <p className="text-sm text-white/65 leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/6">
+                            <span className="text-[11px] text-white/25">{new Date(msg.created_at).toLocaleString()}</span>
+                            <div className="flex items-center gap-2">
+                              {!msg.read && (
+                                <button
+                                  onClick={async () => {
+                                    await adminFetch(`/admin/messages/${msg.id}/mark-read`, password, { method: "PATCH" });
+                                    setContactMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, read: true } : m));
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 border border-white/8 transition-all"
+                                >
+                                  Mark read
+                                </button>
+                              )}
+                              <a
+                                href={`mailto:${msg.email}?subject=Re: Your LightSpeed Ghost Institution Inquiry`}
+                                onClick={async () => {
+                                  if (!msg.replied) {
+                                    await adminFetch(`/admin/messages/${msg.id}/mark-replied`, password, { method: "PATCH" });
+                                    setContactMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, read: true, replied: true } : m));
+                                  }
+                                }}
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-500/20 transition-all"
+                              >
+                                Reply via email
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
