@@ -20,6 +20,7 @@ import StudyAssistant from "@/pages/StudyAssistant";
 import Documents from "@/pages/Documents";
 import Billing from "@/pages/Billing";
 import ResetPassword from "@/pages/ResetPassword";
+import AuthCallback from "@/pages/AuthCallback";
 import ConfirmEmail from "@/pages/ConfirmEmail";
 import Invite from "@/pages/Invite";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -202,6 +203,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/auth" component={Auth} />
+      <Route path="/auth/callback" component={AuthCallback} />
       <Route path="/admin" component={Admin} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/confirm-email" component={ConfirmEmail} />
