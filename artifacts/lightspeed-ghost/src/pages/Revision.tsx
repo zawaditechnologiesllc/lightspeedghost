@@ -2,13 +2,14 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   FileEdit, CheckCircle, AlertTriangle, Zap, ArrowRight, Copy, CheckCheck,
   TrendingUp, BookOpen, Download, BarChart3, RefreshCcw, FileText,
-  ShieldAlert, ShieldCheck, PenLine, ChevronRight,
+  ShieldAlert, ShieldCheck, PenLine, ChevronRight, GraduationCap,
 } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { ExportButtons } from "@/components/ExportButtons";
 import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
@@ -16,6 +17,17 @@ import { renderInlineMd } from "@/lib/renderInline";
 import { apiFetch } from "@/lib/apiFetch";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { GrammarPanel, TonePanel, StyleConsistencyPanel, ReadabilityPanel } from "@/components/analysis";
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const ACADEMIC_LEVELS = [
+  { value: "high_school",   label: "High School" },
+  { value: "undergrad_1_2", label: "UG Year 1–2" },
+  { value: "undergrad_3_4", label: "UG Year 3–4" },
+  { value: "honours",       label: "Honours" },
+  { value: "masters",       label: "Masters" },
+  { value: "phd",           label: "PhD" },
+];
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -119,6 +131,8 @@ export default function Revision() {
 
   // ── prefill from plagiarism checker
   const [fromPlagiarism, setFromPlagiarism] = useState(false);
+
+  const { academicLevel, saveAcademicLevel } = useUserProfile();
 
   // ── form inputs
   const [paperText, setPaperText] = useState("");
@@ -234,6 +248,7 @@ export default function Revision() {
           gradingCriteria: rubricText.trim() || undefined,
           referenceText: referenceText.trim() || undefined,
           instructions: instructions.trim() || undefined,
+          academicLevel: academicLevel || undefined,
         }),
       });
 
@@ -424,6 +439,31 @@ export default function Revision() {
                   placeholder="e.g., A, 85%, First Class"
                   className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
+              </div>
+            </div>
+
+            {/* Academic level */}
+            <div>
+              <label className="text-sm font-medium mb-2 flex items-center gap-1.5 block">
+                <GraduationCap size={14} />
+                Academic Level
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {ACADEMIC_LEVELS.map(lvl => (
+                  <button
+                    key={lvl.value}
+                    type="button"
+                    onClick={() => saveAcademicLevel(lvl.value)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                      academicLevel === lvl.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    )}
+                  >
+                    {lvl.label}
+                  </button>
+                ))}
               </div>
             </div>
 
