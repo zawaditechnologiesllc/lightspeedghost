@@ -525,7 +525,7 @@ export default function StudyAssistant() {
               accept=".csv,.tsv,.txt" onChange={handleDatasetFile} />
 
             {/* Upload row */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}

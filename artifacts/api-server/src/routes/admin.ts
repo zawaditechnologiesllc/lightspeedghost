@@ -1095,4 +1095,59 @@ router.patch("/messages/:id/mark-replied", async (req: Request, res: Response) =
   }
 });
 
+// ── GET /admin/documents/all ─────────────────────────────────────────────────
+router.get("/documents/all", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const limit = Math.min(parseInt((req.query.limit as string) || "50", 10) || 50, 200);
+    const offset = parseInt((req.query.offset as string) || "0", 10) || 0;
+    const typeFilter = req.query.type as string | undefined;
+    const userFilter = req.query.userId as string | undefined;
+
+    const conditions: string[] = [];
+    const values: unknown[] = [limit, offset];
+
+    if (typeFilter) { values.push(typeFilter); conditions.push(`d.type = $${values.length}`); }
+    if (userFilter) { values.push(userFilter); conditions.push(`d.user_id = $${values.length}`); }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const { rows } = await pool.query(
+      `SELECT d.id, d.user_id, d.title, d.type, d.word_count, d.subject, d.doc_number,
+              d.created_at, d.updated_at
+       FROM documents d
+       ${where}
+       ORDER BY d.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      values,
+    );
+
+    const countVals = conditions.length > 0 ? values.slice(2) : [];
+    const { rows: countRows } = await pool.query(
+      `SELECT COUNT(*) AS count FROM documents d ${where}`,
+      countVals,
+    );
+
+    return res.json({
+      documents: rows.map((d: Record<string, unknown>) => ({
+        id: d.id,
+        userId: d.user_id,
+        title: d.title,
+        type: d.type,
+        wordCount: d.word_count,
+        subject: d.subject,
+        docNumber: d.doc_number,
+        createdAt: d.created_at,
+        updatedAt: d.updated_at,
+      })),
+      total: parseInt((countRows[0] as Record<string, string>)?.count ?? "0", 10),
+      limit,
+      offset,
+    });
+  } catch (err) {
+    console.error("[admin] Failed to fetch all documents:", err);
+    return res.status(500).json({ error: "Failed to fetch documents" });
+  }
+});
+
 export default router;

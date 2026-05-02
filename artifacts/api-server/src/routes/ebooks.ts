@@ -190,8 +190,8 @@ router.post("/ebooks/generate", requireAuth, async (req, res) => {
     keywords: string[];
   };
 
-  if (!topic || !targetAudience || !industry) {
-    res.status(400).json({ error: "topic, targetAudience, and industry are required" });
+  if (!topic || !targetAudience) {
+    res.status(400).json({ error: "topic and targetAudience are required" });
     return;
   }
 

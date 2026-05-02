@@ -511,6 +511,9 @@ export default function WritePaper() {
   // ── target word count captured at generation start (for condition checking)
   const targetWordCountRef = useRef<number>(1500);
 
+  // ── elapsed time during generation
+  const [elapsedSecs, setElapsedSecs] = useState(0);
+
   // ── keep screen awake during generation
   useWakeLock(phase === "generating");
 
@@ -532,6 +535,14 @@ export default function WritePaper() {
       if (n >= 100 && n <= 15000) setWordCount(n);
     }
   }, [topic, subject]);
+
+  // ── elapsed timer — counts up while generation is in progress
+  useEffect(() => {
+    if (phase !== "generating") { setElapsedSecs(0); return; }
+    setElapsedSecs(0);
+    const t = setInterval(() => setElapsedSecs((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [phase]);
 
   // ── pre-fill from AI & Plagiarism checker redirect, or from Outline
   useEffect(() => {
@@ -800,6 +811,13 @@ export default function WritePaper() {
               <span className="tabular-nums">{liveWords.toLocaleString()} words written</span>
             )}
             <span>{pct}%</span>
+            {elapsedSecs > 0 && (
+              <span className="tabular-nums opacity-60">
+                {elapsedSecs >= 60
+                  ? `${Math.floor(elapsedSecs / 60)}m ${elapsedSecs % 60}s`
+                  : `${elapsedSecs}s`}
+              </span>
+            )}
           </div>
         </div>
 
@@ -882,10 +900,10 @@ export default function WritePaper() {
               className="flex-1 p-5 overflow-y-auto"
             >
               {streamedContent ? (
-                <pre className="whitespace-pre-wrap font-mono text-xs text-muted-foreground leading-relaxed">
-                  {streamedContent}
+                <div className="text-xs leading-relaxed">
+                  {renderMarkdown(streamedContent)}
                   <span className="inline-block w-0.5 h-3.5 bg-primary align-middle ml-0.5 animate-pulse" />
-                </pre>
+                </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground/30">
                   <Zap size={32} className="text-primary/20" />
@@ -947,7 +965,7 @@ export default function WritePaper() {
             <ExportButtons
               getHtml={() => wrapDocHtml(result.title, mdToBodyHtml(result.content) + (result.bibliography ? `<hr class="section-rule"><h2>References</h2><p>${result.bibliography.replace(/\n/g, "<br>")}</p>` : ""))}
               getText={() => `${result.content}\n\nReferences:\n${result.bibliography}`}
-              filename={makeLsgFilename("paper", result.title || "PAPER")}
+              filename={makeLsgFilename("paper", topic || result.title || "PAPER")}
               formats={["docx", "pdf", "copy"]}
             />
             <button

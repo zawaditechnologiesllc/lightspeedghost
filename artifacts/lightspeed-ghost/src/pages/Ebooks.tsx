@@ -343,7 +343,7 @@ export default function Ebooks() {
   }
 
   const sectorOptions = SECTORS[industry] ?? [];
-  const canGenerate = topic.trim().length > 3 && targetAudience.trim().length > 3 && industry;
+  const canGenerate = topic.trim().length > 3 && targetAudience.trim().length > 3;
   const remaining = Math.max(0, 15 - usedThisMonth);
 
   // ── Loading state ──────────────────────────────────────────────────────────
@@ -786,7 +786,7 @@ export default function Ebooks() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
-                Industry <span className="text-red-400">*</span>
+                Industry <span className="text-muted-foreground text-xs font-normal">(optional)</span>
               </label>
               <select
                 value={industry}
