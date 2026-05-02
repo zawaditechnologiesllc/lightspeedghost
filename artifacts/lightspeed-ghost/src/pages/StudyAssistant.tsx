@@ -71,6 +71,15 @@ const OUTPUT_TYPES: { key: OutputType; label: string; icon: React.ReactNode; des
 
 const SUBJECTS = ALL_SUBJECTS as readonly string[];
 
+const ACADEMIC_LEVELS = [
+  { value: "high_school",   label: "High School",  short: "HS"  },
+  { value: "undergrad_1_2", label: "UG Year 1–2",  short: "UG1" },
+  { value: "undergrad_3_4", label: "UG Year 3–4",  short: "UG3" },
+  { value: "masters",       label: "Master's",     short: "MSc" },
+  { value: "phd",           label: "PhD",          short: "PhD" },
+  { value: "professional",  label: "Professional", short: "Pro" },
+];
+
 const MODE_DESCRIPTIONS: Record<string, string> = {
   flashcards: "Converts your material into interactive flip cards to help memorise key terms and concepts",
   quiz:       "Creates multiple-choice questions that test your understanding at mixed difficulty levels",
@@ -160,7 +169,7 @@ export default function StudyAssistant() {
   const imageInputRef   = useRef<HTMLInputElement>(null);
   const datasetInputRef = useRef<HTMLInputElement>(null);
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
-  const { academicLevel } = useUserProfile();
+  const { academicLevel, saveAcademicLevel } = useUserProfile();
   const subjectInputRef = useRef<HTMLInputElement>(null);
 
   // Input state
@@ -667,7 +676,28 @@ export default function StudyAssistant() {
             </div>
           </div>
 
-          {/* ── 5. GENERATE BUTTON ────────────────────────────────────── */}
+          {/* ── 5. ACADEMIC LEVEL ─────────────────────────────────────── */}
+          <div className="mt-5 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Academic Level</p>
+            <div className="flex flex-wrap gap-1.5">
+              {ACADEMIC_LEVELS.map((lvl) => (
+                <button
+                  key={lvl.value}
+                  onClick={() => saveAcademicLevel(lvl.value)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl border text-xs font-medium transition-all",
+                    academicLevel === lvl.value
+                      ? "border-primary bg-primary/10 text-primary shadow-sm"
+                      : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-muted/30"
+                  )}
+                >
+                  {lvl.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── 6. GENERATE BUTTON ────────────────────────────────────── */}
           <div className="mt-6">
             <button
               onClick={() => generate()}
