@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight, CheckCircle } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight, CheckCircle, ArrowLeft } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
@@ -17,8 +17,10 @@ function GoogleIcon() {
 }
 
 type Tab = "login" | "signup";
+type View = "auth" | "forgot";
 
 export default function Auth() {
+  const [view, setView] = useState<View>("auth");
   const [tab, setTab] = useState<Tab>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,11 +43,21 @@ export default function Auth() {
     setPassword("");
   };
 
+  const openForgot = () => {
+    reset();
+    setView("forgot");
+  };
+
+  const backToLogin = () => {
+    reset();
+    setView("auth");
+    setTab("login");
+  };
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setStatus("loading");
-
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setError(error.message);
@@ -59,7 +71,6 @@ export default function Auth() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
@@ -68,11 +79,8 @@ export default function Auth() {
       setError("Passwords do not match.");
       return;
     }
-
     setStatus("loading");
-
     const { error } = await supabase.auth.signUp({ email, password });
-
     if (error) {
       setError(error.message);
       setStatus("error");
@@ -84,13 +92,11 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-[#04080f] flex flex-col items-center justify-center px-6 py-16">
-      {/* Background glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-blue-600/10 rounded-full blur-[120px]" />
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Centered logo */}
         <div className="flex justify-center mb-10">
           <Link href="/">
             <Logo size={30} textSize="text-base" className="cursor-pointer" />
@@ -98,155 +104,253 @@ export default function Auth() {
         </div>
 
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/30">
-          {/* Tab switcher */}
-          <div className="flex border-b border-white/10">
-            {(["login", "signup"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => switchTab(t)}
-                className={`flex-1 py-4 text-sm font-semibold transition-all ${
-                  tab === t
-                    ? "text-white border-b-2 border-blue-500 bg-blue-500/5"
-                    : "text-white/40 hover:text-white/60"
-                }`}
-              >
-                {t === "login" ? "Sign In" : "Create Account"}
-              </button>
-            ))}
-          </div>
 
-          <div className="p-8">
-            {status === "done" ? (
-              <div className="text-center py-4">
-                <div className="w-14 h-14 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
-                  <CheckCircle size={28} className="text-green-400" />
-                </div>
-                <h2 className="text-xl font-bold text-white mb-2">
-                  {tab === "login" ? "Welcome back!" : "Account created!"}
-                </h2>
-                <p className="text-white/50 text-sm mb-6">Redirecting you to the app…</p>
+          {view === "forgot" ? (
+            <ForgotPasswordView email={email} setEmail={setEmail} onBack={backToLogin} />
+          ) : (
+            <>
+              {/* Tab switcher */}
+              <div className="flex border-b border-white/10">
+                {(["login", "signup"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => switchTab(t)}
+                    className={`flex-1 py-4 text-sm font-semibold transition-all ${
+                      tab === t
+                        ? "text-white border-b-2 border-blue-500 bg-blue-500/5"
+                        : "text-white/40 hover:text-white/60"
+                    }`}
+                  >
+                    {t === "login" ? "Sign In" : "Create Account"}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <>
-                <h2 className="text-2xl font-bold text-white mb-1">
-                  {tab === "login" ? "Welcome back" : "Create your account"}
-                </h2>
-                <p className="text-white/40 text-sm mb-6">
-                  {tab === "login"
-                    ? "Sign in to your Light Speed Ghost account"
-                    : "Starter plan from $4.99/month — cancel any time"}
-                </p>
 
-                {/* Google OAuth */}
-                <GoogleButton />
-
-                <div className="flex items-center gap-3 my-2">
-                  <div className="flex-1 h-px bg-white/10" />
-                  <span className="text-xs text-white/30">or continue with email</span>
-                  <div className="flex-1 h-px bg-white/10" />
-                </div>
-
-                <form
-                  onSubmit={tab === "login" ? handleLogin : handleSignup}
-                  className="space-y-4"
-                >
-                  <EmailInput email={email} setEmail={setEmail} />
-
-                  {/* Password */}
-                  <div>
-                    <label className="block text-sm text-white/60 mb-1.5">Password</label>
-                    <div className="relative">
-                      <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
-                      <input
-                        type={showPw ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        required
-                        minLength={8}
-                        className="w-full pl-10 pr-10 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/8 transition-colors"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPw(!showPw)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
-                      >
-                        {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-                      </button>
+              <div className="p-8">
+                {status === "done" ? (
+                  <div className="text-center py-4">
+                    <div className="w-14 h-14 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
+                      <CheckCircle size={28} className="text-green-400" />
                     </div>
+                    <h2 className="text-xl font-bold text-white mb-2">
+                      {tab === "login" ? "Welcome back!" : "Account created!"}
+                    </h2>
+                    <p className="text-white/50 text-sm mb-6">Redirecting you to the app…</p>
                   </div>
+                ) : (
+                  <>
+                    <h2 className="text-2xl font-bold text-white mb-1">
+                      {tab === "login" ? "Welcome back" : "Create your account"}
+                    </h2>
+                    <p className="text-white/40 text-sm mb-6">
+                      {tab === "login"
+                        ? "Sign in to your Light Speed Ghost account"
+                        : "Starter plan from $4.99/month — cancel any time"}
+                    </p>
 
-                  {/* Confirm password — signup only */}
-                  {tab === "signup" && (
-                    <div>
-                      <label className="block text-sm text-white/60 mb-1.5">Confirm Password</label>
-                      <div className="relative">
-                        <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
-                        <input
-                          type={showConfirmPw ? "text" : "password"}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          placeholder="••••••••"
-                          required
-                          className={`w-full pl-10 pr-10 py-2.5 bg-white/5 border rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:bg-white/8 transition-colors ${
-                            confirmPassword && confirmPassword !== password
-                              ? "border-red-500/40 focus:border-red-500/60"
-                              : confirmPassword && confirmPassword === password
-                              ? "border-green-500/40 focus:border-green-500/60"
-                              : "border-white/10 focus:border-blue-500/50"
-                          }`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPw(!showConfirmPw)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
-                        >
-                          {showConfirmPw ? <EyeOff size={15} /> : <Eye size={15} />}
-                        </button>
-                      </div>
-                      {confirmPassword && confirmPassword !== password && (
-                        <p className="text-xs text-red-400/80 mt-1.5">Passwords do not match</p>
-                      )}
-                      {confirmPassword && confirmPassword === password && (
-                        <p className="text-xs text-green-400/80 mt-1.5 flex items-center gap-1">
-                          <CheckCircle size={11} /> Passwords match
-                        </p>
-                      )}
+                    <GoogleButton />
+
+                    <div className="flex items-center gap-3 my-4">
+                      <div className="flex-1 h-px bg-white/10" />
+                      <span className="text-xs text-white/30">or continue with email</span>
+                      <div className="flex-1 h-px bg-white/10" />
                     </div>
-                  )}
 
-                  {error && <ErrorMsg text={error} />}
+                    <form
+                      onSubmit={tab === "login" ? handleLogin : handleSignup}
+                      className="space-y-4"
+                    >
+                      <EmailInput email={email} setEmail={setEmail} />
 
-                  <SubmitBtn
-                    status={status}
-                    label={tab === "login" ? "Sign In" : "Create Free Account"}
-                  />
-                </form>
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-sm text-white/60">Password</label>
+                          {tab === "login" && (
+                            <button
+                              type="button"
+                              onClick={openForgot}
+                              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                            >
+                              Forgot password?
+                            </button>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
+                          <input
+                            type={showPw ? "text" : "password"}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="••••••••"
+                            required
+                            minLength={8}
+                            className="w-full pl-10 pr-10 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/8 transition-colors"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPw(!showPw)}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                          >
+                            {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                      </div>
 
-                <p className="text-center text-xs text-white/30 mt-6">
-                  {tab === "login" ? (
-                    <>No account?{" "}
-                      <button onClick={() => switchTab("signup")} className="text-blue-400 hover:text-blue-300 transition-colors">
-                        Create one free
-                      </button>
-                    </>
-                  ) : (
-                    <>Already have an account?{" "}
-                      <button onClick={() => switchTab("login")} className="text-blue-400 hover:text-blue-300 transition-colors">
-                        Sign in
-                      </button>
-                    </>
-                  )}
-                </p>
-              </>
-            )}
-          </div>
+                      {tab === "signup" && (
+                        <div>
+                          <label className="block text-sm text-white/60 mb-1.5">Confirm Password</label>
+                          <div className="relative">
+                            <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
+                            <input
+                              type={showConfirmPw ? "text" : "password"}
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              placeholder="••••••••"
+                              required
+                              className={`w-full pl-10 pr-10 py-2.5 bg-white/5 border rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:bg-white/8 transition-colors ${
+                                confirmPassword && confirmPassword !== password
+                                  ? "border-red-500/40 focus:border-red-500/60"
+                                  : confirmPassword && confirmPassword === password
+                                  ? "border-green-500/40 focus:border-green-500/60"
+                                  : "border-white/10 focus:border-blue-500/50"
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPw(!showConfirmPw)}
+                              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                            >
+                              {showConfirmPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                            </button>
+                          </div>
+                          {confirmPassword && confirmPassword !== password && (
+                            <p className="text-xs text-red-400/80 mt-1.5">Passwords do not match</p>
+                          )}
+                          {confirmPassword && confirmPassword === password && (
+                            <p className="text-xs text-green-400/80 mt-1.5 flex items-center gap-1">
+                              <CheckCircle size={11} /> Passwords match
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {error && <ErrorMsg text={error} />}
+
+                      <SubmitBtn
+                        status={status}
+                        label={tab === "login" ? "Sign In" : "Create Free Account"}
+                      />
+                    </form>
+
+                    <p className="text-center text-xs text-white/30 mt-6">
+                      {tab === "login" ? (
+                        <>No account?{" "}
+                          <button onClick={() => switchTab("signup")} className="text-blue-400 hover:text-blue-300 transition-colors">
+                            Create one free
+                          </button>
+                        </>
+                      ) : (
+                        <>Already have an account?{" "}
+                          <button onClick={() => switchTab("login")} className="text-blue-400 hover:text-blue-300 transition-colors">
+                            Sign in
+                          </button>
+                        </>
+                      )}
+                    </p>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         <p className="text-center text-xs text-white/20 mt-6">
           By continuing, you agree to our Terms of Service and Privacy Policy.
         </p>
       </div>
+    </div>
+  );
+}
+
+function ForgotPasswordView({
+  email,
+  setEmail,
+  onBack,
+}: {
+  email: string;
+  setEmail: (v: string) => void;
+  onBack: () => void;
+}) {
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setStatus("loading");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      setError(error.message);
+      setStatus("error");
+    } else {
+      setStatus("done");
+    }
+  }
+
+  return (
+    <div className="p-8">
+      {status === "done" ? (
+        <div className="text-center py-4">
+          <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
+            <Mail size={26} className="text-blue-400" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Check your inbox</h2>
+          <p className="text-white/50 text-sm mb-6">
+            We sent a password reset link to <span className="text-white/80">{email}</span>. Check your spam folder if you don't see it.
+          </p>
+          <button
+            onClick={onBack}
+            className="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1.5 mx-auto"
+          >
+            <ArrowLeft size={14} /> Back to sign in
+          </button>
+        </div>
+      ) : (
+        <>
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors mb-6"
+          >
+            <ArrowLeft size={13} /> Back to sign in
+          </button>
+
+          <h2 className="text-2xl font-bold text-white mb-1">Forgot password?</h2>
+          <p className="text-white/40 text-sm mb-6">
+            Enter your email and we'll send you a reset link.
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <EmailInput email={email} setEmail={setEmail} />
+
+            {error && <ErrorMsg text={error} />}
+
+            <button
+              type="submit"
+              disabled={status === "loading"}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-lg shadow-blue-600/20"
+            >
+              {status === "loading" ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Mail size={15} />
+              )}
+              {status === "loading" ? "Sending…" : "Send reset link"}
+            </button>
+          </form>
+        </>
+      )}
     </div>
   );
 }
@@ -272,7 +376,7 @@ function GoogleButton() {
       disabled={loading}
       className="w-full flex items-center justify-center gap-3 py-2.5 bg-white hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed text-gray-800 font-semibold rounded-xl transition-colors text-sm shadow-sm"
     >
-      {loading ? <Loader2 size={18} className="animate-spin" /> : <GoogleIcon />}
+      {loading ? <Loader2 size={18} className="animate-spin text-gray-500" /> : <GoogleIcon />}
       Continue with Google
     </button>
   );
