@@ -6,7 +6,7 @@ import {
   Presentation, ChevronDown, ChevronUp,
   Star, Target, BookMarked, FlipHorizontal2,
   Image as ImageIcon, Plus, Sparkles, Database, CheckCircle,
-  Brain, X, TrendingUp,
+  Brain, X, TrendingUp, Link, Youtube,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
@@ -193,6 +193,10 @@ export default function StudyAssistant() {
   // Sources (uploaded files + images)
   const [sources,   setSources]   = useState<StudySource[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  // YouTube / URL input
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlInput,     setUrlInput]     = useState("");
 
   // Dataset (CSV / TSV)
   const [datasetText,    setDatasetText]    = useState("");
@@ -524,31 +528,43 @@ export default function StudyAssistant() {
             <input ref={datasetInputRef} type="file" className="sr-only"
               accept=".csv,.tsv,.txt" onChange={handleDatasetFile} />
 
-            {/* Upload row */}
-            <div className="flex flex-wrap gap-2">
+            {/* Upload row — 2-column grid on mobile, single row on sm+ */}
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-primary/40 hover:bg-muted/20 text-sm text-muted-foreground hover:text-foreground transition-all disabled:opacity-50"
+                className="col-span-2 sm:flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-primary/40 hover:bg-muted/20 text-sm text-muted-foreground hover:text-foreground transition-all disabled:opacity-50"
               >
                 {uploading
                   ? <Loader2 size={14} className="animate-spin text-primary shrink-0" />
                   : <Upload size={14} className="shrink-0 text-muted-foreground/60" />}
                 <span className="text-xs">{uploading ? "Uploading…" : "Upload notes"}</span>
-                <span className="ml-auto text-[10px] text-muted-foreground/30">PDF · DOCX · TXT</span>
+                <span className="ml-auto text-[10px] text-muted-foreground/30 hidden sm:inline">PDF · DOCX · TXT</span>
               </button>
               <button
                 onClick={() => imageInputRef.current?.click()}
                 disabled={uploading}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-blue-400/40 hover:bg-blue-50/5 text-sm text-muted-foreground hover:text-blue-400 transition-all disabled:opacity-50"
+                className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-blue-400/40 hover:bg-blue-50/5 text-sm text-muted-foreground hover:text-blue-400 transition-all disabled:opacity-50"
               >
                 <ImageIcon size={14} className="shrink-0" />
                 <span className="text-xs">Screenshot</span>
               </button>
               <button
+                onClick={() => setShowUrlInput(v => !v)}
+                className={cn(
+                  "flex items-center justify-center sm:justify-start gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
+                  showUrlInput || (sources.some(s => s.name.startsWith("🔗")))
+                    ? "border-rose-400/60 text-rose-600 dark:text-rose-400 bg-rose-50/10 dark:bg-rose-900/20"
+                    : "border-border text-muted-foreground hover:border-rose-400/40 hover:text-rose-500"
+                )}
+              >
+                <Youtube size={14} className="shrink-0" />
+                <span className="text-xs">YouTube / URL</span>
+              </button>
+              <button
                 onClick={() => setShowDataset(v => !v)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
+                  "flex items-center justify-center sm:justify-start gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
                   showDataset || datasetText
                     ? "border-violet-400/60 text-violet-600 dark:text-violet-400 bg-violet-50/10 dark:bg-violet-900/20"
                     : "border-border text-muted-foreground hover:border-violet-400/40 hover:text-violet-500"
@@ -561,7 +577,7 @@ export default function StudyAssistant() {
                 <button
                   onClick={() => setShowFinancials(v => !v)}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
+                    "col-span-2 sm:col-span-1 flex items-center justify-center sm:justify-start gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
                     showFinancials || financialStatements
                       ? "border-amber-400/60 text-amber-600 dark:text-amber-400 bg-amber-50/10 dark:bg-amber-900/20"
                       : "border-border text-muted-foreground hover:border-amber-400/40 hover:text-amber-500"
@@ -572,6 +588,61 @@ export default function StudyAssistant() {
                 </button>
               )}
             </div>
+
+            {/* YouTube / URL input panel */}
+            {showUrlInput && (
+              <div className="rounded-xl border border-rose-400/30 bg-rose-50/10 dark:bg-rose-900/10 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                    <Youtube size={12} /> YouTube Video or Web URL
+                  </p>
+                  <button onClick={() => { setShowUrlInput(false); setUrlInput(""); }} className="text-muted-foreground/40 hover:text-muted-foreground">
+                    <X size={12} />
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    placeholder="https://youtube.com/watch?v=… or any web URL"
+                    className="flex-1 text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-rose-400/50"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && urlInput.trim()) {
+                        const url = urlInput.trim();
+                        const isYT = /youtube\.com|youtu\.be/.test(url);
+                        setSources(prev => [...prev, {
+                          id: uid(), name: `🔗 ${isYT ? "YouTube: " : ""}${url.slice(0, 60)}`,
+                          type: "text", content: `[URL reference — paste the transcript or key content below]\nURL: ${url}`, wordCount: 0,
+                        }]);
+                        setUrlInput("");
+                        setShowUrlInput(false);
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      const url = urlInput.trim();
+                      if (!url) return;
+                      const isYT = /youtube\.com|youtu\.be/.test(url);
+                      setSources(prev => [...prev, {
+                        id: uid(), name: `🔗 ${isYT ? "YouTube: " : ""}${url.slice(0, 60)}`,
+                        type: "text", content: `[URL reference — paste the transcript or key content below]\nURL: ${url}`, wordCount: 0,
+                      }]);
+                      setUrlInput("");
+                      setShowUrlInput(false);
+                    }}
+                    disabled={!urlInput.trim()}
+                    className="px-3 py-2 rounded-lg bg-rose-500 text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+                  >
+                    <Link size={13} />
+                  </button>
+                </div>
+                <p className="text-[10px] text-muted-foreground/50">
+                  Add a YouTube video or web URL as a reference. Paste the video transcript in the notes box above for best results.
+                </p>
+              </div>
+            )}
 
             {/* Dataset panel */}
             {showDataset && (
@@ -720,7 +791,7 @@ export default function StudyAssistant() {
           {/* ── 3. OUTPUT TYPE SELECTOR ───────────────────────────────── */}
           <div className="mt-6 space-y-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Generate</p>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {OUTPUT_TYPES.map(({ key, label, icon, desc }) => (
                 <button
                   key={key}

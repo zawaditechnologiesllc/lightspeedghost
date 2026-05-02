@@ -3,7 +3,7 @@
  * Aggregates from 50,000+ peer-reviewed sources via free public APIs.
  * No Wikipedia, no blogs — only DOI-verifiable academic content.
  *
- * Sources (13 databases, 1B+ papers):
+ * Sources (15 databases, 1B+ papers):
  *  • OpenAlex     — 250M+ papers from 50,000+ publishers (openalex.org)
  *  • CrossRef     — 145M+ DOI records (crossref.org)
  *  • Europe PMC   — 40M+ biomedical papers with full abstracts (europepmc.org)
@@ -17,6 +17,8 @@
  *  • BASE         — 340M+ documents from 10,000+ repositories (broad coverage)
  *  • DataCite     — 48M+ research objects with DOIs (datasets, preprints, papers)
  *  • OpenAIRE     — 100M+ EU-funded research outputs (European academic coverage)
+ *  • Sci-Net      — Academic social network with 200M+ paper profiles and author metrics (sci-net.xyz)
+ *  • Unpaywall    — 50M+ open-access versions of paywalled papers (unpaywall.org)
  *
  * These APIs together cover virtually every major academic publisher:
  * Elsevier, Springer, Wiley, Nature, Science, IEEE, ACM, JSTOR, PubMed,

@@ -5,14 +5,21 @@
  * consistent numbers for the same text.
  *
  * Algorithm:
- *  1. Local burstiness analysis (sentence-length variance) — fast, free, and the
+ *  1. Slopbuster pre-pass — local pattern-matching that strips AI "slop" phrases
+ *     before any LLM call, reducing token waste and improving humanisation focus.
+ *     Technique adapted from github.com/slopbuster (local regex, zero API cost).
+ *  2. Local burstiness analysis (sentence-length variance) — fast, free, and the
  *     primary signal Turnitin uses. AI text has very low variance (stdDev 3–6 words),
  *     human writing varies wildly (stdDev 8–15).
- *  2. GPT-4o-mini semantic scoring — replicates the pattern recognition used by
+ *  3. GPT-4o-mini semantic scoring — replicates the pattern recognition used by
  *     GPTZero and Originality.AI: structural symmetry, transition clichés,
  *     encyclopaedic tone, missing imperfection.
- *  3. Blended score — burstiness penalty applied to GPT score when burstiness is
+ *  4. Blended score — burstiness penalty applied to GPT score when burstiness is
  *     unusually low, ensuring the measurement is robust against prompt-injection tricks.
+ *  5. Humanizer-X multi-pass fingerprint manipulation — when the blended score is
+ *     still above threshold after the LLM humanisation pass, the engine targets
+ *     residual statistical fingerprints: predictable n-grams, perplexity uniformity,
+ *     and paragraph-level structural symmetry.
  */
 
 import { openai } from "./ai.js";
@@ -20,6 +27,77 @@ import { computeBurstiness, sampleTextSections } from "./textAnalysis.js";
 import { recordUsage } from "./apiCost.js";
 import { anthropic } from "./ai.js";
 import { WRITER_SOUL } from "./soul.js";
+
+// ── Slopbuster: local pattern-matching pre-pass ───────────────────────────────
+// Removes AI "slop" phrases without any API call.
+// Technique adapted from the Slopbuster project (local regex engine).
+// Run this BEFORE sending text to the LLM humaniser so the model focuses
+// on structural fingerprints rather than surface-level clichés.
+
+const SLOP_REPLACEMENTS: [RegExp, string][] = [
+  // ── Paragraph-opener clichés ─────────────────────────────────────────────
+  [/\bFurthermore,?\s*/g, ""],
+  [/\bMoreover,?\s*/g, ""],
+  [/\bAdditionally,?\s*/g, ""],
+  [/\bIn conclusion,?\s*/g, "Taken together, "],
+  [/\bIn summary,?\s*/g, "Overall, "],
+  [/\bIn today'?s (world|society|landscape|environment|context|era),?\s*/gi, ""],
+  [/\bIn the realm of\s+/gi, "In "],
+  [/\bIn recent years,?\s*/gi, ""],
+  [/\bIt is (clear|evident|apparent) (that)?\s*/gi, ""],
+  [/\bNeedless to say,?\s*/gi, ""],
+  // ── High-frequency AI vocabulary ─────────────────────────────────────────
+  [/\bdelve(s|d)? (into|deeper)\b/gi, "examine"],
+  [/\bcrucial\b/gi, "important"],
+  [/\bpivotal\b/gi, "significant"],
+  [/\bunderscore(s|d)?\b/gi, "highlight$1"],
+  [/\btapestry\b/gi, "combination"],
+  [/\bmultifaceted\b/gi, "complex"],
+  [/\bshed(s|ding)? light on\b/gi, "clarify"],
+  [/\bnavigate (the )?complexit(y|ies)\b/gi, "address the challenges"],
+  [/\bit is (worth|important to) (noting|note)\b/gi, "notably"],
+  [/\bit (should|must) be noted (that)?\b/gi, ""],
+  [/\bit can be argued (that)?\b/gi, "arguably"],
+  [/\bthis (suggests|indicates|demonstrates) that\b/gi, "this shows that"],
+  [/\bnuanced approach\b/gi, "careful approach"],
+  [/\brobust\b/gi, "strong"],
+  [/\butilize(s|d|r|rs)?\b/gi, "use$1"],
+  [/\bfacilitate(s|d)?\b/gi, "enable$1"],
+  [/\bleverage(s|d|ing)?\b/gi, "use$1"],
+  [/\bsynerg(y|ies|ise|ize|istic)\b/gi, "interaction"],
+  [/\bparadigm shift\b/gi, "major change"],
+  [/\bholistic (approach|view|understanding)\b/gi, "broad $1"],
+  [/\bproactive(ly)?\b/gi, "active$1"],
+  [/\bseamless(ly)?\b/gi, "smooth$1"],
+  [/\btransformative\b/gi, "significant"],
+  [/\bgroundbreaking\b/gi, "novel"],
+  [/\bcutting-edge\b/gi, "advanced"],
+  [/\bstate-of-the-art\b/gi, "advanced"],
+  [/\binnovative (approach|solution|strategy)\b/gi, "new $1"],
+  [/\bemphasise(s|d)? the (importance|significance|need) of\b/gi, "stress the value of"],
+  [/\bcomprehensive (understanding|overview|analysis)\b/gi, "thorough $1"],
+  [/\bfoster(s|ed|ing)? a (culture|environment|sense) of\b/gi, "build$1 a $2 of"],
+  [/\bstakeholder(s)?\b/gi, "parties involved"],
+  [/\blend(s)? itself to\b/gi, "suit$1"],
+  [/\bprovide(s|d)? a framework\b/gi, "offer$1 a structure"],
+  [/\bunderpin(s|ned|ning)?\b/gi, "support$1"],
+];
+
+/**
+ * Slopbuster pre-pass — strip known AI phrase patterns with local regex.
+ * Zero API cost. Run before LLM humanisation to focus model effort on
+ * structural fingerprints rather than surface clichés.
+ */
+export function removeSlopPatterns(text: string): string {
+  let out = text;
+  for (const [pattern, replacement] of SLOP_REPLACEMENTS) {
+    out = out.replace(pattern, replacement);
+  }
+  // Clean up any double-spaces created by empty replacements
+  out = out.replace(/[ \t]{2,}/g, " ");
+  out = out.replace(/^[ \t]+/gm, (m, offset) => (offset === 0 ? m : ""));
+  return out.trim();
+}
 
 export interface AIDetectionResult {
   score: number;
@@ -133,12 +211,18 @@ export async function humanizeTextOnce(
   passNumber = 1,
   indicators: string[] = [],
 ): Promise<string> {
+  // ── Slopbuster pre-pass (free, instant, local) ───────────────────────────
+  // Strip surface-level AI phrases before the LLM even sees the text.
+  // This lets the model focus on deeper statistical fingerprints: perplexity
+  // variance, burstiness patterns, and n-gram predictability — not clichés.
+  const preCleaned = removeSlopPatterns(text);
+
   const focusNote =
     passNumber > 1 && indicators.length > 0
-      ? `\nFOCUS FOR THIS PASS — fix these specific remaining AI patterns:\n${indicators.map((i) => `• ${i}`).join("\n")}`
+      ? `\nFOCUS FOR THIS PASS — these specific AI patterns are still detectable. Fix all of them:\n${indicators.map((i) => `• ${i}`).join("\n")}`
       : "";
 
-  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  const wordCount = preCleaned.split(/\s+/).filter(Boolean).length;
 
   const toneGuide: Record<string, string> = {
     academic:
@@ -154,52 +238,67 @@ export async function humanizeTextOnce(
     max_tokens: 8000,
     system: `${WRITER_SOUL}
 
-You are the LightSpeed Humanizer. Your output must score 0% on all major AI detectors — completely undetectable.
+You are the LightSpeed Blader Humanizer. Your SOLE mission: make this text score 0% on Turnitin AI, GPTZero, and Originality.AI — completely undetectable by any detector. This is non-negotiable.
 
 TARGET TONE: ${toneGuide[tone] ?? toneGuide.academic}
 WORD COUNT TARGET: ~${wordCount} words (±5%)${focusNote}
 
-━━━ STEALTH WRITER TECHNIQUES (MANDATORY) ━━━
+━━━ HUMANIZER-X STATISTICAL FINGERPRINT ATTACK (ALL MANDATORY) ━━━
 
-◆ BURSTINESS INJECTION (Turnitin's primary signal):
-• Short punchy sentence. Then one that builds complexity through multiple subordinate clauses. Then medium.
-• Minimum 3 sentences under 10 words AND 3 sentences over 30 words per 400 words of text
-• Open at least 3 paragraphs with a sub-8-word sentence
-• At least one sentence fragment for emphasis per 350 words
+◆ PASS 1 — BURSTINESS INJECTION (Turnitin's #1 signal):
+AI text has sentence-length stdDev of 3–6 words. Human text: 8–15. You must achieve 10+.
+• Every 400 words MUST contain: ≥3 sentences under 9 words, ≥3 sentences over 32 words
+• Open ≥50% of paragraphs with a sub-9-word sentence
+• Insert ≥1 sentence fragment (grammatically incomplete, for rhetorical effect) per 300 words
+• Break up any 3+ consecutive sentences of similar length — vary aggressively
 
-◆ PREDICTABILITY ATTACK:
-• Identify every phrase where the next word is "obvious" — rewrite those clauses
-• Never use the first synonym that comes to mind — choose the third or fourth most natural option
+◆ PASS 2 — PERPLEXITY VARIANCE (GPTZero's primary signal):
+AI text has uniformly low perplexity. Human text spikes and dips.
+• Every paragraph: mix at least one highly predictable sentence with one genuinely surprising phrasing
+• Never use the first or second word that comes to mind for a slot — choose the 3rd or 4th most natural option
+• Introduce at least 2 mildly unexpected but semantically correct word choices per 300 words
 
-◆ N-GRAM DIVERSITY:
-• No sequence of 5+ consecutive words should match common AI writing patterns
-• Every paragraph must use at least 3 different grammatical structures
+◆ PASS 3 — N-GRAM DISRUPTION (Originality.AI's signal):
+• No 5+ word sequence should follow AI statistical predictions
+• Restructure clauses: move adverbials, split compound sentences, invert subject-verb order occasionally
+• Replace predictable transitions with mid-sentence connectors: "—and yet", "(though this varies)", "curiously,"
 
-◆ VOICE AUTHENTICITY:
-• Every 200 words: one em dash aside—like this—, parenthetical remark, or rhetorical question
-• Include 2-3 moments of real intellectual uncertainty per document
-• At least one genuine analytical opinion per 500 words
+◆ PASS 4 — STRUCTURAL SYMMETRY BREAK (paragraph-level Turnitin signal):
+AI paragraphs all follow: claim → evidence → analysis → link. Vary this ruthlessly.
+• ≥30% of paragraphs must NOT follow the standard 4-part structure
+• Use: question-led paragraphs, concessive openers, mid-paragraph pivots, abrupt one-sentence paragraphs
 
-◆ BANNED PHRASES (zero tolerance):
-"delve into", "delve deeper", "crucial", "pivotal", "underscore", "it is worth noting",
-"it should be noted", "it can be argued", "it is evident", "it is important to note",
-"in today's world", "in the realm of", "navigate the complexities", "tapestry",
-"multifaceted", "nuanced approach", "shed light on"
+◆ PASS 5 — VOICE AUTHENTICITY INJECTION:
+• Every 200 words: one em dash aside—like this—, one parenthetical, or one rhetorical question
+• ≥2 moments of genuine analytical doubt ("the evidence here is less convincing", "one complication arises when…")
+• ≥1 direct analytical opinion per 500 words ("the data here points squarely toward X")
+• ≥1 mid-sentence self-correction or qualifier per 600 words ("—or rather, what this implies is…")
+
+◆ BANNED PHRASES (absolute zero tolerance — any match is a detection failure):
+"delve into", "delve deeper", "delve", "crucial", "pivotal", "underscore", "tapestry",
+"multifaceted", "it is worth noting", "it should be noted", "it can be argued",
+"it is evident", "it is important to note", "in today's world", "in the realm of",
+"navigate the complexities", "shed light on", "nuanced approach", "robust",
+"leverage", "synergy", "paradigm shift", "holistic", "seamless", "transformative",
+"groundbreaking", "cutting-edge", "state-of-the-art", "furthermore" (as paragraph opener),
+"moreover" (as paragraph opener), "additionally" (as paragraph opener),
+"in conclusion" (as paragraph opener), "in summary" (as paragraph opener),
+"it is clear that", "needless to say", "as previously mentioned", "as noted above"
 
 ◆ PRESERVE (non-negotiable):
-• All facts, statistics, data points, conclusions — exact accuracy
-• All in-text citations exactly as formatted
-• All LaTeX equations, markdown headings, formatting
-• The paper's original purpose and central argument
+• All facts, statistics, data points, and conclusions — exact accuracy
+• All in-text citations exactly as formatted (Author, Year) / [N] / etc.
+• All LaTeX equations ($...$ and $$...$$), markdown headings, and structural formatting
+• The original central argument and scope
 
-Return ONLY the humanized text. No commentary, no preamble, no explanation of changes.`,
+Return ONLY the humanized text. No preamble, no explanation, no commentary.`,
     messages: [
       {
         role: "user",
         content:
           passNumber === 1
-            ? `Humanize this text — apply all rules:\n\n${text}`
-            : `Humanize this text again (Pass ${passNumber} — fix remaining AI patterns):\n\n${text}`,
+            ? `Apply the full Blader Humanizer protocol to this text:\n\n${preCleaned}`
+            : `Re-humanize (Pass ${passNumber}) — fix ALL remaining AI patterns listed above:\n\n${preCleaned}`,
       },
     ],
   });

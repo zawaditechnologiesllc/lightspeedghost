@@ -9,7 +9,7 @@ import { WRITER_SOUL } from "../lib/soul";
 import { getVerifiedCitations } from "../lib/citationVerifier";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { analyseTextPlagiarism } from "../lib/textAnalysis";
-import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection.js";
+import { detectAIScore, humanizeTextOnce, removeSlopPatterns } from "../lib/aiDetection.js";
 import { recordUsage } from "../lib/apiCost";
 import { eq, desc, and, isNotNull } from "drizzle-orm";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
@@ -746,8 +746,8 @@ Return JSON:
     send("step", {
       id: "citations",
       message: isAnnotatedBib
-        ? `Annotated bibliography mode — fetching ${citationCount} verified academic sources from 13 live databases (OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE) for "${body.topic}"…`
-        : `Searching 13 live academic databases (1B+ papers: OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE) for "${body.topic}"…`,
+        ? `Annotated bibliography mode — fetching ${citationCount} verified academic sources from 15 live databases (OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE, Sci-Net, Unpaywall) for "${body.topic}"…`
+        : `Searching 15 live academic databases (1B+ papers: OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE, Sci-Net, Unpaywall) for "${body.topic}"…`,
       status: "running",
     });
 
@@ -1046,8 +1046,8 @@ ACADEMIC LEVEL: ${academicLevelPrompt(body.academicLevel)}
 PAPER TYPE: ${body.paperType}
 SUBJECT: ${body.subject}
 CITATION STYLE: ${body.citationStyle.toUpperCase()}
-SPACING: ${body.spacing === "single" ? "Single-spaced" : body.spacing === "1.5" ? "1.5 line spacing" : "Double-spaced"}
-LANGUAGE: ${body.language === "uk" ? "British English (use British spelling: colour, analyse, organisation, behaviour, centre, programme, defence)" : body.language === "au" ? "Australian English (use Australian spelling: colour, analyse, organisation, behaviour, centre, but program for computing)" : "American English (use US spelling: color, analyze, organization, behavior, center, program, defense)"}
+SPACING: ${body.spacing === "single" ? "Single-spaced" : body.spacing === "1.5" ? "1.5 line spacing" : "Double-spaced"} — NON-NEGOTIABLE: this spacing must be reflected in all paragraph formatting, never deviated from
+LANGUAGE: ${body.language === "uk" ? "British English (use British spelling throughout: colour, analyse, organisation, behaviour, centre, programme, defence, recognise, prioritise, travelled — NON-NEGOTIABLE: every word must use British spelling, zero American variants)" : body.language === "au" ? "Australian English (use Australian spelling throughout: colour, analyse, organisation, behaviour, centre, but program for computing — NON-NEGOTIABLE: every word must use Australian spelling)" : "American English (use US spelling throughout: color, analyze, organization, behavior, center, program, defense, recognize, prioritize, traveled — NON-NEGOTIABLE: every word must use American spelling, zero British variants)"}
 ${body.numSources ? `MINIMUM SOURCES: Use at least ${body.numSources} sources in the paper` : ""}
 WORD COUNT — ALL THREE RULES ARE MANDATORY:
 • Body content (introduction through conclusion): MINIMUM ${targetWords} words · MAXIMUM ${maxWords} words
@@ -1073,13 +1073,14 @@ MARKDOWN: Write in full markdown — # Title, ## sections, ### subsections
 MATH: All equations in LaTeX: inline $...$ and block $$...$$
 ${includeToC ? "TABLE OF CONTENTS: Include a Table of Contents after the Abstract" : ""}
 
-HUMANIZATION — MANDATORY (papers that read as AI-written are worthless to the student):
-• Vary sentence length aggressively throughout every section
-• Avoid ALL AI-detectable clichés: "delve", "crucial", "pivotal", "underscore", "tapestry", "multifaceted", "it is worth noting", "in today's world"
-• Use em dashes, parenthetical asides, rhetorical questions naturally
-• Include 2-3 moments of genuine analytical uncertainty per paper
-• No two consecutive paragraphs may open with the same grammatical structure
-• Write with 0% AI detectability — a professor must believe a skilled human student wrote this
+HUMANIZATION — NON-NEGOTIABLE (0% AI detectability is the only acceptable outcome):
+• BURSTINESS: Sentence-length stdDev must exceed 10 words. Mix ≥3 sentences under 9 words with ≥3 over 32 words per 400 words written.
+• PERPLEXITY: Vary word predictability per paragraph — never use the first synonym, choose the 3rd or 4th most natural option.
+• N-GRAMS: No 5+ word sequence should match AI writing patterns — restructure clauses, invert order, split compound sentences.
+• STRUCTURE: ≥30% of paragraphs must NOT follow the standard claim→evidence→analysis→link pattern.
+• VOICE: Every 200 words: one em dash aside—like this—, one parenthetical, or one rhetorical question. ≥2 moments of genuine analytical doubt per section.
+• BANNED — ZERO TOLERANCE: "delve", "crucial", "pivotal", "underscore", "tapestry", "multifaceted", "shed light on", "it is worth noting", "it should be noted", "in today's world", "in the realm of", "nuanced approach", "robust", "leverage", "paradigm shift", "holistic", "seamless", "transformative", "groundbreaking", "cutting-edge", "Furthermore"/"Moreover"/"Additionally" as paragraph openers.
+• Write as a skilled, opinionated human scholar — a professor reading this must not suspect AI authorship.
 
 PLAGIARISM PREVENTION:
 • Every sentence must be original prose — synthesise and interpret sources, never copy
@@ -1454,17 +1455,25 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
     }
 
     // ── Step 5b: AI detection gate — verify paper passes AI detectors ─────────
+    // NON-NEGOTIABLE: This step ALWAYS runs and ALWAYS attempts humanisation if
+    // any AI signal is detected. It cannot be skipped or bypassed.
     send("step", {
       id: "ai-gate",
       message: "Running AI detection check — verifying paper reads as human-authored across Turnitin, GPTZero, and Originality.AI signal patterns…",
       status: "running",
     });
 
+    // Slopbuster pre-pass: remove surface-level AI phrases before scanning.
+    // Free, instant, no API call — focuses the LLM humaniser on deeper signals.
+    send("step", { id: "ai-gate-slop", message: "Slopbuster pre-pass: removing AI phrase patterns (no API call)…", status: "running" });
+    finalContent = removeSlopPatterns(finalContent);
+    send("step", { id: "ai-gate-slop", message: "Slopbuster pre-pass complete — AI vocabulary patterns cleaned.", status: "done" });
+
     let realAiScore = 0;
     const AI_PASS_THRESHOLD = 0;
     const AI_HUMANIZE_MAX_PASSES = 3;
     try {
-      send("step", { id: "ai-gate-scan", message: "Scanning paper for AI-generated patterns…", status: "running" });
+      send("step", { id: "ai-gate-scan", message: "Scanning paper for statistical AI fingerprints (burstiness, perplexity, n-gram patterns)…", status: "running" });
 
       const { score: detectedScore, indicators: aiIndicators } = await detectAIScore(
         finalContent,

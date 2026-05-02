@@ -85,15 +85,24 @@ Every body paragraph MUST follow this exact four-part structure:
   4. LINK/TRANSITION — Final sentence either summarises the point or creates a bridge to the next paragraph's argument
 Paragraphs must be 120–220 words — not shorter (too thin), not longer (too unfocused)
 
-ANTI-AI WRITING RULES (MANDATORY — these make the paper undetectable by Turnitin AI, GPTZero, and Originality.AI):
-- BURSTINESS: Never write 2 consecutive sentences of similar length. Mix short punchy sentences (under 10 words) with long analytical ones (30+ words) throughout every section
-- PREDICTABILITY: Avoid predictable word sequences. If the next word is obvious, choose a different — but accurate — phrasing
-- NO AI CLICHÉS: Never use "delve", "crucial", "pivotal", "underscore", "it is worth noting", "it is important to note", "in today's world", "in the realm of", "tapestry", "multifaceted", "nuanced approach", "Furthermore" or "Moreover" as paragraph openers
-- AUTHENTIC VOICE: Every 200 words, include one: em dash aside—like this—, a parenthetical remark, or a genuine rhetorical question
-- UNCERTAINTY: Include 1-2 moments of real analytical uncertainty per paper ("the evidence here is less conclusive", "one complication arises when…")
+ANTI-AI WRITING RULES — NON-NEGOTIABLE (0% AI detection is the only acceptable outcome):
+- BURSTINESS (Turnitin's #1 signal): Never write 2 consecutive sentences of similar length. Target sentence-length stdDev of 10+ words. Every 400 words: ≥3 sentences under 9 words AND ≥3 sentences over 32 words. Open ≥50% of paragraphs with a sub-9-word sentence.
+- PERPLEXITY VARIANCE (GPTZero's #1 signal): Vary word predictability within every paragraph. Mix one highly predictable sentence with one genuinely surprising phrasing. Never use the first synonym — choose the 3rd or 4th most natural option.
+- N-GRAM DISRUPTION (Originality.AI's signal): No 5+ word sequence should match AI writing patterns. Restructure clauses, move adverbials, split compound sentences, invert subject-verb order occasionally.
+- STRUCTURAL SYMMETRY BREAK: ≥30% of paragraphs must NOT follow the standard claim→evidence→analysis→link structure. Use question-led paragraphs, concessive openers, mid-paragraph pivots.
+- AUTHENTIC VOICE: Every 200 words: one em dash aside—like this—, one parenthetical, or one rhetorical question. ≥2 moments of genuine analytical doubt per section. ≥1 direct analytical opinion per 500 words.
 - VARIED TRANSITIONS: Use all 8 types: contrast, consequence, elaboration, exemplification, temporal, concessive, logical, additive — never repeat the same transition word within 300 words
-- N-GRAM DIVERSITY: No 5+ word phrase should follow predictable AI patterns — constantly vary clause structure, sentence openings, and grammatical form
 - MODAL VARIETY: Cycle through "can", "may", "might", "could", "tends to", "proves to", "appears to" — never use the same modal twice in a paragraph
+- BANNED PHRASES — ABSOLUTE ZERO TOLERANCE (any use is a detection failure):
+  "delve", "crucial", "pivotal", "underscore", "tapestry", "multifaceted", "shed light on",
+  "navigate the complexities", "it is worth noting", "it should be noted", "it can be argued",
+  "it is evident", "it is important to note", "it is clear that", "needless to say",
+  "in today's world", "in the realm of", "nuanced approach", "robust", "leverage", "synergy",
+  "paradigm shift", "holistic", "seamless", "transformative", "groundbreaking", "cutting-edge",
+  "state-of-the-art", "Furthermore" (as paragraph opener), "Moreover" (as paragraph opener),
+  "Additionally" (as paragraph opener), "In conclusion" (as paragraph opener),
+  "In summary" (as paragraph opener), "as previously mentioned", "as noted above",
+  "comprehensive understanding", "foster a culture of", "provide a framework"
 
 MATHEMATICAL FORMULA RULES (MANDATORY when including any math):
 - Write ALL mathematical expressions in LaTeX: inline $expression$ and block $$expression$$
