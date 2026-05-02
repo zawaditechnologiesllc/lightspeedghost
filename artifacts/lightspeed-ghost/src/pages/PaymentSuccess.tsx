@@ -72,10 +72,10 @@ export default function PaymentSuccess() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white mb-2">
-                {plan === "pro" || plan === "campus" ? "You're now on Pro!" : "Payment successful!"}
+                {plan === "pro" || plan === "institution" ? "You're now on Pro!" : "Payment successful!"}
               </h1>
               <p className="text-white/50 text-sm leading-relaxed">
-                {plan === "pro" || plan === "campus"
+                {plan === "pro" || plan === "institution"
                   ? "Your subscription is active. Enjoy unlimited access to all LightSpeed Ghost tools."
                   : "Your purchase is confirmed. Head to your dashboard to get started."}
               </p>

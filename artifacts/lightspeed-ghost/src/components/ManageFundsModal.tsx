@@ -25,13 +25,13 @@ const TOOL_LABELS = [
 const PLAN_ICON: Record<string, React.ElementType> = {
   starter: Zap,
   pro:     Crown,
-  campus:  Users,
+  institution:  Users,
 };
 
 const PLAN_COLOR: Record<string, string> = {
   starter: "text-blue-400",
   pro:     "text-amber-400",
-  campus:  "text-emerald-400",
+  institution:  "text-emerald-400",
 };
 
 export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
@@ -45,7 +45,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
   const resolvedPlan = planLoading ? null : (plan ?? "starter");
   const PlanIcon = PLAN_ICON[resolvedPlan ?? "starter"] ?? Zap;
   const planColor = PLAN_COLOR[resolvedPlan ?? "starter"] ?? "text-blue-400";
-  const planName = resolvedPlan === "pro" ? "Pro" : resolvedPlan === "campus" ? "Campus" : resolvedPlan === null ? "…" : "Starter";
+  const planName = resolvedPlan === "pro" ? "Pro" : resolvedPlan === "institution" ? "Institution" : resolvedPlan === null ? "…" : "Starter";
 
   const creditDollars = (balanceCents / 100).toFixed(2);
 
@@ -112,7 +112,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                     <Star size={9} /> Active
                   </span>
                 )}
-                {!planLoading && resolvedPlan === "campus" && (
+                {!planLoading && resolvedPlan === "institution" && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1">
                     <Star size={9} /> Active
                   </span>
@@ -127,7 +127,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                 {planLoading                  && "Fetching your plan…"}
                 {!planLoading && resolvedPlan === "starter" && "3 papers · 1 revision · 1 humanization per month included"}
                 {!planLoading && resolvedPlan === "pro"     && "15 papers · 20 revisions · 20 humanizations per month"}
-                {!planLoading && resolvedPlan === "campus"  && "5 papers · 8 revisions · 8 humanizations per month (seat)"}
+                {!planLoading && resolvedPlan === "institution"  && "5 papers · 8 revisions · 8 humanizations per month (seat)"}
               </p>
             </div>
 

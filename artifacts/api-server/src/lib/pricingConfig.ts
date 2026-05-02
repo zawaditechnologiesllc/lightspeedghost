@@ -1,4 +1,4 @@
-export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "campus_annual" | "ebooks_monthly";
+export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "institution_annual" | "ebooks_monthly";
 export type PaygTool = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline";
 export type DocumentTier = "discussion" | "essay" | "research" | "proposal" | "dissertation";
 
@@ -32,12 +32,12 @@ export const SUBSCRIPTION_PLANS: Record<PlanId, PlanPrice> = {
     label: "Pro — Annual",
     description: "Full access to all LightSpeed Ghost tools (billed annually)",
   },
-  campus_annual: {
+  institution_annual: {
     amountCents: 900,
     currency: "USD",
     interval: "month",
-    label: "Campus — Per Seat",
-    description: "Campus plan billed annually (minimum 5 seats)",
+    label: "Institution — Per Seat",
+    description: "Institution plan billed annually (minimum 5 seats)",
   },
   ebooks_monthly: {
     amountCents: 2999,

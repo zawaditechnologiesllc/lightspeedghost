@@ -69,7 +69,7 @@ export function PaywallPicker({
 
   if (!open) return null;
 
-  const isPro = currentPlan === "pro" || currentPlan === "campus";
+  const isPro = currentPlan === "pro" || currentPlan === "institution";
   const perks = PRO_PERKS[tool];
 
   return (

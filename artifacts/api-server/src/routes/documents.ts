@@ -51,7 +51,7 @@ async function getUserPlanRetentionDays(userId: string): Promise<number | null> 
     const plan = await getUserPlan(userId);
     if (plan === "starter") return 7;
     if (plan === "pro_annual" || plan === "business" || plan === "ebooks_monthly") return null;
-    // pro, campus, and any other active paid plan → 90 days
+    // pro, institution, and any other active paid plan → 90 days
     return 90;
   } catch {
     return 7;

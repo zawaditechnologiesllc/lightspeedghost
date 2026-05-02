@@ -100,13 +100,13 @@ async function initAdminTables() {
       ('pro_study',               '150'),
       ('pro_plagiarism',          '20'),
       ('pro_outline',             '20'),
-      ('campus_paper',            '5'),
-      ('campus_revision',         '8'),
-      ('campus_humanizer',        '8'),
-      ('campus_stem',             '30'),
-      ('campus_study',            '75'),
-      ('campus_plagiarism',       '10'),
-      ('campus_outline',          '10')
+      ('institution_paper',            '5'),
+      ('institution_revision',         '8'),
+      ('institution_humanizer',        '8'),
+      ('institution_stem',             '30'),
+      ('institution_study',            '75'),
+      ('institution_plagiarism',       '10'),
+      ('institution_outline',          '10')
     ON CONFLICT (key) DO NOTHING;
   `);
 }
@@ -509,8 +509,8 @@ router.patch("/mwaramuriuki-login/users/:id/plan", async (req: Request, res: Res
   const { id } = req.params;
   const { plan, billing, seats, durationDays } = req.body as { plan: string; billing?: string; seats?: number; durationDays?: number };
   try {
-    // When admin sets a plan manually, use durationDays if provided; campus defaults to 365 days
-    const days = durationDays ?? (plan === "campus" ? 365 : 30);
+    // When admin sets a plan manually, use durationDays if provided; institution defaults to 365 days
+    const days = durationDays ?? (plan === "institution" ? 365 : 30);
     const periodEnd = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
     await pool.query(`
       INSERT INTO user_subscriptions (user_id, plan, billing, gateway, status, current_period_end, seats)

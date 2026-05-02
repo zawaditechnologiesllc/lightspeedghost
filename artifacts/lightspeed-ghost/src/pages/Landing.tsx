@@ -1350,7 +1350,7 @@ export default function Landing() {
               const showAnnual = billingAnnual || priceMonthly === null;
               const price = showAnnual ? priceAnnual : priceMonthly;
               const per   = showAnnual ? perAnnual   : perMonthly;
-              const isCampus = name === "Institution";
+              const isInstitution = name === "Institution";
               return (
                 <div key={name} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col ${highlight ? "bg-blue-600/10 border-blue-500/40 shadow-xl shadow-blue-900/20" : "bg-white/[0.02] border-white/8"}`}>
                   {badge && (

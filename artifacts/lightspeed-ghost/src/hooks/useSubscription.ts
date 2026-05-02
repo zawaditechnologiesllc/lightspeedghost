@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
-export type PlanTier = "starter" | "pro" | "campus" | "payg" | null;
+export type PlanTier = "starter" | "pro" | "institution" | "payg" | null;
 
 export interface UsageData {
   paper: number;
@@ -34,7 +34,7 @@ const PLAN_LIMITS: Record<string, Partial<Record<keyof UsageData, number | null>
     plagiarism: 20,
     outline:    20,
   },
-  campus: {
+  institution: {
     paper:      5,
     revision:   8,
     humanizer:  8,

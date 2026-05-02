@@ -27,7 +27,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     assistant:  300, // per month — Haiku text; Sonnet image/doc (Pro only)
     ebook:      0,   // separate ebook add-on required
   },
-  campus: {
+  institution: {
     paper:      5,   // per month per seat
     revision:   8,   // per month per seat
     humanizer:  8,   // per month per seat
@@ -88,16 +88,16 @@ function buildDynamicLimits(s: Record<string, string>): Record<string, Record<To
       assistant:  PLAN_LIMITS.pro.assistant,
       ebook:      PLAN_LIMITS.pro.ebook,
     },
-    campus: {
-      paper:      n("campus_paper",      PLAN_LIMITS.campus.paper),
-      revision:   n("campus_revision",   PLAN_LIMITS.campus.revision),
-      humanizer:  n("campus_humanizer",  PLAN_LIMITS.campus.humanizer),
-      stem:       n("campus_stem",       PLAN_LIMITS.campus.stem),
-      study:      n("campus_study",      PLAN_LIMITS.campus.study),
-      plagiarism: n("campus_plagiarism", PLAN_LIMITS.campus.plagiarism),
-      outline:    n("campus_outline",    PLAN_LIMITS.campus.outline),
-      assistant:  PLAN_LIMITS.campus.assistant,
-      ebook:      PLAN_LIMITS.campus.ebook,
+    institution: {
+      paper:      n("institution_paper",      PLAN_LIMITS.institution.paper),
+      revision:   n("institution_revision",   PLAN_LIMITS.institution.revision),
+      humanizer:  n("institution_humanizer",  PLAN_LIMITS.institution.humanizer),
+      stem:       n("institution_stem",       PLAN_LIMITS.institution.stem),
+      study:      n("institution_study",      PLAN_LIMITS.institution.study),
+      plagiarism: n("institution_plagiarism", PLAN_LIMITS.institution.plagiarism),
+      outline:    n("institution_outline",    PLAN_LIMITS.institution.outline),
+      assistant:  PLAN_LIMITS.institution.assistant,
+      ebook:      PLAN_LIMITS.institution.ebook,
     },
   };
 }

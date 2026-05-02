@@ -1,4 +1,4 @@
-export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "campus_annual" | "ebooks_monthly";
+export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "institution_annual" | "ebooks_monthly";
 export type PaygTool = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline";
 export type DocumentTier = "discussion" | "essay" | "research" | "proposal" | "dissertation";
 
@@ -37,8 +37,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     description: "Best value — save 23% vs monthly",
   },
   {
-    id: "campus_annual",
-    name: "Campus",
+    id: "institution_annual",
+    name: "Institution",
     amountCents: 900,
     interval: "month",
     displayPrice: "$9/seat/mo",

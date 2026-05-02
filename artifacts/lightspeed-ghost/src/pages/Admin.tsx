@@ -212,13 +212,13 @@ interface SystemSettings {
   pro_study: string;
   pro_plagiarism: string;
   pro_outline: string;
-  campus_paper: string;
-  campus_revision: string;
-  campus_humanizer: string;
-  campus_stem: string;
-  campus_study: string;
-  campus_plagiarism: string;
-  campus_outline: string;
+  institution_paper: string;
+  institution_revision: string;
+  institution_humanizer: string;
+  institution_stem: string;
+  institution_study: string;
+  institution_plagiarism: string;
+  institution_outline: string;
   tool_ebooks_enabled: string;
   [key: string]: string;
 }
@@ -280,7 +280,7 @@ function countryName(code: string): string {
 const PLAN_COLORS: Record<string, string> = {
   starter: "bg-blue-500/12 text-blue-300 border-blue-500/20",
   pro: "bg-amber-500/12 text-amber-300 border-amber-500/20",
-  campus: "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
+  institution: "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -695,7 +695,7 @@ export default function Admin() {
     setPlanEditing(true);
     try {
       const body: Record<string, unknown> = { plan: planEditValue };
-      if (planEditValue === "campus") {
+      if (planEditValue === "institution") {
         body.seats = Number(planEditSeats) || 5;
         body.durationDays = Number(planEditDuration) || 365;
       }
@@ -998,7 +998,7 @@ export default function Admin() {
                       <div className="bg-gradient-to-br from-violet-600/10 to-violet-500/5 border border-violet-500/12 rounded-xl p-4">
                         <p className="text-xs text-white/40 mb-2 font-medium">Plan Distribution</p>
                         <div className="space-y-1.5">
-                          {[["starter", "text-blue-400"], ["pro", "text-amber-400"], ["campus", "text-emerald-400"]].map(([plan, color]) => (
+                          {[["starter", "text-blue-400"], ["pro", "text-amber-400"], ["institution", "text-emerald-400"]].map(([plan, color]) => (
                             <div key={plan} className="flex items-center justify-between">
                               <span className={`text-[11px] font-semibold capitalize ${color}`}>{plan}</span>
                               <span className="text-xs text-white/60 tabular-nums">{(stats.planDistribution[plan] ?? 0).toLocaleString()}</span>
@@ -2441,17 +2441,17 @@ export default function Admin() {
                       </div>
                     </SettingsCard>
 
-                    {/* Campus limits */}
-                    <SettingsCard title="Campus Plan Monthly Limits (Per Seat)">
+                    {/* Institution limits */}
+                    <SettingsCard title="Institution Plan Monthly Limits (Per Seat)">
                       <div className="grid grid-cols-2 gap-3">
                         {([
-                          { key: "campus_paper",      label: "Papers" },
-                          { key: "campus_revision",   label: "Revisions" },
-                          { key: "campus_humanizer",  label: "Humanizer" },
-                          { key: "campus_stem",       label: "STEM Solves" },
-                          { key: "campus_study",      label: "Study Sessions" },
-                          { key: "campus_plagiarism", label: "Plagiarism" },
-                          { key: "campus_outline",    label: "Outlines" },
+                          { key: "institution_paper",      label: "Papers" },
+                          { key: "institution_revision",   label: "Revisions" },
+                          { key: "institution_humanizer",  label: "Humanizer" },
+                          { key: "institution_stem",       label: "STEM Solves" },
+                          { key: "institution_study",      label: "Study Sessions" },
+                          { key: "institution_plagiarism", label: "Plagiarism" },
+                          { key: "institution_outline",    label: "Outlines" },
                         ] as { key: string; label: string }[]).map(({ key, label }) => (
                           <div key={key}>
                             <label className="block text-xs text-white/40 mb-1.5">{label} / seat / month</label>
@@ -2557,14 +2557,14 @@ export default function Admin() {
           <div className="space-y-3">
             <div>
               <label className="block text-xs text-white/40 mb-1.5">Plan</label>
-              <select value={planEditValue} onChange={(e) => { setPlanEditValue(e.target.value); if (e.target.value === "campus") { setPlanEditSeats("5"); setPlanEditDuration("365"); } }}
+              <select value={planEditValue} onChange={(e) => { setPlanEditValue(e.target.value); if (e.target.value === "institution") { setPlanEditSeats("5"); setPlanEditDuration("365"); } }}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
                 <option value="starter">Starter (free)</option>
                 <option value="pro">Pro</option>
-                <option value="campus">Campus</option>
+                <option value="institution">Institution</option>
               </select>
             </div>
-            {planEditValue === "campus" && (
+            {planEditValue === "institution" && (
               <>
                 <div>
                   <label className="block text-xs text-white/40 mb-1.5">Number of Seats</label>
@@ -2592,7 +2592,7 @@ export default function Admin() {
               className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground hover:opacity-90 font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {planEditing ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-              {planEditValue === "campus" ? `Activate Campus (${planEditSeats} seats, ${planEditDuration}d)` : "Update Plan"}
+              {planEditValue === "institution" ? `Activate Institution (${planEditSeats} seats, ${planEditDuration}d)` : "Update Plan"}
             </button>
           </div>
         </Modal>

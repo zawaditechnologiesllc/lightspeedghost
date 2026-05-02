@@ -53,7 +53,7 @@ const PLAN_AMOUNTS: Record<PlanId, number> = {
   starter_monthly:   499,
   pro_monthly:      1499,
   pro_annual:       13900,
-  campus_annual:     900,
+  institution_annual:     900,
   ebooks_monthly:   2999,
 };
 
@@ -91,7 +91,7 @@ export function CheckoutModal({
   const amountCents = mode === "credits" && creditPackageCents
     ? creditPackageCents
     : mode === "subscription" && plan
-      ? (plan === "campus_annual"
+      ? (plan === "institution_annual"
         ? PLAN_AMOUNTS[plan] * Math.max(5, seats) * 12
         : PLAN_AMOUNTS[plan])
       : (tool ? getPaygPrice(tool, tier) : 0);
@@ -102,7 +102,7 @@ export function CheckoutModal({
       ? plan === "pro_monthly" ? "Pro — Monthly"
         : plan === "pro_annual" ? "Pro — Annual"
         : plan === "ebooks_monthly" ? "Ebooks — $29.99/mo"
-        : `Campus (${seats} seats)`
+        : `Institution (${seats} seats)`
       : (tool ? getPaygLabel(tool, tier) : "");
 
   const canPayWithCredits = mode === "payg" && tool && balanceCents >= amountCents && amountCents > 0;
@@ -225,7 +225,7 @@ export function CheckoutModal({
               <span className="text-sm text-white/80">{label}</span>
               <span className="text-base font-bold text-white">{formatAmount(amountCents)}</span>
             </div>
-            {mode === "subscription" && plan === "campus_annual" && (
+            {mode === "subscription" && plan === "institution_annual" && (
               <div className="mt-1.5 text-xs text-white/35">
                 {seats} seats × $9/seat/mo × 12 months
               </div>

@@ -42,7 +42,7 @@ export function PaywallGate({ tool, tier, children }: PaywallGateProps) {
   const period = PLAN_PERIOD[tool];
   const rem = remaining(tool);
   const paygPrice = getPaygPrice(tool, tier);
-  const isPro = plan === "pro" || plan === "campus";
+  const isPro = plan === "pro" || plan === "institution";
 
   return (
     <>
