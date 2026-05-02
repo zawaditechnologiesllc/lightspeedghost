@@ -18,9 +18,9 @@ async function humanizePass(
   tone: string,
   toneGuide: string,
   passNumber: number,
-  remainingIndicators: string[]
+  remainingIndicators: string[],
+  maxTokens: number,
 ): Promise<string> {
-  const targetScore = 0;
   const focusNote =
     passNumber > 1 && remainingIndicators.length > 0
       ? `\nFOCUS FOR THIS PASS — fix these specific remaining AI patterns:\n${remainingIndicators.map((i) => `• ${i}`).join("\n")}`
@@ -104,7 +104,7 @@ Return ONLY the humanized text. No commentary, no JSON wrapper, no preamble, no 
 
   const resp = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
-    max_tokens: 8000,
+    max_tokens: maxTokens,
     system: systemPrompt,
     messages: [
       {
@@ -214,6 +214,9 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
 
     const tone = body.tone ?? "academic";
     const wordCount = body.text.split(/\s+/).filter(Boolean).length;
+    // Dynamic token budget: 1.65 tokens/word + 600 overhead for instruction adherence.
+    // Prevents truncation of long documents (e.g. a 6000-word paper needs ~10,000 tokens).
+    const humanizeMaxTokens = Math.min(16000, Math.ceil(wordCount * 1.65) + 600);
 
     const toneGuide: Record<string, string> = {
       academic:
@@ -267,6 +270,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       toneGuide[tone],
       1,
       baselineIndicators,
+      humanizeMaxTokens,
     );
 
     send("step", {
@@ -311,6 +315,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
         toneGuide[tone],
         2,
         currentIndicators,
+        humanizeMaxTokens,
       );
 
       send("step", {
@@ -354,6 +359,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
           toneGuide[tone],
           3,
           currentIndicators,
+          humanizeMaxTokens,
         );
 
         send("step", {

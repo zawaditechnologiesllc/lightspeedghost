@@ -212,7 +212,9 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       .map((sentence) => {
         const startIndex = text.indexOf(sentence);
         const wordCount = sentence.split(/\s+/).length;
-        const sentenceScore = Math.min(60 + (wordCount > 20 ? 15 : 0) + aiIndicators.length * 5, 95);
+        // Score reflects actual suspicion level: longer sentences and more overall AI signals
+        // raise the score, but a single keyword match alone is not high-confidence.
+        const sentenceScore = Math.min(30 + (wordCount > 20 ? 15 : 0) + Math.min(aiIndicators.length * 6, 30), 85);
         return { text: sentence, score: sentenceScore, startIndex, endIndex: startIndex + sentence.length };
       });
 

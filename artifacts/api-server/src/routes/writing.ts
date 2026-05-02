@@ -387,6 +387,15 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
     }
   }
 
+  // Normalize so percentages always sum to exactly 1.00.
+  // Any rounding error in the plan definition would otherwise cause the AI to receive
+  // a section budget that adds to less than the requested word count — a mathematical
+  // contradiction that causes systematic under-delivery.
+  const rawTotal = sections.reduce((sum, s) => sum + s.pct, 0);
+  if (Math.abs(rawTotal - 1.0) > 0.001) {
+    sections = sections.map(s => ({ ...s, pct: Math.round((s.pct / rawTotal) * 10000) / 10000 }));
+  }
+
   return sections!;
 }
 
@@ -395,18 +404,22 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
  */
 function planSectionWordBudgets(paperType: string, targetWords: number): string {
   const sections = lookupSectionPlan(paperType);
+  let runningTotal = 0;
   const lines = sections.map(s => {
     const words = Math.round(targetWords * s.pct);
+    runningTotal += words;
     return `  • ${s.name}: ~${words} words`;
   });
+  // Show the actual budgeted total so the AI can verify the math itself
   return `SECTION-BY-SECTION WORD BUDGET (MANDATORY — distribute your words exactly like this):
 ${lines.join("\n")}
   ─────────────────────────────────────
-  Total body text: ${targetWords} words
-  References / bibliography: excluded from count
-  Abstract (if present): excluded from count
+  Section budgets sum to: ~${runningTotal} words  ← this must equal your final body word count
+  Target body word count: ${targetWords} words (${Math.floor(targetWords * 0.95)}–${Math.ceil(targetWords * 1.05)} allowed)
+  References / bibliography: NOT counted in the body total
+  Abstract (if present): NOT counted in the body total
 
-Write each section to its allocated word count. Do NOT over-write early sections and run short on later ones. Check your running word count after each section and adjust accordingly.`;
+CRITICAL — after finishing each section, note your running word count. If a section ran long, write the NEXT section shorter to compensate. If a section ran short, write the NEXT section longer. Your final body count MUST land in ${Math.floor(targetWords * 0.95)}–${Math.ceil(targetWords * 1.05)} words.`;
 }
 
 /**
@@ -474,25 +487,35 @@ async function enforceBodyWordCount(
       status: "running",
     });
 
+    // Token budget: 1.75 tokens/word for the full paper output, plus overhead.
+    // Min 8000 so small papers always have enough room.
+    const optimizerMaxTokens = Math.max(8000, Math.min(16000, Math.ceil(targetWords * 1.75) + 2000));
+    const wordsNeeded = Math.abs(targetWords - currentCount);
+    const sectionsHint = isExpand
+      ? `Prioritize expanding the largest body sections first (analysis, discussion, body paragraphs). Add ${wordsNeeded} substantive words of analytical depth, evidence, and argumentation — no padding or repetition.`
+      : `Prioritize trimming the largest body sections first (remove redundant phrasing, over-explained points, wordy transitions). Remove ${wordsNeeded} words without losing any core argument or evidence.`;
+
     const adjustResp = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: Math.min(16000, Math.ceil(Math.max(targetWords, delta) * 1.8) + 1800),
+      max_tokens: optimizerMaxTokens,
       system: `${WRITER_SOUL}
 
 You are the LightSpeed Word Count Optimizer.
 Current body word count: ${currentCount}
 Required target body word count: ${targetWords}
 Allowed range: ${minTarget} to ${maxTarget} words
+Words to ${isExpand ? "add" : "remove"}: ~${wordsNeeded}
 
-RULES:
-1) Adjust ONLY body sections; references/bibliography must not be expanded.
-2) Keep citations, factual claims, equations, and markdown intact.
-3) If expanding, add substantive analysis/evidence (no filler).
-4) If trimming, remove redundancy first (no loss of core argument/evidence).
-5) Return ONLY the full revised paper content.`,
+${sectionsHint}
+
+STRICT RULES:
+1) Adjust ONLY body sections — references/bibliography must stay unchanged.
+2) Preserve all citations, factual claims, equations, headings, and markdown structure.
+3) Return ONLY the complete revised paper (all sections including references).
+4) After your revision, verify your body word count is in ${minTarget}–${maxTarget} before returning.`,
       messages: [{
         role: "user",
-        content: `${isExpand ? "Expand" : "Trim"} this paper so the body text lands in ${minTarget}-${maxTarget} words (target ${targetWords}):\n\n${current}`,
+        content: `${isExpand ? "Expand" : "Trim"} this paper so the body text lands in ${minTarget}–${maxTarget} words (target ${targetWords}). Current count: ${currentCount}.\n\n${current}`,
       }],
     });
 
@@ -603,7 +626,9 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     const citationCount = body.numSources ? Math.min(Math.max(body.numSources, 3), 50) : autoCitations;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
     const refsOverhead = Math.min(2000, Math.max(400, citationCount * 120));
-    const maxTokens = Math.min(16000, Math.ceil(maxWords * 1.5) + refsOverhead);
+    // Use 1.65 tokens/word — accounts for markdown structure, headings, and citation formatting overhead.
+    // This ensures the model is never token-starved and can always reach the target word count.
+    const maxTokens = Math.min(16000, Math.ceil(maxWords * 1.65) + refsOverhead);
 
     // Keep-alive ping so the SSE connection stays open during slow citation/DB calls
     send("ping", { t: Date.now() });
