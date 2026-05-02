@@ -9,6 +9,7 @@ import {
   Radio, ServerCrash, Database, Clock, CheckCheck, XCircle, Signal,
   Megaphone, Link2, Eye, EyeOff, ThumbsUp, ThumbsDown,
   Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
+  BookOpen,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
@@ -28,7 +29,7 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "tools" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings";
+type Tab = "overview" | "users" | "tools" | "documents" | "ebooks" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings";
 
 interface AdminTool {
   key: string;
@@ -339,6 +340,11 @@ export default function Admin() {
     }>;
   } | null>(null);
   const [applyingDiscountId, setApplyingDiscountId] = useState<number | null>(null);
+  const [ebookData, setEbookData] = useState<{
+    total: number; thisMonth: number; thisWeek: number; avgWords: number;
+    recent: Array<{ id: number; user_id: string | null; title: string; word_count: number; created_at: string }>;
+    subscriptions: Array<{ user_id: string; status: string; billing: string | null; gateway: string | null; created_at: string }>;
+  } | null>(null);
 
   const isAuthed = !!password;
 
@@ -525,6 +531,13 @@ export default function Admin() {
     finally { setLoading(false); }
   }, [password]);
 
+  const loadEbooks = useCallback(async () => {
+    setLoading(true);
+    try { setEbookData(await adminFetch("/admin/ebooks", password) as typeof ebookData); }
+    catch { setEbookData(null); }
+    finally { setLoading(false); }
+  }, [password]);
+
   async function wakeBeforeLogin() {
     setPreLoginWaking(true);
     setPreLoginStatus("idle");
@@ -573,6 +586,7 @@ export default function Admin() {
     if (activeTab === "logs") loadLogs();
     if (activeTab === "announcements") loadAnnouncements();
     if (activeTab === "referrals") loadReferrals();
+    if (activeTab === "ebooks") loadEbooks();
   }, [isAuthed, activeTab]);
 
   useEffect(() => {
@@ -673,6 +687,7 @@ export default function Admin() {
     else if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); loadPwaStats(); }
     else if (activeTab === "logs") loadLogs();
     else if (activeTab === "announcements") loadAnnouncements();
+    else if (activeTab === "ebooks") loadEbooks();
     else loadStats();
   }
 
@@ -806,6 +821,7 @@ export default function Admin() {
     { id: "users",          label: "Users",          icon: Users },
     { id: "tools",          label: "Tools",          icon: Wrench },
     { id: "documents",      label: "Documents",      icon: FileText },
+    { id: "ebooks",         label: "Ebooks",         icon: BookOpen },
     { id: "analytics",      label: "Analytics",      icon: TrendingUp },
     { id: "logs",           label: "Logs",           icon: Radio },
     { id: "gateways",       label: "Gateways",       icon: Globe },
@@ -999,6 +1015,7 @@ export default function Admin() {
                           { id: "users",         label: "Users",          sub: "Accounts & bans",           icon: Users,        color: "text-blue-400",    bg: "bg-blue-500/8",    border: "border-blue-500/12" },
                           { id: "tools",         label: "Tools",          sub: "Enable, monitor & stats",   icon: Wrench,       color: "text-rose-400",    bg: "bg-rose-500/8",    border: "border-rose-500/12" },
                           { id: "documents",     label: "Documents",      sub: "All generated content",     icon: FileText,     color: "text-indigo-400",  bg: "bg-indigo-500/8",  border: "border-indigo-500/12" },
+                          { id: "ebooks",        label: "Ebooks",         sub: "Ebook subs & library",      icon: BookOpen,     color: "text-purple-400",  bg: "bg-purple-500/8",  border: "border-purple-500/12" },
                           { id: "analytics",     label: "Analytics",      sub: "Traffic & usage",           icon: TrendingUp,   color: "text-violet-400",  bg: "bg-violet-500/8",  border: "border-violet-500/12" },
                           { id: "logs",          label: "Logs",           sub: "API request logs",          icon: Radio,        color: "text-cyan-400",    bg: "bg-cyan-500/8",    border: "border-cyan-500/12" },
                           { id: "gateways",      label: "Gateways",       sub: "Payment gateway config",    icon: Globe,        color: "text-teal-400",    bg: "bg-teal-500/8",    border: "border-teal-500/12" },
@@ -1269,7 +1286,7 @@ export default function Admin() {
                   </div>
                 </div>
                 <div className="flex gap-1.5 flex-wrap">
-                  {(["all", "paper", "revision", "humanizer", "stem", "study", "plagiarism", "outline"] as const).map((t) => (
+                  {(["all", "paper", "revision", "humanizer", "stem", "study", "plagiarism", "outline", "ebook"] as const).map((t) => (
                     <button key={t} onClick={() => setDocTypeFilter(t)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize ${docTypeFilter === t ? "bg-white/10 text-white" : "text-white/35 hover:text-white/60"}`}
                     >{t === "all" ? "All Types" : t}</button>
@@ -1301,6 +1318,85 @@ export default function Admin() {
                         ));
                       })()
                   }
+                </div>
+              </div>
+            )}
+
+            {/* ── Ebooks ────────────────────────────────────────────────── */}
+            {activeTab === "ebooks" && (
+              <div className="space-y-6 max-w-5xl">
+                <div className="flex items-start justify-between flex-wrap gap-3">
+                  <SectionHeader title="Ebooks" sub="Business add-on · subscriptions & generated library" />
+                  <button onClick={loadEbooks} disabled={loading}
+                    className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40">
+                    <RefreshCw size={11} className={loading ? "animate-spin" : ""} /> Refresh
+                  </button>
+                </div>
+
+                {/* Stat cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: "All time", value: ebookData?.total ?? 0, color: "text-purple-400", bg: "bg-purple-500/8 border-purple-500/12" },
+                    { label: "This month", value: ebookData?.thisMonth ?? 0, color: "text-indigo-400", bg: "bg-indigo-500/8 border-indigo-500/12" },
+                    { label: "This week", value: ebookData?.thisWeek ?? 0, color: "text-blue-400", bg: "bg-blue-500/8 border-blue-500/12" },
+                    { label: "Avg words", value: ebookData?.avgWords ?? 0, color: "text-emerald-400", bg: "bg-emerald-500/8 border-emerald-500/12" },
+                  ].map(({ label, value, color, bg }) => (
+                    <div key={label} className={`${bg} border rounded-xl px-4 py-4`}>
+                      <p className={`text-2xl font-bold ${color} tabular-nums`}>{value.toLocaleString()}</p>
+                      <p className="text-xs text-white/35 mt-1">{label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Subscriptions */}
+                <div>
+                  <h3 className="text-sm font-semibold text-white/70 mb-3">Active Subscriptions
+                    <span className="ml-2 text-[11px] font-normal text-white/30">({(ebookData?.subscriptions ?? []).filter(s => s.status === "active").length} active)</span>
+                  </h3>
+                  {loading && !ebookData ? <Spinner /> : !ebookData || ebookData.subscriptions.length === 0 ? (
+                    <Empty text="No ebook subscriptions yet" />
+                  ) : (
+                    <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                      <div className="grid grid-cols-[1fr_80px_90px_100px_120px] gap-2 px-4 py-2.5 border-b border-white/6">
+                        {["User ID", "Status", "Gateway", "Billing", "Subscribed"].map(h => (
+                          <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
+                        ))}
+                      </div>
+                      {ebookData.subscriptions.map((sub, i) => (
+                        <div key={sub.user_id} className={`grid grid-cols-[1fr_80px_90px_100px_120px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < ebookData.subscriptions.length - 1 ? "border-b border-white/6" : ""}`}>
+                          <span className="text-[11px] text-white/50 font-mono truncate">{sub.user_id.slice(0, 12)}…</span>
+                          <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize ${sub.status === "active" ? "bg-green-500/12 text-green-400 border-green-500/20" : "bg-white/8 text-white/40 border-white/10"}`}>{sub.status}</span>
+                          <span className="text-xs text-white/50 capitalize">{sub.gateway ?? "—"}</span>
+                          <span className="text-xs text-white/50 capitalize">{sub.billing ?? "—"}</span>
+                          <span className="text-xs text-white/30">{new Date(sub.created_at).toLocaleDateString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent ebooks */}
+                <div>
+                  <h3 className="text-sm font-semibold text-white/70 mb-3">Recently Generated</h3>
+                  {loading && !ebookData ? <Spinner /> : !ebookData || ebookData.recent.length === 0 ? (
+                    <Empty text="No ebooks generated yet" />
+                  ) : (
+                    <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                      <div className="grid grid-cols-[1fr_90px_120px_110px] gap-2 px-4 py-2.5 border-b border-white/6">
+                        {["Title", "Words", "User", "Generated"].map(h => (
+                          <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
+                        ))}
+                      </div>
+                      {ebookData.recent.map((eb, i) => (
+                        <div key={eb.id} className={`grid grid-cols-[1fr_90px_120px_110px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < ebookData.recent.length - 1 ? "border-b border-white/6" : ""}`}>
+                          <p className="text-sm text-white/75 font-medium truncate" title={eb.title}>{eb.title}</p>
+                          <span className="text-xs text-white/35 tabular-nums">{eb.word_count.toLocaleString()}w</span>
+                          <span className="text-[11px] text-white/30 font-mono truncate">{eb.user_id ? eb.user_id.slice(0, 10) + "…" : "anon"}</span>
+                          <span className="text-xs text-white/30">{new Date(eb.created_at).toLocaleDateString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2395,7 +2491,7 @@ function MiniCard({ icon, label, value, format }: { icon: React.ReactNode; label
 }
 
 function typeGradient(type: string) {
-  const map: Record<string, string> = { paper: "bg-blue-500/15", revision: "bg-indigo-500/15", stem: "bg-violet-500/15", study: "bg-cyan-500/15" };
+  const map: Record<string, string> = { paper: "bg-blue-500/15", revision: "bg-indigo-500/15", stem: "bg-violet-500/15", study: "bg-cyan-500/15", ebook: "bg-purple-500/15" };
   return map[type] ?? "bg-white/10";
 }
 
@@ -2405,6 +2501,7 @@ function TypeIcon({ type, size }: { type: string; size: number }) {
     revision: <Files size={size} className="text-indigo-400" />,
     stem: <FlaskConical size={size} className="text-violet-400" />,
     study: <GraduationCap size={size} className="text-cyan-400" />,
+    ebook: <BookOpen size={size} className="text-purple-400" />,
   };
   return <>{map[type] ?? <FileText size={size} className="text-white/40" />}</>;
 }
@@ -2415,6 +2512,7 @@ function TypeBadge({ type }: { type: string }) {
     revision: "bg-indigo-500/15 text-indigo-300 border-indigo-500/20",
     stem: "bg-violet-500/15 text-violet-300 border-violet-500/20",
     study: "bg-cyan-500/15 text-cyan-300 border-cyan-500/20",
+    ebook: "bg-purple-500/15 text-purple-300 border-purple-500/20",
   };
   return (
     <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize border ${styles[type] ?? "bg-white/10 text-white/40 border-white/10"}`}>

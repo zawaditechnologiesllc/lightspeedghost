@@ -314,6 +314,16 @@ export default function Ebooks() {
           setUsedThisMonth(d.usedThisMonth);
           setPhase("results");
           setResultTab("content");
+          apiFetch("/documents", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: d.outline.title,
+              content: d.content,
+              type: "ebook",
+              subject: d.outline.subtitle ?? "",
+            }),
+          }).catch(() => {});
         } else if (event === "error") {
           setError((data as { message: string }).message);
           setPhase("config");
@@ -363,7 +373,7 @@ export default function Ebooks() {
 
   // ── Results Phase ──────────────────────────────────────────────────────────
   if (phase === "results" && outline && content) {
-    const filename = makeLsgFilename(outline.title, "ebook");
+    const filename = makeLsgFilename("ebook", outline.title);
     const bodyHtml = mdToBodyHtml(content);
     const fullHtml = wrapDocHtml(outline.title, bodyHtml);
 
@@ -381,7 +391,7 @@ export default function Ebooks() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <ExportButtons content={content} bodyHtml={bodyHtml} fullHtml={fullHtml} filename={filename} />
+            <ExportButtons getHtml={() => fullHtml} getText={() => content} filename={filename} formats={["pdf"]} />
             <button
               onClick={handleReset}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground text-xs font-medium transition-colors"
@@ -433,7 +443,7 @@ export default function Ebooks() {
                 </div>
               </div>
               <div className="prose prose-sm prose-invert max-w-none bg-card border border-border rounded-xl p-6 sm:p-8">
-                <MathRenderer content={content} />
+                <MathRenderer text={content} />
               </div>
             </div>
           )}
@@ -727,10 +737,6 @@ export default function Ebooks() {
 
         {/* ── Topic & Audience ───────────────────────────────────────────── */}
         <section className="space-y-4">
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-            <Target size={13} className="text-purple-400" /> Topic & Audience
-          </h2>
-
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">
               Ebook Topic <span className="text-red-400">*</span>
@@ -798,6 +804,7 @@ export default function Ebooks() {
                 value={sector}
                 onChange={e => setSector(e.target.value)}
                 disabled={!sectorOptions.length}
+                style={{ colorScheme: "dark" }}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500/50 transition-colors disabled:opacity-40"
               >
                 <option value="">Select sector…</option>

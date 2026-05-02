@@ -48,7 +48,7 @@ export const ListDocumentsResponse = zod.object({
 export const CreateDocumentBody = zod.object({
   title: zod.string(),
   content: zod.string(),
-  type: zod.enum(["paper", "revision", "stem", "study"]),
+  type: zod.enum(["paper", "revision", "stem", "study", "ebook", "humanizer", "plagiarism", "outline"]),
   subject: zod.string().optional(),
 });
 

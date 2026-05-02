@@ -904,6 +904,51 @@ router.post("/feedback", async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /admin/ebooks ─────────────────────────────────────────────────────────
+
+router.get("/admin/ebooks", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [statsRows, recentRows, subRows] = await Promise.all([
+      pool.query<{ total: string; this_month: string; this_week: string; avg_words: string }>(`
+        SELECT
+          COUNT(*)                                                          AS total,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') AS this_month,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')  AS this_week,
+          ROUND(AVG(word_count))::TEXT                                     AS avg_words
+        FROM documents WHERE type = 'ebook'
+      `).catch(() => ({ rows: [] })),
+      pool.query<{ id: number; user_id: string | null; title: string; word_count: number; created_at: string }>(`
+        SELECT id, user_id, title, word_count, created_at
+        FROM documents WHERE type = 'ebook'
+        ORDER BY created_at DESC LIMIT 50
+      `).catch(() => ({ rows: [] })),
+      pool.query<{ user_id: string; status: string; billing: string | null; gateway: string | null; created_at: string }>(`
+        SELECT user_id, status, billing, gateway, created_at
+        FROM user_ebook_subscriptions
+        ORDER BY created_at DESC LIMIT 100
+      `).catch(() => ({ rows: [] })),
+    ]);
+    const s = statsRows.rows[0];
+    res.json({
+      total:      Number(s?.total      ?? 0),
+      thisMonth:  Number(s?.this_month ?? 0),
+      thisWeek:   Number(s?.this_week  ?? 0),
+      avgWords:   Math.round(Number(s?.avg_words ?? 0)),
+      recent: recentRows.rows.map((r) => ({
+        ...r,
+        created_at: r.created_at instanceof Date ? (r.created_at as unknown as Date).toISOString() : String(r.created_at),
+      })),
+      subscriptions: subRows.rows.map((r) => ({
+        ...r,
+        created_at: r.created_at instanceof Date ? (r.created_at as unknown as Date).toISOString() : String(r.created_at),
+      })),
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── GET /admin/feedback ───────────────────────────────────────────────────────
 
 router.get("/admin/feedback", async (req: Request, res: Response) => {
