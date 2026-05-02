@@ -617,7 +617,7 @@ export default function Admin() {
   useEffect(() => {
     if (!isAuthed) return;
     if (activeTab === "overview") loadStats();
-    if (activeTab === "tools") loadTools();
+    if (activeTab === "tools") { loadTools(); loadEbooks(); }
     if (activeTab === "documents") loadDocuments();
     if (activeTab === "users") { loadUsers(); loadSubscriptions(); }
     if (activeTab === "gateways") loadGateways();
@@ -1327,6 +1327,90 @@ export default function Admin() {
                 {!loading && adminTools.length === 0 && (
                   <Empty text="No tool data — push to Render to seed system settings" />
                 )}
+
+                {/* ── Ebook Management ──────────────────────────────────── */}
+                <div className="border-t border-white/6 pt-6 space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <BookOpen size={15} className="text-purple-400" />
+                      <p className="text-sm font-semibold text-white/80">Ebook Subscriptions</p>
+                      <span className="text-[11px] text-white/25 font-normal">· add-on plan management</span>
+                    </div>
+                    <button onClick={loadEbooks} disabled={loading}
+                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40">
+                      <RefreshCw size={11} className={loading ? "animate-spin" : ""} /> Refresh
+                    </button>
+                  </div>
+
+                  {/* Stat cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: "All time",   value: ebookData?.total      ?? 0, color: "text-purple-400", bg: "bg-purple-500/8 border-purple-500/12" },
+                      { label: "This month", value: ebookData?.thisMonth  ?? 0, color: "text-indigo-400", bg: "bg-indigo-500/8 border-indigo-500/12" },
+                      { label: "This week",  value: ebookData?.thisWeek   ?? 0, color: "text-blue-400",   bg: "bg-blue-500/8 border-blue-500/12" },
+                      { label: "Avg words",  value: ebookData?.avgWords   ?? 0, color: "text-emerald-400", bg: "bg-emerald-500/8 border-emerald-500/12" },
+                    ].map(({ label, value, color, bg }) => (
+                      <div key={label} className={`${bg} border rounded-xl px-4 py-4`}>
+                        <p className={`text-2xl font-bold ${color} tabular-nums`}>{value.toLocaleString()}</p>
+                        <p className="text-xs text-white/35 mt-1">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Active subscribers */}
+                  <div>
+                    <h3 className="text-xs font-semibold text-white/50 mb-3 uppercase tracking-wide">
+                      Active Subscribers
+                      <span className="ml-2 font-normal normal-case text-white/25">
+                        ({(ebookData?.subscriptions ?? []).filter(s => s.status === "active").length} active)
+                      </span>
+                    </h3>
+                    {!ebookData || ebookData.subscriptions.length === 0 ? (
+                      <Empty text="No ebook subscriptions yet" />
+                    ) : (
+                      <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                        <div className="grid grid-cols-[1fr_80px_90px_100px_120px] gap-2 px-4 py-2.5 border-b border-white/6">
+                          {["User ID", "Status", "Gateway", "Billing", "Subscribed"].map(h => (
+                            <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
+                          ))}
+                        </div>
+                        {ebookData.subscriptions.map((sub, i) => (
+                          <div key={sub.user_id} className={`grid grid-cols-[1fr_80px_90px_100px_120px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < ebookData.subscriptions.length - 1 ? "border-b border-white/6" : ""}`}>
+                            <span className="text-[11px] text-white/50 font-mono truncate">{sub.user_id.slice(0, 12)}…</span>
+                            <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize ${sub.status === "active" ? "bg-green-500/12 text-green-400 border-green-500/20" : "bg-white/8 text-white/40 border-white/10"}`}>{sub.status}</span>
+                            <span className="text-xs text-white/50 capitalize">{sub.gateway ?? "—"}</span>
+                            <span className="text-xs text-white/50 capitalize">{sub.billing ?? "—"}</span>
+                            <span className="text-xs text-white/30">{new Date(sub.created_at).toLocaleDateString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recent ebooks */}
+                  <div>
+                    <h3 className="text-xs font-semibold text-white/50 mb-3 uppercase tracking-wide">Recently Generated</h3>
+                    {!ebookData || ebookData.recent.length === 0 ? (
+                      <Empty text="No ebooks generated yet" />
+                    ) : (
+                      <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                        <div className="grid grid-cols-[1fr_90px_120px_110px] gap-2 px-4 py-2.5 border-b border-white/6">
+                          {["Title", "Words", "User", "Generated"].map(h => (
+                            <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
+                          ))}
+                        </div>
+                        {ebookData.recent.map((eb, i) => (
+                          <div key={eb.id} className={`grid grid-cols-[1fr_90px_120px_110px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < ebookData.recent.length - 1 ? "border-b border-white/6" : ""}`}>
+                            <p className="text-sm text-white/75 font-medium truncate" title={eb.title}>{eb.title}</p>
+                            <span className="text-xs text-white/35 tabular-nums">{eb.word_count.toLocaleString()}w</span>
+                            <span className="text-[11px] text-white/30 font-mono truncate">{eb.user_id ? eb.user_id.slice(0, 10) + "…" : "anon"}</span>
+                            <span className="text-xs text-white/30">{new Date(eb.created_at).toLocaleDateString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -2441,28 +2525,6 @@ export default function Admin() {
                       </div>
                     </SettingsCard>
 
-                    {/* Institution limits */}
-                    <SettingsCard title="Institution Plan Monthly Limits (Per Seat)">
-                      <div className="grid grid-cols-2 gap-3">
-                        {([
-                          { key: "institution_paper",      label: "Papers" },
-                          { key: "institution_revision",   label: "Revisions" },
-                          { key: "institution_humanizer",  label: "Humanizer" },
-                          { key: "institution_stem",       label: "STEM Solves" },
-                          { key: "institution_study",      label: "Study Sessions" },
-                          { key: "institution_plagiarism", label: "Plagiarism" },
-                          { key: "institution_outline",    label: "Outlines" },
-                        ] as { key: string; label: string }[]).map(({ key, label }) => (
-                          <div key={key}>
-                            <label className="block text-xs text-white/40 mb-1.5">{label} / seat / month</label>
-                            <input type="number" min="0" value={settings[key] ?? ""}
-                              onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
-                              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </SettingsCard>
                   </div>
                 ) : <Empty text="Settings unavailable" />}
               </div>
