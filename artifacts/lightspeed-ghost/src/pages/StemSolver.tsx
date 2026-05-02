@@ -26,6 +26,7 @@ import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useAuth } from "@/contexts/AuthContext";
 
 const schema = z.object({
   problem: z.string().min(5, "Please describe your problem"),
@@ -200,6 +201,7 @@ export default function StemSolver() {
   const thinkingRef = useRef<HTMLDivElement>(null);
   const { data: subjects } = useGetStemSubjects();
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
+  const { user } = useAuth();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -572,7 +574,7 @@ export default function StemSolver() {
             <Database size={12} />
             {datasetText ? "Dataset loaded" : "Add dataset"}
           </button>
-          {isFinanceSubjectForStem && (
+          {!!user && isFinanceSubjectForStem && (
             <button
               type="button"
               onClick={() => setShowFinancials(v => !v)}
@@ -640,7 +642,7 @@ export default function StemSolver() {
           </div>
         )}
         {/* ── Financial Statements panel ── */}
-        {isFinanceSubjectForStem && showFinancials && (
+        {!!user && isFinanceSubjectForStem && showFinancials && (
           <div className="mx-4 mt-2 rounded-xl border border-amber-400/30 bg-amber-50/20 dark:bg-amber-900/10 p-3 space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">

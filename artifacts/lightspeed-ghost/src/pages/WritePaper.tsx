@@ -76,6 +76,78 @@ const FINANCIAL_STATEMENT_TYPES = [
 
 const FINANCE_SUBJECT_RE = /finance|accounting|economics|banking|investment|insurance|actuarial|business\s*studies|credit\s*anal/i;
 
+// ── Financial Health Score ─────────────────────────────────────────────────
+
+function parseFF(text: string, pats: string[]): number | null {
+  for (const pat of pats) {
+    const m = text.match(new RegExp(pat + '[^\\n]{0,20}?\\$?([\\d,\\.]+)', 'i'));
+    if (m) { const v = parseFloat(m[1].replace(/,/g, '')); if (!isNaN(v) && v > 0) return v; }
+  }
+  return null;
+}
+type FHGrade = "A" | "B" | "C" | "D" | "F";
+interface FHCategory { grade: FHGrade; color: string; metrics: string[]; computed: boolean }
+function gpaToGrade(gpa: number): { grade: FHGrade; color: string } {
+  if (gpa >= 3.5) return { grade: "A", color: "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400" };
+  if (gpa >= 2.5) return { grade: "B", color: "border-blue-500/30 bg-blue-500/5 text-blue-600 dark:text-blue-400" };
+  if (gpa >= 1.5) return { grade: "C", color: "border-yellow-500/30 bg-yellow-500/5 text-yellow-600 dark:text-yellow-400" };
+  if (gpa >= 0.5) return { grade: "D", color: "border-orange-500/30 bg-orange-500/5 text-orange-600 dark:text-orange-400" };
+  return { grade: "F", color: "border-red-500/30 bg-red-500/5 text-red-600 dark:text-red-400" };
+}
+function computeFinancialHealthScores(text: string): {
+  profitability: FHCategory; liquidity: FHCategory; solvency: FHCategory; efficiency: FHCategory;
+  overall: { grade: FHGrade; color: string };
+} | null {
+  const p = (pats: string[]) => parseFF(text, pats);
+  const revenue   = p(['revenue','net sales','total revenue','net revenue','sales']);
+  const cogs      = p(['cost of goods sold','cogs','cost of sales','cost of revenue']);
+  const grossP    = p(['gross profit','gross income']) ?? (revenue && cogs != null ? revenue - cogs : null);
+  const opIncome  = p(['operating income','operating profit','ebit','income from operations']);
+  const netIncome = p(['net income','net profit','net earnings']);
+  const totAssets = p(['total assets']);
+  const curAssets = p(['current assets','total current assets']);
+  const curLiabs  = p(['current liabilities','total current liabilities']);
+  const totLiabs  = p(['total liabilities']);
+  const equity    = p(['total equity',"shareholders' equity","stockholders' equity",'owners equity','equity']);
+  const cash      = p(['cash and cash equivalents','cash and equivalents','cash$','cash ']);
+  const inventory = p(['inventories','inventory']);
+  const recv      = p(['accounts receivable','trade receivables','net receivables']);
+  const intExp    = p(['interest expense','interest charges','finance costs']);
+  if (!revenue && !totAssets && !curAssets) return null;
+  const sc = (pts: number, mx: number) => mx > 0 ? (pts / mx) * 4 : -1;
+  const mk = (gpa: number, metrics: string[]): FHCategory => ({ ...gpaToGrade(Math.max(0, gpa)), metrics, computed: metrics.length > 0 });
+
+  // Profitability
+  const pm: string[] = []; let pp = 0, pmx = 0;
+  if (revenue && grossP   != null) { const v = grossP   / revenue * 100; pm.push(`Gross Margin ${v.toFixed(1)}%`);      pp += v>=50?4:v>=30?3:v>=15?2:v>=0?1:0; pmx+=4; }
+  if (revenue && netIncome!= null) { const v = netIncome/ revenue * 100; pm.push(`Net Margin ${v.toFixed(1)}%`);        pp += v>=15?4:v>=8?3:v>=3?2:v>=0?1:0;    pmx+=4; }
+  if (totAssets&& netIncome!=null) { const v = netIncome/totAssets* 100; pm.push(`ROA ${v.toFixed(1)}%`);               pp += v>=10?4:v>=5?3:v>=2?2:v>=0?1:0;    pmx+=4; }
+  if (equity   && netIncome!=null) { const v = netIncome/equity   * 100; pm.push(`ROE ${v.toFixed(1)}%`);               pp += v>=20?4:v>=12?3:v>=5?2:v>=0?1:0;   pmx+=4; }
+  if (revenue && opIncome  !=null) { const v = opIncome / revenue * 100; pm.push(`Op. Margin ${v.toFixed(1)}%`);        pp += v>=20?4:v>=12?3:v>=5?2:v>=0?1:0;   pmx+=4; }
+
+  // Liquidity
+  const lm: string[] = []; let lp = 0, lmx = 0;
+  if (curAssets && curLiabs)                 { const v = curAssets/curLiabs;                  lm.push(`Current ${v.toFixed(2)}x`); lp+=v>=2.5?4:v>=1.5?3:v>=1?2:v>=0.5?1:0; lmx+=4; }
+  if (curAssets && curLiabs && inventory!=null) { const v = (curAssets-inventory)/curLiabs;   lm.push(`Quick ${v.toFixed(2)}x`);   lp+=v>=1.5?4:v>=1?3:v>=0.7?2:v>=0.3?1:0; lmx+=4; }
+  if (cash     && curLiabs)                 { const v = cash/curLiabs;                        lm.push(`Cash ${v.toFixed(2)}x`);    lp+=v>=0.5?4:v>=0.3?3:v>=0.1?2:v>=0?1:0; lmx+=4; }
+
+  // Solvency
+  const sm: string[] = []; let sp = 0, smx = 0;
+  if (totLiabs && equity)    { const v = totLiabs/equity;             sm.push(`D/E ${v.toFixed(2)}x`);          sp+=v<=0.5?4:v<=1?3:v<=2?2:v<=3?1:0;    smx+=4; }
+  if (totLiabs && totAssets) { const v = totLiabs/totAssets*100;      sm.push(`Debt Ratio ${v.toFixed(1)}%`);   sp+=v<=30?4:v<=50?3:v<=65?2:v<=80?1:0;  smx+=4; }
+  if (opIncome && intExp)    { const v = opIncome/intExp;             sm.push(`Int. Coverage ${v.toFixed(1)}x`); sp+=v>=5?4:v>=3?3:v>=1.5?2:v>=1?1:0;   smx+=4; }
+
+  // Efficiency
+  const em: string[] = []; let ep = 0, emx = 0;
+  if (revenue  && totAssets)           { const v = revenue/totAssets;          em.push(`Asset Turn. ${v.toFixed(2)}x`); ep+=v>=1.5?4:v>=1?3:v>=0.5?2:v>=0.2?1:0; emx+=4; }
+  if (cogs     && inventory && inventory>0) { const v = cogs/inventory;        em.push(`Inv. Turns ${v.toFixed(1)}x`); ep+=v>=10?4:v>=6?3:v>=3?2:v>=1?1:0;       emx+=4; }
+  if (revenue  && recv      && recv>0) { const v = recv/revenue*365;           em.push(`DSO ${v.toFixed(0)}d`);         ep+=v<=30?4:v<=45?3:v<=60?2:v<=90?1:0;    emx+=4; }
+
+  const gpas = [sc(pp,pmx), sc(lp,lmx), sc(sp,smx), sc(ep,emx)].filter(g => g >= 0);
+  const overall = gpas.length > 0 ? gpas.reduce((a,b) => a+b,0) / gpas.length : 0;
+  return { profitability: mk(sc(pp,pmx), pm), liquidity: mk(sc(lp,lmx), lm), solvency: mk(sc(sp,smx), sm), efficiency: mk(sc(ep,emx), em), overall: gpaToGrade(overall) };
+}
+
 interface StatTest {
   value: string;
   label: string;
@@ -940,6 +1012,50 @@ export default function WritePaper() {
                 </div>
               </div>
 
+              {/* ── Financial Health Score ── */}
+              {financialStatements.trim() && (() => {
+                const fhs = computeFinancialHealthScores(financialStatements);
+                if (!fhs) return null;
+                const cats = [
+                  { key: "profitability", label: "Profitability", data: fhs.profitability },
+                  { key: "liquidity",     label: "Liquidity",     data: fhs.liquidity },
+                  { key: "solvency",      label: "Solvency",      data: fhs.solvency },
+                  { key: "efficiency",    label: "Efficiency",    data: fhs.efficiency },
+                ].filter(c => c.data.computed);
+                if (cats.length === 0) return null;
+                return (
+                  <div className="bg-card border border-amber-400/20 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp size={14} className="text-amber-500" />
+                        <h3 className="text-sm font-semibold">Financial Health Score</h3>
+                      </div>
+                      <div className={cn("px-2.5 py-1 rounded-lg border text-xs font-bold", fhs.overall.color)}>
+                        Overall: {fhs.overall.grade}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {cats.map(c => (
+                        <div key={c.key} className={cn("rounded-xl border p-3 text-center", c.data.color)}>
+                          <div className="text-2xl sm:text-3xl font-bold leading-none mb-1">{c.data.grade}</div>
+                          <div className="text-[10px] sm:text-[11px] font-semibold opacity-80">{c.label}</div>
+                          {c.data.metrics.length > 0 && (
+                            <div className="mt-1.5 space-y-0.5">
+                              {c.data.metrics.map((m, i) => (
+                                <div key={i} className="text-[8px] sm:text-[9px] opacity-60 leading-tight">{m}</div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/50">
+                      A = excellent · B = good · C = average · D = below average · F = critical — benchmarked against industry standards
+                    </p>
+                  </div>
+                );
+              })()}
+
               {stats.feedback.length > 0 && (
                 <div className="bg-card border border-border rounded-xl p-4">
                   <h3 className="text-sm font-semibold mb-3">AI Quality Feedback</h3>
@@ -1306,8 +1422,8 @@ export default function WritePaper() {
           </div>
         )}
 
-        {/* ── Financial Statements (finance/accounting/economics subjects) ── */}
-        {FINANCE_SUBJECT_RE.test(subject) && (
+        {/* ── Financial Statements (finance/accounting/economics subjects) — paid users only ── */}
+        {!!user && FINANCE_SUBJECT_RE.test(subject) && (
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block flex items-center gap-1.5">
               <TrendingUp size={11} />
@@ -1346,8 +1462,8 @@ export default function WritePaper() {
           </div>
         )}
 
-        {/* ── Interpretive Commentary toggle (when dataset or financial statements present) ── */}
-        {(datasetText.trim() || financialStatements.trim()) && (
+        {/* ── Interpretive Commentary toggle (when dataset or financial statements present) — paid users only ── */}
+        {!!user && (datasetText.trim() || financialStatements.trim()) && (
           <div>
             <button
               type="button"

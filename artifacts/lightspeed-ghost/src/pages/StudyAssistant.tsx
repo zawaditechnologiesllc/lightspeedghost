@@ -19,6 +19,7 @@ import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -177,6 +178,7 @@ export default function StudyAssistant() {
   const imageInputRef   = useRef<HTMLInputElement>(null);
   const datasetInputRef = useRef<HTMLInputElement>(null);
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
+  const { user } = useAuth();
   const { academicLevel, saveAcademicLevel } = useUserProfile();
   const subjectInputRef = useRef<HTMLInputElement>(null);
 
@@ -534,7 +536,7 @@ export default function StudyAssistant() {
                 <Database size={14} className="shrink-0" />
                 <span className="text-xs">{datasetText ? "Dataset ✓" : "Dataset"}</span>
               </button>
-              {isFinanceSubjectForStudy && (
+              {!!user && isFinanceSubjectForStudy && (
                 <button
                   onClick={() => setShowFinancials(v => !v)}
                   className={cn(
@@ -597,7 +599,7 @@ export default function StudyAssistant() {
               </div>
 
             {/* ── Financial Statements panel ── */}
-            {isFinanceSubjectForStudy && showFinancials && (
+            {!!user && isFinanceSubjectForStudy && showFinancials && (
               <div className="rounded-xl border border-amber-400/30 bg-amber-50/10 dark:bg-amber-900/10 p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
