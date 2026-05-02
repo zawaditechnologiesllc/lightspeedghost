@@ -564,12 +564,12 @@ export function AssistantPanel({
           </div>
           <button
             onClick={ask}
-            disabled={!question.trim() && !imageBase64 && !docText}
+            disabled={!question.trim() && !imageBase64 && !docText && !fsText}
             className={cn(
               "flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all",
               isLoading
                 ? "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
-                : (question.trim() || imageBase64 || docText)
+                : (question.trim() || imageBase64 || docText || fsText)
                   ? "bg-violet-500 hover:bg-violet-400 text-white shadow-lg shadow-violet-500/25"
                   : "bg-white/6 text-white/20 cursor-not-allowed",
             )}
