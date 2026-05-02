@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Sparkles, BookOpen, Zap, ClipboardCheck, Lightbulb,
   ImageIcon, Search, X, ExternalLink, GripHorizontal, Send,
-  Paperclip, RotateCcw, Bot, ChevronDown, FileText,
+  Paperclip, RotateCcw, Bot, ChevronDown, FileText, TrendingUp,
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
 import MathRenderer from "@/components/MathRenderer";
@@ -71,6 +71,10 @@ export function AssistantPanel({
   const [docText, setDocText] = useState<string | null>(null);
   const [docName, setDocName] = useState<string | null>(null);
   const docFileRef = useRef<HTMLInputElement>(null);
+  const fsFileRef = useRef<HTMLInputElement>(null);
+  const [fsText, setFsText] = useState<string | null>(null);
+  const [fsName, setFsName] = useState<string | null>(null);
+  const [isFsUploading, setIsFsUploading] = useState(false);
   const [answer, setAnswer] = useState("");
   const [detectedMode, setDetectedMode] = useState<Mode | null>(null);
   const [resolvedModeLabel, setResolvedModeLabel] = useState<string>("");
@@ -97,6 +101,30 @@ export function AssistantPanel({
     setDocText(null);
     setDocName(null);
     if (docFileRef.current) docFileRef.current.value = "";
+  };
+
+  const clearFs = () => {
+    setFsText(null);
+    setFsName(null);
+    if (fsFileRef.current) fsFileRef.current.value = "";
+  };
+
+  const handleFsFile = async (file: File) => {
+    setIsFsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await apiFetch("/files/extract", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json() as { text?: string; isImage?: boolean };
+        if (!data.isImage) {
+          setFsText((data.text ?? "").slice(0, 50000));
+          setFsName(file.name);
+        }
+      }
+    } catch { /* silent */ } finally {
+      setIsFsUploading(false);
+    }
   };
 
   const handleDocFile = async (file: File) => {
@@ -139,7 +167,7 @@ export function AssistantPanel({
   }, []);
 
   const ask = async () => {
-    if (!question.trim() && !imageBase64 && !docText) return;
+    if (!question.trim() && !imageBase64 && !docText && !fsText) return;
     if (isLoading) {
       abortRef.current?.abort();
       return;
@@ -150,6 +178,7 @@ export function AssistantPanel({
     const mimeSnapshot = imageMimeType;
     const docSnapshot = docText;
     const docNameSnapshot = docName;
+    const fsSnapshot = fsText;
 
     setIsLoading(true);
     setError(null);
@@ -158,6 +187,7 @@ export function AssistantPanel({
     setQuestion("");
     clearImage();
     clearDoc();
+    clearFs();
     setDetectedMode(null);
     setResolvedModeLabel("");
 
@@ -177,6 +207,7 @@ export function AssistantPanel({
           mode,
           imageBase64: imageSnapshot ?? undefined,
           mimeType: imageSnapshot ? mimeSnapshot : undefined,
+          financialStatements: fsSnapshot ?? undefined,
         }),
         signal: ctrl.signal,
       });
@@ -245,6 +276,7 @@ export function AssistantPanel({
     setQuestion("");
     clearImage();
     clearDoc();
+    clearFs();
     textareaRef.current?.focus();
   };
 
@@ -413,7 +445,7 @@ export function AssistantPanel({
       </div>
 
       {/* ── Attachments preview ────────────────────────────── */}
-      {(imagePreviewUrl || docName) && (
+      {(imagePreviewUrl || docName || fsName) && (
         <div className="px-3 pt-2 flex-shrink-0 flex gap-2 items-center flex-wrap">
           {imagePreviewUrl && (
             <div className="relative inline-block">
@@ -436,6 +468,18 @@ export function AssistantPanel({
               <span className="truncate max-w-[140px]">{docName}</span>
               <button
                 onClick={clearDoc}
+                className="ml-1 w-3.5 h-3.5 rounded-full bg-red-500 text-white flex items-center justify-center flex-shrink-0"
+              >
+                <X size={8} />
+              </button>
+            </div>
+          )}
+          {fsName && (
+            <div className="relative inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px]">
+              <TrendingUp size={12} />
+              <span className="truncate max-w-[140px]">{fsName}</span>
+              <button
+                onClick={clearFs}
                 className="ml-1 w-3.5 h-3.5 rounded-full bg-red-500 text-white flex items-center justify-center flex-shrink-0"
               >
                 <X size={8} />
@@ -490,6 +534,20 @@ export function AssistantPanel({
               >
                 <FileText size={13} />
               </button>
+              <button
+                onClick={() => fsFileRef.current?.click()}
+                title="Upload financial statements (PDF, Word, text)"
+                disabled={isFsUploading}
+                className={cn(
+                  "p-1 rounded transition-colors",
+                  fsText
+                    ? "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                    : "text-white/25 hover:text-white/60 hover:bg-white/8",
+                  isFsUploading && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <TrendingUp size={13} />
+              </button>
             </div>
               <div className="flex items-center gap-2">
                 {queriesRemaining !== null && (
@@ -540,6 +598,17 @@ export function AssistantPanel({
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleDocFile(file);
+        }}
+      />
+      <input
+        ref={fsFileRef}
+        type="file"
+        accept=".pdf,.docx,.doc,.txt,.md"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFsFile(file);
+          if (e.target) e.target.value = "";
         }}
       />
     </div>

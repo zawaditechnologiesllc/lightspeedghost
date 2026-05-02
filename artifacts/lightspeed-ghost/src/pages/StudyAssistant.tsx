@@ -177,6 +177,7 @@ export default function StudyAssistant() {
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const imageInputRef   = useRef<HTMLInputElement>(null);
   const datasetInputRef = useRef<HTMLInputElement>(null);
+  const fsInputRef      = useRef<HTMLInputElement>(null);
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
   const { user } = useAuth();
   const { academicLevel, saveAcademicLevel } = useUserProfile();
@@ -202,6 +203,7 @@ export default function StudyAssistant() {
   const [financialStatements,    setFinancialStatements]    = useState("");
   const [financialStatementType, setFinancialStatementType] = useState("all");
   const [showFinancials,         setShowFinancials]         = useState(false);
+  const [isFsExtracting,         setIsFsExtracting]         = useState(false);
 
   const STUDY_FINANCIAL_STATEMENT_TYPES = [
     { value: "income_statement", label: "Income Statement" },
@@ -315,6 +317,25 @@ export default function StudyAssistant() {
       setShowDataset(true);
     };
     reader.readAsText(file);
+  }, []);
+
+  const handleFsFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setIsFsExtracting(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await apiFetch("/files/extract", { method: "POST", body: fd });
+      if (!res.ok) throw new Error("Extract failed");
+      const data = await res.json() as { text?: string; isImage?: boolean };
+      if (data.isImage) return;
+      setFinancialStatements((data.text ?? "").slice(0, 50000));
+      setShowFinancials(true);
+    } catch { /* silent */ } finally {
+      setIsFsExtracting(false);
+    }
   }, []);
 
   const handleDatasetPaste = useCallback((raw: string) => {
@@ -622,11 +643,21 @@ export default function StudyAssistant() {
                       )}>{st.label}</button>
                   ))}
                 </div>
+                <input ref={fsInputRef} type="file" accept=".pdf,.docx,.doc,.txt,.md" className="sr-only" onChange={handleFsFile} />
+                <button
+                  type="button"
+                  disabled={isFsExtracting}
+                  onClick={() => fsInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-amber-300 dark:border-amber-700 rounded-lg py-2 transition-colors hover:border-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isFsExtracting ? <Loader2 size={12} className="animate-spin" /> : <TrendingUp size={14} className="shrink-0" />}
+                  {isFsExtracting ? "Extracting…" : "Upload PDF, Word or text file"}
+                </button>
                 <textarea
                   value={financialStatements}
                   onChange={e => setFinancialStatements(e.target.value)}
                   rows={4}
-                  placeholder={"Paste statements — single year OR multi-year for trend analysis…\n\nSingle year:\n  Revenue:   $2,450,000\n  Net Income: $416,500\n\nMulti-year (auto YoY + CAGR):\n  FY2023\n  Revenue:   $2,450,000\n  Net Income: $416,500\n\n  FY2022\n  Revenue:   $2,100,000\n  Net Income: $315,000"}
+                  placeholder={"Or paste statements directly…\n\nSingle year:\n  Revenue:   $2,450,000\n  Net Income: $416,500\n\nMulti-year (auto YoY + CAGR):\n  FY2023\n  Revenue:   $2,450,000\n  FY2022\n  Revenue:   $2,100,000"}
                   className="w-full px-2.5 py-1.5 font-mono text-xs rounded-lg border border-amber-200 dark:border-amber-800 bg-background focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
                 />
                 {financialStatements.trim() && (

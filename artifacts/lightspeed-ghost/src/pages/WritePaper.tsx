@@ -497,6 +497,8 @@ export default function WritePaper() {
   const [includeAssumptionsCheck, setIncludeAssumptionsCheck] = useState(true);
   const [financialStatements, setFinancialStatements]       = useState("");
   const [financialStatementType, setFinancialStatementType] = useState("all");
+  const [isFsExtracting, setIsFsExtracting]                 = useState(false);
+  const fsInputRef                                           = useRef<HTMLInputElement>(null);
   const [includeInterpretiveCommentary, setIncludeInterpretiveCommentary] = useState(false);
 
   // ── citation confirmation
@@ -585,6 +587,25 @@ export default function WritePaper() {
       const firstLine = lines[0];
       const sep = firstLine.split("\t").length > firstLine.split(",").length ? "\t" : ",";
       setDatasetPreview(lines.slice(0, 4).map(l => l.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""))));
+    }
+  }, []);
+
+  // ── financial statement upload (PDF / DOCX / TXT)
+  const handleFsFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setIsFsExtracting(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/files/extract`, { method: "POST", body: fd });
+      if (!res.ok) throw new Error("Extract failed");
+      const data = await res.json() as { text?: string; isImage?: boolean };
+      if (data.isImage) return;
+      setFinancialStatements((data.text ?? "").slice(0, 50000));
+    } catch { /* silent */ } finally {
+      setIsFsExtracting(false);
     }
   }, []);
 
@@ -1536,11 +1557,21 @@ export default function WritePaper() {
                 </button>
               ))}
             </div>
+            <input ref={fsInputRef} type="file" accept=".pdf,.docx,.doc,.txt,.md" className="sr-only" onChange={handleFsFileChange} />
+            <button
+              type="button"
+              disabled={isFsExtracting}
+              onClick={() => fsInputRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-amber-300 dark:border-amber-700 rounded-lg py-2 mb-2 transition-colors hover:border-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isFsExtracting ? <Loader2 size={12} className="animate-spin" /> : <TrendingUp size={12} />}
+              {isFsExtracting ? "Extracting…" : "Upload PDF, Word or text file"}
+            </button>
             <textarea
               value={financialStatements}
               onChange={e => setFinancialStatements(e.target.value)}
               rows={4}
-              placeholder={"Paste financial statements — single year OR multi-year for trend analysis…\n\nSingle year:\n  Revenue:             $2,450,000\n  Net Income:          $416,500\n\nMulti-year (auto YoY + CAGR):\n  FY2023\n  Revenue:             $2,450,000\n  Net Income:          $416,500\n\n  FY2022\n  Revenue:             $2,100,000\n  Net Income:          $315,000"}
+              placeholder={"Or paste financial statements directly…\n\nSingle year:\n  Revenue:             $2,450,000\n  Net Income:          $416,500\n\nMulti-year (auto YoY + CAGR):\n  FY2023\n  Revenue:             $2,450,000\n  Net Income:          $416,500\n\n  FY2022\n  Revenue:             $2,100,000\n  Net Income:          $315,000"}
               className="w-full px-3 py-2 font-mono text-xs rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             />
             {financialStatements.trim() && (
