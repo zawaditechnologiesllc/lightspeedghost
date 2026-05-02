@@ -8,15 +8,30 @@ import { logger } from "../lib/logger";
 
 const router = Router();
 
+// ── Ensure ebook subscriptions table exists ────────────────────────────────────
+export async function initEbooksTable(): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_ebook_subscriptions (
+      user_id                 TEXT PRIMARY KEY,
+      status                  TEXT NOT NULL DEFAULT 'active',
+      billing                 TEXT,
+      gateway                 TEXT,
+      gateway_subscription_id TEXT,
+      current_period_end      TIMESTAMPTZ,
+      created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
 // ── Check if user has ebooks subscription ─────────────────────────────────────
 async function hasEbooksAccess(userId: string): Promise<boolean> {
   try {
-    const { rows } = await pool.query<{ plan: string; status: string }>(
-      "SELECT plan, status FROM user_subscriptions WHERE user_id = $1",
+    const { rows } = await pool.query<{ status: string }>(
+      "SELECT status FROM user_ebook_subscriptions WHERE user_id = $1",
       [userId],
     );
-    const sub = rows[0];
-    return sub?.status === "active" && sub?.plan === "ebooks";
+    return rows[0]?.status === "active";
   } catch {
     return false;
   }

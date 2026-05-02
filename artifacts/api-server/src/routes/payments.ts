@@ -809,20 +809,33 @@ router.get("/payments/verify", async (req: Request, res: Response) => {
 
       if (payment?.type === "subscription" && payment.plan) {
         const billing = payment.plan.endsWith("annual") ? "annual" : "monthly";
-        const planName = payment.plan.startsWith("campus") ? "campus" : payment.plan.startsWith("starter") ? "starter" : payment.plan.startsWith("ebooks") ? "ebooks" : "pro";
+        const isEbooks = payment.plan.startsWith("ebooks");
+        const planName = payment.plan.startsWith("campus") ? "campus" : payment.plan.startsWith("starter") ? "starter" : isEbooks ? "ebooks" : "pro";
         const periodEnd = billing === "annual"
           ? new Date(Date.now() + 365 * 86400000)
           : new Date(Date.now() + 31 * 86400000);
 
-        await pool.query(
-          `INSERT INTO user_subscriptions (user_id, plan, billing, gateway, gateway_subscription_id, status, current_period_end)
-           VALUES ($1,$2,$3,$4,$5,'active',$6)
-           ON CONFLICT (user_id) DO UPDATE SET
-             plan=EXCLUDED.plan, billing=EXCLUDED.billing, gateway=EXCLUDED.gateway,
-             gateway_subscription_id=EXCLUDED.gateway_subscription_id,
-             status='active', current_period_end=EXCLUDED.current_period_end, updated_at=NOW()`,
-          [userId, planName, billing, gateway, ref, periodEnd]
-        );
+        if (isEbooks) {
+          await pool.query(
+            `INSERT INTO user_ebook_subscriptions (user_id, status, billing, gateway, gateway_subscription_id, current_period_end)
+             VALUES ($1,'active',$2,$3,$4,$5)
+             ON CONFLICT (user_id) DO UPDATE SET
+               status='active', billing=EXCLUDED.billing, gateway=EXCLUDED.gateway,
+               gateway_subscription_id=EXCLUDED.gateway_subscription_id,
+               current_period_end=EXCLUDED.current_period_end, updated_at=NOW()`,
+            [userId, billing, gateway, ref, periodEnd]
+          );
+        } else {
+          await pool.query(
+            `INSERT INTO user_subscriptions (user_id, plan, billing, gateway, gateway_subscription_id, status, current_period_end)
+             VALUES ($1,$2,$3,$4,$5,'active',$6)
+             ON CONFLICT (user_id) DO UPDATE SET
+               plan=EXCLUDED.plan, billing=EXCLUDED.billing, gateway=EXCLUDED.gateway,
+               gateway_subscription_id=EXCLUDED.gateway_subscription_id,
+               status='active', current_period_end=EXCLUDED.current_period_end, updated_at=NOW()`,
+            [userId, planName, billing, gateway, ref, periodEnd]
+          );
+        }
         await markFirstPendingDiscountApplied(userId);
       }
     }
