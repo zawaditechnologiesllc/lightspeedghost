@@ -1,6 +1,6 @@
 import { pool } from "@workspace/db";
 
-export type ToolName = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline" | "assistant";
+export type ToolName = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline" | "assistant" | "ebook";
 
 const DAILY_TOOLS = new Set<ToolName>([]);
 
@@ -14,6 +14,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     plagiarism: 5,   // per month
     outline:    5,   // per month
     assistant:  30,  // per month — text modes only; image mode blocked at route level
+    ebook:      0,   // not included in starter
   },
   pro: {
     paper:      15,  // per month
@@ -24,6 +25,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     plagiarism: 20,  // per month — ~1 check per paper + buffer
     outline:    20,  // per month — paired with papers
     assistant:  300, // per month — Haiku text; Sonnet image/doc (Pro only)
+    ebook:      0,   // separate ebook add-on required
   },
   campus: {
     paper:      5,   // per month per seat
@@ -34,6 +36,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     plagiarism: 10,  // per month per seat
     outline:    10,  // per month per seat
     assistant:  150, // per month per seat
+    ebook:      0,   // separate ebook add-on required
   },
 };
 

@@ -1,4 +1,4 @@
-export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "campus_annual";
+export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "campus_annual" | "ebooks_monthly";
 export type PaygTool = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline";
 export type DocumentTier = "discussion" | "essay" | "research" | "proposal" | "dissertation";
 
@@ -43,6 +43,14 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     interval: "month",
     displayPrice: "$9/seat/mo",
     description: "Annual plan, minimum 5 seats",
+  },
+  {
+    id: "ebooks_monthly",
+    name: "Ebooks — Monthly",
+    amountCents: 2999,
+    interval: "month",
+    displayPrice: "$29.99/mo",
+    description: "15 AI-written ebooks/month for Amazon & all platforms",
   },
 ];
 
