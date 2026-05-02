@@ -639,6 +639,7 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       datasetText?: string;
       analysisTool?: string;
       selectedTests?: string[];
+      includeAssumptionsCheck?: boolean;
     };
 
     const requestedWords = body.wordCount ?? 1500;
@@ -811,7 +812,7 @@ Return JSON:
         status: "running",
       });
       try {
-        datasetAnalysis = parseAndAnalyzeDataset(body.datasetText, body.analysisTool, body.selectedTests);
+        datasetAnalysis = parseAndAnalyzeDataset(body.datasetText, body.analysisTool, body.selectedTests, body.includeAssumptionsCheck);
         const estimatedVars = (datasetAnalysis.match(/\*\*/g) ?? []).length / 2;
         const toolLabel = body.analysisTool ? ` · formatted for ${body.analysisTool.toUpperCase()}` : "";
         const testsLabel = body.selectedTests?.length ? ` · ${body.selectedTests.length} test${body.selectedTests.length > 1 ? "s" : ""} requested` : "";

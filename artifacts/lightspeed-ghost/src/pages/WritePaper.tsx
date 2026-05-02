@@ -367,6 +367,7 @@ export default function WritePaper() {
   const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
   const [analysisTool, setAnalysisTool] = useState<string>("r");
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
+  const [includeAssumptionsCheck, setIncludeAssumptionsCheck] = useState(true);
 
   // ── citation confirmation
   const [detectedStyle, setDetectedStyle] = useState<string | null>(null);
@@ -497,6 +498,7 @@ export default function WritePaper() {
           datasetText: datasetText.trim() || undefined,
           analysisTool: datasetText.trim() ? analysisTool : undefined,
           selectedTests: datasetText.trim() && selectedTests.length > 0 ? selectedTests : undefined,
+          includeAssumptionsCheck: datasetText.trim() ? includeAssumptionsCheck : undefined,
         }),
       });
 
@@ -1209,6 +1211,81 @@ export default function WritePaper() {
                     No tests selected — AI will choose appropriate tests based on your data structure
                   </p>
                 )}
+
+                {/* ── Assumptions check toggle ── */}
+                <div className="mt-3 pt-3 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => setIncludeAssumptionsCheck(v => !v)}
+                    className={cn(
+                      "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl border transition-all text-left",
+                      includeAssumptionsCheck ? "border-primary/40 bg-primary/5" : "border-border hover:border-primary/20"
+                    )}
+                  >
+                    <div className={cn("relative w-8 h-4 rounded-full transition-colors shrink-0", includeAssumptionsCheck ? "bg-primary" : "bg-muted")}>
+                      <div className={cn("absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform", includeAssumptionsCheck ? "translate-x-4" : "")} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className={cn("text-xs font-medium leading-tight", includeAssumptionsCheck ? "text-primary" : "text-foreground")}>
+                        Include Assumptions Testing Section
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">
+                        {includeAssumptionsCheck
+                          ? "AI will write a dedicated subsection verifying normality, homogeneity, multicollinearity, sphericity & more before presenting results"
+                          : "Skip assumption checks — results will be presented without formal verification"}
+                      </p>
+                    </div>
+                    {includeAssumptionsCheck && <CheckCircle size={12} className="text-primary shrink-0 ml-auto" />}
+                  </button>
+                  {includeAssumptionsCheck && selectedTests.length > 0 && (
+                    <p className="text-[10px] text-muted-foreground/60 mt-1.5 pl-1">
+                      Checks for: {selectedTests.map(v => {
+                        const labels: Record<string, string> = {
+                          ttest_ind: "normality + Levene's",
+                          ttest_paired: "normality of differences",
+                          oneway_anova: "normality + Levene's + post-hoc",
+                          twoway_anova: "normality + Levene's + interaction",
+                          manova: "Box's M + multivariate normality",
+                          repeated_anova: "Mauchly's sphericity + G-G correction",
+                          mann_whitney: "distribution shape + independence",
+                          wilcoxon: "symmetry of differences",
+                          kruskal_wallis: "distribution shape + sample size",
+                          friedman: "within-subjects design",
+                          pearson: "linearity + bivariate normality + outliers",
+                          spearman: "monotonicity + ties",
+                          chi_square: "expected frequencies ≥ 5",
+                          fishers_exact: "2×2 structure",
+                          simple_regression: "linearity + D-W + homoscedasticity + normality of residuals + Cook's D",
+                          multiple_regression: "VIF + multicollinearity + all OLS",
+                          logistic_regression: "no separation + EPV ratio + VIF",
+                          polynomial_regression: "mean-centring + residuals",
+                          hierarchical_regression: "F-change per block + all OLS",
+                          pca: "KMO + Bartlett's + intercorrelations",
+                          factor_analysis: "KMO + Bartlett's + communalities",
+                          cluster_kmeans: "standardisation + elbow/silhouette",
+                          reliability: "unidimensionality + item scale",
+                          mediation: "causal ordering + regression assumptions",
+                          moderation: "mean-centring + VIF + power",
+                          time_series: "stationarity + Durbin-Watson",
+                          survival: "non-informative censoring + proportional hazards",
+                          effect_size: "effect size interpretation benchmarks",
+                          normality: "Shapiro-Wilk / K-S per variable",
+                          descriptives: "descriptive statistics review",
+                          confidence_intervals: "95% CI coverage",
+                          frequency: "frequency distribution review",
+                          point_biserial: "binary × continuous",
+                          cramers_v: "chi-square effect size",
+                        };
+                        return labels[v] ?? v;
+                      }).join(" · ")}
+                    </p>
+                  )}
+                  {includeAssumptionsCheck && selectedTests.length === 0 && (
+                    <p className="text-[10px] text-muted-foreground/60 mt-1.5 pl-1">
+                      General assumptions guidance — select specific tests above for targeted checks
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>

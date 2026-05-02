@@ -312,6 +312,302 @@ const TEST_INSTRUCTIONS: Record<string, string> = {
     "MANDATORY TEST — Moderation / Interaction Analysis: Test whether the relationship between X and Y depends on moderator variable W. Standardise (mean-centre) X and W before computing the interaction term X×W. Report: regression coefficients for X, W, and X×W with SE, t, p. If the interaction term is significant, plot the interaction: show the X→Y relationship at W = mean, +1 SD, and −1 SD (Johnson-Neyman or simple slopes analysis). Report R², ΔR² for the interaction term.",
 };
 
+// ── Assumptions per test — what the AI must check and report ─────────────────
+
+const TEST_ASSUMPTIONS: Record<string, { name: string; checks: string[] }> = {
+  ttest_ind: {
+    name: "Independent Samples t-test",
+    checks: [
+      "NORMALITY — Run Shapiro-Wilk test (W, p) separately for each group. If N > 50, use Kolmogorov-Smirnov (D, p). State: 'Normality was assessed using the Shapiro-Wilk test; the assumption was [met / violated] for [group names] (W = X.XX, p = .XXX).' If violated, justify switching to Mann-Whitney U.",
+      "HOMOGENEITY OF VARIANCE — Report Levene's test for equality of variances: F(df1, df2) = X.XX, p = .XXX. If p < .05: variances are significantly unequal — use Welch's t-test (do not pool variances) and report Welch-Satterthwaite degrees of freedom.",
+      "INDEPENDENCE OF OBSERVATIONS — Confirm participants in each group are unrelated (no repeated measures, no matched pairs). State this explicitly.",
+      "SCALE OF MEASUREMENT — Confirm the dependent variable is continuous (interval or ratio scale).",
+    ],
+  },
+  ttest_paired: {
+    name: "Paired Samples t-test",
+    checks: [
+      "NORMALITY OF DIFFERENCES — Compute the difference score for each pair. Run Shapiro-Wilk (W, p) on the difference scores. State: 'Shapiro-Wilk test on the difference scores indicated normality was [met/violated] (W = X.XX, p = .XXX).' If violated, use Wilcoxon Signed-Rank test.",
+      "DEPENDENCE — Confirm observations are paired/matched (same participant at two time points, or matched pairs design). State the pairing rationale.",
+      "SCALE OF MEASUREMENT — Confirm the DV is continuous (interval or ratio scale).",
+      "NO OUTLIERS IN DIFFERENCES — Identify any extreme difference scores (> 3 SD from the mean difference). Report and justify retaining or removing outliers.",
+    ],
+  },
+  oneway_anova: {
+    name: "One-way ANOVA",
+    checks: [
+      "NORMALITY — Run Shapiro-Wilk (W, p) on the DV separately within each group. Report each result. If violated in any group, note violation and consider Kruskal-Wallis as alternative.",
+      "HOMOGENEITY OF VARIANCE (LEVENE'S TEST) — Report F(df_between, df_within) = X.XX, p = .XXX. If p < .05: use Welch's ANOVA (robust to unequal variances) or report Games-Howell post-hoc instead of Tukey.",
+      "INDEPENDENCE OF OBSERVATIONS — Confirm all observations are from different participants (between-subjects design).",
+      "SCALE OF MEASUREMENT — Confirm the DV is continuous. Confirm the IV is categorical with 3+ levels.",
+    ],
+  },
+  twoway_anova: {
+    name: "Two-way ANOVA",
+    checks: [
+      "NORMALITY — Run Shapiro-Wilk (W, p) on the DV within each combination of factor levels (each cell). Report any violations.",
+      "HOMOGENEITY OF VARIANCE (LEVENE'S TEST) — Report Levene's F across all cells. If violated (p < .05), note it as a limitation; ANOVA is relatively robust with equal cell sizes.",
+      "INDEPENDENCE — Confirm a fully between-subjects design (no repeated measures on either factor).",
+      "SAMPLE SIZE BALANCE — Note whether the design is balanced (equal n per cell) or unbalanced. If unbalanced, report Type III sums of squares.",
+      "INTERACTION — Examine whether a significant interaction is present before interpreting main effects. If interaction is significant, main effects must be interpreted conditionally.",
+    ],
+  },
+  manova: {
+    name: "MANOVA",
+    checks: [
+      "MULTIVARIATE NORMALITY — Report Box's M test: M = X.XX, F(df1, df2) = X.XX, p = .XXX. Box's M is highly sensitive; if p < .001, note the violation but proceed if group sizes are large and equal (MANOVA is robust under these conditions).",
+      "HOMOGENEITY OF COVARIANCE MATRICES — Box's M test also assesses this. Describe the result.",
+      "ABSENCE OF MULTICOLLINEARITY AMONG DVs — Check correlation matrix of DVs. Correlations between DVs should be moderate (r = .20–.70). If r > .90, DVs are redundant; if r < .20, MANOVA offers no advantage over separate ANOVAs.",
+      "ABSENCE OF OUTLIERS — Report Mahalanobis distance for multivariate outlier detection (χ² critical value at p < .001). List any cases exceeding the threshold.",
+      "SAMPLE SIZE — Minimum n > number of DVs in the smallest group. Report whether this assumption is met.",
+    ],
+  },
+  repeated_anova: {
+    name: "Repeated Measures ANOVA",
+    checks: [
+      "SPHERICITY (MAUCHLY'S TEST) — Report: W = X.XX, χ²(df) = X.XX, p = .XXX. If p < .05: sphericity is violated. Apply Greenhouse-Geisser correction (ε = X.XX) and report corrected F(df_GG), p. If ε < .75, use Greenhouse-Geisser; if ε ≥ .75, Huynh-Feldt correction is acceptable.",
+      "NORMALITY — Assess normality of the DV at each time point/condition using Shapiro-Wilk. Report each result.",
+      "NO SIGNIFICANT OUTLIERS — Check for outliers at each level using boxplots or z-scores (|z| > 3.29). Report and justify any retention/exclusion.",
+    ],
+  },
+  mann_whitney: {
+    name: "Mann-Whitney U Test",
+    checks: [
+      "ORDINAL OR CONTINUOUS DV — Confirm the DV is at least ordinal (rank-ordered values make sense). State this.",
+      "INDEPENDENCE OF OBSERVATIONS — Confirm the two groups are independent (different participants, no matching).",
+      "SIMILAR DISTRIBUTION SHAPE — For interpreting the test as a comparison of medians, the two groups' distributions should have the same shape (only differing in location). Inspect histograms or boxplots per group and comment. If shapes differ substantially, interpret as stochastic superiority rather than a median comparison.",
+    ],
+  },
+  wilcoxon: {
+    name: "Wilcoxon Signed-Rank Test",
+    checks: [
+      "PAIRED DATA — Confirm observations are paired (same participant measured twice, or matched pairs). State the pairing rationale.",
+      "ORDINAL OR CONTINUOUS DV — Confirm the DV is at least ordinal.",
+      "SYMMETRY OF DIFFERENCE SCORES — The distribution of difference scores should be approximately symmetric around the median. Inspect a histogram of differences.",
+    ],
+  },
+  kruskal_wallis: {
+    name: "Kruskal-Wallis H Test",
+    checks: [
+      "ORDINAL OR CONTINUOUS DV — Confirm the DV is at least ordinal.",
+      "INDEPENDENCE — All observations from different participants (between-subjects).",
+      "SIMILAR DISTRIBUTION SHAPE — For median comparison interpretation, distributions should be similarly shaped across groups. Inspect boxplots per group.",
+      "ADEQUATE SAMPLE SIZE — Recommended: at least 5 observations per group for the H approximation to chi-square to be valid.",
+    ],
+  },
+  friedman: {
+    name: "Friedman Test",
+    checks: [
+      "WITHIN-SUBJECTS / REPEATED MEASURES DESIGN — Confirm same participants measured across all conditions/time points.",
+      "ORDINAL OR CONTINUOUS DV — Confirm the DV is at least ordinal.",
+      "ADEQUATE SAMPLE SIZE — At least 10 participants recommended for the chi-square approximation.",
+    ],
+  },
+  pearson: {
+    name: "Pearson Correlation",
+    checks: [
+      "LEVEL OF MEASUREMENT — Both variables must be continuous (interval or ratio scale). State this explicitly.",
+      "LINEARITY — Examine a scatterplot of X vs Y. Describe whether the relationship appears linear. If curvilinear, Pearson r will underestimate the true association; consider Spearman instead.",
+      "BIVARIATE NORMALITY — Both variables should be approximately normally distributed. Report Shapiro-Wilk for each. Visualise with a scatterplot with marginal histograms.",
+      "HOMOSCEDASTICITY — The variance of Y should be consistent across all values of X (fan-shape in scatterplot indicates violation). Describe scatterplot pattern.",
+      "NO SIGNIFICANT OUTLIERS — Identify bivariate outliers using leverage/influence statistics or visual inspection. Report any extreme points and whether they were retained or removed.",
+    ],
+  },
+  spearman: {
+    name: "Spearman Rank Correlation",
+    checks: [
+      "ORDINAL OR CONTINUOUS DV — Both variables must be at least ordinal.",
+      "MONOTONIC RELATIONSHIP — The relationship should be monotonic (consistently increasing or decreasing), not necessarily linear. Examine the scatterplot.",
+      "NO TIES OR FEW TIES — A large number of tied ranks can distort rs. Report the number of tied ranks if present.",
+    ],
+  },
+  chi_square: {
+    name: "Chi-Square Test of Independence",
+    checks: [
+      "INDEPENDENCE OF OBSERVATIONS — Each case must belong to exactly one cell (mutually exclusive categories). Confirm no participant is counted in multiple cells.",
+      "EXPECTED FREQUENCIES — No cell should have an expected frequency < 5 (rule of thumb: > 80% of cells ≥ 5, no cell = 0). Report the minimum expected frequency. If violated: merge categories, use Fisher's exact test (2×2), or use likelihood ratio chi-square.",
+      "LEVEL OF MEASUREMENT — Both variables must be categorical (nominal or ordinal). State variable types.",
+      "ADEQUATE SAMPLE SIZE — Minimum total N ≥ 20. Report total N.",
+    ],
+  },
+  fishers_exact: {
+    name: "Fisher's Exact Test",
+    checks: [
+      "2×2 TABLE STRUCTURE — Confirm the data form a 2×2 contingency table.",
+      "INDEPENDENCE OF OBSERVATIONS — Each case belongs to exactly one cell.",
+      "FIXED MARGINAL TOTALS — The test assumes marginal totals are fixed by design; note if this is an approximation.",
+    ],
+  },
+  simple_regression: {
+    name: "Simple Linear Regression",
+    checks: [
+      "LINEARITY — Plot Y against X (scatterplot). Describe the pattern. If curved, consider polynomial regression or transformation. Report 'The scatterplot of [Y] on [X] indicated a linear relationship.'",
+      "INDEPENDENCE OF RESIDUALS — Report Durbin-Watson statistic (d): values near 2.0 indicate no autocorrelation; d < 1.5 or d > 2.5 indicates potential autocorrelation.",
+      "HOMOSCEDASTICITY OF RESIDUALS — Plot standardised residuals against predicted values. The spread should be roughly constant. Report 'Visual inspection of the residuals vs. fitted plot indicated [constant/non-constant] variance.'",
+      "NORMALITY OF RESIDUALS — Report Shapiro-Wilk on standardised residuals (W, p). Inspect Q-Q plot. If violated, consider robust regression or bootstrap CIs.",
+      "NO INFLUENTIAL OUTLIERS — Report Cook's distance (D) for all cases. Cases with D > 1 (or D > 4/N) are potentially influential. Report and justify retention.",
+    ],
+  },
+  multiple_regression: {
+    name: "Multiple Linear Regression",
+    checks: [
+      "LINEARITY — Plot Y against each predictor separately. Report whether linear relationships are evident.",
+      "INDEPENDENCE OF RESIDUALS — Report Durbin-Watson (d); target range 1.5–2.5.",
+      "HOMOSCEDASTICITY — Inspect residuals vs. fitted plot. Report 'Homoscedasticity was [supported/violated] based on visual inspection of the residual plot.'",
+      "NORMALITY OF RESIDUALS — Shapiro-Wilk on standardised residuals (W, p) + Q-Q plot description.",
+      "ABSENCE OF MULTICOLLINEARITY — For each predictor, report VIF and Tolerance. Flag any VIF > 10 (or > 5 for a conservative threshold) or Tolerance < .10. If multicollinearity detected: consider removing a predictor, combining predictors, or ridge regression.",
+      "NO INFLUENTIAL OUTLIERS — Report leverage (h) and Cook's D. Identify any high-leverage high-influence cases.",
+      "SAMPLE SIZE ADEQUACY — Minimum 10–20 cases per predictor (Green's rule: N ≥ 50 + 8m, where m = number of predictors). Report N and number of predictors.",
+    ],
+  },
+  logistic_regression: {
+    name: "Binary Logistic Regression",
+    checks: [
+      "BINARY OUTCOME — Confirm the DV is dichotomous (0/1, yes/no). State the event of interest and reference category.",
+      "INDEPENDENCE OF OBSERVATIONS — Each case is independent. No repeated measurements.",
+      "ABSENCE OF MULTICOLLINEARITY — Report VIF and Tolerance for all predictors. Same thresholds as linear regression (VIF < 10).",
+      "LINEARITY OF LOG ODDS — For continuous predictors, test the Box-Tidwell procedure (add X × ln(X) interaction terms). If significant, the linearity assumption is violated. Report results.",
+      "NO COMPLETE SEPARATION — Verify the outcome is not perfectly predicted by any predictor (complete separation causes inflated coefficients and SEs). Note if the model converged normally.",
+      "ADEQUATE SAMPLE SIZE — Rule of thumb: ≥ 10–15 events (outcome = 1 cases) per predictor. Report: number of events, number of predictors, events-per-variable (EPV) ratio.",
+    ],
+  },
+  polynomial_regression: {
+    name: "Polynomial Regression",
+    checks: [
+      "MEAN-CENTRING — Confirm that continuous predictors have been mean-centred before computing polynomial terms (X − X̄) to reduce multicollinearity between X and X².",
+      "HOMOSCEDASTICITY — Residuals vs fitted plot. Report pattern.",
+      "NORMALITY OF RESIDUALS — Shapiro-Wilk (W, p) on residuals.",
+      "INDEPENDENCE — Durbin-Watson (d).",
+      "OVERFITTING RISK — Report whether cross-validation or AIC/BIC was used to select the polynomial degree.",
+    ],
+  },
+  hierarchical_regression: {
+    name: "Hierarchical Regression",
+    checks: [
+      "THEORY-DRIVEN BLOCK ORDER — State the theoretical or empirical justification for the order of predictor entry across blocks.",
+      "ALL LINEAR REGRESSION ASSUMPTIONS — Apply all five OLS assumptions (linearity, independence, homoscedasticity, normality of residuals, no multicollinearity) to the FINAL model.",
+      "F-CHANGE SIGNIFICANCE — For each block, report ΔF test: F(df_new, df_residual) = X.XX, p = .XXX. This confirms whether each block adds incremental predictive power.",
+    ],
+  },
+  pca: {
+    name: "Principal Component Analysis (PCA)",
+    checks: [
+      "SAMPLING ADEQUACY (KMO) — Report Kaiser-Meyer-Olkin measure: KMO = X.XX. Interpret: ≥ .90 marvellous, .80–.89 meritorious, .70–.79 middling, .60–.69 mediocre, < .60 unacceptable. KMO < .60 means PCA is not appropriate.",
+      "BARTLETT'S TEST OF SPHERICITY — Report χ²(df) = X.XX, p = .XXX. If p < .05, the correlation matrix is not an identity matrix, meaning PCA is appropriate. If p > .05, variables are uncorrelated — PCA is not meaningful.",
+      "INTERCORRELATIONS — Examine the correlation matrix. At least some correlations should be ≥ .30. If most correlations are < .30, PCA is unlikely to yield interpretable components.",
+      "SAMPLE SIZE — Minimum N = 100, or 5:1 to 10:1 ratio of cases to variables. Report N and number of variables.",
+      "ABSENCE OF EXTREME OUTLIERS — Outliers can distort components. Check Mahalanobis distance.",
+    ],
+  },
+  factor_analysis: {
+    name: "Exploratory Factor Analysis (EFA)",
+    checks: [
+      "SAMPLING ADEQUACY (KMO) — Same as PCA: report KMO ≥ .60 as minimum. Interpret the value.",
+      "BARTLETT'S TEST — χ²(df) = X.XX, p < .05 required for EFA to be appropriate.",
+      "FACTORABILITY OF CORRELATION MATRIX — Report the proportion of correlations ≥ .30. Note any variables with all correlations < .30 (candidates for removal).",
+      "SAMPLE SIZE — N ≥ 200 for stable solutions (Comrey & Lee, 1992). Report N.",
+      "COMMUNALITIES — After extraction, report communalities (h²). Variables with h² < .30 are weakly related to other variables and should be considered for removal.",
+    ],
+  },
+  cluster_kmeans: {
+    name: "K-means Cluster Analysis",
+    checks: [
+      "STANDARDISATION — Confirm all variables have been standardised (z-scores) before clustering to prevent variables with larger scales from dominating the Euclidean distance metric. Report: 'Variables were standardised (M = 0, SD = 1) prior to clustering.'",
+      "OPTIMAL K SELECTION — Report the method used to select k: (a) Elbow method: plot within-cluster sum of squares (WSS) against k and identify the 'elbow'; (b) Silhouette score: report average silhouette width for k = 2 to k = N/2, with higher values indicating better separation; (c) Gap statistic if used.",
+      "STABILITY / REPLICABILITY — Note that k-means solutions can vary with different random seeds. Report the random seed used and/or that the solution was confirmed across multiple runs.",
+      "OUTLIERS — K-means is sensitive to outliers. Report any outlier screening conducted prior to analysis.",
+    ],
+  },
+  reliability: {
+    name: "Reliability Analysis (Cronbach's α)",
+    checks: [
+      "UNIDIMENSIONALITY — Reliability analysis assumes all items measure a single underlying construct. Confirm this with EFA or inter-item correlation matrix (all r > .20). If items cluster into sub-factors, Cronbach's α for the full scale is misleading — compute α per sub-scale.",
+      "CONTINUOUS OR POLYTOMOUS ITEMS — Confirm items are rated on a continuous or Likert-type scale (at least 5 response options). For dichotomous items, Kuder-Richardson KR-20 is more appropriate than α.",
+      "MINIMUM NUMBER OF ITEMS — At least 3 items recommended. Note the number of items.",
+      "SAMPLE SIZE — Minimum N = 50–100 for stable α estimates. Report N.",
+    ],
+  },
+  mediation: {
+    name: "Mediation Analysis",
+    checks: [
+      "CAUSAL ASSUMPTIONS — Mediation implies a causal chain (X → M → Y). Clearly state the theoretical basis for the causal ordering. Cross-sectional data cannot establish causality — acknowledge this limitation.",
+      "REGRESSION ASSUMPTIONS — All OLS regression assumptions apply to each path model (linearity, independence, homoscedasticity, normality of residuals, no multicollinearity between X and M in the path b model).",
+      "MEASUREMENT OF MEDIATOR — The mediator M must be measured before or concurrent with Y, and after or concurrent with X in the causal sequence. State the measurement order.",
+      "NO UNMEASURED CONFOUNDERS — Mediation inference requires no confounding of the M → Y relationship. Acknowledge potential confounders not included in the model.",
+    ],
+  },
+  moderation: {
+    name: "Moderation / Interaction Analysis",
+    checks: [
+      "MEAN-CENTRING — Continuous predictors (X and W) must be mean-centred before computing the interaction term X×W to reduce multicollinearity and improve interpretability of lower-order coefficients. Report: 'X and W were mean-centred prior to computing the interaction term.'",
+      "MULTICOLLINEARITY — After mean-centring, report VIF for X, W, and X×W. VIF < 10 indicates acceptable multicollinearity.",
+      "HOMOSCEDASTICITY AND NORMALITY — Full OLS regression assumption checks apply to the final moderation model.",
+      "POWER — Interaction effects typically require larger samples to detect than main effects. Report whether power was considered (G*Power or rule of thumb: N ≥ 200 for reliable moderation detection).",
+    ],
+  },
+  time_series: {
+    name: "Time Series / Trend Analysis",
+    checks: [
+      "STATIONARITY — Test whether the mean and variance are constant over time. Report Augmented Dickey-Fuller (ADF) test if applicable: ADF statistic, p-value. If non-stationary (p > .05), note that differencing or detrending may be required.",
+      "AUTOCORRELATION — Report Durbin-Watson (d) for regression-based trend analysis, or ACF/PACF plots for time series modelling. Significant autocorrelation at lag 1 may require an AR(1) or ARIMA model.",
+      "EQUAL TIME INTERVALS — Confirm observations are equally spaced in time. Note any missing time points.",
+      "SUFFICIENT OBSERVATIONS — Minimum 30–50 time points for reliable trend and autocorrelation estimation. Report the number of time points.",
+    ],
+  },
+  survival: {
+    name: "Survival Analysis (Kaplan-Meier)",
+    checks: [
+      "CENSORING — Confirm censoring is non-informative (censored subjects do not systematically differ from those who experienced the event). State the censoring mechanism (e.g., end of study, withdrawal).",
+      "PROPORTIONAL HAZARDS (FOR COX MODEL) — If a Cox model is used, test the proportional hazards assumption using Schoenfeld residuals (χ², p > .05 indicates assumption is met). Alternatively, plot log(−log(survival)) against log(time) — parallel lines indicate proportional hazards.",
+      "INDEPENDENCE OF SURVIVAL TIMES — Each participant's survival time is independent of others'. No clustering or matching (or account for it with stratified/frailty models).",
+      "NO TIED EVENT TIMES (OR METHOD FOR HANDLING) — Kaplan-Meier handles ties using Breslow or Efron method. State the method used.",
+    ],
+  },
+};
+
+function buildAssumptionsContext(selectedTests: string[], includeAssumptionsCheck: boolean): string {
+  if (!includeAssumptionsCheck) return "";
+  if (!selectedTests || selectedTests.length === 0) {
+    // Generic assumptions reminder when no specific tests are selected
+    return `
+ASSUMPTIONS CHECK (GENERAL):
+Before reporting any inferential statistics, include a brief "Assumptions Testing" subsection in the Methodology or Results section.
+For each statistical test you choose to run:
+1. Name the test and list its key assumptions
+2. State how each assumption was assessed (test name and output, or visual inspection)
+3. State whether each assumption was met or violated
+4. If violated, state what correction or alternative was applied
+This subsection should precede the presentation of inferential results.`;
+  }
+
+  const testEntries = selectedTests
+    .map(t => TEST_ASSUMPTIONS[t])
+    .filter(Boolean);
+
+  if (testEntries.length === 0) return "";
+
+  const checkLines = testEntries.map(entry => {
+    const checks = entry.checks.map((c, i) => `   ${i + 1}. ${c}`).join("\n");
+    return `▸ ${entry.name}:\n${checks}`;
+  }).join("\n\n");
+
+  return `
+MANDATORY ASSUMPTIONS TESTING SECTION:
+Write a dedicated "Assumptions Testing" subsection within the Methodology section (or immediately before the Results if the paper structure does not include a Methodology section). This section MUST appear in the paper before the inferential results are presented.
+
+Structure the subsection as follows:
+• Title the subsection: "Testing of Statistical Assumptions" or "Assumption Checks"
+• For each test below, systematically report every numbered check in sequence
+• Use the exact statistic names and formatting specified
+• If an assumption is violated, explicitly state what alternative or correction was applied and why
+• Reference the tool-specific output format previously specified (SPSS output labels, R console, etc.)
+
+REQUIRED ASSUMPTION CHECKS (one sub-paragraph per test):
+${checkLines}
+
+CRITICAL RULE: Do NOT present any inferential test result (t, F, χ², r, B, OR, etc.) before first reporting the relevant assumption checks for that test in the Assumptions Testing subsection.`;
+}
+
 function buildTestsContext(selectedTests: string[]): string {
   if (!selectedTests || selectedTests.length === 0) return "";
 
@@ -328,7 +624,7 @@ ${instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n\n")}
 CRITICAL: Every test listed above MUST appear in the Results section with all reported statistics listed. Do not skip or summarise any test. If the data does not perfectly suit a test (e.g., only one group present for a t-test), acknowledge the limitation and report what is computable from the available data.`;
 }
 
-export function parseAndAnalyzeDataset(csvText: string, analysisTool?: string, selectedTests?: string[]): string {
+export function parseAndAnalyzeDataset(csvText: string, analysisTool?: string, selectedTests?: string[], includeAssumptionsCheck?: boolean): string {
   const lines = csvText.trim().split("\n").filter(l => l.trim().length > 0);
   if (lines.length < 2) return "";
 
@@ -505,6 +801,7 @@ export function parseAndAnalyzeDataset(csvText: string, analysisTool?: string, s
 
   const toolContext = buildToolContext(analysisTool ?? "");
   const testsContext = buildTestsContext(selectedTests ?? []);
+  const assumptionsContext = buildAssumptionsContext(selectedTests ?? [], includeAssumptionsCheck ?? false);
 
   return `STUDENT-PROVIDED DATASET (${totalRows} rows × ${headers.length} columns)
 Variables: ${headers.join(", ")}
@@ -522,6 +819,7 @@ Suggested Visualisations (describe these in the paper using the actual data valu
 ${vizSuggestions.map((v, i) => `${i + 1}. ${v}`).join("\n")}
 ${toolContext}
 ${testsContext}
+${assumptionsContext}
 
 MANDATORY DATA USAGE RULES:
 1. Present and discuss the ACTUAL statistics above — never invent alternative numbers
