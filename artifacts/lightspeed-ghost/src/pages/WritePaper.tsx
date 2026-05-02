@@ -16,6 +16,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import { ReadabilityPanel, GrammarPanel, TonePanel, CitationFromUrl } from "@/components/analysis";
 import { SubjectSelect } from "@/components/SubjectSelect";
@@ -282,7 +283,7 @@ export default function WritePaper() {
   const [paperType, setPaperType] = useState("research");
   const [citationStyle, setCitationStyle] = useState<string>("apa");
   const [wordCount, setWordCount] = useState(1000);
-  const [academicLevel, setAcademicLevel] = useState("undergrad_3_4");
+  const { academicLevel, saveAcademicLevel } = useUserProfile();
   const [isStem, setIsStem] = useState(false);
   const [spacing, setSpacing] = useState("double");
   const [numSources, setNumSources] = useState<number | "">("");
@@ -1194,7 +1195,7 @@ export default function WritePaper() {
               <button
                 key={lvl.value}
                 type="button"
-                onClick={() => setAcademicLevel(lvl.value)}
+                onClick={() => saveAcademicLevel(lvl.value)}
                 className={cn(
                   "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
                   academicLevel === lvl.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"

@@ -14,11 +14,13 @@ import paymentsRouter from "./payments";
 import pwaRouter from "./pwa";
 import referralRouter from "./referral";
 import assistantRouter from "./assistant";
+import profileRouter from "./profile";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(profileRouter);
 router.use(documentsRouter);
 router.use(writingRouter);
 router.use(revisionRouter);
