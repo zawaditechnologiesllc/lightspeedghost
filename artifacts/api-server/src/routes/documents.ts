@@ -3,6 +3,7 @@ import { db, pool } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { eq, desc, and, isNull, gte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
+import { getUserPlan } from "../lib/usageTracker";
 import {
   CreateDocumentBody,
   UpdateDocumentBody,
@@ -46,13 +47,11 @@ router.get("/documents/stats", requireAuth, async (req, res) => {
 
 async function getUserPlanRetentionDays(userId: string): Promise<number | null> {
   try {
-    const { rows } = await pool.query<{ plan: string }>(
-      "SELECT plan FROM user_subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
-      [userId],
-    );
-    const plan = rows[0]?.plan ?? "free";
-    if (plan === "free" || plan === "starter") return 7;
+    // getUserPlan checks status + current_period_end so expired subs return "starter"
+    const plan = await getUserPlan(userId);
+    if (plan === "starter") return 7;
     if (plan === "pro_annual" || plan === "business" || plan === "ebooks_monthly") return null;
+    // pro, campus, and any other active paid plan → 90 days
     return 90;
   } catch {
     return 7;

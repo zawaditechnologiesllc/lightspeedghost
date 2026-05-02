@@ -257,7 +257,7 @@ router.post("/referral/record-signup", async (req: Request, res: Response) => {
 
 // ── GET /admin/referrals ──────────────────────────────────────────────────────
 
-router.get("/admin/referrals", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/referrals", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   try {
@@ -325,7 +325,7 @@ router.get("/admin/referrals", async (req: Request, res: Response) => {
 
 // ── POST /admin/referrals/discount/:id/apply — manually mark a discount applied
 
-router.post("/admin/referrals/discount/:id/apply", async (req: Request, res: Response) => {
+router.post("/mwaramuriuki-login/referrals/discount/:id/apply", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const id = parseInt(req.params.id);

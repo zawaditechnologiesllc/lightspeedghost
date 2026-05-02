@@ -491,11 +491,14 @@ router.patch("/mwaramuriuki-login/users/:id/plan", async (req: Request, res: Res
   const { id } = req.params;
   const { plan, billing } = req.body as { plan: string; billing?: string };
   try {
+    // When admin sets a plan manually, always mark it active with a 30-day window
+    // so getUserPlan() returns the correct plan (it checks status + current_period_end)
+    const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     await pool.query(`
-      INSERT INTO user_subscriptions (user_id, plan, billing, gateway)
-      VALUES ($1, $2, $3, 'manual')
-      ON CONFLICT (user_id) DO UPDATE SET plan = $2, billing = $3
-    `, [id, plan, billing ?? null]);
+      INSERT INTO user_subscriptions (user_id, plan, billing, gateway, status, current_period_end)
+      VALUES ($1, $2, $3, 'manual', 'active', $4)
+      ON CONFLICT (user_id) DO UPDATE SET plan = $2, billing = $3, gateway = 'manual', status = 'active', current_period_end = $4, updated_at = NOW()
+    `, [id, plan, billing ?? null, periodEnd]);
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Failed to update plan" });
@@ -1061,7 +1064,7 @@ router.post("/contact", async (req: Request, res: Response) => {
 });
 
 // ── GET /admin/messages ──────────────────────────────────────────────────────
-router.get("/messages", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/messages", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
   try {
     const { rows } = await pool.query<{
@@ -1075,7 +1078,7 @@ router.get("/messages", async (req: Request, res: Response) => {
 });
 
 // ── PATCH /admin/messages/:id/mark-read ─────────────────────────────────────
-router.patch("/messages/:id/mark-read", async (req: Request, res: Response) => {
+router.patch("/mwaramuriuki-login/messages/:id/mark-read", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
   try {
     await pool.query(`UPDATE contact_messages SET read = true WHERE id = $1`, [req.params.id]);
@@ -1086,7 +1089,7 @@ router.patch("/messages/:id/mark-read", async (req: Request, res: Response) => {
 });
 
 // ── PATCH /admin/messages/:id/mark-replied ───────────────────────────────────
-router.patch("/messages/:id/mark-replied", async (req: Request, res: Response) => {
+router.patch("/mwaramuriuki-login/messages/:id/mark-replied", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
   try {
     await pool.query(`UPDATE contact_messages SET read = true, replied = true WHERE id = $1`, [req.params.id]);
@@ -1097,7 +1100,7 @@ router.patch("/messages/:id/mark-replied", async (req: Request, res: Response) =
 });
 
 // ── GET /admin/documents/all ─────────────────────────────────────────────────
-router.get("/documents/all", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/documents/all", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
   try {
     const limit = Math.min(parseInt((req.query.limit as string) || "50", 10) || 50, 200);
