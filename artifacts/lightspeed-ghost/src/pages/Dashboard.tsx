@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   PenLine, BookOpen, Files, ShieldCheck, FlaskConical,
   GraduationCap, TrendingUp, Clock, ArrowRight, Sparkles, Zap, Wand2,
-  Share2, Copy, Check, Gift, X,
+  Share2, Copy, Check, Gift, X, BookMarked,
 } from "lucide-react";
 import { useGetDocumentStats } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/apiFetch";
@@ -77,6 +77,14 @@ const quickActions = [
     icon: BookOpen,
     gradient: "from-violet-500 to-purple-600",
     glow: "group-hover:shadow-violet-500/20",
+  },
+  {
+    path: "/ebooks",
+    label: "Ebooks",
+    desc: "Write & publish business ebooks",
+    icon: BookMarked,
+    gradient: "from-amber-500 to-orange-600",
+    glow: "group-hover:shadow-amber-500/20",
   },
 ];
 

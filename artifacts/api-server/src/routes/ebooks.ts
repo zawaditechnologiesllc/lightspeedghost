@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { pool } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
-import { anthropic } from "../lib/ai";
+import { openai } from "../lib/ai";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { recordUsage } from "../lib/apiCost";
 import { logger } from "../lib/logger";
@@ -148,8 +148,8 @@ Verified Knowledge Sources Used in This Ebook:
 • PwC Global Studies — industry-specific analysis and forecasting
 `;
 
-// ── POST /api/ebooks/generate ─────────────────────────────────────────────────
-router.post("/api/ebooks/generate", requireAuth, async (req, res) => {
+// ── POST /ebooks/generate ─────────────────────────────────────────────────────
+router.post("/ebooks/generate", requireAuth, async (req, res) => {
   const userId = req.userId!;
 
   const hasAccess = await hasEbooksAccess(userId);
@@ -249,12 +249,14 @@ Return ONLY valid JSON with this exact shape (no markdown, no code fences):
   "backCoverBlurb": "150-word back cover description"
 }`;
 
-    const outlineResp = await anthropic.messages.create({
-      model: "claude-3-5-haiku-20241022",
+    const outlineResp = await openai.chat.completions.create({
+      model: "gpt-4o",
       max_tokens: 2000,
       messages: [{ role: "user", content: outlinePrompt }],
+      response_format: { type: "json_object" },
     });
-    await recordUsage(userId, "ebook", outlineResp.usage.input_tokens, outlineResp.usage.output_tokens, "claude-3-5-haiku-20241022");
+    const outlineUsage = outlineResp.usage;
+    if (outlineUsage) await recordUsage(userId, "ebook", outlineUsage.prompt_tokens, outlineUsage.completion_tokens, "gpt-4o");
 
     let outline: {
       title: string; subtitle: string; tagline: string;
@@ -263,7 +265,7 @@ Return ONLY valid JSON with this exact shape (no markdown, no code fences):
     };
 
     try {
-      const raw = (outlineResp.content[0] as { type: string; text: string }).text.trim();
+      const raw = (outlineResp.choices[0]?.message.content ?? "").trim();
       const jsonStart = raw.indexOf("{");
       const jsonEnd = raw.lastIndexOf("}");
       outline = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
@@ -348,14 +350,15 @@ Write a complete, well-structured chapter with:
 Write in ${language}. Do NOT use generic filler — every paragraph must deliver genuine value.
 ${inspiration ? `Keep this inspiration/angle in mind: ${inspiration}` : ""}`;
 
-      const chResp = await anthropic.messages.create({
-        model: "claude-3-5-sonnet-20241022",
+      const chResp = await openai.chat.completions.create({
+        model: "gpt-4o",
         max_tokens: 4000,
         messages: [{ role: "user", content: chapterPrompt }],
       });
-      await recordUsage(userId, "ebook", chResp.usage.input_tokens, chResp.usage.output_tokens, "claude-3-5-sonnet-20241022");
+      const chUsage = chResp.usage;
+      if (chUsage) await recordUsage(userId, "ebook", chUsage.prompt_tokens, chUsage.completion_tokens, "gpt-4o");
 
-      const chapterText = (chResp.content[0] as { type: string; text: string }).text;
+      const chapterText = chResp.choices[0]?.message.content ?? "";
       fullContent += `\n\n# Chapter ${ch.number}: ${ch.title}\n\n${chapterText}\n\n---\n`;
 
       send("step", { id: `chapter_${ch.number}`, message: `Chapter ${ch.number} complete`, status: "done" });
@@ -419,8 +422,8 @@ ${inspiration ? `Keep this inspiration/angle in mind: ${inspiration}` : ""}`;
   }
 });
 
-// ── GET /api/ebooks/status ────────────────────────────────────────────────────
-router.get("/api/ebooks/status", requireAuth, async (req, res) => {
+// ── GET /ebooks/status ────────────────────────────────────────────────────────
+router.get("/ebooks/status", requireAuth, async (req, res) => {
   const userId = req.userId!;
   const [hasAccess, used] = await Promise.all([
     hasEbooksAccess(userId),
