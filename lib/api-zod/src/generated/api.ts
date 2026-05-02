@@ -299,6 +299,7 @@ export const SolveStemBody = zod.object({
     .enum(["text", "latex", "json", "csv"])
     .default(solveStemBodyExportFormatDefault),
   datasetText: zod.string().optional(),
+  academicLevel: zod.string().optional(),
 });
 
 export const SolveStemResponse = zod.object({

@@ -55,14 +55,19 @@ export async function reactSolve(
   subject: string,
   onToken?: (chunk: string) => void,
   academicContext?: string,
+  academicLevel?: string,
 ): Promise<ReActResult> {
   let fullText = "";
   let inputTokens = 0;
   let outputTokens = 0;
 
+  const levelNote = academicLevel
+    ? `\n\nACADEMIC LEVEL: ${academicLevel} — pitch your explanation depth, vocabulary, and detail accordingly.`
+    : "";
+
   const userContent = academicContext
-    ? `ACADEMIC REFERENCE CONTEXT (peer-reviewed abstracts — use these to ground your reasoning):\n\n${academicContext}\n\n---\n\nNow solve this ${subject} problem using the ReAct framework, referencing the above context where relevant:\n\n${problem}`
-    : `Solve this ${subject} problem using the ReAct framework:\n\n${problem}`;
+    ? `ACADEMIC REFERENCE CONTEXT (peer-reviewed abstracts — use these to ground your reasoning):\n\n${academicContext}\n\n---\n\nNow solve this ${subject} problem using the ReAct framework, referencing the above context where relevant:\n\n${problem}${levelNote}`
+    : `Solve this ${subject} problem using the ReAct framework:\n\n${problem}${levelNote}`;
 
   await anthropic.messages.stream({
     model: "claude-sonnet-4-5",

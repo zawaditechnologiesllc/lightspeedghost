@@ -62,7 +62,7 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
       : body.problem;
 
     // 1. ReAct Loop — Pi Engine pattern: Think → Act → Observe → Reflect
-    const reactResult = await reactSolve(augmentedProblem, body.subject, undefined, academicContext);
+    const reactResult = await reactSolve(augmentedProblem, body.subject, undefined, academicContext, body.academicLevel);
 
     // 2. Chain-of-Verification — Critic Agent checks for errors (Gauth-killer pattern)
     const coveResult = await chainOfVerification(body.problem, body.subject, reactResult);
@@ -256,6 +256,7 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
           try { res.write(`event: token\ndata: ${JSON.stringify({ id: "react", text: chunk })}\n\n`); } catch { /* ignore */ }
         },
         academicContext,
+        body.academicLevel,
       );
     } catch (reactErr) {
       req.log.error({ err: reactErr }, "ReAct loop failed");

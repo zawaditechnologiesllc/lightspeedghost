@@ -10,7 +10,7 @@ import {
   AlertTriangle, XCircle, Copy, CheckCheck,
   Download, Loader2, RotateCcw, Camera, FileText, Zap,
   BookOpen, Atom, Calculator, Cpu, BarChart2, Layers,
-  Database,
+  Database, GraduationCap,
 } from "lucide-react";
 import type { StemSolution } from "@workspace/api-client-react";
 import StemImageOcr from "@/components/StemImageOcr";
@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import { useWakeLock } from "@/hooks/useWakeLock";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const schema = z.object({
   problem: z.string().min(5, "Please describe your problem"),
@@ -140,9 +141,19 @@ const API = import.meta.env.VITE_API_URL ?? "";
 
 interface SolveStep { id: string; message: string; status: "running" | "done" | "pending" }
 
+const ACADEMIC_LEVELS = [
+  { value: "high_school",   label: "High School" },
+  { value: "undergrad_1_2", label: "UG Year 1–2" },
+  { value: "undergrad_3_4", label: "UG Year 3–4" },
+  { value: "honours",       label: "Honours" },
+  { value: "masters",       label: "Masters" },
+  { value: "phd",           label: "PhD" },
+];
+
 export default function StemSolver() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const datasetInputRef = useRef<HTMLInputElement>(null);
+  const { academicLevel, saveAcademicLevel } = useUserProfile();
   const [isFileExtracting, setIsFileExtracting] = useState(false);
   const [fileExtractError, setFileExtractError] = useState<string | null>(null);
   const [datasetText, setDatasetText] = useState("");
@@ -273,7 +284,7 @@ export default function StemSolver() {
       const resp = await apiFetch(`/stem/solve-stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, datasetText: datasetText.trim() || undefined }),
+        body: JSON.stringify({ ...data, datasetText: datasetText.trim() || undefined, academicLevel: academicLevel || undefined }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -608,6 +619,29 @@ export default function StemSolver() {
         )}
         {/* Bottom action row */}
         <div className="px-4 py-3 border-t border-border bg-muted/20">
+          {/* Academic level */}
+          <div className="mb-3">
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
+              <GraduationCap size={12} /> Academic Level
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {ACADEMIC_LEVELS.map(lvl => (
+                <button
+                  key={lvl.value}
+                  type="button"
+                  onClick={() => saveAcademicLevel(lvl.value)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md border text-[11px] font-medium transition-all",
+                    academicLevel === lvl.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  )}
+                >
+                  {lvl.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-1.5 cursor-pointer">
