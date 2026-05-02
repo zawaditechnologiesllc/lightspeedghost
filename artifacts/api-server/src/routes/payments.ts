@@ -1053,9 +1053,13 @@ router.post("/payments/webhook/paystack", async (req: Request, res: Response) =>
 // ── Webhook: IntaSend ─────────────────────────────────────────────────────────
 
 router.post("/payments/webhook/intasend", async (req: Request, res: Response) => {
-  // Optional HMAC signature check — activate by setting INTASEND_WEBHOOK_SECRET on Render.
-  // IntaSend sends the signature in the x-intasend-signature header.
   const intasendSecret = process.env.INTASEND_WEBHOOK_SECRET ?? "";
+  // Require signature in production — if secret not configured, reject to prevent spoofed events.
+  if (!intasendSecret && process.env.NODE_ENV === "production") {
+    logger.warn("[intasend] Webhook rejected — INTASEND_WEBHOOK_SECRET not set in production.");
+    res.status(500).json({ error: "Webhook not configured" });
+    return;
+  }
   if (intasendSecret) {
     const sig = req.headers["x-intasend-signature"] as string ?? "";
     const body = req.body as Buffer;
@@ -1089,6 +1093,12 @@ router.post("/payments/webhook/paddle", async (req: Request, res: Response) => {
   const secret = process.env.PADDLE_WEBHOOK_SECRET ?? "";
   const sig = req.headers["paddle-signature"] as string ?? "";
   const body = req.body as Buffer;
+
+  if (!secret && process.env.NODE_ENV === "production") {
+    logger.warn("[paddle] Webhook rejected — PADDLE_WEBHOOK_SECRET not set in production.");
+    res.status(500).json({ error: "Webhook not configured" });
+    return;
+  }
 
   if (secret) {
     const parts = sig.split(";").reduce<Record<string, string>>((acc, part) => {
@@ -1133,6 +1143,12 @@ router.post("/payments/webhook/lemon-squeezy", async (req: Request, res: Respons
   const secret = process.env.LEMONSQUEEZY_WEBHOOK_SECRET ?? "";
   const sig = req.headers["x-signature"] as string ?? "";
   const body = req.body as Buffer;
+
+  if (!secret && process.env.NODE_ENV === "production") {
+    logger.warn("[lemon-squeezy] Webhook rejected — LEMONSQUEEZY_WEBHOOK_SECRET not set in production.");
+    res.status(500).json({ error: "Webhook not configured" });
+    return;
+  }
 
   if (secret) {
     const hash = crypto.createHmac("sha256", secret).update(body).digest("hex");

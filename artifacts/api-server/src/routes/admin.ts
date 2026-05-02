@@ -544,6 +544,12 @@ router.post("/mwaramuriuki-login/users/:id/credits", async (req: Request, res: R
   if (!amountCents || amountCents === 0) {
     res.status(400).json({ error: "amountCents must be non-zero" }); return;
   }
+  if (typeof amountCents !== "number" || !Number.isInteger(amountCents) || Math.abs(amountCents) > 10_000_000) {
+    res.status(400).json({ error: "amountCents must be an integer and cannot exceed ±$100,000" }); return;
+  }
+  if (reason !== undefined && (typeof reason !== "string" || reason.length > 300)) {
+    res.status(400).json({ error: "reason must be a string under 300 characters" }); return;
+  }
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -1107,6 +1113,16 @@ router.post("/contact", async (req: Request, res: Response) => {
     };
     if (!name?.trim() || !email?.trim() || !message?.trim()) {
       return res.status(400).json({ error: "name, email, and message are required" });
+    }
+    if (name.trim().length > 200 || email.trim().length > 320 || message.trim().length > 5000) {
+      return res.status(400).json({ error: "Input too long" });
+    }
+    if (institution && institution.trim().length > 300) {
+      return res.status(400).json({ error: "Institution name too long" });
+    }
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRe.test(email.trim())) {
+      return res.status(400).json({ error: "Invalid email address" });
     }
     await pool.query(
       `INSERT INTO contact_messages (name, email, institution, message, seats) VALUES ($1,$2,$3,$4,$5)`,

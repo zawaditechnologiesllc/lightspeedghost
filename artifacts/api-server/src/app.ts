@@ -307,7 +307,19 @@ app.use(
   aiLimiter,
 );
 
-// ── Admin login brute-force protection ────────────────────────────────────────
+// ── Admin brute-force protection — covers ALL admin routes, not just /verify ──
+// Every admin route checks the x-admin-password header, so every route is a
+// potential brute-force target. /verify gets the strict 10/15-min limit.
+// All other admin routes share a 300/15-min cap to cover lateral brute-forcing.
+const adminBroadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many admin requests from this IP. Try again later." },
+  skipSuccessfulRequests: false,
+});
+app.use("/api/mwaramuriuki-login", adminBroadLimiter);
 app.use("/api/mwaramuriuki-login/verify", adminLoginLimiter);
 
 // ── Body parsers — strict size limits ─────────────────────────────────────────
