@@ -32,9 +32,13 @@ app.head("/api/health", (_req: Request, res: Response) => {
   res.status(200).end();
 });
 
-// ── Diagnostic config — before CORS so direct browser access works ─────────
-// Shows which env vars are present (as booleans) — no secret values exposed.
-app.get("/api/health/config", (_req: Request, res: Response) => {
+// ── Diagnostic config — DISABLED in production to avoid env-var disclosure ───
+// Only available in development. In production, returns 404.
+app.get("/api/health/config", (req: Request, res: Response) => {
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
   const check = (key: string) => !!process.env[key];
   res.json({
     production: process.env.NODE_ENV === "production",

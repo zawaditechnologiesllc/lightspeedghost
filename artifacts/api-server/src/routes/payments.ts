@@ -922,25 +922,91 @@ router.post("/payments/webhook/stripe", async (req: Request, res: Response) => {
   }
 
   try {
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const userId = session.metadata?.userId;
-      if (userId && session.payment_status === "paid") {
-        await pool.query(
-          `UPDATE payments SET status='completed', completed_at=NOW()
-           WHERE gateway_session_id=$1`,
-          [session.id]
-        );
-        await maybeRecordReferralCommission(userId, session.amount_total ?? 0);
-        await markFirstPendingDiscountApplied(userId);
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.userId;
+        if (userId && session.payment_status === "paid") {
+          await pool.query(
+            `UPDATE payments SET status='completed', completed_at=NOW()
+             WHERE gateway_session_id=$1`,
+            [session.id]
+          );
+          await maybeRecordReferralCommission(userId, session.amount_total ?? 0);
+          await markFirstPendingDiscountApplied(userId);
+        }
+        break;
       }
-    } else if (event.type === "customer.subscription.deleted") {
-      const sub = event.data.object as Stripe.Subscription;
-      await pool.query(
-        `UPDATE user_subscriptions SET status='cancelled', updated_at=NOW()
-         WHERE gateway_subscription_id=$1`,
-        [sub.id]
-      );
+
+      case "invoice.payment_succeeded": {
+        // Stripe fires this on every successful renewal. Extend the period end.
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string; customer?: string };
+        const stripeSubId = invoice.subscription;
+        if (stripeSubId && typeof stripeSubId === "string") {
+          // Retrieve the subscription to get the authoritative period end
+          try {
+            const stripeSub = await (getStripe() as Stripe).subscriptions.retrieve(stripeSubId);
+            const periodEnd = new Date(stripeSub.current_period_end * 1000);
+            await pool.query(
+              `UPDATE user_subscriptions
+               SET status='active', current_period_end=$1, updated_at=NOW()
+               WHERE gateway_subscription_id=$2`,
+              [periodEnd, stripeSubId]
+            );
+            logger.info({ stripeSubId, periodEnd }, "[stripe] Subscription renewed");
+          } catch (subErr) {
+            logger.error({ subErr }, "[stripe] Failed to retrieve subscription after renewal");
+          }
+        }
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        // Mark subscription as past_due; access continues until current_period_end
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string };
+        const stripeSubId = invoice.subscription;
+        if (stripeSubId && typeof stripeSubId === "string") {
+          await pool.query(
+            `UPDATE user_subscriptions SET status='past_due', updated_at=NOW()
+             WHERE gateway_subscription_id=$1`,
+            [stripeSubId]
+          );
+          logger.warn({ stripeSubId }, "[stripe] Subscription payment failed — marked past_due");
+        }
+        break;
+      }
+
+      case "customer.subscription.updated": {
+        // Sync plan/status changes (upgrades, downgrades, cancellation at period end)
+        const stripeSub = event.data.object as Stripe.Subscription;
+        const periodEnd = new Date(stripeSub.current_period_end * 1000);
+        const status = stripeSub.status === "active" ? "active"
+          : stripeSub.status === "past_due" ? "past_due"
+          : stripeSub.status === "canceled" ? "cancelled"
+          : stripeSub.status;
+        await pool.query(
+          `UPDATE user_subscriptions
+           SET status=$1, current_period_end=$2, updated_at=NOW()
+           WHERE gateway_subscription_id=$3`,
+          [status, periodEnd, stripeSub.id]
+        );
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        await pool.query(
+          `UPDATE user_subscriptions SET status='cancelled', updated_at=NOW()
+           WHERE gateway_subscription_id=$1`,
+          [sub.id]
+        );
+        logger.info({ subId: sub.id }, "[stripe] Subscription cancelled");
+        break;
+      }
+
+      default:
+        // Unhandled event type — ignore silently
+        break;
     }
   } catch (err) {
     logger.error({ err }, "Stripe webhook processing error");
@@ -1102,7 +1168,7 @@ router.post("/payments/webhook/lemon-squeezy", async (req: Request, res: Respons
 
 // ── Admin: gateway management ─────────────────────────────────────────────────
 
-router.get("/admin/gateways", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/gateways", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -1144,7 +1210,7 @@ function isGatewayConfigured(g: GatewayName): boolean {
   }
 }
 
-router.patch("/admin/gateways/:name", async (req: Request, res: Response) => {
+router.patch("/mwaramuriuki-login/gateways/:name", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -1169,7 +1235,7 @@ router.patch("/admin/gateways/:name", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/admin/payments", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/payments", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -1206,7 +1272,7 @@ router.get("/admin/payments", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/admin/subscriptions", async (req: Request, res: Response) => {
+router.get("/mwaramuriuki-login/subscriptions-list", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -1223,7 +1289,7 @@ router.get("/admin/subscriptions", async (req: Request, res: Response) => {
   }
 });
 
-router.patch("/admin/user-risk/:userId", async (req: Request, res: Response) => {
+router.patch("/mwaramuriuki-login/user-risk/:userId", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;

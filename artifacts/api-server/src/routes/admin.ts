@@ -769,7 +769,7 @@ router.get("/mwaramuriuki-login/logs", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const filter = (req.query.filter as string) ?? "all";
   try {
-    let where = `WHERE path NOT IN ('/api/healthz') AND path NOT LIKE '%/admin/%'`;
+    let where = `WHERE path NOT IN ('/api/healthz') AND path NOT LIKE '%/mwaramuriuki-login/%'`;
     if (filter === "success") where += " AND status < 400";
     else if (filter === "errors") where += " AND status >= 400";
 

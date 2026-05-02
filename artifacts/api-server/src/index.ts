@@ -175,9 +175,29 @@ async function runStartupTasks(): Promise<void> {
     logger.error({ err }, "[startup] Failed to ensure ebook subscriptions table — ebook access checks may fail");
   }
 
-  // 9. Performance indexes — idempotent (IF NOT EXISTS). Critical for 10M+ users/month.
-  //    Without these, every document lookup, session expiry scan, and usage count query
-  //    does a full sequential scan. Each index below targets a specific hot query path.
+  // 9. Subscription expiry sweep — mark any subscriptions past their period end as expired.
+  //    This handles gateways that don't fire webhook renewal events (Paystack, IntaSend, manual).
+  //    Stripe subscriptions are updated in real-time via webhooks; this is a safety net for all.
+  try {
+    const { rowCount } = await pool.query(`
+      UPDATE user_subscriptions
+      SET status = 'expired', updated_at = NOW()
+      WHERE status = 'active'
+        AND current_period_end IS NOT NULL
+        AND current_period_end < NOW()
+    `);
+    if (rowCount && rowCount > 0) {
+      logger.info(`[startup] Expired ${rowCount} subscription(s) past their period end`);
+    } else {
+      logger.info("[startup] Subscription expiry sweep complete — no expired subscriptions found");
+    }
+  } catch (err) {
+    logger.warn({ err }, "[startup] Subscription expiry sweep failed — will retry on next restart");
+  }
+
+  // 10. Performance indexes — idempotent (IF NOT EXISTS). Critical for 10M+ users/month.
+  //     Without these, every document lookup, session expiry scan, and usage count query
+  //     does a full sequential scan. Each index below targets a specific hot query path.
   try {
     await pool.query(`
       -- Documents: user's paper history (most common query on the dashboard)

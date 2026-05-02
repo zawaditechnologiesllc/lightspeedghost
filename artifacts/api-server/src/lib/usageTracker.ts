@@ -90,12 +90,21 @@ export async function getUsage(userId: string): Promise<Record<string, number>> 
 
 export async function getUserPlan(userId: string): Promise<string> {
   try {
-    const { rows } = await pool.query<{ plan: string; status: string }>(
-      "SELECT plan, status FROM user_subscriptions WHERE user_id = $1",
+    const { rows } = await pool.query<{ plan: string; status: string; current_period_end: Date | null }>(
+      "SELECT plan, status, current_period_end FROM user_subscriptions WHERE user_id = $1",
       [userId],
     );
     const sub = rows[0];
     if (!sub || sub.status !== "active") return "starter";
+    // Auto-expire: if the subscription period has passed, treat as starter
+    if (sub.current_period_end && new Date(sub.current_period_end) < new Date()) {
+      // Mark as expired in the background (fire-and-forget)
+      pool.query(
+        "UPDATE user_subscriptions SET status='expired', updated_at=NOW() WHERE user_id=$1 AND status='active'",
+        [userId],
+      ).catch(() => {});
+      return "starter";
+    }
     return sub.plan ?? "starter";
   } catch {
     return "starter";
