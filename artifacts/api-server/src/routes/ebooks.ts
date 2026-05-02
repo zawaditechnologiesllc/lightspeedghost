@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { pool } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
-import { anthropic } from "../lib/ai";
+import { openai } from "../lib/ai";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { recordUsage } from "../lib/apiCost";
 import { logger } from "../lib/logger";
@@ -249,13 +249,14 @@ Return ONLY valid JSON with this exact shape (no markdown, no code fences):
   "backCoverBlurb": "150-word back cover description"
 }`;
 
-    const outlineResp = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
+    const outlineResp = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
       max_tokens: 2000,
       messages: [{ role: "user", content: outlinePrompt }],
+      response_format: { type: "json_object" },
     });
     const outlineUsage = outlineResp.usage;
-    if (outlineUsage) await recordUsage(userId, "ebook", outlineUsage.input_tokens, outlineUsage.output_tokens, "claude-sonnet-4-5");
+    if (outlineUsage) await recordUsage(userId, "ebook", outlineUsage.prompt_tokens, outlineUsage.completion_tokens, "gpt-4o-mini");
 
     let outline: {
       title: string; subtitle: string; tagline: string;
@@ -264,7 +265,7 @@ Return ONLY valid JSON with this exact shape (no markdown, no code fences):
     };
 
     try {
-      const raw = (outlineResp.content[0].type === "text" ? outlineResp.content[0].text : "").trim();
+      const raw = (outlineResp.choices[0]?.message.content ?? "").trim();
       const jsonStart = raw.indexOf("{");
       const jsonEnd = raw.lastIndexOf("}");
       outline = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
@@ -349,15 +350,15 @@ Write a complete, well-structured chapter with:
 Write in ${language}. Do NOT use generic filler — every paragraph must deliver genuine value.
 ${inspiration ? `Keep this inspiration/angle in mind: ${inspiration}` : ""}`;
 
-      const chResp = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
+      const chResp = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         max_tokens: 4000,
         messages: [{ role: "user", content: chapterPrompt }],
       });
       const chUsage = chResp.usage;
-      if (chUsage) await recordUsage(userId, "ebook", chUsage.input_tokens, chUsage.output_tokens, "claude-sonnet-4-5");
+      if (chUsage) await recordUsage(userId, "ebook", chUsage.prompt_tokens, chUsage.completion_tokens, "gpt-4o-mini");
 
-      const chapterText = chResp.content[0].type === "text" ? chResp.content[0].text : "";
+      const chapterText = chResp.choices[0]?.message.content ?? "";
       fullContent += `\n\n# Chapter ${ch.number}: ${ch.title}\n\n${chapterText}\n\n---\n`;
 
       send("step", { id: `chapter_${ch.number}`, message: `Chapter ${ch.number} complete`, status: "done" });
