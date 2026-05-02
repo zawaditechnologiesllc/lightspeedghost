@@ -356,6 +356,7 @@ export const AskStudyAssistantBody = zod.object({
     .enum(["tutor", "explain", "quiz", "summarize"])
     .default(askStudyAssistantBodyModeDefault),
   subject: zod.string().optional(),
+  academicLevel: zod.string().optional(),
 });
 
 export const AskStudyAssistantResponse = zod.object({

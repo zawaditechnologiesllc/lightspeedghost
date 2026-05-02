@@ -191,7 +191,7 @@ ${datasetAnalysis}
 • If a factual claim cannot be grounded in the provided materials or academic sources, flag it: "[unverified — recommend checking primary sources]"
 
 CURRENT MODE: ${(body.mode ?? "tutor").toUpperCase()}
-Mode instructions: ${modeInstruction}
+Mode instructions: ${modeInstruction}${body.academicLevel ? `\nSTUDENT ACADEMIC LEVEL: ${ACADEMIC_LEVEL_LABELS[body.academicLevel] ?? body.academicLevel} — calibrate vocabulary, depth, and difficulty accordingly.` : ""}
 
 End every response with:
 FOLLOW_UP_1: [relevant follow-up question]
@@ -287,17 +287,32 @@ const GenerateBody = z.object({
   subject: z.string().optional(),
   weakTopics: z.array(z.string()).optional(),
   datasetText: z.string().optional(),
+  academicLevel: z.string().optional(),
   images: z.array(z.object({
     base64: z.string().max(10_000_000),
     mimeType: z.string(),
   })).optional(),
 });
 
-const GENERATE_PROMPTS: Record<string, (content: string, subject: string, weakTopics?: string[]) => string> = {
-  flashcards: (content, subject) => `
+const ACADEMIC_LEVEL_LABELS: Record<string, string> = {
+  high_school:    "High School (grade 9-12)",
+  undergrad_1_2:  "Undergraduate — Years 1-2 (introductory college)",
+  undergrad_3_4:  "Undergraduate — Years 3-4 (advanced college)",
+  masters:        "Master's level (graduate)",
+  phd:            "PhD / Doctoral level",
+  professional:   "Professional / Continuing Education",
+};
+
+function levelNote(academicLevel?: string) {
+  const label = academicLevel ? (ACADEMIC_LEVEL_LABELS[academicLevel] ?? academicLevel) : null;
+  return label ? `STUDENT ACADEMIC LEVEL: ${label} — calibrate vocabulary, depth, and difficulty accordingly.\n\n` : "";
+}
+
+const GENERATE_PROMPTS: Record<string, (content: string, subject: string, weakTopics?: string[], academicLevel?: string) => string> = {
+  flashcards: (content, subject, _wt, academicLevel) => `
 You are an expert educator. Create 15 high-quality flashcards from this study material on ${subject}.
 
-Study material:
+${levelNote(academicLevel)}Study material:
 ${content.slice(0, 40000)}
 
 Return ONLY valid JSON (no markdown, no code blocks), exactly this format:
@@ -305,10 +320,10 @@ Return ONLY valid JSON (no markdown, no code blocks), exactly this format:
 
 Generate 15 flashcards covering the most important concepts, definitions, formulas, and facts.`,
 
-  quiz: (content, subject) => `
+  quiz: (content, subject, _wt, academicLevel) => `
 You are an expert educator. Create 10 multiple-choice quiz questions from this study material on ${subject}.
 
-Study material:
+${levelNote(academicLevel)}Study material:
 ${content.slice(0, 40000)}
 
 Return ONLY valid JSON, exactly this format:
@@ -316,10 +331,10 @@ Return ONLY valid JSON, exactly this format:
 
 "correct" is the 0-based index of the right answer. Mix easy (30%), medium (50%), and hard (20%) questions.`,
 
-  summary: (content, subject) => `
+  summary: (content, subject, _wt, academicLevel) => `
 You are an expert educator. Create a comprehensive structured summary of this study material on ${subject}.
 
-Study material:
+${levelNote(academicLevel)}Study material:
 ${content.slice(0, 40000)}
 
 Return ONLY valid JSON, exactly this format:
@@ -327,19 +342,19 @@ Return ONLY valid JSON, exactly this format:
 
 Create 4-6 sections covering all major concepts.`,
 
-  studyguide: (content, subject) => `
+  studyguide: (content, subject, _wt, academicLevel) => `
 You are an expert educator. Create a comprehensive study guide for ${subject} from this material.
 
-Study material:
+${levelNote(academicLevel)}Study material:
 ${content.slice(0, 40000)}
 
 Return ONLY valid JSON, exactly this format:
 {"title":"Study Guide: Topic","sections":[{"type":"overview","heading":"What This Is About","content":"..."},{"type":"concepts","heading":"Core Concepts","items":[{"name":"Concept","explanation":"...","example":"..."}]},{"type":"process","heading":"Step-by-Step Process","steps":["Step 1: ...","Step 2: ..."]},{"type":"tips","heading":"Exam Tips","tips":["Remember that...","Common mistake: ..."]}],"quickRef":[{"label":"Formula/Key","value":"..."}]}`,
 
-  slides: (content, subject) => `
+  slides: (content, subject, _wt, academicLevel) => `
 You are an expert presentation designer. Create a 10-slide presentation from this study material on ${subject}.
 
-Study material:
+${levelNote(academicLevel)}Study material:
 ${content.slice(0, 40000)}
 
 Return ONLY valid JSON, exactly this format:
@@ -347,10 +362,10 @@ Return ONLY valid JSON, exactly this format:
 
 Include: 1 title slide, 1 agenda, 6-7 content slides, 1 conclusion. Each content slide has 3-5 bullets and speaker notes.`,
 
-  weakpoints: (content, subject, weakTopics = []) => `
+  weakpoints: (content, subject, weakTopics = [], academicLevel) => `
 You are an adaptive learning expert. The student has struggled with these topics: ${weakTopics.join(", ") || "general concepts"}.
 
-Study material:
+${levelNote(academicLevel)}Study material:
 ${content.slice(0, 30000)}
 
 Create 8 targeted practice questions focusing on their weak areas.
@@ -380,7 +395,7 @@ router.post("/study/generate", requireAuth, async (req, res) => {
       ? `${body.content}\n\n---\n\n${datasetAnalysis}`
       : body.content;
 
-    const prompt = promptFn(enrichedContent, subject, body.weakTopics);
+    const prompt = promptFn(enrichedContent, subject, body.weakTopics, body.academicLevel);
 
     // Build message content — include images as vision blocks if provided
     type ImageBlock = { type: "image"; source: { type: "base64"; media_type: string; data: string } };

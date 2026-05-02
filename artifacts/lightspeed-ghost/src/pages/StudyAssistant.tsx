@@ -18,6 +18,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import { useWakeLock } from "@/hooks/useWakeLock";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -138,11 +139,12 @@ async function callGenerate(
   images: { base64: string; mimeType: string }[],
   weakTopics?: string[],
   datasetText?: string,
+  academicLevel?: string,
 ) {
   const res = await apiFetch(`/study/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, type, subject, weakTopics, images, datasetText: datasetText?.trim() || undefined }),
+    body: JSON.stringify({ content, type, subject, weakTopics, images, datasetText: datasetText?.trim() || undefined, academicLevel }),
   });
   if (!res.ok) {
     const errBody = await res.json().catch(() => null);
@@ -158,6 +160,7 @@ export default function StudyAssistant() {
   const imageInputRef   = useRef<HTMLInputElement>(null);
   const datasetInputRef = useRef<HTMLInputElement>(null);
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
+  const { academicLevel } = useUserProfile();
   const subjectInputRef = useRef<HTMLInputElement>(null);
 
   // Input state
@@ -315,6 +318,7 @@ export default function StudyAssistant() {
         images,
         type === "weakpoints" ? wrongTopics : undefined,
         datasetText,
+        academicLevel,
       );
       if (type === "flashcards") { setFlashcards(r.data?.flashcards ?? []); setCardIdx(0); setCardFlipped(false); setMasteredCards(new Set()); }
       if (type === "quiz")       { setQuiz(r.data?.questions ?? []); setQuizAnswers([]); setQuizSubmitted(false); setCurrentQ(0); }
@@ -327,7 +331,7 @@ export default function StudyAssistant() {
       setGenerateError(e instanceof Error ? e.message : "Generation failed. Please try again.");
       setActiveView(null);
     } finally { setIsGenerating(false); }
-  }, [topic, sources, selectedType, selectedSubject, wrongTopics, datasetText]);
+  }, [topic, sources, selectedType, selectedSubject, wrongTopics, datasetText, academicLevel]);
 
   // ── Quiz helpers ──────────────────────────────────────────────────────
 
