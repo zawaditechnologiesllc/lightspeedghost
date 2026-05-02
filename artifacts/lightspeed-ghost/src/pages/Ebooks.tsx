@@ -58,7 +58,7 @@ const INDUSTRIES = [
   "Environment & Sustainability", "Politics & Society", "Media & Entertainment",
 ];
 
-const SECTORS = {
+const SECTORS: Record<string, string[]> = {
   "Business & Entrepreneurship": ["Startups", "Small Business", "Corporate", "Franchising", "Non-profit", "Consulting"],
   "Technology & AI": ["Software", "Artificial Intelligence", "Cybersecurity", "Blockchain", "IoT", "Cloud Computing"],
   "Finance & Investing": ["Stock Market", "Cryptocurrency", "Real Estate Finance", "Personal Finance", "Banking", "Insurance"],
@@ -69,7 +69,17 @@ const SECTORS = {
   "Real Estate": ["Residential", "Commercial", "Investment", "Property Management", "Development", "REITs"],
   "E-commerce": ["Amazon FBA", "Dropshipping", "DTC Brands", "Marketplace", "Logistics", "Customer Experience"],
   "Education": ["EdTech", "Higher Education", "K-12", "Vocational Training", "Online Learning", "Curriculum Design"],
-} as Record<string, string[]>;
+  "Law & Legal": ["Corporate Law", "Criminal Law", "Family Law", "Intellectual Property", "Immigration", "Compliance"],
+  "Science & Research": ["Life Sciences", "Physics", "Chemistry", "Environmental Science", "Social Sciences", "Data Science"],
+  "Arts & Creativity": ["Visual Arts", "Music", "Writing & Publishing", "Film & Video", "Design", "Photography"],
+  "Sports & Fitness": ["Athletic Training", "Sports Business", "Coaching", "Nutrition & Performance", "Mental Fitness", "E-sports"],
+  "Food & Nutrition": ["Cooking & Recipes", "Food Business", "Dietetics", "Food Science", "Sustainable Food", "Culinary Arts"],
+  "Travel & Lifestyle": ["Travel Blogging", "Digital Nomad", "Luxury Travel", "Budget Travel", "Hospitality", "Adventure"],
+  "Parenting & Family": ["Early Childhood", "Teen Parenting", "Family Finance", "Education at Home", "Relationships", "Special Needs"],
+  "Environment & Sustainability": ["Climate Change", "Renewable Energy", "Sustainable Business", "Conservation", "Green Tech", "Circular Economy"],
+  "Politics & Society": ["Public Policy", "Social Justice", "International Relations", "Governance", "Activism", "Community Development"],
+  "Media & Entertainment": ["Podcasting", "YouTube & Streaming", "Journalism", "Public Relations", "Gaming", "Influencer Marketing"],
+};
 
 const TONES = [
   { value: "authoritative", label: "Authoritative", desc: "Expert, confident, knowledge-driven" },
@@ -575,47 +585,90 @@ export default function Ebooks() {
     const doneCount = steps.filter(s => s.status === "done").length;
     const totalExpected = steps.length || 3;
     const pct = Math.round((doneCount / totalExpected) * 100);
+    const currentStep = steps.find(s => s.status === "running");
 
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 py-10">
         <div className="w-full max-w-lg">
-          <div className="flex flex-col items-center mb-8 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 flex items-center justify-center mb-4 relative">
-              <BookOpen size={28} className="text-purple-400" />
-              <div className="absolute inset-0 rounded-2xl border border-purple-500/40 animate-ping opacity-20" />
+          {/* LightSpeed AI brand header */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center relative">
+                <Zap size={22} className="text-primary" />
+                <div className="absolute inset-0 rounded-2xl border-2 border-primary/30 animate-ping opacity-20" />
+              </div>
             </div>
-            <h2 className="text-xl font-bold text-white mb-1">Writing Your Ebook</h2>
-            <p className="text-white/50 text-sm">
-              {outline ? `"${outline.title}"` : "Researching sources and building structure…"}
-            </p>
+            <p className="text-[11px] font-bold text-primary uppercase tracking-[0.18em] mb-1">LightSpeed AI</p>
+            <h2 className="text-xl font-bold text-foreground">Writing Your Ebook</h2>
+            {currentStep && (
+              <p className="text-sm text-muted-foreground mt-1 animate-pulse">{currentStep.message}</p>
+            )}
+            {outline && !currentStep && (
+              <p className="text-sm text-muted-foreground mt-1 truncate max-w-xs mx-auto">"{outline.title}"</p>
+            )}
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-5 mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Progress</span>
-              <span className="text-xs font-bold text-purple-400">{pct}%</span>
+          {/* Progress bar */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Progress</span>
+              <span className="text-xs font-bold text-primary">{pct}%</span>
             </div>
-            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-4">
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-700"
+                className="h-full bg-gradient-to-r from-primary to-purple-400 rounded-full transition-all duration-700"
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <div className="space-y-0.5">
-              {steps.map(step => <StepRow key={step.id} step={step} />)}
-            </div>
+          </div>
+
+          {/* Step list */}
+          <div className="bg-card border border-border rounded-xl p-4 mb-4 space-y-1">
+            {steps.map((step, i) => (
+              <div key={step.id} className={cn(
+                "flex items-center gap-3 px-2 py-2.5 rounded-lg transition-colors",
+                step.status === "running" ? "bg-primary/5 border border-primary/20" : ""
+              )}>
+                <div className="shrink-0 w-5 h-5 flex items-center justify-center">
+                  {step.status === "done"    && <CheckCircle size={15} className="text-emerald-400" />}
+                  {step.status === "running" && <Loader2 size={15} className="animate-spin text-primary" />}
+                  {step.status === "pending" && (
+                    <span className="w-5 h-5 rounded-full border-2 border-border flex items-center justify-center text-[9px] font-bold text-muted-foreground">{i + 1}</span>
+                  )}
+                  {step.status === "error"   && <X size={15} className="text-red-400" />}
+                </div>
+                <span className={cn(
+                  "text-sm leading-snug",
+                  step.status === "done"    ? "text-muted-foreground line-through decoration-muted-foreground/30" :
+                  step.status === "running" ? "text-foreground font-medium" :
+                  step.status === "error"   ? "text-red-400" :
+                  "text-muted-foreground/40"
+                )}>
+                  {step.message}
+                </span>
+                {step.status === "running" && (
+                  <span className="ml-auto text-[10px] font-semibold text-primary shrink-0 uppercase tracking-wider">Active</span>
+                )}
+                {step.status === "done" && (
+                  <span className="ml-auto text-[10px] text-emerald-400/70 shrink-0">Done</span>
+                )}
+              </div>
+            ))}
           </div>
 
           {outline && (
-            <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
-              <p className="text-purple-300 text-xs font-semibold mb-1">Outline generated</p>
-              <p className="text-white font-semibold text-sm">{outline.title}</p>
-              <p className="text-white/50 text-xs">{outline.subtitle}</p>
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Zap size={12} className="text-primary" />
+                <p className="text-[11px] font-semibold text-primary uppercase tracking-wider">Outline Ready</p>
+              </div>
+              <p className="text-sm font-semibold text-foreground">{outline.title}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{outline.subtitle}</p>
             </div>
           )}
 
-          <p className="text-center text-white/25 text-xs mt-5">
-            This takes a few minutes — your ebook is being written chapter by chapter using verified sources.
+          <p className="text-center text-muted-foreground/40 text-xs">
+            Keep this window open — LightSpeed AI is writing chapter by chapter using verified sources.
           </p>
         </div>
       </div>
@@ -626,29 +679,33 @@ export default function Ebooks() {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Header */}
-      <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-border shrink-0">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 flex items-center justify-center shrink-0">
-              <BookOpen size={18} className="text-purple-400" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground leading-tight flex items-center gap-2">
-                Ebook Writer
-                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 text-[10px] font-semibold">BUSINESS</span>
-              </h1>
-              <p className="text-muted-foreground text-xs">AI ebooks for Amazon, Apple Books &amp; 40+ platforms · Verified sources · Expert quotes</p>
+      <div className="px-4 sm:px-6 pt-6 pb-4 border-b border-border shrink-0">
+        {/* Centered LightSpeed AI brand header */}
+        <div className="text-center space-y-1.5 mb-4">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Zap size={20} className="text-primary" />
             </div>
           </div>
+          <p className="text-[11px] font-bold text-primary uppercase tracking-[0.18em]">LightSpeed AI</p>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Ebook Writer</h1>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Write &amp; publish professional ebooks to Amazon, Apple Books &amp; 40+ platforms — powered by verified sources and expert quotes.
+          </p>
+          <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
+            {["15 ebooks / month", "Amazon KDP ready", "15 languages", "Expert quotes", "Publishing guide"].map(f => (
+              <span key={f} className="text-[10px] px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{f}</span>
+            ))}
+          </div>
+        </div>
 
-          {/* Usage badge */}
+        {/* Usage badge row */}
+        <div className="flex items-center justify-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20">
             <BarChart2 size={13} className="text-purple-400" />
-            <div>
-              <p className="text-purple-300 text-xs font-bold">{usedThisMonth} / 15</p>
-              <p className="text-purple-300/50 text-[10px]">this month</p>
-            </div>
+            <p className="text-purple-300 text-xs font-bold">{usedThisMonth} / 15 this month</p>
           </div>
+          <span className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500/15 to-pink-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold uppercase tracking-wider">Business</span>
         </div>
 
         {remaining === 0 && (
@@ -886,7 +943,7 @@ export default function Ebooks() {
                 <p className="text-xs font-semibold text-emerald-400">Verified Academic Sources</p>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Every ebook is grounded in real research from Harvard Business Review, MIT Sloan, McKinsey, Semantic Scholar, OpenAlex, PubMed, and 10+ other verified databases. Sources are listed in the appendix.
+                Every ebook is grounded in real research from Harvard Business Review, MIT Sloan, McKinsey, and 10+ verified academic databases. All sources are cited in the appendix.
               </p>
             </div>
           </div>
@@ -904,9 +961,9 @@ export default function Ebooks() {
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
           >
-            <Sparkles size={16} />
-            Generate Ebook
-            <span className="text-white/60 font-normal text-xs">({remaining} remaining)</span>
+            <Zap size={16} />
+            Generate with LightSpeed AI
+            <span className={cn("font-normal text-xs", canGenerate && remaining > 0 ? "text-white/60" : "")}>({remaining} remaining)</span>
           </button>
 
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
