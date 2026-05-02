@@ -67,6 +67,23 @@ const DATA_PAPER_TYPES = new Set([
   "business plan", "financial analysis", "capstone project",
 ]);
 
+const ANALYSIS_TOOLS: { value: string; label: string; badge: string; desc: string }[] = [
+  { value: "r",       label: "R / RStudio",    badge: "R",       desc: "t.test(), lm(), ggplot2, tidyverse" },
+  { value: "python",  label: "Python",          badge: "PY",      desc: "pandas, scipy, statsmodels, seaborn" },
+  { value: "excel",   label: "Excel",           badge: "XL",      desc: "Data Analysis ToolPak, pivot tables" },
+  { value: "spss",    label: "SPSS",            badge: "SPSS",    desc: "IBM SPSS Statistics output format" },
+  { value: "stata",   label: "Stata",           badge: "STATA",   desc: "regress, ttest, anova commands" },
+  { value: "sas",     label: "SAS",             badge: "SAS",     desc: "PROC MEANS, PROC REG, PROC GLM" },
+  { value: "matlab",  label: "MATLAB",          badge: "MAT",     desc: "fitlm(), ttest2(), Statistics Toolbox" },
+  { value: "minitab", label: "Minitab",         badge: "MTB",     desc: "Minitab output tables and menu paths" },
+  { value: "prism",   label: "GraphPad Prism",  badge: "PRISM",   desc: "Biomedical stats, Tukey, F(DFn,DFd)" },
+  { value: "jamovi",  label: "jamovi",          badge: "JMV",     desc: "jamovi (R-based GUI, Cohen's d auto)" },
+  { value: "jasp",    label: "JASP",            badge: "JASP",    desc: "Bayesian stats, BF₁₀, Jeffreys scale" },
+  { value: "tableau", label: "Tableau",         badge: "TAB",     desc: "Visual analytics, trend lines, LOD" },
+  { value: "powerbi", label: "Power BI",        badge: "PBI",     desc: "DAX measures, Power Query, KPIs" },
+  { value: "julia",   label: "Julia",           badge: "JL",      desc: "GLM.jl, HypothesisTests.jl, Plots.jl" },
+];
+
 const PAPER_TYPES = [
   { value: "research",               label: "Research Paper" },
   { value: "essay",                  label: "Essay" },
@@ -296,6 +313,7 @@ export default function WritePaper() {
   const [referenceText, setReferenceText] = useState("");
   const [datasetText, setDatasetText] = useState("");
   const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
+  const [analysisTool, setAnalysisTool] = useState<string>("r");
 
   // ── citation confirmation
   const [detectedStyle, setDetectedStyle] = useState<string | null>(null);
@@ -424,6 +442,7 @@ export default function WritePaper() {
           rubricText: rubricText.trim() || undefined,
           referenceText: referenceText.trim() || undefined,
           datasetText: datasetText.trim() || undefined,
+          analysisTool: datasetText.trim() ? analysisTool : undefined,
         }),
       });
 
@@ -1027,10 +1046,46 @@ export default function WritePaper() {
                 </table>
               </div>
             )}
-            {datasetText && (
-              <p className="text-[10px] text-muted-foreground mt-1">
-                AI will compute means, medians, and standard deviations — your Results section will cite real numbers
-              </p>
+            {/* ── Analysis tool selector — shown as soon as dataset text exists ── */}
+            {datasetText.trim() && (
+              <div className="mt-3">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block flex items-center gap-1.5">
+                  <BarChart3 size={11} />
+                  Analysis Tool
+                  <span className="text-[10px] font-normal lowercase tracking-normal ml-1 text-muted-foreground/60">— AI will use this tool's exact conventions, function names &amp; output format</span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {ANALYSIS_TOOLS.map(tool => (
+                    <button
+                      key={tool.value}
+                      type="button"
+                      onClick={() => setAnalysisTool(tool.value)}
+                      className={cn(
+                        "flex items-start gap-2 px-2.5 py-2 rounded-lg border text-left transition-all",
+                        analysisTool === tool.value
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/30 bg-background"
+                      )}
+                    >
+                      <span className={cn(
+                        "shrink-0 text-[9px] font-bold px-1 py-0.5 rounded mt-0.5 leading-none",
+                        analysisTool === tool.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                      )}>
+                        {tool.badge}
+                      </span>
+                      <div className="min-w-0">
+                        <p className={cn("text-xs font-medium leading-tight truncate", analysisTool === tool.value ? "text-primary" : "text-foreground")}>
+                          {tool.label}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5 truncate">{tool.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground/60 mt-1.5">
+                  Results section will reference {ANALYSIS_TOOLS.find(t => t.value === analysisTool)?.label ?? "your chosen tool"}'s output labels, test names, and citation.
+                </p>
+              </div>
             )}
           </div>
         )}
