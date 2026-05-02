@@ -205,6 +205,22 @@ interface SystemSettings {
   starter_study: string;
   starter_plagiarism: string;
   starter_outline: string;
+  pro_paper: string;
+  pro_revision: string;
+  pro_humanizer: string;
+  pro_stem: string;
+  pro_study: string;
+  pro_plagiarism: string;
+  pro_outline: string;
+  campus_paper: string;
+  campus_revision: string;
+  campus_humanizer: string;
+  campus_stem: string;
+  campus_study: string;
+  campus_plagiarism: string;
+  campus_outline: string;
+  tool_ebooks_enabled: string;
+  [key: string]: string;
 }
 
 interface TrafficData {
@@ -305,7 +321,12 @@ export default function Admin() {
   const [creditAdjusting, setCreditAdjusting] = useState(false);
   const [planEditUser, setPlanEditUser] = useState<AdminUser | null>(null);
   const [planEditValue, setPlanEditValue] = useState("starter");
+  const [planEditSeats, setPlanEditSeats] = useState("5");
+  const [planEditDuration, setPlanEditDuration] = useState("365");
   const [planEditing, setPlanEditing] = useState(false);
+  const [selectedCreditUserId, setSelectedCreditUserId] = useState<string | null>(null);
+  const [userCreditTx, setUserCreditTx] = useState<Array<{ id: number; amount_cents: number; type: string; description: string; created_at: string }>>([]);
+  const [userCreditTxLoading, setUserCreditTxLoading] = useState(false);
   const [banTogglingId, setBanTogglingId] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "completed" | "pending" | "failed">("all");
@@ -673,13 +694,27 @@ export default function Admin() {
     if (!planEditUser) return;
     setPlanEditing(true);
     try {
+      const body: Record<string, unknown> = { plan: planEditValue };
+      if (planEditValue === "campus") {
+        body.seats = Number(planEditSeats) || 5;
+        body.durationDays = Number(planEditDuration) || 365;
+      }
       await adminFetch(`/mwaramuriuki-login/users/${planEditUser.id}/plan`, password, {
         method: "PATCH",
-        body: JSON.stringify({ plan: planEditValue }),
+        body: JSON.stringify(body),
       });
       setUsers((prev) => prev.map((u) => u.id === planEditUser.id ? { ...u, plan: planEditValue } : u));
       setPlanEditUser(null);
     } catch {} finally { setPlanEditing(false); }
+  }
+
+  async function loadUserCreditTransactions(userId: string) {
+    setUserCreditTxLoading(true);
+    try {
+      const data = await adminFetch(`/mwaramuriuki-login/users/${userId}/credit-transactions`, password);
+      setUserCreditTx(data.transactions ?? []);
+    } catch { setUserCreditTx([]); }
+    finally { setUserCreditTxLoading(false); }
   }
 
   async function saveSettings() {
@@ -1167,6 +1202,7 @@ export default function Admin() {
                         plagiarism: <Shield size={16} className="text-cyan-400" />,
                         stem:       <FlaskConical size={16} className="text-amber-400" />,
                         study:      <GraduationCap size={16} className="text-emerald-400" />,
+                        ebook:      <BookOpen size={16} className="text-purple-400" />,
                       };
                       const toolColors: Record<string, string> = {
                         write:      "from-blue-600/10 to-blue-500/5 border-blue-500/12",
@@ -1176,6 +1212,7 @@ export default function Admin() {
                         plagiarism: "from-cyan-600/10 to-cyan-500/5 border-cyan-500/12",
                         stem:       "from-amber-600/10 to-amber-500/5 border-amber-500/12",
                         study:      "from-emerald-600/10 to-emerald-500/5 border-emerald-500/12",
+                        ebook:      "from-purple-600/10 to-purple-500/5 border-purple-500/12",
                       };
                       const rate7d = tool.totalRequests7d > 0 ? tool.errorRate7d : null;
                       const rate30d = tool.totalRequests > 0 ? tool.errorRate : null;
@@ -1543,12 +1580,16 @@ export default function Admin() {
                         <div key={u.user_id} className={`flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < Math.min(creditUsers.length, 15) - 1 ? "border-b border-white/6" : ""}`}>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-white/50 font-mono truncate">{u.user_id.slice(0, 16)}…</p>
-                            <p className="text-[10px] text-white/25 mt-0.5">Spent: {u.lifetime_spent_cents.toLocaleString()} cr</p>
+                            <p className="text-[10px] text-white/25 mt-0.5">Spent: {u.lifetime_spent_cents.toLocaleString()} cr · Earned: {u.lifetime_earned_cents.toLocaleString()} cr</p>
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-bold text-amber-400 tabular-nums">{u.balance_cents.toLocaleString()} cr</p>
                             <p className="text-[10px] text-white/30">≈ ${(u.balance_cents / 100).toFixed(2)}</p>
                           </div>
+                          <button onClick={() => { setSelectedCreditUserId(u.user_id); loadUserCreditTransactions(u.user_id); }}
+                            className="p-1.5 rounded-md text-white/20 hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="View transaction history">
+                            <Eye size={11} />
+                          </button>
                           <button onClick={() => { const usr = users.find((x) => x.id === u.user_id); if (usr) { setCreditAdjustUser(usr); setCreditAdjustAmt(""); setCreditAdjustNote(""); } else { setCreditAdjustUser({ id: u.user_id, email: null, createdAt: null, lastSignIn: null, documentCount: 0, sessionCount: 0, plan: "starter", billing: null, creditBalance: u.balance_cents, lifetimeEarned: u.lifetime_earned_cents, lifetimeSpent: u.lifetime_spent_cents, banned: false, banReason: null }); setCreditAdjustAmt(""); setCreditAdjustNote(""); } }}
                             className="p-1.5 rounded-md text-white/20 hover:text-amber-400 hover:bg-amber-500/10 transition-all" title="Adjust credits">
                             <Edit2 size={11} />
@@ -2357,18 +2398,64 @@ export default function Admin() {
                     {/* Starter limits */}
                     <SettingsCard title="Starter Plan Monthly Limits">
                       <div className="grid grid-cols-2 gap-3">
-                        {[
-                          { key: "starter_paper" as const,      label: "Papers" },
-                          { key: "starter_revision" as const,   label: "Revisions" },
-                          { key: "starter_humanizer" as const,  label: "Humanizer" },
-                          { key: "starter_stem" as const,       label: "STEM Solves" },
-                          { key: "starter_study" as const,      label: "Study Sessions" },
-                          { key: "starter_plagiarism" as const, label: "Plagiarism" },
-                          { key: "starter_outline" as const,    label: "Outlines" },
-                        ].map(({ key, label }) => (
+                        {([
+                          { key: "starter_paper",      label: "Papers" },
+                          { key: "starter_revision",   label: "Revisions" },
+                          { key: "starter_humanizer",  label: "Humanizer" },
+                          { key: "starter_stem",       label: "STEM Solves" },
+                          { key: "starter_study",      label: "Study Sessions" },
+                          { key: "starter_plagiarism", label: "Plagiarism" },
+                          { key: "starter_outline",    label: "Outlines" },
+                        ] as { key: string; label: string }[]).map(({ key, label }) => (
                           <div key={key}>
                             <label className="block text-xs text-white/40 mb-1.5">{label} / month</label>
-                            <input type="number" min="0" value={settings[key]}
+                            <input type="number" min="0" value={settings[key] ?? ""}
+                              onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
+                              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </SettingsCard>
+
+                    {/* Pro limits */}
+                    <SettingsCard title="Pro Plan Monthly Limits">
+                      <div className="grid grid-cols-2 gap-3">
+                        {([
+                          { key: "pro_paper",      label: "Papers" },
+                          { key: "pro_revision",   label: "Revisions" },
+                          { key: "pro_humanizer",  label: "Humanizer" },
+                          { key: "pro_stem",       label: "STEM Solves" },
+                          { key: "pro_study",      label: "Study Sessions" },
+                          { key: "pro_plagiarism", label: "Plagiarism" },
+                          { key: "pro_outline",    label: "Outlines" },
+                        ] as { key: string; label: string }[]).map(({ key, label }) => (
+                          <div key={key}>
+                            <label className="block text-xs text-white/40 mb-1.5">{label} / month</label>
+                            <input type="number" min="0" value={settings[key] ?? ""}
+                              onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
+                              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </SettingsCard>
+
+                    {/* Campus limits */}
+                    <SettingsCard title="Campus Plan Monthly Limits (Per Seat)">
+                      <div className="grid grid-cols-2 gap-3">
+                        {([
+                          { key: "campus_paper",      label: "Papers" },
+                          { key: "campus_revision",   label: "Revisions" },
+                          { key: "campus_humanizer",  label: "Humanizer" },
+                          { key: "campus_stem",       label: "STEM Solves" },
+                          { key: "campus_study",      label: "Study Sessions" },
+                          { key: "campus_plagiarism", label: "Plagiarism" },
+                          { key: "campus_outline",    label: "Outlines" },
+                        ] as { key: string; label: string }[]).map(({ key, label }) => (
+                          <div key={key}>
+                            <label className="block text-xs text-white/40 mb-1.5">{label} / seat / month</label>
+                            <input type="number" min="0" value={settings[key] ?? ""}
                               onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
                               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
                             />
@@ -2383,6 +2470,55 @@ export default function Admin() {
           </main>
         </div>
       </div>
+
+      {/* ── User Credit History Modal ────────────────────────────────────── */}
+      {selectedCreditUserId && (
+        <Modal title="Credit Transaction History" onClose={() => { setSelectedCreditUserId(null); setUserCreditTx([]); }}>
+          <p className="text-xs text-white/30 mb-3 font-mono">{selectedCreditUserId.slice(0, 20)}…</p>
+          {userCreditTxLoading ? (
+            <div className="py-8 flex justify-center"><Loader2 size={16} className="animate-spin text-white/30" /></div>
+          ) : userCreditTx.length === 0 ? (
+            <p className="text-xs text-white/30 text-center py-6">No transactions found</p>
+          ) : (
+            <div className="space-y-1 max-h-96 overflow-y-auto">
+              {userCreditTx.map((tx) => (
+                <div key={tx.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.03] transition-colors">
+                  <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${tx.amount_cents > 0 ? "bg-emerald-500/15" : "bg-red-500/15"}`}>
+                    {tx.amount_cents > 0 ? <ArrowUp size={10} className="text-emerald-400" /> : <ArrowDown size={10} className="text-red-400" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-white/60 truncate">{tx.description}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[9px] text-white/20">{new Date(tx.created_at).toLocaleString()}</span>
+                      <span className={`text-[9px] px-1 py-0.5 rounded capitalize ${tx.type === "bonus" ? "bg-emerald-500/15 text-emerald-400" : tx.type === "spend" ? "bg-red-500/15 text-red-400" : "bg-white/8 text-white/30"}`}>{tx.type}</span>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-bold tabular-nums shrink-0 ${tx.amount_cents > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {tx.amount_cents > 0 ? "+" : ""}{tx.amount_cents.toLocaleString()} cr
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="mt-4 pt-3 border-t border-white/8 flex gap-2">
+            <button
+              onClick={() => {
+                const u = creditUsers.find((x) => x.user_id === selectedCreditUserId);
+                setSelectedCreditUserId(null);
+                setUserCreditTx([]);
+                if (u) {
+                  const usr = users.find((x) => x.id === u.user_id);
+                  if (usr) { setCreditAdjustUser(usr); setCreditAdjustAmt(""); setCreditAdjustNote(""); }
+                  else { setCreditAdjustUser({ id: u.user_id, email: null, createdAt: null, lastSignIn: null, documentCount: 0, sessionCount: 0, plan: "starter", billing: null, creditBalance: u.balance_cents, lifetimeEarned: u.lifetime_earned_cents, lifetimeSpent: u.lifetime_spent_cents, banned: false, banReason: null }); setCreditAdjustAmt(""); setCreditAdjustNote(""); }
+                }
+              }}
+              className="flex-1 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Coins size={11} /> Adjust Credits
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {/* ── Credit Adjust Modal ──────────────────────────────────────────── */}
       {creditAdjustUser && (
@@ -2421,13 +2557,34 @@ export default function Admin() {
           <div className="space-y-3">
             <div>
               <label className="block text-xs text-white/40 mb-1.5">Plan</label>
-              <select value={planEditValue} onChange={(e) => setPlanEditValue(e.target.value)}
+              <select value={planEditValue} onChange={(e) => { setPlanEditValue(e.target.value); if (e.target.value === "campus") { setPlanEditSeats("5"); setPlanEditDuration("365"); } }}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
                 <option value="starter">Starter (free)</option>
                 <option value="pro">Pro</option>
                 <option value="campus">Campus</option>
               </select>
             </div>
+            {planEditValue === "campus" && (
+              <>
+                <div>
+                  <label className="block text-xs text-white/40 mb-1.5">Number of Seats</label>
+                  <input type="number" min="1" value={planEditSeats} onChange={(e) => setPlanEditSeats(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all" />
+                  <p className="text-[10px] text-white/25 mt-1">Minimum 5 seats recommended</p>
+                </div>
+                <div>
+                  <label className="block text-xs text-white/40 mb-1.5">Access Duration</label>
+                  <select value={planEditDuration} onChange={(e) => setPlanEditDuration(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
+                    <option value="30">30 days (1 month)</option>
+                    <option value="90">90 days (3 months)</option>
+                    <option value="180">180 days (6 months)</option>
+                    <option value="365">365 days (1 year)</option>
+                    <option value="730">730 days (2 years)</option>
+                  </select>
+                </div>
+              </>
+            )}
             <div className="bg-amber-500/8 border border-amber-500/15 rounded-xl px-3 py-2.5 text-xs text-amber-400/80">
               ⚠️ This manually overrides the user's subscription. Make sure their payment has been verified before granting paid plans.
             </div>
@@ -2435,7 +2592,7 @@ export default function Admin() {
               className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground hover:opacity-90 font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {planEditing ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-              Update Plan
+              {planEditValue === "campus" ? `Activate Campus (${planEditSeats} seats, ${planEditDuration}d)` : "Update Plan"}
             </button>
           </div>
         </Modal>

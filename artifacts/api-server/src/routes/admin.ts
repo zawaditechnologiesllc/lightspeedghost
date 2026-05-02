@@ -91,7 +91,22 @@ async function initAdminTables() {
       ('tool_humanizer_enabled',  'true'),
       ('tool_plagiarism_enabled', 'true'),
       ('tool_stem_enabled',       'true'),
-      ('tool_study_enabled',      'true')
+      ('tool_study_enabled',      'true'),
+      ('tool_ebooks_enabled',     'true'),
+      ('pro_paper',               '15'),
+      ('pro_revision',            '20'),
+      ('pro_humanizer',           '20'),
+      ('pro_stem',                '60'),
+      ('pro_study',               '150'),
+      ('pro_plagiarism',          '20'),
+      ('pro_outline',             '20'),
+      ('campus_paper',            '5'),
+      ('campus_revision',         '8'),
+      ('campus_humanizer',        '8'),
+      ('campus_stem',             '30'),
+      ('campus_study',            '75'),
+      ('campus_plagiarism',       '10'),
+      ('campus_outline',          '10')
     ON CONFLICT (key) DO NOTHING;
   `);
 }
@@ -208,6 +223,7 @@ const TOOL_DEFS = [
   { key: "plagiarism", label: "Plagiarism Check",  settingKey: "tool_plagiarism_enabled", docType: "plagiarism", path: "/plagiarism/" },
   { key: "stem",       label: "STEM Solver",       settingKey: "tool_stem_enabled",       docType: "stem",       path: "/stem/" },
   { key: "study",      label: "Study Assistant",   settingKey: "tool_study_enabled",      docType: null,         path: "/study/" },
+  { key: "ebook",      label: "Ebook Generator",   settingKey: "tool_ebooks_enabled",     docType: "ebook",      path: "/ebooks/" },
 ];
 
 router.get("/mwaramuriuki-login/tools", async (req: Request, res: Response) => {
@@ -242,6 +258,7 @@ router.get("/mwaramuriuki-login/tools", async (req: Request, res: Response) => {
             WHEN path LIKE '%/plagiarism/%'        THEN 'plagiarism'
             WHEN path LIKE '%/stem/%'              THEN 'stem'
             WHEN path LIKE '%/study/%'             THEN 'study'
+            WHEN path LIKE '%/ebooks/%'            THEN 'ebook'
           END AS path_group,
           COUNT(*)                                                          AS total,
           COUNT(*) FILTER (WHERE status >= 500)                            AS errors,
@@ -251,7 +268,8 @@ router.get("/mwaramuriuki-login/tools", async (req: Request, res: Response) => {
           MAX(created_at)                                                   AS last_used
         FROM request_logs
         WHERE (path LIKE '%/writing/%' OR path LIKE '%/revision/%' OR path LIKE '%/humanizer/%'
-            OR path LIKE '%/plagiarism/%' OR path LIKE '%/stem/%' OR path LIKE '%/study/%')
+            OR path LIKE '%/plagiarism/%' OR path LIKE '%/stem/%' OR path LIKE '%/study/%'
+            OR path LIKE '%/ebooks/%')
           AND created_at > NOW() - INTERVAL '30 days'
         GROUP BY 1
       `).catch(() => ({ rows: [] })),
@@ -489,16 +507,16 @@ router.patch("/mwaramuriuki-login/users/:id/ban", async (req: Request, res: Resp
 router.patch("/mwaramuriuki-login/users/:id/plan", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
-  const { plan, billing } = req.body as { plan: string; billing?: string };
+  const { plan, billing, seats, durationDays } = req.body as { plan: string; billing?: string; seats?: number; durationDays?: number };
   try {
-    // When admin sets a plan manually, always mark it active with a 30-day window
-    // so getUserPlan() returns the correct plan (it checks status + current_period_end)
-    const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    // When admin sets a plan manually, use durationDays if provided; campus defaults to 365 days
+    const days = durationDays ?? (plan === "campus" ? 365 : 30);
+    const periodEnd = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
     await pool.query(`
-      INSERT INTO user_subscriptions (user_id, plan, billing, gateway, status, current_period_end)
-      VALUES ($1, $2, $3, 'manual', 'active', $4)
-      ON CONFLICT (user_id) DO UPDATE SET plan = $2, billing = $3, gateway = 'manual', status = 'active', current_period_end = $4, updated_at = NOW()
-    `, [id, plan, billing ?? null, periodEnd]);
+      INSERT INTO user_subscriptions (user_id, plan, billing, gateway, status, current_period_end, seats)
+      VALUES ($1, $2, $3, 'manual', 'active', $4, $5)
+      ON CONFLICT (user_id) DO UPDATE SET plan = $2, billing = $3, gateway = 'manual', status = 'active', current_period_end = $4, seats = $5, updated_at = NOW()
+    `, [id, plan, billing ?? null, periodEnd, seats ?? null]);
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Failed to update plan" });
@@ -563,6 +581,31 @@ router.get("/mwaramuriuki-login/credits", async (req: Request, res: Response) =>
       users: creditsRows.rows,
       recentTransactions: recentTx.rows,
       totals: totals.rows[0] ?? { total_balance: "0", total_earned: "0", total_spent: "0" },
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/users/:id/credit-transactions ─────────────────────────────────
+
+router.get("/mwaramuriuki-login/users/:id/credit-transactions", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  try {
+    const [txRows, balanceRow] = await Promise.all([
+      pool.query<{ id: number; amount_cents: number; type: string; description: string; created_at: string }>(
+        "SELECT id, amount_cents, type, description, created_at::text FROM credit_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100",
+        [id]
+      ),
+      pool.query<{ balance_cents: number; lifetime_earned_cents: number; lifetime_spent_cents: number }>(
+        "SELECT balance_cents, lifetime_earned_cents, lifetime_spent_cents FROM user_credits WHERE user_id = $1",
+        [id]
+      ),
+    ]);
+    res.json({
+      transactions: txRows.rows,
+      balance: balanceRow.rows[0] ?? { balance_cents: 0, lifetime_earned_cents: 0, lifetime_spent_cents: 0 },
     });
   } catch {
     res.status(500).json({ error: "Internal server error" });
