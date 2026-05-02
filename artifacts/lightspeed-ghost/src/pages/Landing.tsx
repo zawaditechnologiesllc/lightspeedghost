@@ -885,9 +885,9 @@ export default function Landing() {
                 border: "border-violet-500/20 bg-violet-500/5",
               },
               {
-                value: "10",
+                value: "15",
                 label: "Live academic databases",
-                sub: "1B+ papers · OpenAlex · PubMed · CrossRef · Semantic Scholar · ERIC · Zenodo · arXiv + 3 more",
+                sub: "1B+ papers · OpenAlex · PubMed · CrossRef · Semantic Scholar · ERIC · Zenodo · arXiv · BASE · DataCite · OpenAIRE · Sci-Net · Unpaywall + more",
                 color: "text-amber-400",
                 border: "border-amber-500/20 bg-amber-500/5",
               },

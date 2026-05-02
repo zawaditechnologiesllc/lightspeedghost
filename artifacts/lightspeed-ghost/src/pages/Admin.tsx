@@ -321,6 +321,7 @@ export default function Admin() {
   const [creditAdjusting, setCreditAdjusting] = useState(false);
   const [planEditUser, setPlanEditUser] = useState<AdminUser | null>(null);
   const [planEditValue, setPlanEditValue] = useState("starter");
+  const [planEditBilling, setPlanEditBilling] = useState("monthly");
   const [planEditSeats, setPlanEditSeats] = useState("5");
   const [planEditDuration, setPlanEditDuration] = useState("365");
   const [planEditing, setPlanEditing] = useState(false);
@@ -694,16 +695,20 @@ export default function Admin() {
     if (!planEditUser) return;
     setPlanEditing(true);
     try {
-      const body: Record<string, unknown> = { plan: planEditValue };
+      const body: Record<string, unknown> = {
+        plan: planEditValue,
+        billing: planEditValue === "pro" ? planEditBilling : planEditValue === "starter" ? "monthly" : null,
+      };
       if (planEditValue === "institution") {
         body.seats = Number(planEditSeats) || 5;
         body.durationDays = Number(planEditDuration) || 365;
+        body.billing = null;
       }
       await adminFetch(`/mwaramuriuki-login/users/${planEditUser.id}/plan`, password, {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      setUsers((prev) => prev.map((u) => u.id === planEditUser.id ? { ...u, plan: planEditValue } : u));
+      setUsers((prev) => prev.map((u) => u.id === planEditUser.id ? { ...u, plan: planEditValue, billing: body.billing as string | null } : u));
       setPlanEditUser(null);
     } catch {} finally { setPlanEditing(false); }
   }
@@ -1154,7 +1159,7 @@ export default function Admin() {
                           className="p-1.5 rounded-md text-white/20 hover:text-amber-400 hover:bg-amber-500/10 transition-all">
                           <Coins size={11} />
                         </button>
-                        <button onClick={() => { setPlanEditUser(user); setPlanEditValue(user.plan); }} title="Edit plan"
+                        <button onClick={() => { setPlanEditUser(user); const pv = user.plan === "pro" ? (user.billing === "annual" ? "pro_annual" : "pro") : user.plan; setPlanEditValue(pv); setPlanEditBilling(user.billing ?? "monthly"); }} title="Edit plan"
                           className="p-1.5 rounded-md text-white/20 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
                           <Edit2 size={11} />
                         </button>
@@ -1805,6 +1810,52 @@ export default function Admin() {
                     </div>
                   </>
                 ) : <Empty text="No revenue data yet" />}
+
+                {/* ── Revenue Projections ───────────────────────────────── */}
+                {(() => {
+                  const ARPU = 20.98;
+                  const scenarios = [
+                    { label: "6 Months", users: 80, hosting: 95 },
+                    { label: "12 Months", users: 300, hosting: 95 },
+                    { label: "24 Months", users: 1200, hosting: 200 },
+                    { label: "36 Months", users: 4000, hosting: 500 },
+                  ].map(({ label, users, hosting }) => {
+                    const mrr = Math.round(users * ARPU);
+                    const apiCost = Math.round(users * 0.7 * 1.50);
+                    const netMrr = mrr - apiCost - hosting;
+                    return { label, users, mrr, apiCost, hosting, netMrr, arr: mrr * 12 };
+                  });
+                  return (
+                    <div>
+                      <h3 className="text-sm font-semibold text-white/70 mb-1 flex items-center gap-2">
+                        <TrendingUp size={13} className="text-indigo-400" /> Revenue Projections
+                      </h3>
+                      <p className="text-[11px] text-white/30 mb-3">
+                        Conservative model — ARPU $20.98 (55% Starter $9.99 · 30% Pro Monthly $29.99 · 10% Pro Annual $19.92/mo · 5% Institution $90/mo avg).
+                        Variable costs: AI API $1.50/active user/mo (70% MAU). Hosting scales with traffic.
+                      </p>
+                      <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                        <div className="grid grid-cols-[110px_1fr_1fr_1fr_1fr_1fr_1fr] gap-2 px-4 py-2.5 border-b border-white/6">
+                          {["Period", "Paid Users", "MRR", "ARR", "AI API Cost", "Hosting", "Net MRR"].map((h) => (
+                            <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
+                          ))}
+                        </div>
+                        {scenarios.map((s, i) => (
+                          <div key={s.label} className={`grid grid-cols-[110px_1fr_1fr_1fr_1fr_1fr_1fr] gap-2 items-center px-4 py-3 ${i < scenarios.length - 1 ? "border-b border-white/6" : ""}`}>
+                            <span className="text-sm font-semibold text-white/80">{s.label}</span>
+                            <span className="text-sm text-white/55 tabular-nums">{s.users.toLocaleString()}</span>
+                            <span className="text-sm font-semibold text-emerald-400 tabular-nums">${s.mrr.toLocaleString()}</span>
+                            <span className="text-xs text-white/45 tabular-nums">${s.arr.toLocaleString()}</span>
+                            <span className="text-xs text-red-400/70 tabular-nums">−${s.apiCost.toLocaleString()}</span>
+                            <span className="text-xs text-amber-400/70 tabular-nums">−${s.hosting.toLocaleString()}</span>
+                            <span className={`text-sm font-bold tabular-nums ${s.netMrr > 0 ? "text-emerald-400" : "text-red-400"}`}>${s.netMrr.toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-white/20 mt-2 px-0.5">Projections are estimates for planning purposes only. Actual results depend on conversion rate, churn, and pricing. Institution accounts counted as single users here; actual seat revenue is higher.</p>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -2619,13 +2670,23 @@ export default function Admin() {
           <div className="space-y-3">
             <div>
               <label className="block text-xs text-white/40 mb-1.5">Plan</label>
-              <select value={planEditValue} onChange={(e) => { setPlanEditValue(e.target.value); if (e.target.value === "institution") { setPlanEditSeats("5"); setPlanEditDuration("365"); } }}
+              <select value={planEditValue} onChange={(e) => { setPlanEditValue(e.target.value); if (e.target.value === "institution") { setPlanEditSeats("5"); setPlanEditDuration("365"); } if (e.target.value === "pro") { setPlanEditBilling("monthly"); } }}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
-                <option value="starter">Starter (free)</option>
-                <option value="pro">Pro</option>
-                <option value="institution">Institution</option>
+                <option value="starter">Starter — $9.99/mo</option>
+                <option value="pro">Pro (select billing below)</option>
+                <option value="institution">Institution (select seats &amp; duration below)</option>
               </select>
             </div>
+            {planEditValue === "pro" && (
+              <div>
+                <label className="block text-xs text-white/40 mb-1.5">Billing Cycle</label>
+                <select value={planEditBilling} onChange={(e) => setPlanEditBilling(e.target.value)}
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
+                  <option value="monthly">Monthly — $29.99/mo</option>
+                  <option value="annual">Annual — $239/yr ($19.92/mo)</option>
+                </select>
+              </div>
+            )}
             {planEditValue === "institution" && (
               <>
                 <div>
@@ -2654,7 +2715,11 @@ export default function Admin() {
               className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground hover:opacity-90 font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {planEditing ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-              {planEditValue === "institution" ? `Activate Institution (${planEditSeats} seats, ${planEditDuration}d)` : "Update Plan"}
+              {planEditValue === "institution"
+                ? `Activate Institution (${planEditSeats} seats, ${planEditDuration}d)`
+                : planEditValue === "pro"
+                  ? `Set Pro — ${planEditBilling === "annual" ? "Annual ($239/yr)" : "Monthly ($29.99/mo)"}`
+                  : "Set Starter ($9.99/mo)"}
             </button>
           </div>
         </Modal>

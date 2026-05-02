@@ -508,6 +508,18 @@ router.patch("/mwaramuriuki-login/users/:id/plan", async (req: Request, res: Res
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   const { plan, billing, seats, durationDays } = req.body as { plan: string; billing?: string; seats?: number; durationDays?: number };
+  if (!plan || !["starter", "pro", "institution", "ebooks_monthly"].includes(plan)) {
+    res.status(400).json({ error: "Invalid plan value" }); return;
+  }
+  if (billing !== undefined && billing !== null && !["monthly", "annual"].includes(billing)) {
+    res.status(400).json({ error: "Invalid billing value" }); return;
+  }
+  if (seats !== undefined && (typeof seats !== "number" || seats < 1 || seats > 10000)) {
+    res.status(400).json({ error: "Invalid seats value" }); return;
+  }
+  if (durationDays !== undefined && (typeof durationDays !== "number" || durationDays < 1 || durationDays > 1825)) {
+    res.status(400).json({ error: "Invalid durationDays value" }); return;
+  }
   try {
     // When admin sets a plan manually, use durationDays if provided; institution defaults to 365 days
     const days = durationDays ?? (plan === "institution" ? 365 : 30);
