@@ -638,6 +638,7 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       referenceText?: string;
       datasetText?: string;
       analysisTool?: string;
+      selectedTests?: string[];
     };
 
     const requestedWords = body.wordCount ?? 1500;
@@ -810,12 +811,13 @@ Return JSON:
         status: "running",
       });
       try {
-        datasetAnalysis = parseAndAnalyzeDataset(body.datasetText, body.analysisTool);
+        datasetAnalysis = parseAndAnalyzeDataset(body.datasetText, body.analysisTool, body.selectedTests);
         const estimatedVars = (datasetAnalysis.match(/\*\*/g) ?? []).length / 2;
         const toolLabel = body.analysisTool ? ` · formatted for ${body.analysisTool.toUpperCase()}` : "";
+        const testsLabel = body.selectedTests?.length ? ` · ${body.selectedTests.length} test${body.selectedTests.length > 1 ? "s" : ""} requested` : "";
         send("step", {
           id: "data",
-          message: `Dataset analysed — ${estimatedVars} variable${estimatedVars !== 1 ? "s" : ""} processed with descriptive statistics${toolLabel}, ready for Results/Findings section`,
+          message: `Dataset analysed — ${estimatedVars} variable${estimatedVars !== 1 ? "s" : ""} processed${toolLabel}${testsLabel}, ready for Results/Findings section`,
           status: "done",
         });
       } catch {

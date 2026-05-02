@@ -239,7 +239,96 @@ Report statistics using standard APA 7th edition format:
 • Describe visualisations generically without referencing a specific software package`;
 }
 
-export function parseAndAnalyzeDataset(csvText: string, analysisTool?: string): string {
+// ── Per-test mandatory instructions injected into AI prompt ──────────────────
+
+const TEST_INSTRUCTIONS: Record<string, string> = {
+  ttest_ind:
+    "MANDATORY TEST — Independent Samples t-test: Compare the means of two independent groups. Report: group means ± SD, Levene's test for equality of variances (F, p), t-statistic, degrees of freedom, two-tailed p-value, Cohen's d, and 95% CI for the mean difference. State clearly whether variances are assumed equal or not.",
+  ttest_paired:
+    "MANDATORY TEST — Paired Samples t-test: Compare two related measurements (before/after, matched pairs). Report: mean difference ± SD, t-statistic, degrees of freedom, two-tailed p-value, Cohen's d (= mean diff / SD of differences), and 95% CI for the mean difference.",
+  oneway_anova:
+    "MANDATORY TEST — One-way ANOVA: Test whether means differ across 3+ groups. Report: F(df_between, df_within), p-value, η² (eta-squared) as effect size. Include a descriptives table (n, mean, SD per group). If significant (p < .05), report a post-hoc test (Tukey HSD preferred; note if Bonferroni or Games-Howell used instead).",
+  twoway_anova:
+    "MANDATORY TEST — Two-way ANOVA: Test main effects of two factors and their interaction. Report each main effect: F(df_effect, df_error), p, partial η². Report the interaction: F(df_interaction, df_error), p, partial η². Describe what a significant interaction means in context.",
+  manova:
+    "MANDATORY TEST — MANOVA: Test mean differences across groups on multiple dependent variables simultaneously. Report: Wilks' Λ (Lambda), F approximation, df, p-value, partial η². Follow with univariate ANOVAs for each DV. Report Box's M test for homogeneity of covariance matrices.",
+  repeated_anova:
+    "MANDATORY TEST — Repeated Measures ANOVA: Analyse within-subject changes over time/conditions. Report: Mauchly's test of sphericity (W, p); if violated, apply Greenhouse-Geisser correction (ε). Report F(df_corrected), p, partial η². Include post-hoc pairwise comparisons with Bonferroni correction.",
+  mann_whitney:
+    "MANDATORY TEST — Mann-Whitney U test (non-parametric): Use instead of independent t-test when normality is violated. Report: U statistic, z-score, two-tailed p-value, effect size r (= z / √N). Report median and IQR for each group instead of mean ± SD.",
+  wilcoxon:
+    "MANDATORY TEST — Wilcoxon Signed-Rank Test (non-parametric): Use instead of paired t-test when normality is violated. Report: W (or T) statistic, z-score, two-tailed p-value, effect size r (= z / √N). Report median difference and IQR.",
+  kruskal_wallis:
+    "MANDATORY TEST — Kruskal-Wallis H Test (non-parametric): Use instead of one-way ANOVA when normality is violated or data is ordinal. Report: H statistic, df, p-value, effect size η² (= (H − k + 1) / (N − k)). Report median and IQR per group. If significant, report post-hoc Dunn's test with Bonferroni correction.",
+  friedman:
+    "MANDATORY TEST — Friedman Test (non-parametric): Non-parametric alternative to repeated measures ANOVA. Report: χ²(df) = X.XX, p-value, Kendall's W as effect size. Report median rankings per condition. Follow with post-hoc Wilcoxon signed-rank tests if significant.",
+  pearson:
+    "MANDATORY TEST — Pearson Correlation: Test linear relationship between two continuous variables. Report: r(df) = X.XX, p = .XXX (two-tailed), R² = X.XX (variance explained), 95% CI for r. Characterise strength: |r| < .20 negligible, .20–.39 weak, .40–.59 moderate, .60–.79 strong, ≥ .80 very strong. Include a correlation matrix if there are 3+ numeric variables.",
+  spearman:
+    "MANDATORY TEST — Spearman Rank Correlation: Non-parametric alternative for ordinal data or when Pearson assumptions are violated. Report: rs(df) = X.XX, p = .XXX (two-tailed). Characterise strength using the same benchmarks as Pearson r. Note that Spearman measures monotonic (not necessarily linear) relationships.",
+  chi_square:
+    "MANDATORY TEST — Chi-Square Test of Independence: Test association between two categorical variables. Report: χ²(df) = X.XX, N = XX, p = .XXX, Cramér's V as effect size (V = √(χ²/N·min(r−1,c−1))). Include an observed frequency table and expected frequency table. Check assumptions: no cell with expected frequency < 5; if violated, use Fisher's exact test.",
+  fishers_exact:
+    "MANDATORY TEST — Fisher's Exact Test: Use for 2×2 tables where expected cell frequencies < 5. Report: exact two-tailed p-value, odds ratio (OR) with 95% CI. Describe the direction and magnitude of the association.",
+  point_biserial:
+    "MANDATORY TEST — Point-Biserial Correlation: Correlation between a dichotomous variable and a continuous variable. Report: rpb = X.XX, p = .XXX, R² = X.XX. Note: numerically equivalent to Pearson r when one variable is binary (0/1).",
+  cramers_v:
+    "MANDATORY TEST — Cramér's V: Report as effect size for chi-square tests. V = √(χ²/N·min(r−1,c−1)). Interpret: V ≈ .10 small, ≈ .30 medium, ≈ .50 large (for df = 1). Adjust benchmarks for larger tables.",
+  simple_regression:
+    "MANDATORY TEST — Simple Linear Regression: Predict one continuous outcome from one predictor. Report: regression equation (Ŷ = b₀ + b₁X), unstandardised coefficients (B) with SE and 95% CI, standardised coefficient (β), t, p, R², Adjusted R², F(1, N−2), p for the model. Assess assumptions: linearity, homoscedasticity, normality of residuals.",
+  multiple_regression:
+    "MANDATORY TEST — Multiple Linear Regression: Predict outcome from two or more predictors. Report: overall model F(df1, df2), p, R², Adjusted R². For each predictor: B, SE, β, t, p, 95% CI for B, VIF (multicollinearity check; VIF > 10 is problematic). Identify which predictors are significant. Report the full regression equation.",
+  logistic_regression:
+    "MANDATORY TEST — Binary Logistic Regression: Predict a binary outcome. Report: −2 Log Likelihood, Nagelkerke R², Hosmer-Lemeshow goodness-of-fit (χ², p). For each predictor: B, SE, Wald statistic, p, Exp(B) = odds ratio with 95% CI. Report classification table (overall accuracy %). Interpret each significant OR in plain language.",
+  polynomial_regression:
+    "MANDATORY TEST — Polynomial Regression: Fit a curvilinear relationship. Report: the polynomial model equation, R², Adjusted R², F-statistic, p. Report each term's B, SE, t, p. Compare R² improvement over simple linear model using F-change test to justify the polynomial term.",
+  hierarchical_regression:
+    "MANDATORY TEST — Hierarchical (Blocked) Regression: Enter predictors in theoretically motivated steps. For each block/step, report: R², Adjusted R², R² Change (ΔR²), F Change, p for ΔR². Report final model's full coefficient table. Discuss what each block adds above and beyond the previous block.",
+  descriptives:
+    "MANDATORY TEST — Full Descriptive Statistics Table: Present a complete descriptive statistics table with the following for every numeric variable: N, Mean, SD, SE, Median, Mode (if applicable), Minimum, Maximum, Range, Q1, Q3, IQR, Skewness, Kurtosis. Use a properly formatted markdown table. Discuss the shape, central tendency, and spread of each variable.",
+  normality:
+    "MANDATORY TEST — Normality Testing: Test whether each numeric variable follows a normal distribution. Report Shapiro-Wilk test (preferred for N < 50) or Kolmogorov-Smirnov test (N ≥ 50): W (or D) statistic, p-value for each variable. Also report skewness and kurtosis: values between −2 and +2 are generally acceptable for normality. State whether normality is supported or violated for each variable, and what this implies for the choice of parametric vs non-parametric tests.",
+  frequency:
+    "MANDATORY TEST — Frequency Analysis: For all categorical variables, produce a complete frequency table showing: category labels, frequency (n), valid percent, cumulative percent. Discuss the most common category, distribution of responses, and any notable patterns or imbalances.",
+  effect_size:
+    "MANDATORY TEST — Effect Sizes: Compute and report effect sizes for all inferential tests in the paper. Use: Cohen's d for t-tests (small = .20, medium = .50, large = .80), η² or partial η² for ANOVA (small = .01, medium = .06, large = .14), r for non-parametric tests (small = .10, medium = .30, large = .50), R² for regression (small = .02, medium = .13, large = .26), Cramér's V for chi-square. Interpret each effect size verbally in the Results section.",
+  confidence_intervals:
+    "MANDATORY TEST — Confidence Intervals: Report 95% confidence intervals for all key estimates in the paper: means (mean ± 1.96·SE), mean differences, regression coefficients (B ± 1.96·SE), correlations (use Fisher's z-transformation), odds ratios (log scale). Present CIs alongside p-values for every inferential result. If CIs do not cross zero (or 1 for ORs), the result is statistically significant.",
+  pca:
+    "MANDATORY TEST — Principal Component Analysis (PCA): Report: Kaiser-Meyer-Olkin (KMO) measure of sampling adequacy (>.60 acceptable), Bartlett's test of sphericity (χ², df, p). Extract components using eigenvalue > 1 criterion (Kaiser rule) OR based on scree plot. Report: eigenvalues, percentage of variance explained, cumulative variance. Present a rotated component matrix (Varimax rotation preferred). Interpret each component by the variables that load most strongly (|loading| > .40).",
+  factor_analysis:
+    "MANDATORY TEST — Exploratory Factor Analysis (EFA): Report: KMO, Bartlett's test. Specify extraction method (Maximum Likelihood or Principal Axis Factoring) and rotation (Oblimin for correlated factors, Varimax for orthogonal). Report factor loadings matrix (only loadings |.30|+), communalities (h²), eigenvalues, and cumulative variance explained. Name each factor based on its strongest loadings. Report Cronbach's α for each factor's items as reliability estimate.",
+  cluster_kmeans:
+    "MANDATORY TEST — K-means Cluster Analysis: Report the number of clusters (k) chosen and the method used to determine k (elbow method, silhouette score, or theoretical). Report: cluster sizes (n per cluster), cluster centroids for each variable, within-cluster sum of squares, between-cluster sum of squares, total sum of squares. Describe and name each cluster profile based on centroid values. Note that k-means uses Euclidean distance and requires standardised variables.",
+  reliability:
+    "MANDATORY TEST — Reliability Analysis (Cronbach's α): Report Cronbach's alpha for the full scale: α = X.XX. Interpret: α ≥ .90 excellent, .80–.89 good, .70–.79 acceptable, .60–.69 questionable, < .60 poor (Nunnally, 1978). Report item-total correlations and 'α if item deleted' for each item. Flag any item that substantially lowers α if removed.",
+  time_series:
+    "MANDATORY TEST — Time Series Analysis: Identify the temporal variable and the outcome variable. Report: trend direction (upward/downward/stable), seasonal patterns if present, autocorrelation (Durbin-Watson statistic for regression residuals: values near 2 indicate no autocorrelation). Compute and report period-over-period changes (absolute and percentage). If appropriate, fit a linear trend line and report slope, R², and p-value. Discuss stationarity.",
+  survival:
+    "MANDATORY TEST — Survival Analysis (Kaplan-Meier): Report: number of events and censored observations. For each group, report median survival time with 95% CI. Report Log-rank test (Mantel-Cox): χ²(df), p-value. Interpret as probability of event-free survival at key time points. If comparing groups, report hazard ratio (HR) with 95% CI from Cox proportional hazards model.",
+  mediation:
+    "MANDATORY TEST — Mediation Analysis: Test whether the effect of X on Y operates through mediator M. Report all four paths: total effect (c: X→Y), direct effect (c': X→Y controlling for M), a path (X→M), b path (M→Y controlling for X). Compute indirect effect (a×b) with 95% bootstrap CI (5,000 resamples; PROCESS macro / lavaan / mediation package). If 95% CI for indirect effect excludes zero, mediation is supported. Report full vs partial mediation distinction. Include path diagram description.",
+  moderation:
+    "MANDATORY TEST — Moderation / Interaction Analysis: Test whether the relationship between X and Y depends on moderator variable W. Standardise (mean-centre) X and W before computing the interaction term X×W. Report: regression coefficients for X, W, and X×W with SE, t, p. If the interaction term is significant, plot the interaction: show the X→Y relationship at W = mean, +1 SD, and −1 SD (Johnson-Neyman or simple slopes analysis). Report R², ΔR² for the interaction term.",
+};
+
+function buildTestsContext(selectedTests: string[]): string {
+  if (!selectedTests || selectedTests.length === 0) return "";
+
+  const instructions = selectedTests
+    .map(t => TEST_INSTRUCTIONS[t])
+    .filter(Boolean);
+
+  if (instructions.length === 0) return "";
+
+  return `
+REQUIRED STATISTICAL TESTS (student-specified — ALL must be performed and fully reported):
+${instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n\n")}
+
+CRITICAL: Every test listed above MUST appear in the Results section with all reported statistics listed. Do not skip or summarise any test. If the data does not perfectly suit a test (e.g., only one group present for a t-test), acknowledge the limitation and report what is computable from the available data.`;
+}
+
+export function parseAndAnalyzeDataset(csvText: string, analysisTool?: string, selectedTests?: string[]): string {
   const lines = csvText.trim().split("\n").filter(l => l.trim().length > 0);
   if (lines.length < 2) return "";
 
@@ -415,6 +504,7 @@ export function parseAndAnalyzeDataset(csvText: string, analysisTool?: string): 
   const tableBody = previewRows.map(r => `| ${headers.map((_, i) => r[i] ?? "").join(" | ")} |`).join("\n");
 
   const toolContext = buildToolContext(analysisTool ?? "");
+  const testsContext = buildTestsContext(selectedTests ?? []);
 
   return `STUDENT-PROVIDED DATASET (${totalRows} rows × ${headers.length} columns)
 Variables: ${headers.join(", ")}
@@ -431,6 +521,7 @@ ${correlations.length > 0 ? "\n" + correlations.join("\n") : ""}${financialAnaly
 Suggested Visualisations (describe these in the paper using the actual data values):
 ${vizSuggestions.map((v, i) => `${i + 1}. ${v}`).join("\n")}
 ${toolContext}
+${testsContext}
 
 MANDATORY DATA USAGE RULES:
 1. Present and discuss the ACTUAL statistics above — never invent alternative numbers
@@ -441,9 +532,9 @@ MANDATORY DATA USAGE RULES:
 6. Describe at least one visualisation (chart/graph) in text — explain what it shows using the real data values
 7. If correlations are provided, discuss their strength, direction, and practical significance
 8. Use quartiles and IQR to discuss data spread and identify potential outliers
-9. FOLLOW THE ANALYSIS TOOL CONVENTIONS ABOVE — use the exact function names, output labels, and reporting format for the specified tool so the student can reproduce the analysis${isFinancialData ? `
-10. Present ALL computed financial ratios and interpret them against industry benchmarks
-11. Calculate and discuss year-over-year or period-over-period growth rates
-12. Perform horizontal (trend) and vertical (common-size) analysis where applicable
-13. Discuss financial health, solvency, liquidity, and profitability based on the ratios` : ""}`;
+9. FOLLOW THE ANALYSIS TOOL CONVENTIONS ABOVE — use the exact function names, output labels, and reporting format for the specified tool so the student can reproduce the analysis${testsContext ? "\n10. PERFORM EVERY TEST LISTED IN THE REQUIRED STATISTICAL TESTS SECTION — do not omit any" : ""}${isFinancialData ? `
+${testsContext ? "11" : "10"}. Present ALL computed financial ratios and interpret them against industry benchmarks
+${testsContext ? "12" : "11"}. Calculate and discuss year-over-year or period-over-period growth rates
+${testsContext ? "13" : "12"}. Perform horizontal (trend) and vertical (common-size) analysis where applicable
+${testsContext ? "14" : "13"}. Discuss financial health, solvency, liquidity, and profitability based on the ratios` : ""}`;
 }

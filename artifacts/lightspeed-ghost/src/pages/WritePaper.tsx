@@ -67,6 +67,58 @@ const DATA_PAPER_TYPES = new Set([
   "business plan", "financial analysis", "capstone project",
 ]);
 
+interface StatTest {
+  value: string;
+  label: string;
+  cat: string;
+  hint: string;
+}
+
+const STATISTICAL_TESTS: StatTest[] = [
+  // ── Comparing groups (parametric) ──────────────────────────────────────────
+  { value: "ttest_ind",         label: "Independent t-test",        cat: "Comparing Groups",       hint: "2 independent groups, continuous DV" },
+  { value: "ttest_paired",      label: "Paired t-test",             cat: "Comparing Groups",       hint: "Before/after or matched pairs" },
+  { value: "oneway_anova",      label: "One-way ANOVA",             cat: "Comparing Groups",       hint: "3+ groups, single factor" },
+  { value: "twoway_anova",      label: "Two-way ANOVA",             cat: "Comparing Groups",       hint: "Two factors + interaction" },
+  { value: "manova",            label: "MANOVA",                    cat: "Comparing Groups",       hint: "Multiple DVs, Wilks' Λ" },
+  { value: "repeated_anova",    label: "Repeated Measures ANOVA",   cat: "Comparing Groups",       hint: "Within-subject, sphericity test" },
+  // ── Non-parametric alternatives ────────────────────────────────────────────
+  { value: "mann_whitney",      label: "Mann-Whitney U",            cat: "Non-parametric",         hint: "Non-param 2-group, effect size r" },
+  { value: "wilcoxon",          label: "Wilcoxon Signed-Rank",      cat: "Non-parametric",         hint: "Non-param paired, W statistic" },
+  { value: "kruskal_wallis",    label: "Kruskal-Wallis H",          cat: "Non-parametric",         hint: "Non-param ANOVA, Dunn post-hoc" },
+  { value: "friedman",          label: "Friedman Test",             cat: "Non-parametric",         hint: "Non-param repeated, Kendall's W" },
+  // ── Relationships & association ────────────────────────────────────────────
+  { value: "pearson",           label: "Pearson Correlation",       cat: "Relationships",          hint: "r, R², 95% CI, correlation matrix" },
+  { value: "spearman",          label: "Spearman Correlation",      cat: "Relationships",          hint: "Rank-based, monotonic relationship" },
+  { value: "chi_square",        label: "Chi-Square Test",           cat: "Relationships",          hint: "Categorical association, Cramér's V" },
+  { value: "fishers_exact",     label: "Fisher's Exact Test",       cat: "Relationships",          hint: "2×2 table, small expected frequencies" },
+  { value: "point_biserial",    label: "Point-Biserial r",          cat: "Relationships",          hint: "Binary × continuous correlation" },
+  { value: "cramers_v",         label: "Cramér's V",                cat: "Relationships",          hint: "Chi-square effect size" },
+  // ── Regression ─────────────────────────────────────────────────────────────
+  { value: "simple_regression",      label: "Simple Linear Regression",      cat: "Regression", hint: "1 predictor, R², B, β, 95% CI" },
+  { value: "multiple_regression",    label: "Multiple Linear Regression",    cat: "Regression", hint: "2+ predictors, VIF, Adj R²" },
+  { value: "logistic_regression",    label: "Binary Logistic Regression",    cat: "Regression", hint: "Binary outcome, OR, Nagelkerke R²" },
+  { value: "polynomial_regression",  label: "Polynomial Regression",         cat: "Regression", hint: "Curvilinear fit, ΔR² test" },
+  { value: "hierarchical_regression",label: "Hierarchical Regression",       cat: "Regression", hint: "Blocked steps, ΔR² per block" },
+  // ── Descriptive & distribution ─────────────────────────────────────────────
+  { value: "descriptives",      label: "Full Descriptives Table",   cat: "Descriptive",            hint: "N, mean, SD, SE, skew, kurtosis" },
+  { value: "normality",         label: "Normality Tests",           cat: "Descriptive",            hint: "Shapiro-Wilk / K-S for each variable" },
+  { value: "frequency",         label: "Frequency Analysis",        cat: "Descriptive",            hint: "n, %, cumulative % for categories" },
+  { value: "effect_size",       label: "Effect Sizes",              cat: "Descriptive",            hint: "d, η², r, R², V — all tests" },
+  { value: "confidence_intervals", label: "Confidence Intervals",   cat: "Descriptive",            hint: "95% CIs for all key estimates" },
+  // ── Advanced / multivariate ────────────────────────────────────────────────
+  { value: "pca",               label: "PCA",                       cat: "Advanced",               hint: "KMO, eigenvalues, rotated loadings" },
+  { value: "factor_analysis",   label: "Factor Analysis (EFA)",     cat: "Advanced",               hint: "Communalities, factor loadings, α" },
+  { value: "cluster_kmeans",    label: "K-means Clustering",        cat: "Advanced",               hint: "Cluster profiles, centroids, WSS" },
+  { value: "reliability",       label: "Reliability (Cronbach's α)", cat: "Advanced",              hint: "Item-total r, α if item deleted" },
+  { value: "time_series",       label: "Time Series / Trend",       cat: "Advanced",               hint: "Trend line, D-W autocorrelation" },
+  { value: "survival",          label: "Survival Analysis",         cat: "Advanced",               hint: "Kaplan-Meier, log-rank, hazard ratio" },
+  { value: "mediation",         label: "Mediation Analysis",        cat: "Advanced",               hint: "Indirect effect, bootstrap 95% CI" },
+  { value: "moderation",        label: "Moderation / Interaction",  cat: "Advanced",               hint: "X×W interaction, simple slopes" },
+];
+
+const TEST_CATEGORIES = ["Comparing Groups", "Non-parametric", "Relationships", "Regression", "Descriptive", "Advanced"];
+
 const ANALYSIS_TOOLS: { value: string; label: string; badge: string; desc: string }[] = [
   { value: "r",       label: "R / RStudio",    badge: "R",       desc: "t.test(), lm(), ggplot2, tidyverse" },
   { value: "python",  label: "Python",          badge: "PY",      desc: "pandas, scipy, statsmodels, seaborn" },
@@ -314,6 +366,7 @@ export default function WritePaper() {
   const [datasetText, setDatasetText] = useState("");
   const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
   const [analysisTool, setAnalysisTool] = useState<string>("r");
+  const [selectedTests, setSelectedTests] = useState<string[]>([]);
 
   // ── citation confirmation
   const [detectedStyle, setDetectedStyle] = useState<string | null>(null);
@@ -443,6 +496,7 @@ export default function WritePaper() {
           referenceText: referenceText.trim() || undefined,
           datasetText: datasetText.trim() || undefined,
           analysisTool: datasetText.trim() ? analysisTool : undefined,
+          selectedTests: datasetText.trim() && selectedTests.length > 0 ? selectedTests : undefined,
         }),
       });
 
@@ -1085,6 +1139,76 @@ export default function WritePaper() {
                 <p className="text-[10px] text-muted-foreground/60 mt-1.5">
                   Results section will reference {ANALYSIS_TOOLS.find(t => t.value === analysisTool)?.label ?? "your chosen tool"}'s output labels, test names, and citation.
                 </p>
+              </div>
+            )}
+
+            {/* ── Statistical tests multi-select ── */}
+            {datasetText.trim() && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <ListOrdered size={11} />
+                    Statistical Tests
+                    <span className="text-[10px] font-normal lowercase tracking-normal ml-1 text-muted-foreground/60">— select all tests to run (leave blank to let AI decide)</span>
+                  </label>
+                  {selectedTests.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTests([])}
+                      className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                    >
+                      <X size={9} /> Clear all
+                    </button>
+                  )}
+                </div>
+
+                {TEST_CATEGORIES.map(cat => {
+                  const tests = STATISTICAL_TESTS.filter(t => t.cat === cat);
+                  return (
+                    <div key={cat} className="mb-3">
+                      <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest mb-1.5">{cat}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {tests.map(test => {
+                          const active = selectedTests.includes(test.value);
+                          return (
+                            <button
+                              key={test.value}
+                              type="button"
+                              title={test.hint}
+                              onClick={() => setSelectedTests(prev =>
+                                active ? prev.filter(v => v !== test.value) : [...prev, test.value]
+                              )}
+                              className={cn(
+                                "group relative px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                                active
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                              )}
+                            >
+                              {active && <CheckCircle size={9} className="inline mr-1 mb-0.5" />}
+                              {test.label}
+                              <span className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-popover border border-border rounded text-[10px] text-muted-foreground whitespace-nowrap z-10 shadow-md pointer-events-none">
+                                {test.hint}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {selectedTests.length > 0 && (
+                  <p className="text-[10px] text-primary mt-1 flex items-center gap-1">
+                    <CheckCircle size={10} />
+                    {selectedTests.length} test{selectedTests.length > 1 ? "s" : ""} selected — AI will perform and fully report each one in the Results section
+                  </p>
+                )}
+                {selectedTests.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground/50 mt-1">
+                    No tests selected — AI will choose appropriate tests based on your data structure
+                  </p>
+                )}
               </div>
             )}
           </div>
