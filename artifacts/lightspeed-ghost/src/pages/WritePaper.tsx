@@ -94,6 +94,52 @@ function gpaToGrade(gpa: number): { grade: FHGrade; color: string } {
   if (gpa >= 0.5) return { grade: "D", color: "border-orange-500/30 bg-orange-500/5 text-orange-600 dark:text-orange-400" };
   return { grade: "F", color: "border-red-500/30 bg-red-500/5 text-red-600 dark:text-red-400" };
 }
+// ── Multi-year trend detection (client-side) ──────────────────────────────
+interface TrendYoY { label: string; yoy: string; up: boolean | null }
+function detectTrendData(text: string): { years: string[]; rows: TrendYoY[] } | null {
+  const yearMatches = [...text.matchAll(/\b(20\d{2})\b/g)].map(m => m[1]);
+  const uniqueYears = [...new Set(yearMatches)].sort();
+  if (uniqueYears.length < 2) return null;
+
+  // Try to build per-year segments using section headers
+  function getSegment(yr: string): string {
+    const secPat = new RegExp(`(?:^|\\n)\\s*(?:(?:fy|fiscal\\s+year?\\s*|year\\s*):?\\s*)?${yr}\\s*(?::[ \\t]*)?\\s*(?=\\n|$)`, 'i');
+    const m = text.match(secPat);
+    if (!m || m.index == null) return "";
+    const start = m.index + m[0].length;
+    // End = next year section or EOF
+    const otherYrs = uniqueYears.filter(y => y !== yr);
+    const nextPat = new RegExp(`(?:^|\\n)\\s*(?:(?:fy|fiscal\\s+year?\\s*|year\\s*):?\\s*)?(?:${otherYrs.join('|')})\\s*(?::[ \\t]*)?\\s*(?=\\n|$)`, 'i');
+    const nextM = text.slice(start).match(nextPat);
+    return nextM ? text.slice(start, start + (nextM.index ?? text.length)) : text.slice(start);
+  }
+
+  const rows: TrendYoY[] = [];
+  const sortedYrs = [...uniqueYears].sort();
+  const segs = sortedYrs.map(y => ({ year: y, seg: getSegment(y) }));
+  const allHaveSegs = segs.every(s => s.seg.trim().length > 0);
+
+  if (allHaveSegs) {
+    const getPP = (seg: string, pats: string[]) => parseFF(seg, pats);
+    const addRow = (label: string, pats: string[]) => {
+      const vals = segs.map(s => getPP(s.seg, pats));
+      if (vals.every(v => v == null)) return;
+      for (let i = 1; i < segs.length; i++) {
+        const curr = vals[i], prev = vals[i - 1];
+        if (curr == null || prev == null || prev === 0) continue;
+        const g = ((curr - prev) / Math.abs(prev)) * 100;
+        rows.push({ label: `${label} (${segs[i - 1].year}→${segs[i].year})`, yoy: `${g >= 0 ? "+" : ""}${g.toFixed(1)}%`, up: g > 0 });
+      }
+    };
+    addRow("Revenue",    ["revenue","net sales","total revenue","net revenue","sales"]);
+    addRow("Net Income", ["net income","net profit","net earnings"]);
+    addRow("Gross Profit",["gross profit","gross income"]);
+    addRow("Total Assets",["total assets"]);
+  }
+
+  return { years: uniqueYears, rows };
+}
+
 function computeFinancialHealthScores(text: string): {
   profitability: FHCategory; liquidity: FHCategory; solvency: FHCategory; efficiency: FHCategory;
   overall: { grade: FHGrade; color: string };
@@ -1014,41 +1060,84 @@ export default function WritePaper() {
 
               {/* ── Financial Health Score ── */}
               {financialStatements.trim() && (() => {
-                const fhs = computeFinancialHealthScores(financialStatements);
-                if (!fhs) return null;
-                const cats = [
+                const fhs   = computeFinancialHealthScores(financialStatements);
+                const trend = detectTrendData(financialStatements);
+                if (!fhs && !trend) return null;
+                const cats = fhs ? [
                   { key: "profitability", label: "Profitability", data: fhs.profitability },
                   { key: "liquidity",     label: "Liquidity",     data: fhs.liquidity },
                   { key: "solvency",      label: "Solvency",      data: fhs.solvency },
                   { key: "efficiency",    label: "Efficiency",    data: fhs.efficiency },
-                ].filter(c => c.data.computed);
-                if (cats.length === 0) return null;
+                ].filter(c => c.data.computed) : [];
+                if (cats.length === 0 && !trend) return null;
                 return (
                   <div className="bg-card border border-amber-400/20 rounded-xl p-4 space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         <TrendingUp size={14} className="text-amber-500" />
                         <h3 className="text-sm font-semibold">Financial Health Score</h3>
+                        {trend && (
+                          <span className="px-2 py-0.5 rounded-full bg-violet-500/10 border border-violet-400/30 text-[10px] font-semibold text-violet-600 dark:text-violet-400">
+                            {trend.years.length}-year trend · {trend.years.join(", ")}
+                          </span>
+                        )}
                       </div>
-                      <div className={cn("px-2.5 py-1 rounded-lg border text-xs font-bold", fhs.overall.color)}>
-                        Overall: {fhs.overall.grade}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {cats.map(c => (
-                        <div key={c.key} className={cn("rounded-xl border p-3 text-center", c.data.color)}>
-                          <div className="text-2xl sm:text-3xl font-bold leading-none mb-1">{c.data.grade}</div>
-                          <div className="text-[10px] sm:text-[11px] font-semibold opacity-80">{c.label}</div>
-                          {c.data.metrics.length > 0 && (
-                            <div className="mt-1.5 space-y-0.5">
-                              {c.data.metrics.map((m, i) => (
-                                <div key={i} className="text-[8px] sm:text-[9px] opacity-60 leading-tight">{m}</div>
-                              ))}
-                            </div>
-                          )}
+                      {fhs && cats.length > 0 && (
+                        <div className={cn("px-2.5 py-1 rounded-lg border text-xs font-bold", fhs.overall.color)}>
+                          Overall: {fhs.overall.grade}
                         </div>
-                      ))}
+                      )}
                     </div>
+                    {cats.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {cats.map(c => (
+                          <div key={c.key} className={cn("rounded-xl border p-3 text-center", c.data.color)}>
+                            <div className="text-2xl sm:text-3xl font-bold leading-none mb-1">{c.data.grade}</div>
+                            <div className="text-[10px] sm:text-[11px] font-semibold opacity-80">{c.label}</div>
+                            {c.data.metrics.length > 0 && (
+                              <div className="mt-1.5 space-y-0.5">
+                                {c.data.metrics.map((m, i) => (
+                                  <div key={i} className="text-[8px] sm:text-[9px] opacity-60 leading-tight">{m}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {trend && trend.rows.length > 0 && (
+                      <div className="rounded-xl border border-violet-400/20 bg-violet-50/5 dark:bg-violet-900/5 p-3 space-y-1.5">
+                        <p className="text-[10px] font-semibold text-violet-700 dark:text-violet-400 flex items-center gap-1.5">
+                          <TrendingUp size={10} /> Year-over-Year Trends
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                          {trend.rows.map((row, i) => (
+                            <div key={i} className="flex items-center justify-between gap-2 text-[10px]">
+                              <span className="text-muted-foreground">{row.label}</span>
+                              <span className={cn(
+                                "font-semibold tabular-nums",
+                                row.up === true  ? "text-green-600 dark:text-green-400" :
+                                row.up === false ? "text-red-500 dark:text-red-400" :
+                                "text-muted-foreground"
+                              )}>
+                                {row.up === true ? "↑ " : row.up === false ? "↓ " : ""}{row.yoy}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-muted-foreground/40 pt-0.5">
+                          Full trend narrative, CAGR &amp; flag analysis included in the AI output
+                        </p>
+                      </div>
+                    )}
+                    {trend && trend.rows.length === 0 && (
+                      <div className="rounded-xl border border-violet-400/20 bg-violet-50/5 dark:bg-violet-900/5 px-3 py-2">
+                        <p className="text-[10px] text-violet-600 dark:text-violet-400 flex items-center gap-1.5">
+                          <TrendingUp size={10} />
+                          Multi-year data detected ({trend.years.join(", ")}) — AI will compute YoY growth rates, CAGR &amp; flag deteriorating metrics
+                        </p>
+                      </div>
+                    )}
                     <p className="text-[10px] text-muted-foreground/50">
                       A = excellent · B = good · C = average · D = below average · F = critical — benchmarked against industry standards
                     </p>
@@ -1451,7 +1540,7 @@ export default function WritePaper() {
               value={financialStatements}
               onChange={e => setFinancialStatements(e.target.value)}
               rows={4}
-              placeholder={"Paste your financial statement data here…\n\nRevenue:            $2,450,000\nCOGS:               $1,200,000\nGross Profit:       $1,250,000\nNet Income:         $416,500\nTotal Assets:       $5,800,000\nTotal Equity:       $2,100,000\nCurrent Assets:     $1,200,000\nCurrent Liabilities:$650,000"}
+              placeholder={"Paste financial statements — single year OR multi-year for trend analysis…\n\nSingle year:\n  Revenue:             $2,450,000\n  Net Income:          $416,500\n\nMulti-year (auto YoY + CAGR):\n  FY2023\n  Revenue:             $2,450,000\n  Net Income:          $416,500\n\n  FY2022\n  Revenue:             $2,100,000\n  Net Income:          $315,000"}
               className="w-full px-3 py-2 font-mono text-xs rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             />
             {financialStatements.trim() && (

@@ -89,6 +89,179 @@ const P = {
   capex:           [/(?:capital\s+expenditures?|capex|purchase\s+of\s+(?:property|ppe|equipment|plant))\s*[:\|]?\s*\(?([$£€¥]?\s*[\d,]+\.?\d*[MBKmkbBTt]?)\)?/i],
 };
 
+// ── Multi-year trend analysis ─────────────────────────────────────────────────
+
+interface YearSnapshot {
+  year: string;
+  revenue: number | null; cogs: number | null; grossProfit: number | null;
+  ebit: number | null; netIncome: number | null;
+  totalAssets: number | null; totalEquity: number | null;
+  currentAssets: number | null; currentLiab: number | null;
+  operatingCF: number | null; capex: number | null;
+}
+
+function extractByYear(text: string): Map<string, string> {
+  // Strategy 1: explicit section headers (FY2023, Year 2023, 2023:, etc.)
+  const secPat = /(?:^|\n)\s*(?:(?:fy|fiscal\s+year?\s*|year\s*):?\s*)?(20\d{2})\s*(?::[ \t]*)?\s*(?=\n|$)/gi;
+  const secMs = [...text.matchAll(secPat)];
+  if (secMs.length >= 2) {
+    const map = new Map<string, string>();
+    for (let i = 0; i < secMs.length; i++) {
+      const yr = secMs[i][1];
+      const start = secMs[i].index! + secMs[i][0].length;
+      const end = i + 1 < secMs.length ? secMs[i + 1].index! : text.length;
+      map.set(yr, text.slice(start, end));
+    }
+    return map;
+  }
+  // Strategy 2: column header row with 2+ years, values in subsequent rows
+  const lines = text.split('\n');
+  let headerIdx = -1;
+  let yearCols: Array<{ year: string }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const ms = [...lines[i].matchAll(/\b((?:fy\s*)?20\d{2})\b/gi)];
+    if (ms.length >= 2) {
+      headerIdx = i;
+      yearCols = ms.map(m => ({ year: m[1].replace(/\s/g, '').replace(/^[Ff][Yy]/, '') }));
+      break;
+    }
+  }
+  if (headerIdx < 0) return new Map();
+  const perYear = new Map<string, string>();
+  for (const { year } of yearCols) perYear.set(year, '');
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    const labelM = line.match(/^([A-Za-z][^:0-9$£€(]{2,}?)(?:\s{2,}|\t|:\s*)/);
+    if (!labelM) continue;
+    const label = labelM[1].trim();
+    const numMs = [...line.matchAll(/\(?\s*\$?\s*([\d,]+\.?\d*[KMBTkmbt]?)\s*\)?/g)]
+      .filter(m => { const n = parseFloat(m[1].replace(/,/g, '')); return !isNaN(n) && n > 0; });
+    for (let j = 0; j < yearCols.length && j < numMs.length; j++) {
+      const ex = perYear.get(yearCols[j].year) ?? '';
+      perYear.set(yearCols[j].year, ex + `${label}: ${numMs[j][0]}\n`);
+    }
+  }
+  if ([...perYear.values()].every(v => !v.trim())) return new Map();
+  return perYear;
+}
+
+function snapshotFromText(text: string, year: string): YearSnapshot {
+  const ev = (pats: RegExp[]) => extractValue(text, pats);
+  const revenue = ev(P.revenue);
+  const cogs    = ev(P.cogs);
+  return {
+    year, revenue, cogs,
+    grossProfit:  ev(P.grossProfit) ?? (revenue != null && cogs != null ? revenue - cogs : null),
+    ebit:         ev(P.ebit),
+    netIncome:    ev(P.netIncome),
+    totalAssets:  ev(P.totalAssets),
+    totalEquity:  ev(P.totalEquity),
+    currentAssets:ev(P.currentAssets),
+    currentLiab:  ev(P.currentLiab),
+    operatingCF:  ev(P.operatingCF),
+    capex:        ev(P.capex),
+  };
+}
+
+function yoyChange(curr: number | null, prev: number | null): string | null {
+  if (curr == null || prev == null || prev === 0) return null;
+  const g = ((curr - prev) / Math.abs(prev)) * 100;
+  return `${g >= 0 ? "+" : ""}${g.toFixed(1)}%`;
+}
+
+function cagrStr(oldest: number | null, newest: number | null, nYrs: number): string | null {
+  if (!oldest || !newest || oldest <= 0 || nYrs <= 0) return null;
+  const c = (Math.pow(newest / oldest, 1 / nYrs) - 1) * 100;
+  return `${c >= 0 ? "+" : ""}${c.toFixed(1)}% CAGR`;
+}
+
+function trendArrow(g: string | null): string {
+  if (!g) return "─";
+  const v = parseFloat(g);
+  if (v >= 10) return "↑↑"; if (v > 0) return "↑";
+  if (v <= -10) return "↓↓"; if (v < 0) return "↓";
+  return "─";
+}
+
+export function buildTrendAnalysisContext(rawText: string): string {
+  const segments = extractByYear(rawText);
+  if (segments.size < 2) return "";
+  const sortedYears = [...segments.keys()].sort();
+  const snaps = sortedYears.map(y => snapshotFromText(segments.get(y)!, y));
+  if (snaps.length < 2) return "";
+  const newest = snaps[snaps.length - 1];
+  const oldest = snaps[0];
+  const nYrs   = parseInt(newest.year) - parseInt(oldest.year);
+
+  const rows: string[] = [];
+  function addRow(label: string, get: (s: YearSnapshot) => number | null, fmtFn: (n: number) => string) {
+    const vals = snaps.map(get);
+    if (vals.every(v => v == null)) return;
+    const cells = vals.map(v => v != null ? fmtFn(v) : "N/A");
+    const yoys  = snaps.slice(1).map((s, i) => {
+      const g = yoyChange(get(s), get(snaps[i]));
+      return g ? `${trendArrow(g)} ${g}` : "─";
+    });
+    rows.push(`${label.padEnd(20)}| ${cells.join(" | ")} | YoY: ${yoys.join(" → ")}`);
+  }
+
+  rows.push(`${"METRIC".padEnd(20)}| ${sortedYears.join("        | ")}`);
+  rows.push("-".repeat(72));
+  addRow("Revenue",       s => s.revenue,      fmt);
+  addRow("Gross Profit",  s => s.grossProfit,   fmt);
+  addRow("EBIT",          s => s.ebit,          fmt);
+  addRow("Net Income",    s => s.netIncome,     fmt);
+  addRow("Total Assets",  s => s.totalAssets,   fmt);
+  addRow("Total Equity",  s => s.totalEquity,   fmt);
+  addRow("Operating CF",  s => s.operatingCF,   fmt);
+
+  const marginLines = snaps.map(s => {
+    const m: string[] = [];
+    if (s.revenue && s.grossProfit) m.push(`Gross ${pct(s.grossProfit / s.revenue * 100)}`);
+    if (s.revenue && s.ebit)        m.push(`EBIT ${pct(s.ebit / s.revenue * 100)}`);
+    if (s.revenue && s.netIncome)   m.push(`Net ${pct(s.netIncome / s.revenue * 100)}`);
+    return m.length ? `  ${s.year}: ${m.join("  |  ")}` : "";
+  }).filter(Boolean);
+
+  const cagrLines: string[] = [];
+  const revC = cagrStr(oldest.revenue, newest.revenue, nYrs);
+  if (revC) cagrLines.push(`Revenue ${revC} (${oldest.year}→${newest.year})`);
+  const niC  = cagrStr(oldest.netIncome, newest.netIncome, nYrs);
+  if (niC)  cagrLines.push(`Net Income ${niC}`);
+
+  const flags: string[] = [];
+  for (let i = 1; i < snaps.length; i++) {
+    const c = snaps[i], p = snaps[i - 1];
+    if (c.revenue != null && p.revenue != null && c.revenue < p.revenue * 0.95)
+      flags.push(`Revenue declined ${yoyChange(c.revenue, p.revenue)} in ${c.year}`);
+    if (c.netIncome != null && c.netIncome < 0 && (p.netIncome == null || p.netIncome >= 0))
+      flags.push(`Net income turned negative in ${c.year} — profitability reversal`);
+    if (c.revenue && c.grossProfit && p.revenue && p.grossProfit) {
+      const gm = (s: YearSnapshot) => s.grossProfit! / s.revenue!;
+      if (gm(c) < gm(p) - 0.05)
+        flags.push(`Gross margin compressed ${pct((gm(p) - gm(c)) * 100)} from ${p.year} to ${c.year}`);
+    }
+    if (c.operatingCF != null && c.operatingCF < 0 && (p.operatingCF == null || p.operatingCF >= 0))
+      flags.push(`Operating cash flow turned negative in ${c.year}`);
+  }
+
+  let block = `\nMULTI-YEAR TREND ANALYSIS — ${snaps.length} PERIODS (${oldest.year}–${newest.year})\n${"=".repeat(64)}\n`;
+  block += rows.join("\n") + "\n\n";
+  if (marginLines.length) block += `MARGIN TRENDS:\n${marginLines.join("\n")}\n\n`;
+  if (cagrLines.length)   block += `COMPOUND GROWTH RATES:\n${cagrLines.map(l => `  • ${l}`).join("\n")}\n\n`;
+  if (flags.length)       block += `⚠ DETERIORATING METRICS / RED FLAGS:\n${flags.map(f => `  • ${f}`).join("\n")}\n\n`;
+  block += `TREND ANALYSIS MANDATORY REQUIREMENTS:
+1. Open with a 2–3 sentence TREND NARRATIVE describing the overall trajectory across the ${snaps.length} periods
+2. For every YoY change, provide a one-sentence interpretation — not just the number
+3. Compute and cite CAGR for Revenue and Net Income across the full ${nYrs > 0 ? nYrs + "-year " : ""}period
+4. Identify the SINGLE MOST SIGNIFICANT trend (positive or negative) and explain its strategic implications
+5. If any metric deteriorated, diagnose whether it is cyclical or structural with evidence from the data
+6. Conclude with a forward-looking assessment: based on the trends, what should the next fiscal period look like?`;
+
+  return block;
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function buildFinancialStatementsContext(rawText: string, statementType: string): string {
@@ -261,10 +434,13 @@ FULL FINANCIAL STATEMENTS — INTEGRATED ANALYSIS — MANDATORY SECTIONS:
 
   const instructions = stInstructions[statementType] ?? stInstructions.all;
 
+  const trendBlock = buildTrendAnalysisContext(rawText);
+
   return `STUDENT-PROVIDED FINANCIAL STATEMENTS — ${typeLabel}
 ${"-".repeat(60)}
 ${rawText.slice(0, 6000)}${rawText.length > 6000 ? "\n[… truncated for context window — full data above]" : ""}
 ${ratioBlock}
+${trendBlock}
 ${instructions}
 
 MANDATORY FINANCIAL ANALYSIS RULES:

@@ -597,6 +597,7 @@ export default function StudyAssistant() {
                   </div>
                 )}
               </div>
+            )}
 
             {/* ── Financial Statements panel ── */}
             {!!user && isFinanceSubjectForStudy && showFinancials && (
@@ -625,7 +626,7 @@ export default function StudyAssistant() {
                   value={financialStatements}
                   onChange={e => setFinancialStatements(e.target.value)}
                   rows={4}
-                  placeholder={"Paste financial statements…\n\nRevenue:       $2,450,000\nCOGS:          $1,200,000\nNet Income:    $416,500\nTotal Assets:  $5,800,000\nTotal Equity:  $2,100,000"}
+                  placeholder={"Paste statements — single year OR multi-year for trend analysis…\n\nSingle year:\n  Revenue:   $2,450,000\n  Net Income: $416,500\n\nMulti-year (auto YoY + CAGR):\n  FY2023\n  Revenue:   $2,450,000\n  Net Income: $416,500\n\n  FY2022\n  Revenue:   $2,100,000\n  Net Income: $315,000"}
                   className="w-full px-2.5 py-1.5 font-mono text-xs rounded-lg border border-amber-200 dark:border-amber-800 bg-background focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
                 />
                 {financialStatements.trim() && (
