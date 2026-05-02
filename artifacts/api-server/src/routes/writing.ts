@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import { db, pool } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { GenerateOutlineBody } from "@workspace/api-zod";
@@ -19,6 +20,38 @@ import { parseAndAnalyzeDataset, buildInterpretiveContext } from "../lib/dataset
 import { buildFinancialStatementsContext, isFinanceSubject } from "../lib/financialStatements";
 
 const router = Router();
+
+// ── Input validation schemas ───────────────────────────────────────────────────
+// Validates all incoming fields BEFORE any API calls are made.
+// Prevents wasted Claude/OpenAI tokens on malformed requests.
+
+const VALID_CITATION_STYLES = ["apa", "apa7", "mla", "chicago", "chicago17", "harvard", "ieee", "vancouver", "oscola"] as const;
+const VALID_ACADEMIC_LEVELS = ["high_school", "undergrad_1_2", "undergrad_3_4", "honours", "masters", "phd", "professional"] as const;
+const VALID_SPACING         = ["single", "1.5", "double"] as const;
+const VALID_LANGUAGE        = ["us", "uk", "au"] as const;
+
+const GenerateStreamBody = z.object({
+  topic:                       z.string().min(1, "Topic is required").max(3000, "Topic must be under 3000 characters").trim(),
+  subject:                     z.string().min(1, "Subject is required").max(200).trim(),
+  paperType:                   z.string().min(1, "Paper type is required").max(200).trim(),
+  wordCount:                   z.number({ invalid_type_error: "wordCount must be a number" }).int().min(100, "Minimum word count is 100").max(30000, "Maximum word count is 30,000"),
+  citationStyle:               z.enum(VALID_CITATION_STYLES, { errorMap: () => ({ message: `citationStyle must be one of: ${VALID_CITATION_STYLES.join(", ")}` }) }),
+  academicLevel:               z.enum(VALID_ACADEMIC_LEVELS, { errorMap: () => ({ message: `academicLevel must be one of: ${VALID_ACADEMIC_LEVELS.join(", ")}` }) }),
+  isStem:                      z.boolean().optional().default(false),
+  spacing:                     z.enum(VALID_SPACING).optional().default("double"),
+  numSources:                  z.number().int().min(1).max(50).optional(),
+  language:                    z.enum(VALID_LANGUAGE).optional().default("us"),
+  additionalInstructions:      z.string().max(5000).optional(),
+  rubricText:                  z.string().max(15000).optional(),
+  referenceText:               z.string().max(80000).optional(),
+  datasetText:                 z.string().max(300000).optional(),
+  analysisTool:                z.string().max(100).optional(),
+  selectedTests:               z.array(z.string().max(100)).max(20).optional(),
+  includeAssumptionsCheck:     z.boolean().optional(),
+  financialStatements:         z.string().max(50000).optional(),
+  financialStatementType:      z.string().max(50).optional(),
+  includeInterpretiveCommentary: z.boolean().optional(),
+});
 
 // ── Word count helpers ────────────────────────────────────────────────────────
 
@@ -623,28 +656,21 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       return;
     }
 
-    const body = req.body as {
-      topic: string;
-      subject: string;
-      paperType: string;
-      wordCount: number;
-      citationStyle: string;
-      academicLevel: string;
-      isStem: boolean;
-      spacing?: string;
-      numSources?: number;
-      language?: string;
-      additionalInstructions?: string;
-      rubricText?: string;
-      referenceText?: string;
-      datasetText?: string;
-      analysisTool?: string;
-      selectedTests?: string[];
-      includeAssumptionsCheck?: boolean;
-      financialStatements?: string;
-      financialStatementType?: string;
-      includeInterpretiveCommentary?: boolean;
-    };
+    // ── Input validation (Zod) — returns 400 with field errors before any API call ─
+    let body: z.infer<typeof GenerateStreamBody>;
+    try {
+      body = GenerateStreamBody.parse(req.body);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const messages = err.errors.map(e => `${e.path.join(".")}: ${e.message}`).join("; ");
+        send("error", { type: "validation", message: `Invalid request — ${messages}` });
+      } else {
+        send("error", { type: "validation", message: "Invalid request body" });
+      }
+      res.end();
+      clearInterval(heartbeat);
+      return;
+    }
 
     const requestedWords = body.wordCount ?? 1500;
     // Target = exactly what was requested. Max = requested + 5%. Both are hard limits.

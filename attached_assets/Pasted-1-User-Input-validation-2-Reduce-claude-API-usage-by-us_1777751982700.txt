@@ -1,0 +1,27 @@
+1.	User Input validation
+2.	Reduce claude API usage by using openwolf, obsidian, graphify
+Task 	Strategy
+Academic Writing	Use Obsidian for structuring notes and Graphify to map relationships between citations and summaries, reducing repeated reading of full PDFs.
+Data Analysis	Use Graphify to convert large datasets into a graph format, sending only necessary nodes to Claude for analysis.
+OCR	Convert PDFs to images and use OpenWolf to summarize the text before sending to Graphify to create a structured database, reducing image/text processing costs.
+To maximize efficiency and further reduce Claude API costs, you can layer specialized Model Context Protocol (MCP) servers, research-specific plugins, and local RAG workflows on top of your OpenWolf/Obsidian/Graphify stack.
+1. Research & Academic Efficiency
+For academic writing, you can automate citation management and literature mapping directly within your workspace.
+•	KatmerCode: An Obsidian plugin that brings Claude Code directly into your sidebar. It includes academic "skills" like /cite-verify (cross-checking references against CrossRef and OpenAlex) and /peer-review, which evaluates manuscripts against formal criteria.
+•	Scite MCP: Use the Scite connector to give Claude access to a citation graph of 1.6 billion "Smart Citations." This prevents "hallucinated" citations and ensures your academic writing is grounded in papers that actually support your claims.
+•	Litmaps: While external to Obsidian, it can be used to export citation networks that you then feed into Graphify to help Claude understand the evolution of a research field. 
+2. High-Efficiency Data Analysis & OCR
+When dealing with massive data or thousands of OCR pages, standard prompts are too expensive. Use these "bridging" tools:
+•	Caveman: Often paired with Graphify, Caveman is designed for "extreme brevity." It forces Claude to strip away conversational filler, which can save substantial tokens on high-volume data analysis.
+•	Batch API: For non-urgent OCR or data processing, use the Batch API to get 50% off standard costs. This is ideal for overnight processing of research archives.
+•	Reducto: A specialized tool for structured OCR that can convert complex PDFs into clean Markdown or JSON before sending it to Claude. This reduces the "vision tokens" needed, which are significantly more expensive than text tokens. 
+3. Workflow "Power Moves" for Cost Control
+•	Sub-Agent Delegation: Instead of one "God-mode" Claude, use specialized sub-agents (e.g., one for data cleaning, one for drafting). According to Kaizen AI Consulting, parallel sub-agents can process up to 54 documents simultaneously, improving both speed and accuracy.
+•	Portkey: An AI gateway that routes between different Claude models (Haiku vs. Sonnet) or even local models like Ollama based on the complexity of the task. One organization saw a 40% drop in API bills by using this smart routing.
+•	Claude Code Usage Monitor: A GitHub tool to track your real-time token spend, helping you identify which specific academic tasks (like full-paper summarization) are burning your budget
+
+Tool Category 	Recommended Tool	Core Benefit
+Citation Logic	Scite MCP	Real-time citation verification; zero hallucinations.
+Cost Control	Portkey	Routes simple tasks to cheaper models automatically.
+High-Volume OCR	Reducto	Pre-processes PDFs to reduce vision token costs.
+Workspace Chat	KatmerCode	Native Obsidian integration with academic slash commands.
