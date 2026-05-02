@@ -403,15 +403,39 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
  * Formats the section plan as a word-budget string for injection into the system prompt.
  */
 function planSectionWordBudgets(paperType: string, targetWords: number): string {
-  const sections = lookupSectionPlan(paperType);
+  // For very short papers, collapse to 2-3 sections so each section has a realistic
+  // word budget. Showing 5 sections at 40 words each causes Claude to expand each one
+  // to a "full" paragraph and overshoot the target by 5–10×.
+  let sections: { name: string; pct: number }[];
+  if (targetWords <= 300) {
+    sections = [
+      { name: "Introduction — state the topic and thesis in 1–2 sentences", pct: 0.20 },
+      { name: "Body — present the core argument, evidence, and analysis", pct: 0.60 },
+      { name: "Conclusion — summarise the argument in 1–2 sentences", pct: 0.20 },
+    ];
+  } else if (targetWords <= 600) {
+    sections = [
+      { name: "Introduction — state the topic and thesis (1 short paragraph)", pct: 0.18 },
+      { name: "Body Part 1 — first supporting point with evidence", pct: 0.33 },
+      { name: "Body Part 2 — second supporting point or counter-argument", pct: 0.33 },
+      { name: "Conclusion — tie the argument together (1 short paragraph)", pct: 0.16 },
+    ];
+  } else {
+    sections = lookupSectionPlan(paperType);
+  }
+
   let runningTotal = 0;
   const lines = sections.map(s => {
     const words = Math.round(targetWords * s.pct);
     runningTotal += words;
     return `  • ${s.name}: ~${words} words`;
   });
-  // Show the actual budgeted total so the AI can verify the math itself
-  return `SECTION-BY-SECTION WORD BUDGET (MANDATORY — distribute your words exactly like this):
+
+  const shortPaperBanner = targetWords <= 600
+    ? `⚠ SHORT PAPER — ${targetWords} WORDS TOTAL. Every section budget below is a HARD LIMIT. Stop each section the moment you hit its word count. DO NOT expand beyond the allocated words.\n\n`
+    : "";
+
+  return `${shortPaperBanner}SECTION-BY-SECTION WORD BUDGET (MANDATORY — distribute your words exactly like this):
 ${lines.join("\n")}
   ─────────────────────────────────────
   Section budgets sum to: ~${runningTotal} words  ← this must equal your final body word count
@@ -1012,7 +1036,7 @@ SOURCE INTEGRITY (CRITICAL — violations mean the paper is useless):
 
 CITATION FORMAT: Use the chosen style (${body.citationStyle.toUpperCase()}) correctly for every in-text citation and the references section. References section lists ONLY the verified citations.
 
-STRUCTURE: Follow the required structure for ${body.paperType} exactly — every section must be fully developed, not abbreviated or skipped.
+STRUCTURE: ${targetWords <= 600 ? `This is a SHORT paper (${targetWords} words). Keep every section tightly within its allocated word budget — do NOT expand sections beyond their assigned words. Brevity and precision are the mark of quality here.` : `Follow the required structure for ${body.paperType} exactly — every section must be fully developed, not abbreviated or skipped.`}
 
 MARKDOWN: Write in full markdown — # Title, ## sections, ### subsections
 MATH: All equations in LaTeX: inline $...$ and block $$...$$
@@ -1031,7 +1055,7 @@ PLAGIARISM PREVENTION:
 • Paraphrase with genuine transformation, not surface synonym substitution
 • Run a mental originality check on every paragraph — would this pass Turnitin? If not, rewrite.
 
-GRADE TARGET: This paper MUST score 92% or higher. Every section must demonstrate critical analysis, strong argumentation, precise evidence handling, and discipline-specific depth that earns distinction-level marks.
+GRADE TARGET: ${targetWords <= 600 ? `This short paper must demonstrate sharp, focused thinking within its tight word limit. Quality is shown through precision and concision — a 200-word paper that lands exactly on target and argues clearly scores higher than a 600-word paper that ignores the brief. Do NOT write more than ${maxWords} words.` : `This paper MUST score 92% or higher. Every section must demonstrate critical analysis, strong argumentation, precise evidence handling, and discipline-specific depth that earns distinction-level marks.`}
 ${body.additionalInstructions ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STUDENT'S ADDITIONAL INSTRUCTIONS — MANDATORY COMPLIANCE
