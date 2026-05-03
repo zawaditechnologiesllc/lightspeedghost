@@ -1767,9 +1767,10 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
     send("step", { id: "analyse", message: "Scope analysis complete", status: "done" });
     send("step", { id: "structure", message: `Designing argument flow and section hierarchy for ${body.subject}…`, status: "running" });
 
+    const outlineWordCount = Number(rawBody.wordCount) > 0 ? Number(rawBody.wordCount) : 1000;
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: 2500,
+      max_tokens: wordsToTokens(outlineWordCount, 400, 3000),
       system: `${WRITER_SOUL}\n\n${qualityRules}\n\nGenerate a detailed academic paper outline. Return ONLY valid JSON: {"title": string, "sections": [{"heading": string, "subsections": string[]}]}`,
       messages: [{
         role: "user",

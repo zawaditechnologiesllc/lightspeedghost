@@ -20,8 +20,10 @@ export const HealthCheckResponse = zod.object({
 export const listDocumentsQueryLimitDefault = 20;
 export const listDocumentsQueryOffsetDefault = 0;
 
+export const ALL_DOC_TYPES = ["paper", "revision", "stem", "study", "ebook", "outline", "humanizer", "plagiarism"] as const;
+
 export const ListDocumentsQueryParams = zod.object({
-  type: zod.enum(["paper", "revision", "stem", "study"]).optional(),
+  type: zod.enum(ALL_DOC_TYPES).optional(),
   limit: zod.coerce.number().default(listDocumentsQueryLimitDefault),
   offset: zod.coerce.number().default(listDocumentsQueryOffsetDefault),
 });
@@ -32,7 +34,7 @@ export const ListDocumentsResponse = zod.object({
       id: zod.number(),
       title: zod.string(),
       content: zod.string(),
-      type: zod.enum(["paper", "revision", "stem", "study"]),
+      type: zod.enum(ALL_DOC_TYPES),
       subject: zod.string().optional(),
       wordCount: zod.number().optional(),
       createdAt: zod.coerce.date(),
@@ -40,6 +42,7 @@ export const ListDocumentsResponse = zod.object({
     }),
   ),
   total: zod.number(),
+  retentionDays: zod.number().nullable().optional(),
 });
 
 /**
