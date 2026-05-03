@@ -20,6 +20,7 @@ import {
   ShoppingCart,
   ChevronDown,
   BookMarked,
+  ListTree,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useTheme } from "next-themes";
@@ -44,8 +45,8 @@ const ACADEMIC_LEVELS = [
 const navItems = [
   { path: "/app",        label: "Dashboard",           icon: LayoutDashboard },
   { path: "/write",      label: "Write Paper",          icon: PenLine },
-  { path: "/outline",    label: "Outline",              icon: BookOpen },
-  { path: "/revision",   label: "Revision",             icon: Files },
+  { path: "/outline",    label: "Outline",              icon: ListTree },
+  { path: "/revision",   label: "Revision",             icon: RotateCcw },
   { path: "/humanizer",  label: "Humanizer",            icon: Wand2 },
   { path: "/plagiarism", label: "AI & Plagiarism",      icon: ShieldCheck },
   { path: "/stem",       label: "STEM Solver",          icon: FlaskConical },
@@ -56,8 +57,8 @@ const navItems = [
 
 const mobileBottomNav = [
   { path: "/write",      label: "Write",    icon: PenLine },
+  { path: "/outline",    label: "Outline",  icon: ListTree },
   { path: "/humanizer",  label: "Humanize", icon: Wand2 },
-  { path: "/revision",   label: "Revise",   icon: RotateCcw },
   { path: "/plagiarism", label: "Check",    icon: ShieldCheck },
   { path: "/study",      label: "Study",    icon: GraduationCap },
 ];

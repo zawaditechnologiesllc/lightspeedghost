@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import {
   Loader2, Wand2, Download, Save, CheckCircle, XCircle, ExternalLink,
   FileText, ListOrdered, BookMarked, Zap, BarChart3, Edit3,
   Eye, RotateCcw, ChevronDown, Upload, X, Check, AlertTriangle,
-  GraduationCap, FlaskConical, TrendingUp,
+  GraduationCap, FlaskConical, TrendingUp, ListTree,
 } from "lucide-react";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
@@ -459,6 +460,7 @@ ${content
 
 export default function WritePaper() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
 
   // ── phase
@@ -1255,6 +1257,20 @@ export default function WritePaper() {
               Real verified citations · Live generation · Grade &amp; plagiarism estimates
             </p>
           </div>
+
+          {/* Outline nudge */}
+          <button
+            type="button"
+            onClick={() => navigate("/outline")}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-indigo-500/25 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors text-left group"
+          >
+            <ListTree size={16} className="text-indigo-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-indigo-300">Plan first with Outline Generator</p>
+              <p className="text-[11px] text-muted-foreground leading-tight">Generate a structured outline → write the full paper in one click</p>
+            </div>
+            <span className="text-[10px] text-indigo-400/70 group-hover:text-indigo-400 transition-colors shrink-0">Try it →</span>
+          </button>
 
         {fromPlagiarism && (
           <div className="flex items-center justify-between gap-3 px-4 py-3 bg-primary/10 border border-primary/30 rounded-xl text-sm text-primary">
