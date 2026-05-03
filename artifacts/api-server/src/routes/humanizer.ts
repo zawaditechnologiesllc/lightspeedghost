@@ -391,12 +391,58 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       }
     }
 
-    // ── Word count enforcement check ────────────────────────────────────────
-    const humanizedWordCount = currentText.split(/\s+/).filter(Boolean).length;
-    const wcRatio = humanizedWordCount / wordCount;
+    // ── Word count enforcement (not just a warning) ──────────────────────────
+    let humanizedWordCount = currentText.split(/\s+/).filter(Boolean).length;
+    let wcRatio = humanizedWordCount / wordCount;
     let wordCountWarning = "";
     if (wcRatio < 0.95 || wcRatio > 1.05) {
-      wordCountWarning = ` Word count shifted: ${wordCount} → ${humanizedWordCount} (${wcRatio < 1 ? "-" : "+"}${Math.abs(Math.round((wcRatio - 1) * 100))}%). Target was ±5%.`;
+      const isExpand = humanizedWordCount < wordCount;
+      const wordsNeeded = Math.abs(wordCount - humanizedWordCount);
+      send("step", {
+        id: "word-count-fix",
+        message: `Word count drifted after humanization: ${humanizedWordCount} → target ${wordCount} (${isExpand ? "short" : "over"} by ${wordsNeeded}). Running word-count correction pass…`,
+        status: "running",
+      });
+      try {
+        const minTarget = Math.floor(wordCount * 0.95);
+        const maxTarget = Math.ceil(wordCount * 1.05);
+        const corrResp = await anthropic.messages.create({
+          model: "claude-sonnet-4-5",
+          max_tokens: wordsToTokens(wordCount, 600),
+          system: `${WRITER_SOUL}
+
+You are a precise word count adjuster.
+Current word count: ${humanizedWordCount}
+Target word count: ${wordCount}
+Allowed range: ${minTarget}–${maxTarget} words
+
+${isExpand
+  ? `Add ~${wordsNeeded} words of substantive content — deepen analysis, add specific examples, expand key points. No padding or repetition.`
+  : `Remove ~${wordsNeeded} words — cut redundant phrasing, over-explained points, and wordy transitions while keeping all core arguments and citations intact.`}
+
+Preserve ALL citations, facts, headings, LaTeX equations, and markdown formatting exactly. Return ONLY the adjusted text.`,
+          messages: [{
+            role: "user",
+            content: `${isExpand ? "Expand" : "Trim"} this text to reach ${wordCount} words (±5%):\n\n${currentText}`,
+          }],
+        });
+        recordUsage("claude-sonnet-4-5", corrResp.usage.input_tokens, corrResp.usage.output_tokens, "humanizer-wordcount-fix");
+        const corrected = corrResp.content[0].type === "text" ? corrResp.content[0].text.trim() : currentText;
+        currentText = corrected;
+        humanizedWordCount = currentText.split(/\s+/).filter(Boolean).length;
+        wcRatio = humanizedWordCount / wordCount;
+        send("step", {
+          id: "word-count-fix",
+          message: `Word count corrected: ${humanizedWordCount} words (target ${wordCount}${wcRatio >= 0.95 && wcRatio <= 1.05 ? ", within ±5%" : " — best achievable"}).`,
+          status: "done",
+        });
+        if (wcRatio < 0.95 || wcRatio > 1.05) {
+          wordCountWarning = ` Word count: ${wordCount} → ${humanizedWordCount} (outside ±5% target after correction).`;
+        }
+      } catch {
+        wordCountWarning = ` Word count shifted: ${wordCount} → ${humanizedWordCount} (${wcRatio < 1 ? "-" : "+"}${Math.abs(Math.round((wcRatio - 1) * 100))}%). Target was ±5%.`;
+        send("step", { id: "word-count-fix", message: "Word count correction skipped due to error.", status: "done" });
+      }
     }
 
     // ── Final verification step ──────────────────────────────────────────────

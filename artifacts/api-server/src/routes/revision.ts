@@ -680,6 +680,20 @@ Return ONLY the rephrased paper content.`,
       send("step", { id: "ai-gate", message: "AI detection check complete.", status: "done" });
     }
 
+    // ── Re-enforce word count if plagiarism/AI humanization passes drifted it ─
+    // enforceRevisionWordCount ran before the quality gates; those rewrites can
+    // freely change length. Re-run only when measurably outside ±5%.
+    const postGateRevWords = countWords(revisedText);
+    const postGateRevMin = Math.floor(wordCount * 0.95);
+    const postGateRevMax = Math.ceil(wordCount * 1.05);
+    if (postGateRevWords < postGateRevMin || postGateRevWords > postGateRevMax) {
+      try {
+        revisedText = await enforceRevisionWordCount(revisedText, wordCount);
+      } catch {
+        // non-fatal — continue with current text
+      }
+    }
+
     const aiScore = realAiScore;
     const finalPlagScore = plagScore >= 0 ? plagScore : 0;
 
