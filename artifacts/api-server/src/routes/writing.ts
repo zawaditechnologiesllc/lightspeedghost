@@ -18,6 +18,8 @@ import { recordSearchResults, recordQualitySignal } from "../lib/learningEngine"
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
 import { parseAndAnalyzeDataset, buildInterpretiveContext } from "../lib/datasetAnalysis";
 import { buildFinancialStatementsContext, isFinanceSubject } from "../lib/financialStatements";
+import { cavemanSystem } from "../lib/caveman.js";
+import { fastCall } from "../lib/aiGateway.js";
 
 const router = Router();
 
@@ -717,26 +719,18 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
         return { aGradeCriteria: buildGradeCriteria(body.academicLevel), rubricFormatReqs: "" };
       }
       try {
-        // Caveman-compressed system prompt — no conversational filler, just the task
-        const rubricResp = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          max_tokens: 1000,
-          response_format: { type: "json_object" },
-          messages: [
-            {
-              role: "system",
-              content: `Extract TOP grade band criteria from an academic rubric.
-Return JSON: {"topGradeBand":"...","gradeThreshold":"...","criteria":["..."],"formatRequirements":"...or null"}`,
-            },
-            {
-              role: "user",
-              content: body.rubricText.slice(0, 4000),
-            },
-          ],
-        });
-        if (rubricResp.usage) recordUsage("gpt-4o-mini", rubricResp.usage.prompt_tokens, rubricResp.usage.completion_tokens, "rubric-analysis");
+        // Caveman-compressed system prompt routed through AI Gateway (fast tier → gpt-4o-mini with fallback)
+        const rawRubricSystem = `You are an expert academic assessor. Extract the top grade band criteria from the uploaded academic rubric.
+Return JSON: {"topGradeBand":"...","gradeThreshold":"...","criteria":["..."],"formatRequirements":"...or null"}
+Only output valid JSON. Do not include markdown fences or commentary.`;
 
-        const rd = JSON.parse(rubricResp.choices[0]?.message?.content ?? "{}") as {
+        const rubricContent = await fastCall(
+          cavemanSystem(rawRubricSystem, "ultra"),
+          body.rubricText.slice(0, 4000),
+          { maxTokens: 1000, jsonMode: true, operation: "rubric-analysis" }
+        );
+
+        const rd = JSON.parse(rubricContent ?? "{}") as {
           topGradeBand?: string; gradeThreshold?: string;
           criteria?: string[]; formatRequirements?: string;
         };

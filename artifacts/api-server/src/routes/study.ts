@@ -15,6 +15,7 @@ import { recordUsage } from "../lib/apiCost";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
 import { buildFinancialStatementsContext } from "../lib/financialStatements";
+import { cavemanSystem } from "../lib/caveman.js";
 import { z } from "zod";
 
 const router = Router();
@@ -436,11 +437,13 @@ router.post("/study/generate", requireAuth, async (req, res) => {
       // Uses OpenAI's JSON mode to guarantee valid JSON output, eliminating the
       // regex-strip fallback needed for Claude. Caveman-style: no system prompt,
       // just the task. Strip verbose preamble to save input tokens.
+      // Caveman: compress the prompt before sending to gpt-4o-mini to save input tokens
+      const compressedPrompt = cavemanSystem(prompt, "lite");
       const gptResp = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         max_tokens: 4000,
         response_format: { type: "json_object" },
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: compressedPrompt }],
       });
       if (gptResp.usage) recordUsage("gpt-4o-mini", gptResp.usage.prompt_tokens, gptResp.usage.completion_tokens, `study-${body.type}`);
       raw = gptResp.choices[0]?.message?.content ?? "";

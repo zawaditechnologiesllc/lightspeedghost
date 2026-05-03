@@ -11,6 +11,7 @@ import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection";
 import { searchAllAcademicSources } from "../lib/academicSources";
 import { runOpenSourcePlagiarismCheck } from "../lib/openSourceSearch";
+import { analyseCodeSimilarity, containsCode, type CodeLanguage } from "../lib/codeAnalysis.js";
 
 const router = Router();
 
@@ -297,6 +298,12 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
 
     send("step", { id: "report", message: "Full diagnostic report ready", status: "done" });
 
+    // Code plagiarism analysis — AST-inspired structural fingerprinting (Advanced-Code-Plagiarism-Detection-Tool pattern)
+    const codeDetected = containsCode(text);
+    const codeAnalysisResult = codeDetected
+      ? analyseCodeSimilarity(text, text.slice(0, Math.floor(text.length / 2)))
+      : null;
+
     send("done", {
       aiScore: effectiveAiScore !== null ? effectiveAiScore : 0,
       aiDetectionAvailable: effectiveAiScore !== null,
@@ -321,6 +328,12 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       aiFlags: aiIndicators,
       readability,
       detectionModel: "gpt-4o-mini + burstiness",
+      codeAnalysis: codeDetected ? {
+        detected: true,
+        language: codeAnalysisResult?.language ?? "unknown",
+        verdict: codeAnalysisResult?.verdictLabel ?? "",
+        structuralSimilarity: codeAnalysisResult?.structuralSimilarity ?? 0,
+      } : { detected: false },
       sourcesScanned: [
         "OpenAlex (250M+ papers)", "Semantic Scholar (200M+ papers)", "CrossRef (145M+ DOIs)",
         "Open Library (20M+ books)", "Wikipedia", "Google Books", "Internet Archive",
@@ -443,20 +456,38 @@ router.post("/plagiarism/code", requireAuth, async (req, res) => {
 
     const result = compareDocuments(doc1, doc2, kgramSize, windowSize);
     const overallSimilarity = Math.round((result.similarity1 + result.similarity2) / 2);
+
+    // AST-inspired structural code analysis — layer on top of Winnowing (Advanced-Code-Plagiarism-Detection-Tool pattern)
+    const structuralResult = (containsCode(doc1) || containsCode(doc2))
+      ? analyseCodeSimilarity(doc1, doc2, typeof language === "string" ? language as CodeLanguage : undefined)
+      : null;
+
+    const combinedSimilarity = structuralResult
+      ? Math.round(overallSimilarity * 0.5 + structuralResult.similarity * 0.5)
+      : overallSimilarity;
+
     const riskLevel: "low" | "medium" | "high" =
-      overallSimilarity >= 40 ? "high" : overallSimilarity >= 20 ? "medium" : "low";
+      combinedSimilarity >= 40 ? "high" : combinedSimilarity >= 20 ? "medium" : "low";
 
     res.json({
       similarity1: Math.round(result.similarity1),
       similarity2: Math.round(result.similarity2),
-      overallSimilarity,
+      overallSimilarity: combinedSimilarity,
       tokenOverlap: result.tokenOverlap,
       slices1: result.slices1,
       slices2: result.slices2,
       highlightedDoc1: result.highlightedDoc1,
       highlightedDoc2: result.highlightedDoc2,
       riskLevel,
-      algorithm: "Winnowing (MOSS)",
+      algorithm: structuralResult ? "Winnowing (MOSS) + AST Structural Analysis" : "Winnowing (MOSS)",
+      structuralAnalysis: structuralResult ? {
+        language: structuralResult.language,
+        structuralSimilarity: structuralResult.structuralSimilarity,
+        tokenSimilarity: structuralResult.tokenSimilarity,
+        apiCallSimilarity: structuralResult.apiCallSimilarity,
+        verdict: structuralResult.verdictLabel,
+        sharedPatterns: structuralResult.sharedPatterns.slice(0, 5),
+      } : null,
       kgramSize,
       windowSize,
     });
