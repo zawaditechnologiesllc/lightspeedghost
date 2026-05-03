@@ -881,7 +881,7 @@ Only output valid JSON. Do not include markdown fences or commentary.`;
       try {
         const stemResp = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
-          max_tokens: 3500,
+          max_tokens: wordsToTokens(Math.ceil(maxWords * 0.25), 400, 4000),
           system: `You are an expert STEM researcher and academic writer.
 Generate technical content tagged to the EXACT section of the paper where it belongs.
 Return JSON (include ONLY sections relevant to this topic):
@@ -1378,7 +1378,7 @@ RULES:
     try {
       const bibResp = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_tokens: 1200,
+        max_tokens: wordsToTokens(citations.length * 30, 0, 1200),
         messages: [{
           role: "system",
           content: `Format these citations as a clean ${body.citationStyle.toUpperCase()} bibliography. Return ONLY the bibliography list, numbered.`,

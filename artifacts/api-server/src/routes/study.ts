@@ -16,6 +16,7 @@ import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
 import { buildFinancialStatementsContext } from "../lib/financialStatements";
 import { cavemanSystem } from "../lib/caveman.js";
+import { wordsToTokens } from "../lib/tokenBudget.js";
 import { z } from "zod";
 
 const router = Router();
@@ -430,6 +431,11 @@ router.post("/study/generate", requireAuth, async (req, res) => {
     const hasImages = (body.images ?? []).length > 0;
     const model     = selectStudyModel(body.type, hasImages);
 
+    // Dynamic token budget based on input content size.
+    // Output is always shorter than input: summaries ~35%, flashcards/quiz ~40%,
+    // study guides / slides ~60%. Claude path handles longer-form outputs.
+    const contentWordCount = enrichedContent.split(/\s+/).filter(Boolean).length;
+
     let raw = "";
 
     if (model === "gpt-4o-mini") {
@@ -441,7 +447,7 @@ router.post("/study/generate", requireAuth, async (req, res) => {
       const compressedPrompt = cavemanSystem(prompt, "lite");
       const gptResp = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_tokens: 4000,
+        max_tokens: wordsToTokens(Math.ceil(contentWordCount * 0.40), 200, 4000),
         response_format: { type: "json_object" },
         messages: [{ role: "user", content: compressedPrompt }],
       });
@@ -461,7 +467,7 @@ router.post("/study/generate", requireAuth, async (req, res) => {
 
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-5",
-        max_tokens: 4000,
+        max_tokens: wordsToTokens(Math.ceil(contentWordCount * 0.60), 300, 6000),
         messages: [{ role: "user", content: userContent }],
       });
       recordUsage("claude-sonnet-4-5", response.usage.input_tokens, response.usage.output_tokens, `study-${body.type}`);
