@@ -23,6 +23,20 @@ import { useWakeLock } from "@/hooks/useWakeLock";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
+type PlagiarismPageResult = PlagiarismResult & {
+  sourcesScanned?: string[];
+  matchedSentences?: Array<{
+    sentence: string;
+    matchScore: number;
+    sources: Array<{ url: string; title: string; sourceType: string }>;
+  }>;
+  matchedWords?: Array<{
+    word: string;
+    matchScore: number;
+    sources: Array<{ url: string; title: string; sourceType: string }>;
+  }>;
+};
+
 type PageTab = "text" | "code";
 type TextPhase = "idle" | "checking" | "results";
 type CodePhase = "idle" | "comparing" | "results";
@@ -567,7 +581,7 @@ export default function PlagiarismChecker() {
   const [textPhase, setTextPhase] = useState<TextPhase>("idle");
   useWakeLock(textPhase === "checking");
   const [checkError, setCheckError] = useState<string | null>(null);
-  const [result, setResult] = useState<PlagiarismResult | null>(null);
+  const [result, setResult] = useState<PlagiarismPageResult | null>(null);
   const [humanizedText, setHumanizedText] = useState<string | null>(null);
   const [intensityValue, setIntensityValue] = useState(50);
   const [copied, setCopied] = useState(false);
@@ -1086,9 +1100,9 @@ export default function PlagiarismChecker() {
                     <div className="bg-card border border-border rounded-xl p-4">
                       <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-2.5">Words Matched in Academic Corpus</h3>
                       <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-                        {result.matchedWords.slice(0, 60).map((word: string) => (
-                          <span key={word} className="text-[11px] px-2 py-0.5 bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 rounded font-medium">
-                            {word}
+                        {result.matchedWords.slice(0, 60).map((item) => (
+                          <span key={item.word} className="text-[11px] px-2 py-0.5 bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 rounded font-medium">
+                            {item.word}
                           </span>
                         ))}
                         {result.matchedWords.length > 60 && (
@@ -1319,14 +1333,13 @@ export default function PlagiarismChecker() {
                 </div>
               )}
 
-                {codePhase === "idle" && (
+              {codePhase === "idle" && (
                   <div className="bg-card border border-dashed border-border rounded-xl p-10 flex flex-col items-center justify-center text-center gap-2 text-muted-foreground">
                     <Code2 size={36} className="opacity-30 mb-1" />
                     <p className="text-sm font-medium">Paste two code submissions and click Compare Code</p>
                     <p className="text-xs max-w-sm">The Winnowing algorithm fingerprints both documents and highlights structurally similar sections, even if variable names or formatting were changed</p>
                   </div>
-                )}
-                </div>
+              )}
               </div>
             </div>
           )
