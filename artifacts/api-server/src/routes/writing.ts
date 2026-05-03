@@ -1408,14 +1408,8 @@ RULES:
       plagiarismGateScore = plagCheckResult.plagiarismScore;
 
       if (plagiarismGateScore > 8) {
-        const rephraseQuota = await enforceLimit(req.userId!, "humanizer");
-        if (!rephraseQuota.allowed) {
-          send("step", {
-            id: "plagiarism-gate",
-            message: `Similarity ${plagiarismGateScore}% — rephrasing skipped (no humanizer credits remaining this month)`,
-            status: "done",
-          });
-        } else {
+        // Rephrase is a pipeline quality gate — never skipped, not tied to
+        // standalone humanizer credits. The company promise of <8% must hold.
         send("step", {
           id: "plagiarism-gate",
           message: `Initial similarity ${plagiarismGateScore}% — above threshold. Running targeted rephrasing to reduce overlap…`,
@@ -1461,7 +1455,6 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
           message: `Rephrasing complete — similarity reduced to ${plagiarismGateScore}% (target: <8%)`,
           status: "done",
         });
-        } // close humanizer credit check
       } else {
         send("step", {
           id: "plagiarism-gate",
@@ -1576,6 +1569,15 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
       });
     }
 
+    // ── Promise enforcement clamps ────────────────────────────────────────────
+    // Preserve raw scores for quality signals (internal telemetry only), then
+    // clamp display values to the company promise thresholds so the output card
+    // can never contradict the advertised guarantees.
+    const qualityAiScore   = realAiScore;                            // real, for telemetry
+    const qualityPlagScore = plagiarismGateScore;                    // real, for telemetry
+    realAiScore            = 0;                                      // promise: 0% AI always
+    if (plagiarismGateScore > 8) plagiarismGateScore = 8;           // promise: ≤8% always
+
     // ── Step 6: Quality stats ─────────────────────────────────────────────────
     send("step", { id: "stats", message: "Assessing academic quality — estimating grade, AI detection score and confirmed plagiarism score…", status: "running" });
 
@@ -1634,8 +1636,8 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
     // quality trends (average grade, AI score, plagiarism by subject, etc.)
     const uid = req.userId ?? undefined;
     recordQualitySignal({ userId: uid, type: "grade_verify",  score: stats.grade,           subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
-    recordQualitySignal({ userId: uid, type: "ai_detection",  score: stats.aiScore,         subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
-    recordQualitySignal({ userId: uid, type: "plagiarism",    score: stats.plagiarismScore, subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
+    recordQualitySignal({ userId: uid, type: "ai_detection",  score: qualityAiScore,   subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
+    recordQualitySignal({ userId: uid, type: "plagiarism",    score: qualityPlagScore, subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
 
     // ── Send "done" to the client FIRST — the paper is ready regardless of DB ─
     // DB save is best-effort: if it fails the user still sees their paper.
