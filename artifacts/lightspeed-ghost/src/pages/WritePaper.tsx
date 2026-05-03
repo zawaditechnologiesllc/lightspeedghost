@@ -21,6 +21,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import { ReadabilityPanel, GrammarPanel, TonePanel, CitationFromUrl } from "@/components/analysis";
 import { SubjectSelect } from "@/components/SubjectSelect";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -970,6 +971,7 @@ export default function WritePaper() {
               filename={makeLsgFilename("paper", topic || result.title || "PAPER")}
               formats={["docx", "pdf", "copy"]}
             />
+            <FeedbackWidget type="paper" subject={subject} className="shrink-0" />
             <button
               onClick={() => { setPhase("config"); setResult(null); setStreamedContent(""); }}
               className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors"

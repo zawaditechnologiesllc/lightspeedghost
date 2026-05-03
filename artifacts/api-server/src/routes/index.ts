@@ -16,6 +16,7 @@ import referralRouter from "./referral";
 import assistantRouter from "./assistant";
 import profileRouter from "./profile";
 import ebooksRouter from "./ebooks";
+import feedbackRouter from "./feedback";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(pwaRouter);
 router.use(referralRouter);
 router.use(assistantRouter);
 router.use(ebooksRouter);
+router.use(feedbackRouter);
 
 export default router;

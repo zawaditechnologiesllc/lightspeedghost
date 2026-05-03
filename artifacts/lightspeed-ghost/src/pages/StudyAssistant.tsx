@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
 import { ExportButtons } from "@/components/ExportButtons";
 import { wrapDocHtml, mdToBodyHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { renderInlineMd } from "@/lib/renderInline";
 import { ALL_SUBJECTS } from "@/lib/subjects";
 import { apiFetch } from "@/lib/apiFetch";
@@ -971,9 +972,10 @@ export default function StudyAssistant() {
                 )}
               </div>
 
-              {/* Export buttons for exportable views */}
+              {/* Export buttons and feedback for exportable views */}
               {activeView && activeView !== "weakpoints" && (
-                <div className="flex justify-end -mt-1">
+                <div className="flex items-center justify-between -mt-1 flex-wrap gap-2">
+                  <FeedbackWidget type="study" />
                   <ExportButtons
                     getHtml={() => {
                       if (activeView === "flashcards" && flashcards.length) {
