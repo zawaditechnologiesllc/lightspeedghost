@@ -10,7 +10,9 @@ import {
   Megaphone, Link2, Eye, EyeOff, ThumbsUp, ThumbsDown,
   Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
   BookOpen, Inbox, MailOpen, MailCheck, Building2,
+  Copy, FileDown, Printer, FileText as FileTextIcon, Loader2 as Loader2Icon,
 } from "lucide-react";
+import { exportAsDocx, exportAsPDF, exportAsTxt, copyText, richToHtml, wrapDocHtml } from "@/lib/exportUtils";
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
 
@@ -114,6 +116,7 @@ interface AdminDocument {
   id: number;
   userId: string | null;
   title: string;
+  content?: string | null;
   type: string;
   subject: string | null;
   wordCount: number;
@@ -351,6 +354,7 @@ export default function Admin() {
   const [docTotal, setDocTotal] = useState(0);
   const [docSearch, setDocSearch] = useState("");
   const [docTypeFilter, setDocTypeFilter] = useState("all");
+  const [adminExportingKey, setAdminExportingKey] = useState<string | null>(null);
   const [pwaStats, setPwaStats] = useState<{
     totalInstalls: number; androidInstalls: number; iosInstalls: number;
     installs7d: number; installs30d: number;
@@ -490,6 +494,21 @@ export default function Admin() {
     try { setRevenue(await adminFetch("/mwaramuriuki-login/revenue", password) as RevenueData); } catch { setRevenue(null); }
     finally { setLoading(false); }
   }, [password]);
+
+  const handleAdminExport = async (fmt: string, doc: AdminDocument) => {
+    const key = `${doc.id}-${fmt}`;
+    setAdminExportingKey(key);
+    const slug = doc.title.replace(/[^a-zA-Z0-9-_ ]/g, "_").replace(/\s+/g, "_").slice(0, 60).trim();
+    const content = doc.content ?? "";
+    try {
+      if (fmt === "copy") await copyText(content);
+      else if (fmt === "docx") await exportAsDocx(content, slug, doc.title);
+      else if (fmt === "pdf") exportAsPDF(wrapDocHtml(doc.title, richToHtml(content)));
+      else if (fmt === "txt") exportAsTxt(content, slug);
+    } finally {
+      setAdminExportingKey(null);
+    }
+  };
 
   const loadDocuments = useCallback(async () => {
     setLoading(true);
@@ -1456,8 +1475,8 @@ export default function Admin() {
                   ))}
                 </div>
                 <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                  <div className="grid grid-cols-[1fr_100px_80px_140px_100px] gap-2 px-4 py-2.5 border-b border-white/6">
-                    {["Title", "Type", "Words", "User", "Updated"].map((h) => (
+                  <div className="grid grid-cols-[1fr_100px_80px_120px_80px_120px] gap-2 px-4 py-2.5 border-b border-white/6">
+                    {["Title", "Type", "Words", "User", "Updated", "Download"].map((h) => (
                       <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
                     ))}
                   </div>
@@ -1471,12 +1490,37 @@ export default function Admin() {
                         });
                         if (filtered.length === 0) return <Empty text="No documents found" />;
                         return filtered.map((doc, i) => (
-                          <div key={doc.id} className={`grid grid-cols-[1fr_100px_80px_140px_100px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < filtered.length - 1 ? "border-b border-white/6" : ""}`}>
+                          <div key={doc.id} className={`grid grid-cols-[1fr_100px_80px_120px_80px_120px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < filtered.length - 1 ? "border-b border-white/6" : ""}`}>
                             <p className="text-sm text-white/75 font-medium truncate" title={doc.title}>{doc.title}</p>
                             <TypeBadge type={doc.type} />
                             <span className="text-xs text-white/35 tabular-nums">{doc.wordCount.toLocaleString()}w</span>
                             <span className="text-[11px] text-white/30 font-mono truncate" title={doc.userId ?? ""}>{doc.userId ? doc.userId.slice(0, 10) + "…" : "anon"}</span>
                             <span className="text-xs text-white/30">{new Date(doc.updatedAt).toLocaleDateString()}</span>
+                            {doc.content ? (
+                              <div className="flex items-center gap-0.5">
+                                {([
+                                  { fmt: "copy", icon: <Copy size={11} />, title: "Copy" },
+                                  { fmt: "docx", icon: <FileDown size={11} />, title: "Word" },
+                                  { fmt: "pdf",  icon: <Printer size={11} />, title: "PDF" },
+                                  { fmt: "txt",  icon: <FileTextIcon size={11} />, title: ".txt" },
+                                ] as const).map(({ fmt, icon, title }) => {
+                                  const isLoading = adminExportingKey === `${doc.id}-${fmt}`;
+                                  return (
+                                    <button
+                                      key={fmt}
+                                      onClick={() => handleAdminExport(fmt, doc)}
+                                      disabled={!!adminExportingKey}
+                                      title={title}
+                                      className="p-1 rounded text-white/25 hover:text-white/70 hover:bg-white/8 transition-colors disabled:opacity-30"
+                                    >
+                                      {isLoading ? <Loader2Icon size={11} className="animate-spin" /> : icon}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-white/15">—</span>
+                            )}
                           </div>
                         ));
                       })()

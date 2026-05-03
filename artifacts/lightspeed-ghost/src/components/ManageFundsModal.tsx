@@ -194,7 +194,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
             {/* Plans list */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-foreground">All plans</p>
-              {SUBSCRIPTION_PLANS.map((p) => (
+              {SUBSCRIPTION_PLANS.filter((p) => p.id !== "institution_annual").map((p) => (
                 <button
                   key={p.id}
                   onClick={() => setCheckoutPlan(p.id)}
