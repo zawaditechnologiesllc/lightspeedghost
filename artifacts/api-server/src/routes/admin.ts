@@ -465,17 +465,48 @@ router.delete("/mwaramuriuki-login/users/:id", async (req: Request, res: Respons
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   try {
-    // Remove user's activity data from public tables
+    // 1. Remove all local activity data from public tables
     await Promise.allSettled([
       pool.query("DELETE FROM documents WHERE user_id = $1", [id]),
       pool.query("DELETE FROM study_sessions WHERE user_id = $1", [id]),
       pool.query("DELETE FROM user_usage WHERE user_id = $1", [id]),
       pool.query("DELETE FROM user_subscriptions WHERE user_id = $1", [id]),
       pool.query("DELETE FROM user_bans WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM user_credits WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM credit_transactions WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM request_logs WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM referral_codes WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM referral_signups WHERE referred_user_id = $1", [id]),
+      pool.query("DELETE FROM student_profiles WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM user_ebook_subscriptions WHERE user_id = $1", [id]),
     ]);
-    // Attempt hard delete from auth.users (works with direct DB connection; no-op if pooler restricts it)
-    await pool.query("DELETE FROM auth.users WHERE id = $1::uuid", [id]).catch(() => {});
-    res.json({ ok: true });
+
+    // 2. Hard-delete the Supabase auth user via Admin API
+    // Direct SQL against auth.users is blocked by Supabase's connection pooler —
+    // the Admin REST API is the correct path.
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    let authDeleteError: string | null = null;
+
+    if (supabaseUrl && serviceRoleKey) {
+      const delResp = await fetch(`${supabaseUrl}/auth/v1/admin/users/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: serviceRoleKey,
+        },
+      });
+      if (!delResp.ok) {
+        const errText = await delResp.text().catch(() => delResp.statusText);
+        authDeleteError = `Supabase auth delete failed (${delResp.status}): ${errText}`;
+        logger.warn({ id, authDeleteError }, "[admin] Could not delete Supabase auth user");
+      }
+    } else {
+      authDeleteError = "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set — Supabase auth user was NOT deleted";
+      logger.warn({ id }, "[admin] Supabase env vars missing — skipped auth user deletion");
+    }
+
+    res.json({ ok: true, authDeleteError });
   } catch {
     res.status(500).json({ error: "Internal server error" });
   }
