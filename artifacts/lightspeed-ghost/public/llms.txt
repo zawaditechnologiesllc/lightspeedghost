@@ -68,8 +68,9 @@ Total coverage: 1B+ papers. Wikipedia is excluded. All sources require DOI or ve
 ## Quality standards enforced on every output
 
 - 92%+ grade accuracy: A-grade rubric cross-check on every paper
-- Below 8% plagiarism: cosine similarity gate enforced before delivery
-- Below 5% AI detection score: multi-pass humanization loop with real detector
+- Below 8% plagiarism: cosine similarity gate enforced before delivery — hard block, not a warning
+- Below 5% AI detection score (target 0%): multi-pass humanization loop with real detector — hard block, not a warning
+- Word count: 95–105% of student target (hard enforced). Body text only — excludes reference list, in-text citations, headings, abstract, ToC, figure/table captions. Auto-corrects if outside range
 - Citation count ranking: highest-impact papers surface first in every response
 - No Wikipedia, no invented citations, no broken URLs
 
@@ -79,11 +80,12 @@ All tools support: PDF, Word (.docx), plain text (.txt), PNG, JPG, WEBP. Images 
 
 ## Pricing
 
-- **Starter**: $1.50/month — 3 papers/month, 5 outlines, 5 plagiarism checks, 10 STEM queries/day, 10 study messages/day, 1 revision
-- **Pro Monthly**: $14.99/month — 50 papers/month, 50 revisions, 30 STEM problems/day, unlimited study sessions, unlimited plagiarism + AI detection, LightSpeed Humanizer (50 jobs/month), 90-day history, BibTeX/RIS/Zotero export, priority AI processing
-- **Pro Annual**: $99/year ($8.25/month) — same as Pro Monthly, 45% saving
-- **Campus**: $6/seat/month (annual, min 5 seats) — Pro features per seat, 15 papers/seat/month, shared document library, admin dashboard, academic integrity reporting
-- **Pay-As-You-Go**: No subscription. Per-job pricing — from $1.99 (discussion post) to $24.99 (dissertation). Plagiarism checks $0.99 each. Credits never expire.
+- **Starter**: $9.99/month — 3 papers/month, 5 outlines, 5 plagiarism checks, 15 STEM queries/month, 20 study messages/month, 1 revision
+- **Pro Monthly**: $29.99/month — 15 papers/month, 20 revisions, 40 STEM solves/month, 80 study sessions/month, 20 plagiarism + AI checks/month, LightSpeed Humanizer (20 jobs/month), priority AI processing
+- **Pro Annual**: $269/year ($22.42/month) — same as Pro Monthly, 25% saving
+- **Institution**: Custom pricing — admin-assigned only, not self-service. 5 papers/seat, 8 revisions, 8 humanizations, 30 STEM solves, 75 study sessions
+- **Ebooks Add-On**: $29.99/month — 15 AI-written ebooks/month for KDP/Apple Books/all platforms. Completely separate from academic plans
+- **Pay-As-You-Go**: No subscription. Per-job pricing — from $3.99 (discussion post) to $59.99 (dissertation/thesis). Credits never expire.
 
 ## Citation styles supported
 

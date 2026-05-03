@@ -192,6 +192,37 @@ EBI BioModels, PubChem
 
 ---
 
+## Sector Admin System
+
+The admin panel (`/admin`) supports two admin roles:
+
+### Super Admin
+- Authenticates with just `ADMIN_PASSWORD` env var (no email required)
+- Has access to all tabs including the `admin-management` tab
+- Can create, edit, toggle active/inactive, and delete sector admins
+
+### Sector Admin
+- Authenticates with email + password (bcrypt-hashed in `admin_users` DB table)
+- Has access only to tabs in their assigned sectors (union of sector tab lists)
+- Cannot access `admin-management` tab
+- Login: enter email in the "Sector Admin Email" field + their password
+
+### Sector-to-Tab Mapping
+| Sector | Tabs |
+|---|---|
+| content | overview, users, documents, ebooks, announcements, messages |
+| finance | overview, payments, credits, finance, referrals, gateways |
+| analytics | overview, analytics, logs, intelligence |
+| support | overview, users, messages, credits |
+| technical | overview, tools, gateways, settings, logs |
+
+### Auth flow
+- Frontend stores `admin_token`, `admin_role` (JSON), `admin_email` in `sessionStorage`
+- Backend: `POST /api/admin/verify` — super admin checks `ADMIN_PASSWORD` env var; sector admin checks bcrypt hash from `admin_users` table
+- All admin routes require either super-admin token or `x-admin-email` + `x-admin-password` headers
+
+---
+
 ## Workflows
 
 | Workflow | Command | Purpose |

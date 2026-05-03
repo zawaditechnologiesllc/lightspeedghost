@@ -2,10 +2,22 @@ import { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { documentsTable, studySessionsTable } from "@workspace/db";
 import { desc, sql, eq, ilike, and } from "drizzle-orm";
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { invalidateSettingsCache } from "../lib/systemSettings";
 import { getUsageLog, checkBudget } from "../lib/apiCost";
 import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
+
+// ── Extend Express Request to carry resolved admin context ────────────────────
+declare module "express-serve-static-core" {
+  interface Request {
+    adminAuth?: {
+      authorized: boolean;
+      isSuperAdmin: boolean;
+      sectorAdmin?: { id: number; name: string; email: string; sectors: string[] };
+    };
+  }
+}
 
 const router = Router();
 
@@ -22,11 +34,54 @@ function timingSafeCompare(a: string, b: string): boolean {
   return crypto.timingSafeEqual(aPadded, bPadded) && aBuf.length === bBuf.length;
 }
 
-function verifyAdminToken(req: Request): boolean {
-  if (!ADMIN_PASSWORD) return false;
+// ── Router-level middleware: resolve admin identity once per request ───────────
+// Resolves BEFORE every /mwaramuriuki-login/* route handler.
+// Super admin: x-admin-password matches ADMIN_PASSWORD env var (fast, sync).
+// Sector admin: x-admin-email + x-admin-password → DB lookup + bcrypt compare.
+router.use(async (req: Request, _res: Response, next: NextFunction) => {
   const token = req.headers["x-admin-password"] as string | undefined;
-  if (!token) return false;
-  return timingSafeCompare(token, ADMIN_PASSWORD);
+  if (!token) {
+    req.adminAuth = { authorized: false, isSuperAdmin: false };
+    return next();
+  }
+
+  // 1. Super admin — env var check (constant-time, no DB)
+  if (ADMIN_PASSWORD && timingSafeCompare(token, ADMIN_PASSWORD)) {
+    req.adminAuth = { authorized: true, isSuperAdmin: true };
+    return next();
+  }
+
+  // 2. Sector admin — DB lookup by email + bcrypt compare
+  const adminEmail = (req.headers["x-admin-email"] as string | undefined)?.trim().toLowerCase();
+  if (adminEmail) {
+    try {
+      const { rows } = await pool.query<{
+        id: number; name: string; email: string; sectors: string[]; password_hash: string;
+      }>(
+        "SELECT id, name, email, sectors, password_hash FROM admin_users WHERE email = $1 AND active = true LIMIT 1",
+        [adminEmail],
+      );
+      if (rows.length > 0 && await bcrypt.compare(token, rows[0].password_hash)) {
+        const { password_hash: _h, ...admin } = rows[0];
+        void _h;
+        req.adminAuth = { authorized: true, isSuperAdmin: false, sectorAdmin: admin };
+        return next();
+      }
+    } catch { /* DB error — fall through to unauthorized */ }
+  }
+
+  req.adminAuth = { authorized: false, isSuperAdmin: false };
+  next();
+});
+
+// Keep backward-compat helper used by all existing route guards
+function verifyAdminToken(req: Request): boolean {
+  return req.adminAuth?.authorized ?? false;
+}
+
+// Super-admin-only guard — used for sensitive config and admin-user CRUD
+function requireSuperAdmin(req: Request): boolean {
+  return req.adminAuth?.isSuperAdmin ?? false;
 }
 
 // ── Bootstrap admin tables ───────────────────────────────────────────────────
@@ -73,6 +128,17 @@ async function initAdminTables() {
       read BOOLEAN NOT NULL DEFAULT false,
       replied BOOLEAN NOT NULL DEFAULT false,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS admin_users (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      sectors TEXT[] NOT NULL DEFAULT '{}',
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_by TEXT NOT NULL DEFAULT 'super',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     INSERT INTO system_settings (key, value) VALUES
       ('maintenance_mode',        'false'),
@@ -125,18 +191,42 @@ async function getSettings(): Promise<Record<string, string>> {
 }
 
 // ── POST /admin/verify ────────────────────────────────────────────────────────
+// Returns: { ok, role: 'super'|'sector', sectors, name, email?, adminId? }
+// Sector admin login requires { email, password }; super admin uses { password } only.
 
-router.post("/mwaramuriuki-login/verify", (req, res) => {
-  const { password } = req.body as { password?: string };
+router.post("/mwaramuriuki-login/verify", async (req: Request, res: Response) => {
+  const { password, email } = req.body as { password?: string; email?: string };
+  const pwd = password ?? "";
+  const emailVal = (email ?? "").trim().toLowerCase();
+
+  // ── Sector admin login (email provided) ─────────────────────────────────────
+  if (emailVal) {
+    try {
+      const { rows } = await pool.query<{
+        id: number; name: string; email: string; sectors: string[]; password_hash: string;
+      }>(
+        "SELECT id, name, email, sectors, password_hash FROM admin_users WHERE email = $1 AND active = true LIMIT 1",
+        [emailVal],
+      );
+      if (rows.length > 0 && await bcrypt.compare(pwd, rows[0].password_hash)) {
+        res.json({ ok: true, role: "sector", sectors: rows[0].sectors, name: rows[0].name, email: rows[0].email, adminId: rows[0].id });
+        return;
+      }
+    } catch { /* DB error — fall through to reject */ }
+    res.status(401).json({ ok: false, error: "Invalid email or password" });
+    return;
+  }
+
+  // ── Super admin login (no email — env var only) ───────────────────────────
   if (!ADMIN_PASSWORD) {
     res.status(503).json({ error: "Admin not configured. Set ADMIN_PASSWORD environment variable." });
     return;
   }
-  if (timingSafeCompare(password ?? "", ADMIN_PASSWORD)) {
-    res.json({ ok: true });
-  } else {
-    res.status(401).json({ ok: false, error: "Invalid admin password" });
+  if (timingSafeCompare(pwd, ADMIN_PASSWORD)) {
+    res.json({ ok: true, role: "super", sectors: ["all"], name: "Super Admin" });
+    return;
   }
+  res.status(401).json({ ok: false, error: "Invalid admin password" });
 });
 
 // ── GET /admin/stats ──────────────────────────────────────────────────────────
@@ -1408,6 +1498,118 @@ router.get("/mwaramuriuki-login/intelligence", async (req: Request, res: Respons
     });
   } catch (err) {
     console.error("[admin] intelligence fetch failed:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/admin-users ────────────────────────────────────────────────────
+// Lists all sector admins. Super admin only.
+
+router.get("/mwaramuriuki-login/admin-users", async (req: Request, res: Response) => {
+  if (!requireSuperAdmin(req)) { res.status(401).json({ error: "Unauthorized — super admin only" }); return; }
+  try {
+    const { rows } = await pool.query<{
+      id: number; name: string; email: string; sectors: string[];
+      active: boolean; created_by: string; created_at: string; updated_at: string;
+    }>(
+      "SELECT id, name, email, sectors, active, created_by, created_at, updated_at FROM admin_users ORDER BY created_at DESC"
+    );
+    res.json({ adminUsers: rows });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /admin/admin-users ───────────────────────────────────────────────────
+// Creates a new sector admin. Super admin only.
+
+router.post("/mwaramuriuki-login/admin-users", async (req: Request, res: Response) => {
+  if (!requireSuperAdmin(req)) { res.status(401).json({ error: "Unauthorized — super admin only" }); return; }
+  const { name, email, password, sectors } = req.body as {
+    name?: string; email?: string; password?: string; sectors?: string[];
+  };
+
+  if (!name || !name.trim()) { res.status(400).json({ error: "name is required" }); return; }
+  if (!email || !email.trim()) { res.status(400).json({ error: "email is required" }); return; }
+  if (!password || password.length < 8) { res.status(400).json({ error: "password must be at least 8 characters" }); return; }
+  if (!Array.isArray(sectors) || sectors.length === 0) { res.status(400).json({ error: "at least one sector is required" }); return; }
+
+  const VALID_SECTORS = ["content", "finance", "analytics", "support", "technical"];
+  const invalidSectors = sectors.filter((s) => !VALID_SECTORS.includes(s));
+  if (invalidSectors.length > 0) { res.status(400).json({ error: `Invalid sectors: ${invalidSectors.join(", ")}` }); return; }
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 12);
+    const { rows } = await pool.query<{ id: number }>(
+      "INSERT INTO admin_users (name, email, password_hash, sectors, created_by) VALUES ($1, $2, $3, $4, 'super') RETURNING id",
+      [name.trim(), email.trim().toLowerCase(), passwordHash, sectors],
+    );
+    res.status(201).json({ ok: true, id: rows[0].id });
+  } catch (err: unknown) {
+    const pgErr = err as { code?: string };
+    if (pgErr.code === "23505") { res.status(409).json({ error: "Email already exists" }); return; }
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── PATCH /admin/admin-users/:id ─────────────────────────────────────────────
+// Updates name, sectors, active status, or resets password. Super admin only.
+
+router.patch("/mwaramuriuki-login/admin-users/:id", async (req: Request, res: Response) => {
+  if (!requireSuperAdmin(req)) { res.status(401).json({ error: "Unauthorized — super admin only" }); return; }
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const { name, sectors, active, password } = req.body as {
+    name?: string; sectors?: string[]; active?: boolean; password?: string;
+  };
+
+  const updates: string[] = [];
+  const values: unknown[] = [];
+  let idx = 1;
+
+  if (name !== undefined) { updates.push(`name = $${idx++}`); values.push(name.trim()); }
+  if (sectors !== undefined) {
+    const VALID_SECTORS = ["content", "finance", "analytics", "support", "technical"];
+    const bad = sectors.filter((s) => !VALID_SECTORS.includes(s));
+    if (bad.length > 0) { res.status(400).json({ error: `Invalid sectors: ${bad.join(", ")}` }); return; }
+    updates.push(`sectors = $${idx++}`); values.push(sectors);
+  }
+  if (active !== undefined) { updates.push(`active = $${idx++}`); values.push(active); }
+  if (password !== undefined) {
+    if (password.length < 8) { res.status(400).json({ error: "password must be at least 8 characters" }); return; }
+    const hash = await bcrypt.hash(password, 12);
+    updates.push(`password_hash = $${idx++}`); values.push(hash);
+  }
+
+  if (updates.length === 0) { res.status(400).json({ error: "No fields to update" }); return; }
+  updates.push(`updated_at = NOW()`);
+  values.push(id);
+
+  try {
+    const result = await pool.query(
+      `UPDATE admin_users SET ${updates.join(", ")} WHERE id = $${idx} RETURNING id`,
+      values,
+    );
+    if (result.rowCount === 0) { res.status(404).json({ error: "Admin user not found" }); return; }
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── DELETE /admin/admin-users/:id ─────────────────────────────────────────────
+// Permanently deletes a sector admin. Super admin only.
+
+router.delete("/mwaramuriuki-login/admin-users/:id", async (req: Request, res: Response) => {
+  if (!requireSuperAdmin(req)) { res.status(401).json({ error: "Unauthorized — super admin only" }); return; }
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  try {
+    const result = await pool.query("DELETE FROM admin_users WHERE id = $1 RETURNING id", [id]);
+    if (result.rowCount === 0) { res.status(404).json({ error: "Admin user not found" }); return; }
+    res.json({ ok: true });
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });
