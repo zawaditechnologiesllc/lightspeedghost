@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useSubscription } from "./useSubscription";
-import type { PaygTool, DocumentTier } from "@/lib/pricing";
+import type { PaygTool, DocumentTier, PlanId } from "@/lib/pricing";
 
 export type PickerState =
   | { open: false }
@@ -8,7 +8,8 @@ export type PickerState =
 
 export type CheckoutState =
   | { open: false }
-  | { open: true; mode: "subscription" | "payg"; tool?: PaygTool; tier?: DocumentTier };
+  | { open: true; mode: "subscription"; plan: PlanId }
+  | { open: true; mode: "payg"; tool: PaygTool; tier?: DocumentTier };
 
 export function usePaywallGuard() {
   const { plan, isAtLimit, loading } = useSubscription();
@@ -32,9 +33,9 @@ export function usePaywallGuard() {
     setCheckoutState({ open: false });
   }
 
-  function chooseSubscription() {
+  function chooseSubscription(targetPlan: PlanId = "pro_monthly") {
     setPickerState({ open: false });
-    setCheckoutState({ open: true, mode: "subscription" });
+    setCheckoutState({ open: true, mode: "subscription", plan: targetPlan });
   }
 
   function choosePayg(tool: PaygTool, tier?: DocumentTier) {

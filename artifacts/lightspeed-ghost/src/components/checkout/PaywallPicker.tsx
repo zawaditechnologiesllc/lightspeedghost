@@ -16,7 +16,7 @@ interface PaywallPickerProps {
   onClose: () => void;
   tool: PaygTool;
   tier?: DocumentTier;
-  onChooseSubscription: () => void;
+  onChooseSubscription: (plan?: string) => void;
   onChoosePayg: (tier?: DocumentTier) => void;
   currentPlan?: string | null;
   mode?: "paywall" | "buy";
@@ -110,7 +110,7 @@ export function PaywallPicker({
           {/* ── Option A: Subscribe ── */}
           {!isPro && (
             <button
-              onClick={onChooseSubscription}
+              onClick={() => onChooseSubscription()}
               className="w-full group text-left p-4 rounded-xl bg-gradient-to-br from-blue-900/30 to-blue-800/20 border border-blue-500/25 hover:border-blue-400/40 hover:from-blue-900/40 transition-all"
             >
               <div className="flex items-start justify-between gap-3 mb-3">

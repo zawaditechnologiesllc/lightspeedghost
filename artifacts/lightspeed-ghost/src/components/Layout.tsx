@@ -93,7 +93,7 @@ function NavItem({
           <span className="truncate flex-1">{label}</span>
         )}
         {showLabel && badge && (
-          <span className="px-1.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[9px] font-bold leading-none shrink-0">
+          <span className="px-1.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-600 dark:text-purple-300 text-[9px] font-bold leading-none shrink-0">
             {badge}
           </span>
         )}
