@@ -305,17 +305,16 @@ Return ONLY valid JSON with this exact shape (no markdown, no code fences):
     }
     fullContent += `\n---\n\n`;
 
-    // Introduction with expert quote
-    if (expertQuotes.length > 0) {
-      const introQuote = expertQuotes[0];
-      fullContent += `## Introduction\n\n> *"${introQuote.quote}"*\n> — **${introQuote.author}**, ${introQuote.role}\n\n`;
-    }
-
     const wordsPerChapter = Math.floor(wordTarget / outline.chapters.length);
+    // token budget: gpt-4o-mini ~0.75 tokens/word; add 500 headroom
+    const chapterMaxTokens = Math.min(8000, Math.ceil(wordsPerChapter * 1.45) + 500);
+    // Truncate RAG context once for token efficiency — reused across all chapters
+    const truncatedRag = ragContext ? ragContext.slice(0, 2500) : "";
+    let previousSummaries = "";
 
     for (let ci = 0; ci < outline.chapters.length; ci++) {
       const ch = outline.chapters[ci];
-      const quoteForChapter = expertQuotes[ci % expertQuotes.length];
+      const quoteForChapter = expertQuotes.length > 0 ? expertQuotes[ci % expertQuotes.length] : null;
 
       send("step", {
         id: `chapter_${ch.number}`,
@@ -329,37 +328,64 @@ EBOOK: "${outline.title}" — ${outline.subtitle}
 AUDIENCE: ${targetAudience} in the ${industry} industry
 TONE: ${tone} | LANGUAGE: ${language}
 
-CHAPTER ${ch.number}: ${ch.title}
+CHAPTER ${ch.number} of ${outline.chapters.length}: ${ch.title}
 Focus: ${ch.focus}
 Key Takeaway: ${ch.keyTakeaway}
-Target: ~${wordsPerChapter} words
-
-${ragContext ? `RESEARCH CONTEXT (cite insights naturally):\n${ragContext}\n` : ""}
-
-${quoteForChapter ? `OPEN WITH THIS EXPERT QUOTE (format as a blockquote):\n"${quoteForChapter.quote}" — ${quoteForChapter.author}, ${quoteForChapter.role}\n` : ""}
-
+WORD TARGET: EXACTLY ${wordsPerChapter} words for this chapter — aim for ${Math.floor(wordsPerChapter * 0.97)}–${Math.ceil(wordsPerChapter * 1.03)} words. Count carefully as you write.
+${truncatedRag ? `\nRESEARCH CONTEXT (cite insights naturally, do NOT copy verbatim):\n${truncatedRag}\n` : ""}${previousSummaries ? `\nPREVIOUS CHAPTERS COVERED (do NOT repeat these themes):\n${previousSummaries}\n` : ""}
+${quoteForChapter ? `OPEN WITH THIS EXPERT QUOTE (format as a markdown blockquote at the very start):\n"${quoteForChapter.quote}" — ${quoteForChapter.author}, ${quoteForChapter.role}\n` : ""}
 Write a complete, well-structured chapter with:
-- A compelling opening that hooks the reader
-- 3-5 main sections with clear headings (use ## for sections, ### for subsections)
+- A compelling opening that hooks the reader (begin with the expert quote blockquote if provided)
+- 3–5 main sections with clear headings (## for sections, ### for subsections)
 - Practical examples, case studies, or real-world applications relevant to ${industry}
 - Actionable insights the reader can implement immediately
 - Statistical references and research findings where applicable
-- A "Chapter Summary" section at the end with 3-5 bullet point takeaways
-- A smooth transition to the next chapter
+- Tables, numbered process steps, or structured text diagrams where they aid comprehension
+- A "Chapter Summary" section at the end with 3–5 bullet point takeaways
+- A smooth transition sentence pointing toward the next chapter
 
-Write in ${language}. Do NOT use generic filler — every paragraph must deliver genuine value.
-${inspiration ? `Keep this inspiration/angle in mind: ${inspiration}` : ""}`;
+IMPORTANT:
+- Do NOT write "Chapter ${ch.number}:" as a heading — it will be added automatically
+- Do NOT repeat themes already covered in previous chapters listed above
+- You MUST deliver ${wordsPerChapter} words (±5%) — count as you write; every paragraph must deliver genuine, actionable value
+- Write in ${language}
+${inspiration ? `- Keep this inspiration/angle throughout: ${inspiration}` : ""}`;
 
       const chResp = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_tokens: 4000,
+        max_tokens: chapterMaxTokens,
         messages: [{ role: "user", content: chapterPrompt }],
       });
       const chUsage = chResp.usage;
       if (chUsage) await recordUsage(userId, "ebook", chUsage.prompt_tokens, chUsage.completion_tokens, "gpt-4o-mini");
 
-      const chapterText = chResp.choices[0]?.message.content ?? "";
+      let chapterText = chResp.choices[0]?.message.content ?? "";
+
+      // ── Word count correction pass ───────────────────────────────────────────
+      const chapterWordCount = chapterText.split(/\s+/).filter(Boolean).length;
+      if (chapterWordCount < wordsPerChapter * 0.84) {
+        const wordsNeeded = wordsPerChapter - chapterWordCount;
+        const corrResp = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          max_tokens: Math.min(4000, Math.ceil(wordsNeeded * 1.5) + 300),
+          messages: [
+            { role: "user", content: chapterPrompt },
+            { role: "assistant", content: chapterText },
+            {
+              role: "user",
+              content: `The chapter is only ${chapterWordCount} words but must reach ${wordsPerChapter} words (±5%). Expand it by ~${wordsNeeded} words — deepen the analysis, add concrete examples, elaborate on key points. Return the COMPLETE expanded chapter from beginning to end.`,
+            },
+          ],
+        });
+        const corrUsage = corrResp.usage;
+        if (corrUsage) await recordUsage(userId, "ebook", corrUsage.prompt_tokens, corrUsage.completion_tokens, "gpt-4o-mini");
+        chapterText = corrResp.choices[0]?.message.content ?? chapterText;
+      }
+
       fullContent += `\n\n# Chapter ${ch.number}: ${ch.title}\n\n${chapterText}\n\n---\n`;
+
+      // Build running summary for next chapter — avoids repetition and saves tokens
+      previousSummaries += `Ch.${ch.number} "${ch.title}": ${ch.keyTakeaway}\n`;
 
       send("step", { id: `chapter_${ch.number}`, message: `Chapter ${ch.number} complete`, status: "done" });
       send("chapter", { number: ch.number, title: ch.title, preview: chapterText.slice(0, 200) + "…" });
@@ -391,13 +417,40 @@ ${inspiration ? `Keep this inspiration/angle in mind: ${inspiration}` : ""}`;
         pricing: "Recommended: $9.99–$14.99 (70% royalty tier)",
         formats: ["EPUB", "MOBI (KDP auto-converts)"],
       },
-      otherPlatforms: [
-        { name: "Apple Books", tip: "Upload via Apple Books for Authors. EPUB required." },
-        { name: "Google Play Books", tip: "Upload via Google Play Books Partner Center." },
-        { name: "Kobo Writing Life", tip: "Direct upload at kobo.com/writinglife" },
-        { name: "Barnes & Noble Press", tip: "Upload at press.barnesandnoble.com" },
-        { name: "Smashwords / Draft2Digital", tip: "Distributes to 40+ retailers at once — recommended for wide release." },
-      ],
+      otherPlatforms: (() => {
+        const tips: Record<string, string> = {
+          "Apple Books": "Upload via Apple Books for Authors (authors.apple.com). EPUB 3 required.",
+          "Google Play Books": "Upload via Google Play Books Partner Center. EPUB and PDF accepted.",
+          "Kobo Writing Life": "Direct upload at kobo.com/writinglife. Reach Kobo's 30M+ global readers.",
+          "Barnes & Noble Press": "Upload at press.barnesandnoble.com. EPUB or DOCX accepted.",
+          "Smashwords / Draft2Digital": "Distributes to 40+ retailers in one upload — Apple, Kobo, B&N, Tolino, OverDrive, and more.",
+          "Draft2Digital": "Free distributor to 40+ stores including Apple, Kobo, B&N, Tolino, and libraries. Takes 10% per sale.",
+          "IngramSpark": "Print + digital distribution to 40,000+ retailers and libraries worldwide. Best for professional reach.",
+          "PublishDrive": "Distributes to 400+ stores including Chinese market platforms. Keep 100% of royalties.",
+          "Scribd": "Subscription platform with 150M+ monthly readers. Distribute via Draft2Digital.",
+          "StreetLib": "Strong European and African market distribution. Free upload, set your own price.",
+          "Leanpub": "Best for technical/professional/business ebooks. Variable pricing and reader bundles.",
+          "Gumroad": "Sell directly to your audience with minimal fees. Supports PDF, EPUB, and MOBI.",
+          "Payhip": "No setup fee. Sell PDFs and EPUBs directly with built-in EU VAT handling.",
+          "Overdrive (Libraries)": "Get your ebook into public libraries worldwide via IngramSpark or Draft2Digital.",
+          "Tolino (Europe)": "Leading e-reader platform in Germany, Austria, and Switzerland. Reach via Draft2Digital or StreetLib.",
+          "Bookmate": "Popular subscription platform in Eastern Europe and Southeast Asia.",
+          "Storytel": "Audiobook and ebook subscription in 25+ countries. Strong in Scandinavia and Southeast Asia.",
+          "Findaway Voices (Audiobook)": "Distribute your content as an audiobook to Audible, Apple Podcasts, and 40+ retailers.",
+          "ACX / Audible": "Amazon's audiobook platform. Produce an audio version to reach Audible's 150M+ members.",
+        };
+        const always = [
+          "Draft2Digital", "IngramSpark", "PublishDrive", "Scribd", "StreetLib",
+          "Leanpub", "Gumroad", "Payhip", "Overdrive (Libraries)",
+          "Tolino (Europe)", "Bookmate", "Storytel",
+        ];
+        const selected = platforms.filter(p => p !== "Amazon Kindle (KDP)");
+        const combined = [...selected, ...always.filter(p => !platforms.includes(p))];
+        return combined.map(name => ({
+          name,
+          tip: tips[name] ?? `Publish directly via ${name}'s author portal or submission page.`,
+        }));
+      })(),
       wordCount: fullContent.split(/\s+/).length,
     };
 

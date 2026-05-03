@@ -3,7 +3,7 @@ import {
   BookOpen, Sparkles, Globe, Layers, Target, Zap, CheckCircle,
   ChevronDown, ChevronUp, Download, Copy, Check, Loader2,
   BookMarked, ShoppingBag, Star, Quote, ArrowRight, Lock,
-  BarChart2, Users, Lightbulb, PenLine, RefreshCw, X, Info,
+  BarChart2, Users, Lightbulb, PenLine, RefreshCw, X, Info, Plus,
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
 import { cn } from "@/lib/utils";
@@ -95,10 +95,23 @@ const PLATFORMS = [
   "Kobo Writing Life", "Barnes & Noble Press", "Smashwords / Draft2Digital",
 ];
 
+const ADDITIONAL_PLATFORMS: string[] = [
+  "Draft2Digital", "IngramSpark", "PublishDrive", "StreetLib", "BookBaby",
+  "Lulu", "Blurb", "Reedsy", "Leanpub", "Scribd", "Storytel", "Bookmate",
+  "Overdrive (Libraries)", "Hoopla (Libraries)", "Palace Marketplace (Libraries)",
+  "Odilo (Libraries)", "cloudLibrary (Libraries)", "Gumroad", "Payhip", "Podia",
+  "Teachable", "Etsy (Digital Downloads)", "Patreon", "Substack",
+  "Wattpad", "Royal Road", "Radish", "Tapas", "Inkitt",
+  "Tolino (Europe)", "Babelcube (Translations)", "Rakuten Kobo Japan",
+  "Livraria Cultura (Brazil)", "Litres (Russia)", "24symbols",
+  "Findaway Voices (Audiobook)", "ACX / Audible", "Kindle Unlimited (via KDP)",
+  "Amazon Japan (via KDP)", "Flipkart (India)", "Pratilipi (India)",
+];
+
 const LENGTH_OPTIONS = [
-  { value: "short", label: "Short Ebook", words: "~8,000 words", chapters: "5 chapters", time: "~6 min", badge: null },
-  { value: "medium", label: "Standard Ebook", words: "~15,000 words", chapters: "8 chapters", time: "~12 min", badge: "Most popular" },
-  { value: "long", label: "Extended Ebook", words: "~25,000 words", chapters: "12 chapters", time: "~20 min", badge: "Best value" },
+  { value: "short", label: "Short Ebook", words: "~8,000 words", chapters: "5 chapters", time: "~3 min", badge: null },
+  { value: "medium", label: "Standard Ebook", words: "~15,000 words", chapters: "8 chapters", time: "~6 min", badge: "Most popular" },
+  { value: "long", label: "Extended Ebook", words: "~25,000 words", chapters: "12 chapters", time: "~12 min", badge: "Best value" },
 ] as const;
 
 const PLATFORM_ICONS: Record<string, string> = {
@@ -204,6 +217,8 @@ export default function Ebooks() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["Amazon Kindle (KDP)", "Apple Books"]);
   const [includeExpertQuotes, setIncludeExpertQuotes] = useState(true);
   const [keywords, setKeywords] = useState("");
+  const [showMorePlatforms, setShowMorePlatforms] = useState(false);
+  const [customPlatform, setCustomPlatform] = useState("");
 
   useEffect(() => {
     checkStatus();
@@ -229,6 +244,13 @@ export default function Ebooks() {
     setSelectedPlatforms(prev =>
       prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
     );
+  }
+
+  function addCustomPlatform() {
+    const trimmed = customPlatform.trim();
+    if (!trimmed || selectedPlatforms.includes(trimmed)) return;
+    setSelectedPlatforms(prev => [...prev, trimmed]);
+    setCustomPlatform("");
   }
 
   function toggleChapter(n: number) {
@@ -391,7 +413,7 @@ export default function Ebooks() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <ExportButtons getHtml={() => fullHtml} getText={() => content} filename={filename} formats={["pdf"]} />
+            <ExportButtons getHtml={() => fullHtml} getText={() => content} filename={filename} formats={["pdf", "docx", "copy"]} />
             <button
               onClick={handleReset}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground text-xs font-medium transition-colors"
@@ -689,7 +711,7 @@ export default function Ebooks() {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Header */}
-      <div className="px-4 sm:px-6 pt-6 pb-4 border-b border-border shrink-0">
+      <div className="px-4 sm:px-6 pt-6 pb-4 shrink-0">
         {/* Centered LightSpeed AI brand header */}
         <div className="text-center space-y-1.5 mb-4">
           <div className="flex items-center justify-center gap-2 mb-1">
@@ -904,6 +926,8 @@ export default function Ebooks() {
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
             <ShoppingBag size={13} className="text-purple-400" /> Publishing Platforms
           </h2>
+
+          {/* Main 6 platforms — quick select */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {PLATFORMS.map(p => (
               <button
@@ -921,6 +945,75 @@ export default function Ebooks() {
               </button>
             ))}
           </div>
+
+          {/* More platforms — expandable */}
+          <button
+            onClick={() => setShowMorePlatforms(v => !v)}
+            className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            <ChevronDown size={13} className={cn("transition-transform duration-200", showMorePlatforms && "rotate-180")} />
+            {showMorePlatforms ? "Hide additional platforms" : "More platforms (40+ supported)"}
+            {ADDITIONAL_PLATFORMS.filter(p => selectedPlatforms.includes(p)).length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-bold">
+                {ADDITIONAL_PLATFORMS.filter(p => selectedPlatforms.includes(p)).length} selected
+              </span>
+            )}
+          </button>
+
+          {showMorePlatforms && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {ADDITIONAL_PLATFORMS.map(p => (
+                <button
+                  key={p}
+                  onClick={() => togglePlatform(p)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-left text-xs transition-all",
+                    selectedPlatforms.includes(p)
+                      ? "border-purple-500/60 bg-purple-500/10 text-purple-300"
+                      : "border-border bg-card text-muted-foreground hover:border-purple-500/30 hover:text-foreground"
+                  )}
+                >
+                  <span className="text-sm leading-none">📚</span>
+                  <span className="font-medium leading-tight">{p}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Custom platform input */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={customPlatform}
+              onChange={e => setCustomPlatform(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && addCustomPlatform()}
+              placeholder="Add a custom platform…"
+              className="flex-1 px-3 py-2 rounded-xl border border-border bg-background text-foreground text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500/50 transition-colors"
+            />
+            <button
+              onClick={addCustomPlatform}
+              disabled={!customPlatform.trim()}
+              className="flex items-center gap-1 px-3 py-2 rounded-xl border border-purple-500/40 bg-purple-500/10 text-purple-300 text-xs font-medium hover:bg-purple-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Plus size={12} />
+              Add
+            </button>
+          </div>
+
+          {/* Selected platforms as removable chips */}
+          {selectedPlatforms.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <span className="text-[10px] text-muted-foreground/50 self-center">Selected:</span>
+              {selectedPlatforms.map(p => (
+                <span key={p} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-medium">
+                  {p}
+                  <button onClick={() => togglePlatform(p)} className="ml-0.5 hover:text-white transition-colors">
+                    <X size={9} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ── Options ────────────────────────────────────────────────────── */}
