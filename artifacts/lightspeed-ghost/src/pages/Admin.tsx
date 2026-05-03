@@ -2640,7 +2640,7 @@ export default function Admin() {
               <label className="block text-xs text-white/40 mb-1.5">Plan</label>
               <select value={planEditValue} onChange={(e) => { setPlanEditValue(e.target.value); if (e.target.value === "institution") { setPlanEditSeats("5"); setPlanEditDuration("365"); } if (e.target.value === "pro") { setPlanEditBilling("monthly"); } }}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
-                <option value="starter">Starter — $4.99/mo</option>
+                <option value="starter">Starter — $9.99/mo</option>
                 <option value="pro">Pro (select billing below)</option>
                 <option value="institution">Institution (select seats &amp; duration below)</option>
               </select>
@@ -2650,8 +2650,8 @@ export default function Admin() {
                 <label className="block text-xs text-white/40 mb-1.5">Billing Cycle</label>
                 <select value={planEditBilling} onChange={(e) => setPlanEditBilling(e.target.value)}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
-                  <option value="monthly">Monthly — $14.99/mo</option>
-                  <option value="annual">Annual — $139/yr ($11.58/mo)</option>
+                  <option value="monthly">Monthly — $29.99/mo</option>
+                  <option value="annual">Annual — $269/yr ($22.42/mo)</option>
                 </select>
               </div>
             )}
@@ -2686,8 +2686,8 @@ export default function Admin() {
               {planEditValue === "institution"
                 ? `Activate Institution (${planEditSeats} seats, ${planEditDuration}d)`
                 : planEditValue === "pro"
-                  ? `Set Pro — ${planEditBilling === "annual" ? "Annual ($139/yr)" : "Monthly ($14.99/mo)"}`
-                  : "Set Starter ($4.99/mo)"}
+                  ? `Set Pro — ${planEditBilling === "annual" ? "Annual ($269/yr)" : "Monthly ($29.99/mo)"}`
+                  : "Set Starter ($9.99/mo)"}
             </button>
           </div>
         </Modal>

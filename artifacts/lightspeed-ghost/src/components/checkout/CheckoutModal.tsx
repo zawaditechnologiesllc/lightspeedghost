@@ -229,7 +229,7 @@ export function CheckoutModal({
             )}
             {mode === "subscription" && plan === "pro_annual" && (
               <div className="mt-1.5 text-xs text-green-400/80">
-                Save 23% vs monthly billing
+                Save 25% vs monthly billing
               </div>
             )}
           </div>
