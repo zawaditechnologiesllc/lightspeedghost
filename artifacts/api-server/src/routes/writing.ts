@@ -1768,13 +1768,22 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
     send("step", { id: "structure", message: `Designing argument flow and section hierarchy for ${body.subject}…`, status: "running" });
 
     const outlineWordCount = Number(rawBody.wordCount) > 0 ? Number(rawBody.wordCount) : 1000;
+
+    // Scale section/subsection guidance to paper size
+    const sectionGuide =
+      outlineWordCount < 800   ? "4–5 sections, 2–3 subsections each" :
+      outlineWordCount < 2000  ? "5–6 sections, 3–4 subsections each" :
+      outlineWordCount < 5000  ? "6–8 sections, 3–5 subsections each" :
+      outlineWordCount < 10000 ? "8–10 sections, 4–6 subsections each" :
+                                 "10–12 sections, 5–7 subsections each";
+
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: wordsToTokens(outlineWordCount, 400, 3000),
       system: `${WRITER_SOUL}\n\n${qualityRules}\n\nGenerate a detailed academic paper outline. Return ONLY valid JSON: {"title": string, "sections": [{"heading": string, "subsections": string[]}]}`,
       messages: [{
         role: "user",
-        content: `Create a detailed outline for a ${body.paperType} on "${body.topic}" in ${body.subject}. Include 6-8 sections with 3-5 subsections each. Each subsection should name a specific argument, finding, or analytical point — not just a topic label.${extraContext ? `\n\n${extraContext}` : ""}`,
+        content: `Create a detailed outline for a ${body.paperType} on "${body.topic}" in ${body.subject}.\n\nTarget paper length: ${outlineWordCount.toLocaleString()} words. Use ${sectionGuide} — scale the depth and number of analytical points to suit a paper of this length.\n\nEach subsection should name a specific argument, finding, or analytical point — not just a topic label.${extraContext ? `\n\n${extraContext}` : ""}`,
       }],
     });
 
