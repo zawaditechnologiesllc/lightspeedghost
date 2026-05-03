@@ -1520,9 +1520,6 @@ router.get("/mwaramuriuki-login/admin-users", async (req: Request, res: Response
   }
 });
 
-// ── POST /admin/admin-users ───────────────────────────────────────────────────
-// Creates a new sector admin. Super admin only.
-
 router.post("/mwaramuriuki-login/admin-users", async (req: Request, res: Response) => {
   if (!requireSuperAdmin(req)) { res.status(401).json({ error: "Unauthorized — super admin only" }); return; }
   const { name, email, password, sectors } = req.body as {
@@ -1534,7 +1531,7 @@ router.post("/mwaramuriuki-login/admin-users", async (req: Request, res: Respons
   if (!password || password.length < 8) { res.status(400).json({ error: "password must be at least 8 characters" }); return; }
   if (!Array.isArray(sectors) || sectors.length === 0) { res.status(400).json({ error: "at least one sector is required" }); return; }
 
-  const VALID_SECTORS = ["content", "finance", "analytics", "support", "technical"];
+  const VALID_SECTORS = ["content", "finance", "analytics", "support", "technical", "all"];
   const invalidSectors = sectors.filter((s) => !VALID_SECTORS.includes(s));
   if (invalidSectors.length > 0) { res.status(400).json({ error: `Invalid sectors: ${invalidSectors.join(", ")}` }); return; }
 
@@ -1570,7 +1567,7 @@ router.patch("/mwaramuriuki-login/admin-users/:id", async (req: Request, res: Re
 
   if (name !== undefined) { updates.push(`name = $${idx++}`); values.push(name.trim()); }
   if (sectors !== undefined) {
-    const VALID_SECTORS = ["content", "finance", "analytics", "support", "technical"];
+    const VALID_SECTORS = ["content", "finance", "analytics", "support", "technical", "all"];
     const bad = sectors.filter((s) => !VALID_SECTORS.includes(s));
     if (bad.length > 0) { res.status(400).json({ error: `Invalid sectors: ${bad.join(", ")}` }); return; }
     updates.push(`sectors = $${idx++}`); values.push(sectors);
