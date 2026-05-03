@@ -1035,13 +1035,16 @@ router.post("/payments/webhook/paystack", async (req: Request, res: Response) =>
     };
 
     if (event.event === "charge.success" && event.data?.reference) {
-      const pRes = await pool.query<{ user_id: string }>(
+      const pRes = await pool.query<{ user_id: string; amount_cents: number }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id`,
+         WHERE gateway_session_id=$1 RETURNING user_id, amount_cents`,
         [event.data.reference]
       );
       const uid = pRes.rows[0]?.user_id;
-      if (uid) await markFirstPendingDiscountApplied(uid);
+      if (uid) {
+        await maybeRecordReferralCommission(uid, pRes.rows[0].amount_cents ?? 0);
+        await markFirstPendingDiscountApplied(uid);
+      }
     }
   } catch (err) {
     logger.error({ err }, "Paystack webhook error");
@@ -1073,13 +1076,16 @@ router.post("/payments/webhook/intasend", async (req: Request, res: Response) =>
     const raw = req.body as Buffer | Record<string, unknown>;
     const payload = (Buffer.isBuffer(raw) ? JSON.parse(raw.toString()) : raw) as { invoice_id?: string; state?: string };
     if (payload.state === "COMPLETE" && payload.invoice_id) {
-      const pRes = await pool.query<{ user_id: string }>(
+      const pRes = await pool.query<{ user_id: string; amount_cents: number }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id`,
+         WHERE gateway_session_id=$1 RETURNING user_id, amount_cents`,
         [payload.invoice_id]
       );
       const uid = pRes.rows[0]?.user_id;
-      if (uid) await markFirstPendingDiscountApplied(uid);
+      if (uid) {
+        await maybeRecordReferralCommission(uid, pRes.rows[0].amount_cents ?? 0);
+        await markFirstPendingDiscountApplied(uid);
+      }
     }
   } catch (err) {
     logger.error({ err }, "IntaSend webhook error");
@@ -1122,13 +1128,16 @@ router.post("/payments/webhook/paddle", async (req: Request, res: Response) => {
     };
 
     if (event.event_type === "transaction.completed" && event.data?.id) {
-      const pRes = await pool.query<{ user_id: string }>(
+      const pRes = await pool.query<{ user_id: string; amount_cents: number }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id`,
+         WHERE gateway_session_id=$1 RETURNING user_id, amount_cents`,
         [event.data.id]
       );
       const uid = pRes.rows[0]?.user_id;
-      if (uid) await markFirstPendingDiscountApplied(uid);
+      if (uid) {
+        await maybeRecordReferralCommission(uid, pRes.rows[0].amount_cents ?? 0);
+        await markFirstPendingDiscountApplied(uid);
+      }
     }
   } catch (err) {
     logger.error({ err }, "Paddle webhook error");
@@ -1167,13 +1176,16 @@ router.post("/payments/webhook/lemon-squeezy", async (req: Request, res: Respons
     const evName = event.meta?.event_name ?? "";
     if ((evName === "order_created" || evName === "subscription_created") && event.data?.id) {
       const lsUserId = event.meta?.custom_data?.userId;
-      const pRes = await pool.query<{ user_id: string }>(
+      const pRes = await pool.query<{ user_id: string; amount_cents: number }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id`,
+         WHERE gateway_session_id=$1 RETURNING user_id, amount_cents`,
         [event.data.id]
       );
       const uid = lsUserId ?? pRes.rows[0]?.user_id;
-      if (uid) await markFirstPendingDiscountApplied(uid);
+      if (uid) {
+        await maybeRecordReferralCommission(uid, pRes.rows[0]?.amount_cents ?? 0);
+        await markFirstPendingDiscountApplied(uid);
+      }
     }
   } catch (err) {
     logger.error({ err }, "Lemon Squeezy webhook error");
