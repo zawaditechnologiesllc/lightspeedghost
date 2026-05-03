@@ -8,7 +8,7 @@ import {
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, ChevronUp, Sparkles, Upload, BarChart3,
   Users, Award, Clock, Quote, MapPin, Mail, Twitter, Linkedin, Wand2,
-  Lock, Building2, Share, BotMessageSquare,
+  Lock, Building2, Share, BotMessageSquare, Info,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
@@ -141,6 +141,14 @@ const faqs = [
     a: "ChatGPT is a general-purpose chatbot. Light Speed Ghost is purpose-built for academic work: real, verifiable citations, specific citation formats, plagiarism checking, grade-targeted revision, and a STEM solver with step-by-step verification — all in one platform with a student-focused interface.",
   },
   {
+    q: "What document types are included in Starter and Pro plans?",
+    a: "Both Starter and Pro plans include paper generation for discussion posts, essays, and research papers (up to approximately 3,500 words). Research proposals and reports (3,500–6,000 words) and dissertations or theses (6,000–15,000 words) are not included in any plan — they are available on Pay-As-You-Go only, priced at $24.99 and $59.99 respectively. This is because longer documents require significantly more compute time and API cost per job. All other tools — revision, humanizer, plagiarism checks, STEM solver, outlines, and study sessions — work with any document length on a plan.",
+  },
+  {
+    q: "Is the Ebook tool included in my Starter or Pro plan?",
+    a: "No. Ebooks are a completely separate add-on subscription at $29.99/month. They are designed for business users publishing on Amazon KDP, Apple Books, and other platforms — not for academic work. Your academic plan (Starter or Pro) is entirely unaffected by the ebooks add-on. You can subscribe to one, both, or neither independently. The ebook monthly quota (15 ebooks/month) and the academic plan quotas are tracked separately.",
+  },
+  {
     q: "What's the cheapest plan?",
     a: "The Starter plan is $4.99/month — competitive pricing for a full academic writing suite. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves per month, 20 study sessions per month, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
   },
@@ -163,7 +171,7 @@ const pricingPlans = [
     perAnnual: "/ month",
     desc: "All core tools. Low commitment. No hidden gotchas.",
     features: [
-      "3 paper generations / month (any type)",
+      "3 paper generations / month (discussion, essay & research)",
       "5 plagiarism + AI detection checks / month",
       "15 STEM solver queries / month",
       "20 study messages / month",
@@ -185,7 +193,7 @@ const pricingPlans = [
     perAnnual: "/ month  ·  billed $139 / year",
     desc: "Every cap lifted. Every tool unlocked. One flat price.",
     features: [
-      "15 papers / month (essay & research types)",
+      "15 papers / month (discussion, essay & research)",
       "20 revisions / month",
       "40 STEM solver problems / month",
       "80 study messages / month",
@@ -944,7 +952,7 @@ export default function Landing() {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium mb-5">
                 <BookOpen size={11} className="text-purple-400" />
-                Business Add-On · $29.99 / month
+                Business Add-On · $29.99 / month · Separate from academic plans
               </div>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-5">
                 Publish ebooks on{" "}
@@ -976,7 +984,7 @@ export default function Landing() {
                   <ArrowRight size={15} />
                 </span>
               </Link>
-              <p className="text-white/25 text-xs mt-3">$29.99/month · Cancel anytime · Does not affect your academic plan</p>
+              <p className="text-white/25 text-xs mt-3">$29.99/month · Cancel anytime · Completely separate from Starter &amp; Pro academic plans · Not included in any academic subscription</p>
             </div>
 
             {/* Right: feature cards */}
@@ -1125,7 +1133,7 @@ export default function Landing() {
               </div>
               <div className="space-y-6">
                 {[
-                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter plan at $4.99/month or Pro at $14.99/month. Cancel any time." },
+                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter ($4.99/mo) or Pro ($14.99/mo). Plans cover discussion posts, essays, and research papers. Proposals, reports, and dissertations are available per-job below. Cancel any time." },
                   { num: "02", title: "Upload your brief or describe your task", body: "Drag in your assignment PDF, paste the rubric, or just type what you need. The platform detects citation style, length, and subject automatically." },
                   { num: "03", title: "Generate, revise, humanize, and submit", body: "Run any tool in sequence — paper → plagiarism check → LightSpeed Humanizer → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
                 ].map(({ num, title, body }) => (
@@ -1329,7 +1337,7 @@ export default function Landing() {
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Honest pricing. No dark patterns.</h2>
             <p className="text-white/45 text-sm sm:text-base max-w-xl mx-auto">
-              Starter at $4.99/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
+              Starter at $4.99/mo. Pro for weekly deadlines. Plans cover essays &amp; research papers — proposals and dissertations are PAYG. Ebooks are a separate add-on.
             </p>
             <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
               <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-white" : "text-white/35"}`}>Monthly</span>
@@ -1382,6 +1390,11 @@ export default function Landing() {
                     ))}
                   </ul>
 
+                  {name !== "Institution" && (
+                    <p className="text-[10px] text-white/28 leading-relaxed border-t border-white/5 pt-3 mb-3">
+                      Proposals, reports &amp; dissertations are PAYG only (see below). Ebooks ($29.99/mo) are a separate add-on — not included.
+                    </p>
+                  )}
                   {name === "Institution" && (
                     <p className="text-[10px] text-white/30 italic mb-3">Custom pricing — we'll get back to you within 1 business day.</p>
                   )}
@@ -1410,6 +1423,16 @@ export default function Landing() {
                 </div>
               );
             })}
+          </div>
+
+          {/* ── Plan vs PAYG transparency callout ── */}
+          <div className="flex items-start gap-3 px-4 sm:px-5 py-4 rounded-2xl bg-orange-500/6 border border-orange-500/15 mb-12 sm:mb-16">
+            <Info size={14} className="text-orange-400/70 shrink-0 mt-0.5" />
+            <div className="text-xs text-white/50 leading-relaxed space-y-1">
+              <p><span className="text-white/70 font-semibold">What subscription plans cover:</span> Discussion posts, essays, and research papers (up to ~3,500 words). All other tools (STEM, revision, humanizer, plagiarism checks, outlines, study) work with any length.</p>
+              <p><span className="text-orange-300/80 font-semibold">PAYG only — not in any plan:</span> Research proposals / reports (3,500–6,000 words) and dissertations / theses (6,000–15,000 words). These are charged per job below because of their significantly higher compute cost.</p>
+              <p><span className="text-purple-300/70 font-semibold">Ebooks ($29.99/mo)</span> are a completely separate business add-on. They are not connected to your academic plan in any way — you can subscribe to either, both, or neither independently.</p>
+            </div>
           </div>
 
           {/* ── Pay-As-You-Go ── */}
@@ -1787,7 +1810,9 @@ export default function Landing() {
 
           <div className="border-t border-white/5 pt-6 sm:pt-7 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-white/25 text-xs">© {new Date().getFullYear()} Light Speed Ghost. All rights reserved.</p>
-            <p className="text-white/20 text-xs text-center sm:text-right">Built for students who have too much to do and too little time.</p>
+            <p className="text-white/20 text-xs text-center sm:text-right max-w-md">
+              Subscription plans (Starter &amp; Pro) cover discussion posts, essays &amp; research papers only. Proposals, reports &amp; dissertations are PAYG. Ebooks are a separate add-on — not included in academic plans.
+            </p>
           </div>
         </div>
       </footer>
