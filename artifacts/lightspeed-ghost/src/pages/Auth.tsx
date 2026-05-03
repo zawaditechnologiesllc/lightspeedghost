@@ -4,6 +4,9 @@ import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight, CheckCircle,
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
+import { SUBSCRIPTION_PLANS } from "@/lib/pricing";
+
+const _starterPlan = SUBSCRIPTION_PLANS.find(p => p.id === "starter_monthly")!;
 
 function GoogleIcon() {
   return (
@@ -145,7 +148,7 @@ export default function Auth() {
                     <p className="text-white/40 text-sm mb-6">
                       {tab === "login"
                         ? "Sign in to your Light Speed Ghost account"
-                        : "Starter plan from $4.99/month — cancel any time"}
+                        : `Starter plan from ${_starterPlan.displayPrice} — cancel any time`}
                     </p>
 
                     <GoogleButton />
