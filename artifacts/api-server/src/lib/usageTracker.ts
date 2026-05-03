@@ -20,8 +20,8 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     paper:      15,  // per month
     revision:   20,  // per month — paired with papers
     humanizer:  20,  // per month — paired with papers
-    stem:       60,  // per month
-    study:      150, // per month
+    stem:       40,  // per month
+    study:      80,  // per month
     plagiarism: 20,  // per month — ~1 check per paper + buffer
     outline:    20,  // per month — paired with papers
     assistant:  300, // per month — Haiku text; Sonnet image/doc (Pro only)

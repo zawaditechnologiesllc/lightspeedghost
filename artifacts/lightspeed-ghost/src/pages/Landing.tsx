@@ -146,7 +146,7 @@ const faqs = [
   },
   {
     q: "What's the difference between Pro monthly and annual?",
-    a: "Same features, different price. Monthly is $29.99/month. Annual is $239/year — that works out to $19.92/month, saving you 34%. Most students buy annual at the start of a semester. You can cancel anytime and keep access until the billing period ends.",
+    a: "Same features, different price. Monthly is $29.99/month. Annual is $269/year — that works out to $22.42/month, saving you 25%. Most students buy annual at the start of a semester. You can cancel anytime and keep access until the billing period ends.",
   },
   {
     q: "How does Pay-As-You-Go work?",
@@ -180,15 +180,15 @@ const pricingPlans = [
   {
     name: "Pro",
     priceMonthly: "$29.99",
-    priceAnnual: "$19.92",
+    priceAnnual: "$22.42",
     perMonthly: "/ month",
-    perAnnual: "/ month  ·  billed $239 / year",
+    perAnnual: "/ month  ·  billed $269 / year",
     desc: "Every cap lifted. Every tool unlocked. One flat price.",
     features: [
       "15 papers / month (essay & research types)",
       "20 revisions / month",
-      "60 STEM solver problems / month",
-      "150 study messages / month",
+      "40 STEM solver problems / month",
+      "80 study messages / month",
       "20 plagiarism + AI detection checks / month",
       "LightSpeed Humanizer — 20 jobs / month",
       "20 outline generations / month",

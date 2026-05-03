@@ -1415,6 +1415,14 @@ RULES:
       plagiarismGateScore = plagCheckResult.plagiarismScore;
 
       if (plagiarismGateScore > 8) {
+        const rephraseQuota = await enforceLimit(req.userId!, "humanizer");
+        if (!rephraseQuota.allowed) {
+          send("step", {
+            id: "plagiarism-gate",
+            message: `Similarity ${plagiarismGateScore}% — rephrasing skipped (no humanizer credits remaining this month)`,
+            status: "done",
+          });
+        } else {
         send("step", {
           id: "plagiarism-gate",
           message: `Initial similarity ${plagiarismGateScore}% — above threshold. Running targeted rephrasing to reduce overlap…`,
@@ -1460,6 +1468,7 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
           message: `Rephrasing complete — similarity reduced to ${plagiarismGateScore}% (target: <8%)`,
           status: "done",
         });
+        } // close humanizer credit check
       } else {
         send("step", {
           id: "plagiarism-gate",

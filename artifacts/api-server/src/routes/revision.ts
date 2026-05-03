@@ -567,6 +567,8 @@ RULES:
       plagScore = plagResult.plagiarismScore;
 
       if (plagScore > 8) {
+        const rephraseQuota = await enforceLimit(req.userId!, "humanizer");
+        if (rephraseQuota.allowed) {
         send("step", {
           id: "plag-gate",
           message: `Similarity ${plagScore}% — above 8% threshold. Running targeted rephrasing…`,
@@ -602,6 +604,7 @@ Return ONLY the rephrased paper content.`,
         const recheck = analyseTextPlagiarism(rephrased);
         revisedText = rephrased;
         plagScore = recheck.plagiarismScore;
+        } // close humanizer credit check
       }
 
       send("step", {

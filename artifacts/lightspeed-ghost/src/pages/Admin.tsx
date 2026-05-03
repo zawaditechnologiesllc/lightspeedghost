@@ -2638,7 +2638,7 @@ export default function Admin() {
                 <select value={planEditBilling} onChange={(e) => setPlanEditBilling(e.target.value)}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
                   <option value="monthly">Monthly — $29.99/mo</option>
-                  <option value="annual">Annual — $239/yr ($19.92/mo)</option>
+                  <option value="annual">Annual — $269/yr ($22.42/mo)</option>
                 </select>
               </div>
             )}
@@ -2673,7 +2673,7 @@ export default function Admin() {
               {planEditValue === "institution"
                 ? `Activate Institution (${planEditSeats} seats, ${planEditDuration}d)`
                 : planEditValue === "pro"
-                  ? `Set Pro — ${planEditBilling === "annual" ? "Annual ($239/yr)" : "Monthly ($29.99/mo)"}`
+                  ? `Set Pro — ${planEditBilling === "annual" ? "Annual ($269/yr)" : "Monthly ($29.99/mo)"}`
                   : "Set Starter ($9.99/mo)"}
             </button>
           </div>
