@@ -88,7 +88,7 @@ export function PaywallGate({ tool, tier, children }: PaywallGateProps) {
 
             {!isPro && (
               <p className="mt-3 text-[11px] text-white/25">
-                Pro: 15 papers/mo · 20 plagiarism/mo · 150 study/mo · 60 STEM/mo
+                Pro: 15 papers/mo · 20 revisions/mo · 40 STEM/mo · 80 study/mo · 20 plagiarism/mo
               </p>
             )}
           </div>

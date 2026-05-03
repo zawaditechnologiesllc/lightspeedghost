@@ -172,7 +172,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                   <p className="text-sm font-semibold text-primary">Upgrade to Pro</p>
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-3">
-                  Unlock 50 of every tool per month, priority LightSpeed AI, and unlimited Study &amp; Plagiarism checks.
+                  15 papers · 20 revisions · 20 humanizations · 40 STEM · 80 study sessions · 20 plagiarism checks · 20 outlines per month.
                 </p>
                 <div className="flex gap-2">
                   <button
