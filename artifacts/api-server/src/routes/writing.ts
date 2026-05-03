@@ -1569,6 +1569,27 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
       });
     }
 
+    // ── Re-enforce word count if humanization/plagiarism passes drifted it ────
+    // enforceBodyWordCount ran before the quality gates; those rewrites can freely
+    // change the length. Re-run only when the body is measurably outside ±5%.
+    if (!isAnnotatedBib) {
+      const postGateBodyCount = computeBodyWordCount(finalContent);
+      const postGateMin = Math.floor(targetWords * 0.95);
+      const postGateMax = Math.ceil(targetWords * 1.05);
+      if (postGateBodyCount < postGateMin || postGateBodyCount > postGateMax) {
+        send("step", {
+          id: "word-count-relock",
+          message: `Body word count drifted to ${postGateBodyCount.toLocaleString()} after quality passes (target ${targetWords.toLocaleString()}). Re-locking…`,
+          status: "running",
+        });
+        try {
+          finalContent = await enforceBodyWordCount(finalContent, targetWords, send);
+        } catch {
+          send("step", { id: "word-count-relock", message: "Word count re-lock skipped due to adjustment error.", status: "done" });
+        }
+      }
+    }
+
     // ── Promise enforcement clamps ────────────────────────────────────────────
     // Preserve raw scores for quality signals (internal telemetry only), then
     // clamp display values to the company promise thresholds so the output card
