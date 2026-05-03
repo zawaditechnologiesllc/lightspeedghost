@@ -45,13 +45,13 @@ const TOOL_VERB: Record<PaygTool, string> = {
 const TIER_TOOLS: PaygTool[] = ["paper", "revision", "humanizer"];
 
 const PRO_PERKS: Record<PaygTool, string[]> = {
-  paper:      ["50 papers/month", "All paper types", "Verified citations", "Priority queue"],
-  revision:   ["50 revisions/month", "Full AI+plagiarism analysis", "Grade targeting"],
-  humanizer:  ["50 humanizations/month", "Ghost Writer mode", "Style presets"],
-  stem:       ["60 STEM solves/month", "All subjects", "Step-by-step + graphs"],
-  study:      ["Unlimited study sessions", "Flashcards + quizzes", "Multi-file upload"],
-  plagiarism: ["Unlimited plagiarism checks", "AI detection", "Code compare"],
-  outline:    ["Unlimited outlines", "Auto-detect paper type", "Reference integration"],
+  paper:      ["15 papers/month", "All paper types", "Verified citations", "Priority queue"],
+  revision:   ["20 revisions/month", "Full AI+plagiarism analysis", "Grade targeting"],
+  humanizer:  ["20 humanizations/month", "Ghost Writer mode", "Style presets"],
+  stem:       ["40 STEM solves/month", "All subjects", "Step-by-step + graphs"],
+  study:      ["80 study sessions/month", "Flashcards + quizzes", "Multi-file upload"],
+  plagiarism: ["20 plagiarism checks/month", "AI detection", "Code compare"],
+  outline:    ["20 outlines/month", "Auto-detect paper type", "Reference integration"],
 };
 
 export function PaywallPicker({

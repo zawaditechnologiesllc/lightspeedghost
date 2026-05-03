@@ -278,7 +278,7 @@ const ARTICLE_BODIES: Record<string, React.ReactNode> = {
         <li>You want predictable billing without tracking per-use costs</li>
         <li>You're in a heavy course-load semester</li>
       </ul>
-      <p>At $29.99/month, Pro provides 50 of every tool per month plus unlimited study and plagiarism checks. If you write three papers a month, that's less than $5 per paper — significantly below PAYG rates for equivalent output length. The math strongly favors Pro once you're consistently at or above that volume.</p>
+      <p>At $29.99/month, Pro gives you 15 papers, 20 revisions, 20 humanizations, 40 STEM solves, 80 study sessions, 20 plagiarism checks, and 20 outlines per month. If you write three papers a month, that works out to $10 per paper — well below PAYG rates for research-length work. The math strongly favors Pro once you're consistently at or above that volume.</p>
 
       <h3 className="text-white font-semibold text-base mt-7">The honest recommendation</h3>
       <p>Start on PAYG if you're testing the platform or if your usage is genuinely unpredictable. Move to Starter once you're using it regularly — even one paper per month makes Starter cheaper annually than PAYG. Upgrade to Pro when you're using 3+ papers per month consistently or when you need the higher limits on revisions and humanizations.</p>
