@@ -32,7 +32,10 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
       ...options?.headers,
     },
   });
-  if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text ? text : `${res.status}: ${res.statusText}`);
+  }
   return res.json();
 }
 
