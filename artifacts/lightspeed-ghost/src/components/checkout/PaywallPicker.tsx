@@ -5,8 +5,11 @@ import {
 } from "lucide-react";
 import {
   formatAmount, getPaygPrice, DOCUMENT_TIERS, TIER_LABELS, TIER_WORD_RANGES,
+  SUBSCRIPTION_PLANS,
   type PaygTool, type DocumentTier,
 } from "@/lib/pricing";
+
+const _proMonthly = SUBSCRIPTION_PLANS.find(p => p.id === "pro_monthly")!;
 
 interface PaywallPickerProps {
   open: boolean;
@@ -117,7 +120,7 @@ export function PaywallPicker({
                     <span className="text-sm font-bold text-white">Pro Plan</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-semibold">BEST VALUE</span>
                   </div>
-                  <div className="text-xs text-white/40">$14.99/month · cancel anytime</div>
+                  <div className="text-xs text-white/40">{_proMonthly.displayPrice} · cancel anytime</div>
                 </div>
                 <ArrowRight size={14} className="text-blue-400/70 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all mt-0.5 shrink-0" />
               </div>

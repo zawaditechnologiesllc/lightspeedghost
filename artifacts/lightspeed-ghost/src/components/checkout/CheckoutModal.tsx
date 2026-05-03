@@ -10,6 +10,7 @@ import {
   getPaygPrice,
   getPaygLabel,
   GATEWAY_LABELS,
+  SUBSCRIPTION_PLANS,
   type PlanId,
   type PaygTool,
   type DocumentTier,
@@ -49,13 +50,9 @@ const GATEWAY_ICONS: Record<string, React.ElementType> = {
   intasend:      Smartphone,
 };
 
-const PLAN_AMOUNTS: Record<PlanId, number> = {
-  starter_monthly:   499,
-  pro_monthly:      1499,
-  pro_annual:       13900,
-  institution_annual:     900,
-  ebooks_monthly:   2999,
-};
+const PLAN_AMOUNTS = Object.fromEntries(
+  SUBSCRIPTION_PLANS.map(p => [p.id, p.amountCents])
+) as Record<PlanId, number>;
 
 export function CheckoutModal({
   open,
@@ -101,7 +98,7 @@ export function CheckoutModal({
     : mode === "subscription" && plan
       ? plan === "pro_monthly" ? "Pro — Monthly"
         : plan === "pro_annual" ? "Pro — Annual"
-        : plan === "ebooks_monthly" ? "Ebooks — $29.99/mo"
+        : plan === "ebooks_monthly" ? `Ebooks — ${SUBSCRIPTION_PLANS.find(p => p.id === "ebooks_monthly")!.displayPrice}`
         : `Institution (${seats} seats)`
       : (tool ? getPaygLabel(tool, tier) : "");
 
