@@ -1331,4 +1331,85 @@ router.get("/mwaramuriuki-login/api-costs", (req: Request, res: Response) => {
   });
 });
 
+// ── GET /admin/intelligence ────────────────────────────────────────────────────
+// Returns quality signals, source performance stats, and user feedback data
+// so the admin can see how the AI system is learning and improving over time.
+
+router.get("/mwaramuriuki-login/intelligence", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  type QRow = { signal_type: string; avg: string; cnt: string };
+  type WRow = { week: Date; signal_type: string; avg: string; cnt: string };
+  type SRow = { source: string; subject: string; total_queries: number; total_results: number; success_count: number };
+  type FTotalRow = { rating: string; cnt: string };
+  type FTypeRow  = { type: string; rating: string; cnt: string };
+
+  try {
+    const [allTimeRes, last30Res, weeklyRes, sourceRes, fbTotalRes, fbTypeRes] = await Promise.all([
+      pool.query<QRow>(`SELECT signal_type, ROUND(AVG(score)::numeric, 1)::text AS avg, COUNT(*)::text AS cnt FROM quality_signals GROUP BY signal_type`),
+      pool.query<QRow>(`SELECT signal_type, ROUND(AVG(score)::numeric, 1)::text AS avg, COUNT(*)::text AS cnt FROM quality_signals WHERE recorded_at > NOW() - INTERVAL '30 days' GROUP BY signal_type`),
+      pool.query<WRow>(`
+        SELECT date_trunc('week', recorded_at) AS week, signal_type,
+               ROUND(AVG(score)::numeric, 1)::text AS avg, COUNT(*)::text AS cnt
+        FROM quality_signals WHERE recorded_at > NOW() - INTERVAL '8 weeks'
+        GROUP BY week, signal_type ORDER BY week ASC
+      `),
+      pool.query<SRow>(`SELECT source, subject, total_queries, total_results, success_count FROM source_learning_stats ORDER BY total_results DESC LIMIT 20`),
+      pool.query<FTotalRow>(`SELECT rating, COUNT(*)::text AS cnt FROM output_feedback GROUP BY rating`).catch(() => ({ rows: [] as FTotalRow[] })),
+      pool.query<FTypeRow>(`SELECT type, rating, COUNT(*)::text AS cnt FROM output_feedback GROUP BY type, rating ORDER BY type, rating`).catch(() => ({ rows: [] as FTypeRow[] })),
+    ]);
+
+    const buildQuality = (rows: QRow[]) => {
+      const m: Record<string, { avg: number; count: number }> = {};
+      for (const r of rows) m[r.signal_type] = { avg: parseFloat(r.avg), count: Number(r.cnt) };
+      return {
+        avgAiDetection: m["ai_detection"]?.avg ?? null,
+        avgPlagiarism:  m["plagiarism"]?.avg  ?? null,
+        avgGrade:       m["grade_verify"]?.avg ?? null,
+        totalSignals:   Object.values(m).reduce((s, v) => s + v.count, 0),
+      };
+    };
+
+    const weekMap: Record<string, Record<string, number>> = {};
+    for (const r of weeklyRes.rows) {
+      const wk = r.week.toISOString().slice(0, 10);
+      if (!weekMap[wk]) weekMap[wk] = {};
+      weekMap[wk][r.signal_type] = parseFloat(r.avg);
+    }
+    const weeklyTrends = Object.entries(weekMap).map(([week, m]) => ({
+      week,
+      avgAiDetection: m["ai_detection"] ?? null,
+      avgPlagiarism:  m["plagiarism"]   ?? null,
+      avgGrade:       m["grade_verify"] ?? null,
+    }));
+
+    const topSources = sourceRes.rows.map((r) => ({
+      source:      r.source,
+      subject:     r.subject,
+      totalQueries: Number(r.total_queries),
+      totalResults: Number(r.total_results),
+      successRate: r.total_queries > 0 ? parseFloat((r.success_count / r.total_queries).toFixed(3)) : 0,
+      avgResults:  r.total_queries > 0 ? parseFloat((r.total_results / r.total_queries).toFixed(1)) : 0,
+    }));
+
+    const fbTotal: Record<string, number> = {};
+    for (const r of fbTotalRes.rows) fbTotal[r.rating] = Number(r.cnt);
+    const fbByType: Record<string, { up: number; down: number }> = {};
+    for (const r of fbTypeRes.rows) {
+      if (!fbByType[r.type]) fbByType[r.type] = { up: 0, down: 0 };
+      if (r.rating === "up" || r.rating === "down") fbByType[r.type][r.rating] = Number(r.cnt);
+    }
+
+    res.json({
+      qualityAverages: { allTime: buildQuality(allTimeRes.rows), last30Days: buildQuality(last30Res.rows) },
+      weeklyTrends,
+      topSources,
+      feedbackStats: { totalUp: fbTotal["up"] ?? 0, totalDown: fbTotal["down"] ?? 0, byType: fbByType },
+    });
+  } catch (err) {
+    console.error("[admin] intelligence fetch failed:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

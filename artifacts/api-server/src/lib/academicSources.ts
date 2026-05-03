@@ -31,6 +31,7 @@
 
 import { withCache } from "./cache.js";
 import { ssRateLimit } from "./ssRateLimit.js";
+import { getSourceStats, type SourceStats } from "./learningEngine.js";
 
 export interface AcademicPaper {
   title: string;
@@ -1109,19 +1110,34 @@ async function _fetchAllAcademicSources(
   // Over-fetch per source so after deduplication we still hit the target limit.
   const budget = Math.ceil(limit * 2.0);   // fetch ~100% more than needed across 13 sources
 
-  const openAlexLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.22 : 0.20));
-  const crossRefLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.14 : 0.12));
-  const ssLimit          = Math.ceil(budget * (isFinanceBusiness ? 0.14 : 0.12));
-  const pmcLimit         = isBiomedical ? Math.ceil(budget * 0.12) : 0;
-  const pubmedLimit      = isBiomedical ? Math.ceil(budget * 0.10) : Math.ceil(budget * 0.04);
-  const arxivLimit       = (isSTEM || isFinanceBusiness) ? Math.ceil(budget * 0.12) : Math.ceil(budget * 0.03);
-  const ericLimit        = isEducation  ? Math.ceil(budget * 0.12) : Math.ceil(budget * 0.03);
-  const coreLimit        = (isHumanities || isFinanceBusiness) ? Math.ceil(budget * 0.10) : Math.ceil(budget * 0.04);
-  const doajLimit        = (isHumanities || isFinanceBusiness) ? Math.ceil(budget * 0.08) : Math.ceil(budget * 0.03);
-  const zenodoLimit      = Math.ceil(budget * 0.04);  // general supplement
-  const baseLimit        = Math.ceil(budget * 0.08);  // broad humanities/social science coverage
-  const dataCiteLimit    = Math.ceil(budget * 0.05);  // datasets and interdisciplinary research
-  const openAIRELimit    = Math.ceil(budget * 0.06);  // European academic coverage
+  // ── Adaptive source weighting — learned from past performance ────────────────
+  // Each source gets a multiplier based on its observed successRate for this subject.
+  // Formula: multiplier = 0.5 + successRate  (range 0.5 – 1.5)
+  // Sources with <3 historical queries stay at neutral weight 1.0 (not enough data).
+  // This creates a self-improving loop: sources that consistently return results are
+  // allocated a larger share of the budget over time, while unreliable ones shrink.
+  const _learnedStats: SourceStats[] = await getSourceStats(subject ?? "general").catch(() => []);
+  const _weightMap: Record<string, number> = {};
+  for (const s of _learnedStats) {
+    _weightMap[s.source] = s.totalQueries >= 3
+      ? Math.max(0.5, Math.min(1.5, 0.5 + s.successRate))
+      : 1.0;
+  }
+  const w = (name: string) => _weightMap[name] ?? 1.0;
+
+  const openAlexLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.22 : 0.20) * w("OpenAlex"));
+  const crossRefLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.14 : 0.12) * w("CrossRef"));
+  const ssLimit          = Math.ceil(budget * (isFinanceBusiness ? 0.14 : 0.12) * w("Semantic Scholar"));
+  const pmcLimit         = isBiomedical ? Math.ceil(budget * 0.12 * w("Europe PMC"))  : 0;
+  const pubmedLimit      = isBiomedical ? Math.ceil(budget * 0.10 * w("PubMed"))      : Math.ceil(budget * 0.04 * w("PubMed"));
+  const arxivLimit       = (isSTEM || isFinanceBusiness) ? Math.ceil(budget * 0.12 * w("arXiv"))  : Math.ceil(budget * 0.03 * w("arXiv"));
+  const ericLimit        = isEducation  ? Math.ceil(budget * 0.12 * w("ERIC"))        : Math.ceil(budget * 0.03 * w("ERIC"));
+  const coreLimit        = (isHumanities || isFinanceBusiness) ? Math.ceil(budget * 0.10 * w("CORE")) : Math.ceil(budget * 0.04 * w("CORE"));
+  const doajLimit        = (isHumanities || isFinanceBusiness) ? Math.ceil(budget * 0.08 * w("DOAJ")) : Math.ceil(budget * 0.03 * w("DOAJ"));
+  const zenodoLimit      = Math.ceil(budget * 0.04 * w("Zenodo"));
+  const baseLimit        = Math.ceil(budget * 0.08 * w("BASE"));
+  const dataCiteLimit    = Math.ceil(budget * 0.05 * w("DataCite"));
+  const openAIRELimit    = Math.ceil(budget * 0.06 * w("OpenAIRE"));
 
   const [
     openAlexResults,

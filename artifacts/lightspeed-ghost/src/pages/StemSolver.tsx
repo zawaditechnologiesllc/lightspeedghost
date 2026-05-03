@@ -17,6 +17,7 @@ import StemImageOcr from "@/components/StemImageOcr";
 import MathRenderer from "@/components/MathRenderer";
 import { ExportButtons } from "@/components/ExportButtons";
 import { buildStemExportHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -971,6 +972,8 @@ export default function StemSolver() {
                     <CheckCircle size={16} className="text-green-500 shrink-0" />
                     <span className="text-sm font-bold text-green-800 dark:text-green-200">Answer</span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <FeedbackWidget type="stem" subject={result.subject} />
                   <ExportButtons
                     getHtml={() => buildStemExportHtml({
                       problem: solvedProblem,
@@ -986,6 +989,7 @@ export default function StemSolver() {
                     filename={makeLsgFilename("stem", result.subject + "-SOLUTION")}
                     formats={["docx", "pdf", "txt", "copy"]}
                   />
+                  </div>
                 </div>
                 <div className="px-5 py-5">
                   {result.graphData ? (

@@ -11,6 +11,7 @@ import {
   Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
   BookOpen, Inbox, MailOpen, MailCheck, Building2,
   Copy, FileDown, Printer, FileText as FileTextIcon, Loader2 as Loader2Icon,
+  Brain,
 } from "lucide-react";
 import { exportAsDocx, exportAsPDF, exportAsTxt, copyText, richToHtml, wrapDocHtml } from "@/lib/exportUtils";
 import { Logo } from "@/components/Logo";
@@ -31,7 +32,7 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "tools" | "documents" | "ebooks" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings" | "messages";
+type Tab = "overview" | "users" | "tools" | "documents" | "ebooks" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings" | "messages" | "intelligence";
 
 interface ContactMessage {
   id: string;
@@ -384,6 +385,16 @@ export default function Admin() {
     recent: Array<{ id: number; user_id: string | null; title: string; word_count: number; created_at: string }>;
     subscriptions: Array<{ user_id: string; status: string; billing: string | null; gateway: string | null; created_at: string }>;
   } | null>(null);
+  const [intelligenceData, setIntelligenceData] = useState<{
+    qualityAverages: {
+      allTime:    { avgAiDetection: number | null; avgPlagiarism: number | null; avgGrade: number | null; totalSignals: number };
+      last30Days: { avgAiDetection: number | null; avgPlagiarism: number | null; avgGrade: number | null; totalSignals: number };
+    };
+    weeklyTrends: Array<{ week: string; avgAiDetection: number | null; avgPlagiarism: number | null; avgGrade: number | null }>;
+    topSources: Array<{ source: string; subject: string; totalQueries: number; successRate: number; avgResults: number }>;
+    feedbackStats: { totalUp: number; totalDown: number; byType: Record<string, { up: number; down: number }> };
+  } | null>(null);
+  const [intelligenceLoading, setIntelligenceLoading] = useState(false);
 
   const isAuthed = !!password;
 
@@ -549,6 +560,13 @@ export default function Admin() {
     try { setPwaStats(await adminFetch("/mwaramuriuki-login/pwa/stats", password) as typeof pwaStats); } catch { setPwaStats(null); }
   }, [password]);
 
+  const loadIntelligence = useCallback(async () => {
+    setIntelligenceLoading(true);
+    try { setIntelligenceData(await adminFetch("/mwaramuriuki-login/intelligence", password) as typeof intelligenceData); }
+    catch { setIntelligenceData(null); }
+    finally { setIntelligenceLoading(false); }
+  }, [password]);
+
   const loadLogs = useCallback(async () => {
     setLoading(true);
     try {
@@ -651,6 +669,7 @@ export default function Admin() {
     if (activeTab === "finance") loadRevenue();
     if (activeTab === "settings") loadSettings();
     if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); loadPwaStats(); }
+    if (activeTab === "intelligence") loadIntelligence();
     if (activeTab === "logs") loadLogs();
     if (activeTab === "announcements") loadAnnouncements();
     if (activeTab === "referrals") loadReferrals();
@@ -919,6 +938,7 @@ export default function Admin() {
     { id: "referrals",      label: "Referrals",      icon: Share2 },
     { id: "messages",       label: "Messages",       icon: Inbox },
     { id: "settings",       label: "Settings",       icon: Settings },
+    { id: "intelligence",   label: "Intelligence",   icon: Brain },
   ];
 
   const filteredUsers = userSearch
@@ -2590,6 +2610,188 @@ export default function Admin() {
 
                   </div>
                 ) : <Empty text="Settings unavailable" />}
+              </div>
+            )}
+
+            {/* ── Intelligence ──────────────────────────────────────────── */}
+            {activeTab === "intelligence" && (
+              <div className="space-y-6 max-w-5xl">
+                <div className="flex items-center justify-between">
+                  <SectionHeader title="AI Intelligence Dashboard" sub="Quality signals, source learning, and user feedback — how the system improves over time" />
+                  <button onClick={loadIntelligence} disabled={intelligenceLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-all disabled:opacity-40">
+                    <RefreshCw size={12} className={intelligenceLoading ? "animate-spin" : ""} /> Refresh
+                  </button>
+                </div>
+                {intelligenceLoading && !intelligenceData ? <Spinner /> : !intelligenceData ? (
+                  <div className="bg-white/[0.02] border border-white/8 rounded-xl px-5 py-8 text-center">
+                    <Brain size={22} className="text-white/20 mx-auto mb-2" />
+                    <p className="text-sm text-white/30">No intelligence data yet — data appears after users run papers, STEM solves, and study sessions.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+
+                    {/* ── Feedback summary ── */}
+                    <div>
+                      <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">User Feedback (Thumbs Up / Down)</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-gradient-to-br from-emerald-600/15 to-emerald-500/5 border border-emerald-500/15 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <ThumbsUp size={14} className="text-emerald-400" />
+                            <span className="text-xs text-white/40">Total Positive</span>
+                          </div>
+                          <p className="text-2xl font-bold text-white tabular-nums">{intelligenceData.feedbackStats.totalUp}</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-rose-600/15 to-rose-500/5 border border-rose-500/15 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <ThumbsDown size={14} className="text-rose-400" />
+                            <span className="text-xs text-white/40">Total Negative</span>
+                          </div>
+                          <p className="text-2xl font-bold text-white tabular-nums">{intelligenceData.feedbackStats.totalDown}</p>
+                        </div>
+                        {(["paper", "stem", "study"] as const).map((type) => {
+                          const fb = intelligenceData.feedbackStats.byType[type];
+                          const total = (fb?.up ?? 0) + (fb?.down ?? 0);
+                          const pct = total > 0 ? Math.round(((fb?.up ?? 0) / total) * 100) : null;
+                          return (
+                            <div key={type} className="bg-white/[0.03] border border-white/8 rounded-xl p-4">
+                              <p className="text-xs text-white/40 capitalize mb-1">{type} satisfaction</p>
+                              <p className="text-2xl font-bold text-white tabular-nums">{pct !== null ? `${pct}%` : "—"}</p>
+                              <p className="text-[10px] text-white/25 mt-0.5">{fb?.up ?? 0} up · {fb?.down ?? 0} down</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* ── Quality averages ── */}
+                    <div>
+                      <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">Output Quality Scores (from AI-Detection &amp; Plagiarism checks)</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {[
+                          { label: "All Time", data: intelligenceData.qualityAverages.allTime },
+                          { label: "Last 30 Days", data: intelligenceData.qualityAverages.last30Days },
+                        ].map(({ label, data }) => (
+                          <div key={label} className="bg-white/[0.02] border border-white/8 rounded-xl p-4 space-y-3">
+                            <p className="text-xs font-semibold text-white/50">{label} · {data.totalSignals} signals</p>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <p className="text-[10px] text-white/30 mb-1">AI Detection %</p>
+                                <p className={`text-xl font-bold tabular-nums ${data.avgAiDetection !== null && data.avgAiDetection < 10 ? "text-emerald-400" : data.avgAiDetection !== null && data.avgAiDetection < 25 ? "text-amber-400" : "text-rose-400"}`}>
+                                  {data.avgAiDetection !== null ? `${data.avgAiDetection}%` : "—"}
+                                </p>
+                                <p className="text-[9px] text-white/20 mt-0.5">lower = better</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-white/30 mb-1">Plagiarism %</p>
+                                <p className={`text-xl font-bold tabular-nums ${data.avgPlagiarism !== null && data.avgPlagiarism < 10 ? "text-emerald-400" : data.avgPlagiarism !== null && data.avgPlagiarism < 20 ? "text-amber-400" : "text-rose-400"}`}>
+                                  {data.avgPlagiarism !== null ? `${data.avgPlagiarism}%` : "—"}
+                                </p>
+                                <p className="text-[9px] text-white/20 mt-0.5">lower = better</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-white/30 mb-1">Grade Score</p>
+                                <p className={`text-xl font-bold tabular-nums ${data.avgGrade !== null && data.avgGrade >= 85 ? "text-emerald-400" : data.avgGrade !== null && data.avgGrade >= 70 ? "text-amber-400" : "text-rose-400"}`}>
+                                  {data.avgGrade !== null ? `${data.avgGrade}` : "—"}
+                                </p>
+                                <p className="text-[9px] text-white/20 mt-0.5">higher = better</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ── 8-week weekly trends ── */}
+                    {intelligenceData.weeklyTrends.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">8-Week Quality Trend</p>
+                        <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-white/6">
+                                <th className="text-left px-4 py-2.5 text-white/30 font-medium">Week</th>
+                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">AI Detection %</th>
+                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Plagiarism %</th>
+                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Grade Score</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/[0.04]">
+                              {intelligenceData.weeklyTrends.map((row) => (
+                                <tr key={row.week} className="hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-4 py-2.5 text-white/50 font-mono">{row.week}</td>
+                                  <td className={`px-4 py-2.5 text-right font-semibold tabular-nums ${row.avgAiDetection !== null && row.avgAiDetection < 10 ? "text-emerald-400" : "text-amber-400"}`}>
+                                    {row.avgAiDetection !== null ? `${row.avgAiDetection}%` : "—"}
+                                  </td>
+                                  <td className={`px-4 py-2.5 text-right font-semibold tabular-nums ${row.avgPlagiarism !== null && row.avgPlagiarism < 10 ? "text-emerald-400" : "text-amber-400"}`}>
+                                    {row.avgPlagiarism !== null ? `${row.avgPlagiarism}%` : "—"}
+                                  </td>
+                                  <td className={`px-4 py-2.5 text-right font-semibold tabular-nums ${row.avgGrade !== null && row.avgGrade >= 85 ? "text-emerald-400" : "text-white/50"}`}>
+                                    {row.avgGrade !== null ? row.avgGrade : "—"}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Source performance ── */}
+                    <div>
+                      <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
+                        <span className="flex items-center gap-1.5"><Database size={12} className="text-violet-400" /> Adaptive Source Weighting — Learned Database Performance</span>
+                      </p>
+                      {intelligenceData.topSources.length === 0 ? (
+                        <div className="bg-white/[0.02] border border-white/8 rounded-xl px-5 py-6 text-center">
+                          <p className="text-xs text-white/30">No source data yet — runs automatically as users search for papers.</p>
+                        </div>
+                      ) : (
+                        <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-white/6">
+                                <th className="text-left px-4 py-2.5 text-white/30 font-medium">Source</th>
+                                <th className="text-left px-4 py-2.5 text-white/30 font-medium">Subject</th>
+                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Queries</th>
+                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Avg Results</th>
+                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Success Rate</th>
+                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Weight</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/[0.04]">
+                              {intelligenceData.topSources.map((s, i) => {
+                                const weight = s.totalQueries >= 3 ? Math.max(0.5, Math.min(1.5, 0.5 + s.successRate)) : 1.0;
+                                const pct = Math.round(s.successRate * 100);
+                                return (
+                                  <tr key={i} className="hover:bg-white/[0.02] transition-colors">
+                                    <td className="px-4 py-2.5 text-white/70 font-medium">{s.source}</td>
+                                    <td className="px-4 py-2.5 text-white/40 capitalize">{s.subject}</td>
+                                    <td className="px-4 py-2.5 text-right text-white/50 tabular-nums">{s.totalQueries}</td>
+                                    <td className="px-4 py-2.5 text-right text-white/50 tabular-nums">{s.avgResults}</td>
+                                    <td className="px-4 py-2.5 text-right">
+                                      <span className={`font-semibold tabular-nums ${pct >= 70 ? "text-emerald-400" : pct >= 40 ? "text-amber-400" : "text-rose-400"}`}>{pct}%</span>
+                                    </td>
+                                    <td className="px-4 py-2.5 text-right">
+                                      <span className={`font-bold tabular-nums ${weight > 1.0 ? "text-emerald-400" : weight < 1.0 ? "text-rose-400" : "text-white/30"}`}>
+                                        {s.totalQueries >= 3 ? `×${weight.toFixed(2)}` : "—"}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-white/20 mt-2">
+                        Weight formula: 0.5 + successRate (range ×0.50 – ×1.50). Sources with &lt;3 queries use neutral weight ×1.00.
+                        High-performing sources receive proportionally more search budget on each query.
+                      </p>
+                    </div>
+
+                  </div>
+                )}
               </div>
             )}
           </main>
