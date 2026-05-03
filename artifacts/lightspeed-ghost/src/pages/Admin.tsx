@@ -17,7 +17,7 @@ import { exportAsDocx, exportAsPDF, exportAsTxt, copyText, richToHtml, wrapDocHt
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 // adminFetch automatically adds x-admin-email header when a sector admin is
 // logged in (stored in sessionStorage by handleAdminLogin).
@@ -476,7 +476,7 @@ export default function Admin() {
     try {
       const body: Record<string, string> = { password: inputPassword };
       if (loginEmail.trim()) body.email = loginEmail.trim().toLowerCase();
-      const res = await fetch(`${API_BASE}/mwaramuriuki-login/verify`, {
+      const res = await fetch(`${API_BASE}/api/mwaramuriuki-login/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
