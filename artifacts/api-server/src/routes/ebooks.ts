@@ -1,11 +1,13 @@
 import { Router } from "express";
-import { pool } from "@workspace/db";
+import { pool, db } from "@workspace/db";
+import { documentsTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
 import { openai } from "../lib/ai";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { recordUsage } from "../lib/apiCost";
 import { logger } from "../lib/logger";
 import { wordsToTokens } from "../lib/tokenBudget.js";
+import { getNextDocNumber, formatDocTitle } from "../lib/docLabels.js";
 
 const router = Router();
 
@@ -456,6 +458,22 @@ ${inspiration ? `- Keep this inspiration/angle throughout: ${inspiration}` : ""}
     };
 
     await incrementEbookUsage(userId);
+
+    // ── Save ebook to documents history ───────────────────────────────────
+    try {
+      const ebookDocNum = await getNextDocNumber(userId, "ebook");
+      await db.insert(documentsTable).values({
+        userId,
+        title: formatDocTitle({ type: "ebook", docNumber: ebookDocNum, ebookTitle: outline.title }),
+        content: fullContent,
+        type: "ebook",
+        subject: topic,
+        docNumber: ebookDocNum,
+        wordCount: fullContent.split(/\s+/).filter(Boolean).length,
+      });
+    } catch (saveErr) {
+      logger.warn({ saveErr }, "Failed to save ebook to documents history (non-fatal)");
+    }
 
     send("step", { id: "finalizing", message: "Ebook complete and ready for publishing!", status: "done" });
     send("complete", {

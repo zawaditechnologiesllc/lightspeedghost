@@ -14,4 +14,8 @@ export const ListDocumentsType = {
   revision: "revision",
   stem: "stem",
   study: "study",
+  ebook: "ebook",
+  outline: "outline",
+  humanizer: "humanizer",
+  plagiarism: "plagiarism",
 } as const;

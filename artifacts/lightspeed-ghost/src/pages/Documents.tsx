@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useListDocuments, useDeleteDocument, getListDocumentsQueryKey } from "@workspace/api-client-react";
 import type { ListDocumentsType } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, FileText, PenLine, FlaskConical, GraduationCap, Files, Search, ListOrdered, Wand2, ShieldCheck } from "lucide-react";
+import { Trash2, FileText, PenLine, FlaskConical, GraduationCap, Files, Search, ListOrdered, Wand2, ShieldCheck, BookMarked, ListTree, Download, Clock, Infinity } from "lucide-react";
 
 const typeFilters = [
   { value: undefined,       label: "All" },
@@ -13,18 +13,20 @@ const typeFilters = [
   { value: "plagiarism",    label: "AI & Plag" },
   { value: "stem",          label: "STEM" },
   { value: "study",         label: "Study" },
+  { value: "ebook",         label: "Ebooks" },
 ] as const;
 
 type DocType = typeof typeFilters[number]["value"];
 
 const typeIcons: Record<string, React.ReactNode> = {
   paper:       <PenLine size={14} className="text-primary" />,
-  outline:     <ListOrdered size={14} className="text-emerald-500" />,
+  outline:     <ListTree size={14} className="text-emerald-500" />,
   revision:    <Files size={14} className="text-blue-500" />,
   humanizer:   <Wand2 size={14} className="text-violet-500" />,
   plagiarism:  <ShieldCheck size={14} className="text-rose-500" />,
   stem:        <FlaskConical size={14} className="text-indigo-500" />,
   study:       <GraduationCap size={14} className="text-cyan-500" />,
+  ebook:       <BookMarked size={14} className="text-purple-500" />,
 };
 
 const typeBadgeColors: Record<string, string> = {
@@ -35,6 +37,7 @@ const typeBadgeColors: Record<string, string> = {
   plagiarism: "bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400",
   stem:       "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400",
   study:      "bg-cyan-100 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-400",
+  ebook:      "bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400",
 };
 
 const typeLabels: Record<string, string> = {
@@ -45,12 +48,24 @@ const typeLabels: Record<string, string> = {
   plagiarism: "AI & Plagiarism",
   stem:       "STEM",
   study:      "Study",
+  ebook:      "Ebook",
 };
 
 function parseLsgTitle(title: string): { code: string | null; label: string } {
   const match = title.match(/^(LSG-[A-Z]+\d+)-(.+)$/);
   if (match) return { code: match[1], label: match[2] };
   return { code: null, label: title };
+}
+
+function downloadDocument(title: string, content: string, type: string) {
+  const ext = type === "ebook" ? "md" : "txt";
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${title.replace(/[^a-zA-Z0-9-_]/g, "_")}.${ext}`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function Documents() {
@@ -76,12 +91,41 @@ export default function Documents() {
     doc.subject?.toLowerCase().includes(search.toLowerCase())
   ) ?? [];
 
+  const retentionDays = data?.retentionDays;
+
+  const retentionLabel =
+    retentionDays === null || retentionDays === undefined
+      ? null
+      : retentionDays <= 7
+        ? { text: `Documents kept for ${retentionDays} days on your plan. Upgrade to Pro for 90-day history or Institution/Ebooks for unlimited.`, warn: true }
+        : { text: `Documents kept for ${retentionDays} days on your plan.`, warn: false };
+
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
       <div>
         <h1 className="text-xl sm:text-2xl font-bold">History</h1>
-        <p className="text-muted-foreground text-sm mt-1">All your saved documents — papers, outlines, revisions, humanizer runs, reports, STEM solutions, and study sessions</p>
+        <p className="text-muted-foreground text-sm mt-1">All your saved documents — papers, outlines, revisions, humanizer runs, reports, STEM solutions, study sessions and ebooks</p>
       </div>
+
+      {/* Retention notice */}
+      {retentionDays !== undefined && (
+        <div className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-xs ${
+          retentionLabel?.warn
+            ? "bg-amber-500/8 border-amber-500/20 text-amber-600 dark:text-amber-400"
+            : retentionDays === null
+              ? "bg-emerald-500/8 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+              : "bg-muted/60 border-border text-muted-foreground"
+        }`}>
+          {retentionDays === null
+            ? <Infinity size={13} className="shrink-0" />
+            : <Clock size={13} className="shrink-0" />}
+          <span>
+            {retentionDays === null
+              ? "Unlimited document history — your plan keeps all documents forever."
+              : retentionLabel?.text}
+          </span>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex gap-1 flex-wrap">
@@ -157,13 +201,24 @@ export default function Documents() {
                     {(doc.wordCount ?? 0) > 0 && <span className="text-xs text-muted-foreground">{(doc.wordCount ?? 0).toLocaleString()} words</span>}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(doc.id)}
-                  disabled={deleteDocument.isPending}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {doc.content && (
+                    <button
+                      onClick={() => downloadDocument(doc.title, doc.content, doc.type)}
+                      title="Download"
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      <Download size={14} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDelete(doc.id)}
+                    disabled={deleteDocument.isPending}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             );
           })}
