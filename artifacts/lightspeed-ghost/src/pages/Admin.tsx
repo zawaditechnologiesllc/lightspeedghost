@@ -2917,6 +2917,72 @@ export default function Admin() {
                       </div>
                     )}
 
+                    {/* ── Database Registry ── */}
+                    <div>
+                      <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
+                        <span className="flex items-center gap-1.5"><Database size={12} className="text-sky-400" /> Verified Source Registry — 25+ Live Academic Databases (1.5B+ Papers)</span>
+                      </p>
+                      <div className="bg-white/[0.02] border border-white/8 rounded-xl p-4">
+                        <p className="text-[10px] text-white/30 mb-3">Every source below is queried live via free public APIs. No Wikipedia, no news, no unverified sources. All results carry a DOI or institutional URL.</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                          {[
+                            { name: "OpenAlex",           count: "250M+ papers",   cat: "Core",        note: "All disciplines, 50,000+ publishers" },
+                            { name: "CrossRef",           count: "145M+ DOIs",     cat: "Core",        note: "Citation backbone of academic publishing" },
+                            { name: "Semantic Scholar",   count: "200M+ papers",   cat: "Core",        note: "AI-enhanced citation intelligence" },
+                            { name: "BASE",               count: "340M+ docs",     cat: "Core",        note: "10,000+ institutional repositories" },
+                            { name: "CORE",               count: "200M+ papers",   cat: "Core",        note: "10,000+ OA data providers" },
+                            { name: "PubMed NCBI",        count: "36M+ papers",    cat: "Biomedical",  note: "NIH gold standard for medicine" },
+                            { name: "PubMed Central",     count: "8M+ full-text",  cat: "Biomedical",  note: "NIH-funded open access full text" },
+                            { name: "Europe PMC",         count: "40M+ papers",    cat: "Biomedical",  note: "MEDLINE + life sciences" },
+                            { name: "bioRxiv",            count: "210K+ preprints",cat: "Biomedical",  note: "Biology preprints (Cold Spring Harbor)" },
+                            { name: "medRxiv",            count: "55K+ preprints", cat: "Biomedical",  note: "Medical preprints (CSH + Yale/BMJ)" },
+                            { name: "ClinicalTrials.gov", count: "450K+ trials",   cat: "Biomedical",  note: "NIH/FDA — 220+ countries" },
+                            { name: "arXiv",              count: "2.4M+ preprints",cat: "STEM",        note: "STEM, CS, econ, stats, quantitative bio" },
+                            { name: "NASA ADS",           count: "16M+ papers",    cat: "STEM",        note: "Astronomy & astrophysics (key req.)" },
+                            { name: "Zenodo (CERN)",      count: "3M+ records",    cat: "STEM",        note: "Datasets, preprints, theses" },
+                            { name: "DataCite",           count: "48M+ objects",   cat: "STEM",        note: "Research data & software DOIs" },
+                            { name: "Dryad",              count: "50K+ packages",  cat: "STEM",        note: "Peer-reviewed research data" },
+                            { name: "DOAJ",               count: "20K+ journals",  cat: "OA Journals", note: "Peer-reviewed open access only" },
+                            { name: "PLOS ONE",           count: "250K+ articles", cat: "OA Journals", note: "Biology, medicine, environment" },
+                            { name: "Figshare",           count: "9M+ outputs",    cat: "OA Journals", note: "Papers, datasets, posters, code" },
+                            { name: "ERIC (US Dept Ed)",  count: "2M+ papers",     cat: "Education",   note: "Education research & pedagogy" },
+                            { name: "HAL France",         count: "1.5M+ papers",   cat: "Humanities",  note: "French & European institutions" },
+                            { name: "OpenAIRE",           count: "100M+ outputs",  cat: "EU Research", note: "EU-funded research, CORDIS" },
+                            { name: "OSF Preprints",      count: "Multidisc.",     cat: "Social Sci",  note: "Psychology, social science, education" },
+                            { name: "NBER",               count: "35K+ papers",    cat: "Economics",   note: "Economics & public policy working papers" },
+                            { name: "Recent Layer",       count: "Last 90 days",   cat: "Current",     note: "arXiv + CrossRef + OpenAlex date-filtered" },
+                          ].map((src) => {
+                            const catColor: Record<string, string> = {
+                              Core:       "text-sky-400 bg-sky-400/10 border-sky-400/20",
+                              Biomedical: "text-rose-400 bg-rose-400/10 border-rose-400/20",
+                              STEM:       "text-violet-400 bg-violet-400/10 border-violet-400/20",
+                              "OA Journals": "text-amber-400 bg-amber-400/10 border-amber-400/20",
+                              Education:  "text-teal-400 bg-teal-400/10 border-teal-400/20",
+                              Humanities: "text-orange-400 bg-orange-400/10 border-orange-400/20",
+                              "EU Research": "text-blue-400 bg-blue-400/10 border-blue-400/20",
+                              "Social Sci": "text-pink-400 bg-pink-400/10 border-pink-400/20",
+                              Economics:  "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
+                              Current:    "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
+                            };
+                            const cls = catColor[src.cat] ?? "text-white/40 bg-white/5 border-white/10";
+                            return (
+                              <div key={src.name} className="flex items-start gap-2 p-2.5 bg-white/[0.02] rounded-lg border border-white/[0.04]">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-xs font-semibold text-white/80 truncate">{src.name}</span>
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium border ${cls}`}>{src.cat}</span>
+                                  </div>
+                                  <p className="text-[9px] text-white/35 mt-0.5 font-mono">{src.count}</p>
+                                  <p className="text-[9px] text-white/25 mt-0.5 leading-tight">{src.note}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <p className="text-[9px] text-white/20 mt-3">NASA ADS requires a free API key (NASA_ADS_API_KEY env var). All others are fully keyless. The Recent Layer auto-activates for current-events topics.</p>
+                      </div>
+                    </div>
+
                     {/* ── Source performance ── */}
                     <div>
                       <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
