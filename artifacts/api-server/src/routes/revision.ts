@@ -7,6 +7,7 @@ import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { recordQualitySignal } from "../lib/learningEngine";
+import { wordsToTokens } from "../lib/tokenBudget.js";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { computeBurstiness, sampleTextSections, analyseTextPlagiarism } from "../lib/textAnalysis.js";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
@@ -34,7 +35,7 @@ async function enforceRevisionWordCount(
     const expand = currentWords < minTarget;
     const adjusted = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: Math.min(16000, Math.ceil(Math.max(targetWords, Math.abs(targetWords - currentWords)) * 1.8) + 1800),
+      max_tokens: wordsToTokens(Math.max(targetWords, Math.abs(targetWords - currentWords)), 1800),
       system: `${WRITER_SOUL}
 
 You are the LightSpeed Revision Word Count Controller.
@@ -361,7 +362,7 @@ Return ONLY valid JSON:
 
     const revisionResp = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: 12000,
+      max_tokens: wordsToTokens(wordCount, 2500),
       system: revisionSystemPrompt,
       messages: [
         {
@@ -492,7 +493,7 @@ ${effectiveGradingCriteria}`,
 
         const improvResp = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
-          max_tokens: 12000,
+          max_tokens: wordsToTokens(wordCount, 1500),
           system: `${WRITER_SOUL}
 
 You are the LightSpeed Grade Optimizer for a revised paper. Strengthen the paper to reach at least 92%.
@@ -577,7 +578,7 @@ RULES:
 
         const rephrasedResp = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
-          max_tokens: 12000,
+          max_tokens: wordsToTokens(wordCount, 1500),
           system: `${WRITER_SOUL}
 
 You are the LightSpeed Originality Engine. Rephrase flagged sections of this academic paper to reduce textual similarity below 8% while preserving:

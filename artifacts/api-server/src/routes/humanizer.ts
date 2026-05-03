@@ -8,6 +8,7 @@ import { recordUsage } from "../lib/apiCost";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { detectAIScore } from "../lib/aiDetection.js";
+import { wordsToTokens } from "../lib/tokenBudget.js";
 
 const router = Router();
 
@@ -214,9 +215,8 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
 
     const tone = body.tone ?? "academic";
     const wordCount = body.text.split(/\s+/).filter(Boolean).length;
-    // Dynamic token budget: 1.65 tokens/word + 600 overhead for instruction adherence.
-    // Prevents truncation of long documents (e.g. a 6000-word paper needs ~10,000 tokens).
-    const humanizeMaxTokens = Math.min(16000, Math.ceil(wordCount * 1.65) + 600);
+    // Dynamic token budget: words × 1.35 (token/word) × 1.10 (±10% margin) + 600 instruction overhead.
+    const humanizeMaxTokens = wordsToTokens(wordCount, 600);
 
     const toneGuide: Record<string, string> = {
       academic:

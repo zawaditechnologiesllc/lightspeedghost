@@ -5,6 +5,7 @@ import { openai } from "../lib/ai";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { recordUsage } from "../lib/apiCost";
 import { logger } from "../lib/logger";
+import { wordsToTokens } from "../lib/tokenBudget.js";
 
 const router = Router();
 
@@ -306,8 +307,8 @@ Return ONLY valid JSON with this exact shape (no markdown, no code fences):
     fullContent += `\n---\n\n`;
 
     const wordsPerChapter = Math.floor(wordTarget / outline.chapters.length);
-    // token budget: gpt-4o-mini ~0.75 tokens/word; add 500 headroom
-    const chapterMaxTokens = Math.min(8000, Math.ceil(wordsPerChapter * 1.45) + 500);
+    // Dynamic token budget: words × 1.485 (words→tokens + ±10% margin) + 500 overhead. Cap 8 000 for gpt-4o-mini.
+    const chapterMaxTokens = wordsToTokens(wordsPerChapter, 500, 8000);
     // Truncate RAG context once for token efficiency — reused across all chapters
     const truncatedRag = ragContext ? ragContext.slice(0, 2500) : "";
     let previousSummaries = "";
@@ -367,7 +368,7 @@ ${inspiration ? `- Keep this inspiration/angle throughout: ${inspiration}` : ""}
         const wordsNeeded = wordsPerChapter - chapterWordCount;
         const corrResp = await openai.chat.completions.create({
           model: "gpt-4o-mini",
-          max_tokens: Math.min(4000, Math.ceil(wordsNeeded * 1.5) + 300),
+          max_tokens: wordsToTokens(wordsNeeded, 300, 4000),
           messages: [
             { role: "user", content: chapterPrompt },
             { role: "assistant", content: chapterText },
