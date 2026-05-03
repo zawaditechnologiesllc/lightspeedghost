@@ -1520,21 +1520,18 @@ router.get("/mwaramuriuki-login/admin-users", async (req: Request, res: Response
   }
 });
 
-router.post("/mwaramuriuki-login/admin-users", async (req: Request, res: Response) => {
+router.post("/api/mwaramuriuki-login/admin-users", async (req: Request, res: Response) => {
   if (!requireSuperAdmin(req)) { res.status(401).json({ error: "Unauthorized — super admin only" }); return; }
   const { name, email, password, sectors } = req.body as {
     name?: string; email?: string; password?: string; sectors?: string[];
   };
-
   if (!name || !name.trim()) { res.status(400).json({ error: "name is required" }); return; }
   if (!email || !email.trim()) { res.status(400).json({ error: "email is required" }); return; }
   if (!password || password.length < 8) { res.status(400).json({ error: "password must be at least 8 characters" }); return; }
   if (!Array.isArray(sectors) || sectors.length === 0) { res.status(400).json({ error: "at least one sector is required" }); return; }
-
   const VALID_SECTORS = ["content", "finance", "analytics", "support", "technical", "all"];
   const invalidSectors = sectors.filter((s) => !VALID_SECTORS.includes(s));
   if (invalidSectors.length > 0) { res.status(400).json({ error: `Invalid sectors: ${invalidSectors.join(", ")}` }); return; }
-
   try {
     const passwordHash = await bcrypt.hash(password, 12);
     const { rows } = await pool.query<{ id: number }>(
