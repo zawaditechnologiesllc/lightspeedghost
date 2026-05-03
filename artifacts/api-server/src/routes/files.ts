@@ -5,6 +5,7 @@ import { convert as htmlToText } from "html-to-text";
 import { requireAuth } from "../middlewares/auth";
 import { openai } from "../lib/ai";
 import { recordUsage } from "../lib/apiCost";
+import { wordsToTokens } from "../lib/tokenBudget.js";
 
 const router = Router();
 
@@ -71,7 +72,7 @@ async function reductoClean(rawText: string): Promise<string> {
   try {
     const resp = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      max_tokens: 4000,
+      max_tokens: wordsToTokens(wordCount),
       messages: [{
         role: "user",
         content: `Convert this extracted PDF text to clean Markdown. Remove: page numbers, repeated headers/footers, OCR artifacts, excessive blank lines. Preserve ALL academic content, headings, lists, and data. Do not summarise — keep every substantive sentence.\n\n${rawText.slice(0, 18000)}`,
