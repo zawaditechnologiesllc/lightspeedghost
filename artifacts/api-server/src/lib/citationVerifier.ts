@@ -16,6 +16,7 @@ import { withCache } from "./cache.js";
 import { ssRateLimit } from "./ssRateLimit.js";
 import Cite from "@citation-js/core";
 import "@citation-js/plugin-csl";
+import { batchSmartCitationQuality, formatCitationQualityBadge } from "./sciteCitations.js";
 
 const CSL_STYLE_MAP: Record<string, string> = {
   apa: "apa",
@@ -90,6 +91,14 @@ export interface VerifiedCitation {
   doi?: string;
   verified: boolean;
   formatted: string;
+  citationQuality?: {
+    score: number;
+    label: "High" | "Moderate" | "Low" | "Unknown";
+    badge: string;
+    supporting: number;
+    contrasting: number;
+    influential: number;
+  };
 }
 
 export async function searchSemanticScholar(
@@ -534,10 +543,38 @@ export async function getVerifiedCitations(
         }
       }
 
-      return deduped.slice(0, count).map((c, i) => ({
-        ...c,
-        formatted: formatCitationCSL(c, style, i),
-      }));
+      const trimmed = deduped.slice(0, count);
+
+      // Scite-style smart citation quality enrichment — fetch citation intent data
+      // from Semantic Scholar (supporting/contrasting/mentioning breakdown)
+      const citationInputs = trimmed
+        .filter(c => c.id.startsWith("ss-"))
+        .map(c => ({
+          paperId: c.id.replace(/^ss-/, ""),
+          doi: c.doi,
+          citationCount: 0,
+        }));
+
+      const qualityMap = citationInputs.length > 0
+        ? await batchSmartCitationQuality(citationInputs).catch(() => new Map())
+        : new Map();
+
+      return trimmed.map((c, i) => {
+        const ssId = c.id.replace(/^ss-/, "");
+        const quality = qualityMap.get(ssId);
+        return {
+          ...c,
+          formatted: formatCitationCSL(c, style, i),
+          citationQuality: quality ? {
+            score: quality.qualityScore,
+            label: quality.qualityLabel,
+            badge: formatCitationQualityBadge(quality),
+            supporting: quality.supportingCount,
+            contrasting: quality.contrastingCount,
+            influential: quality.influentialCitationCount,
+          } : undefined,
+        };
+      });
     },
     topic,
     subject,

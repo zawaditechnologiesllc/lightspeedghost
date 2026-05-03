@@ -14,6 +14,7 @@ import { ACADEMIC_SOUL } from "../lib/soul";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
 import { buildFinancialStatementsContext } from "../lib/financialStatements";
+import { buildWolframContext, wolframStatus } from "../lib/wolframAlpha.js";
 
 const router = Router();
 
@@ -62,8 +63,11 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
       ? `${body.problem}\n\n---\n\n${datasetBlock}`
       : body.problem;
 
+    // Wolfram Alpha verification — fetch mathematically-verified result to ground the solution
+    const wolframBlock = await buildWolframContext(body.problem).catch(() => "");
+
     // 1. ReAct Loop — Pi Engine pattern: Think → Act → Observe → Reflect
-    const reactResult = await reactSolve(augmentedProblem, body.subject, undefined, academicContext, body.academicLevel);
+    const reactResult = await reactSolve(augmentedProblem, body.subject, undefined, (academicContext ?? "") + wolframBlock, body.academicLevel);
 
     // 2. Chain-of-Verification — Critic Agent checks for errors (Gauth-killer pattern)
     const coveResult = await chainOfVerification(body.problem, body.subject, reactResult);
@@ -249,6 +253,9 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
       financialBlock && `---\n\n${financialBlock}`,
     ].filter(Boolean).join("\n\n");
 
+    // Wolfram Alpha verification for streaming route
+    const wolframBlockStream = await buildWolframContext(body.problem).catch(() => "");
+
     let reactResult: Awaited<ReturnType<typeof reactSolve>>;
     try {
       reactResult = await reactSolve(
@@ -259,7 +266,7 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
           // lets the frontend show live AI thinking content.
           try { res.write(`event: token\ndata: ${JSON.stringify({ id: "react", text: chunk })}\n\n`); } catch { /* ignore */ }
         },
-        academicContext,
+        (academicContext ?? "") + wolframBlockStream,
         body.academicLevel,
       );
     } catch (reactErr) {
