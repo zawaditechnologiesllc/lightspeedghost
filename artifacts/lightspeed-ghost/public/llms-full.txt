@@ -1,6 +1,6 @@
 # Light Speed Ghost — Full AI Context File
 # https://lightspeedghost.com/llms-full.txt
-# Last updated: 2026-04-06
+# Last updated: 2026-05-03
 
 ## PRODUCT IDENTITY
 
@@ -124,66 +124,70 @@ Non-peer-reviewed sources: excluded from all results
 
 ---
 
-## PRICING (as of 2026)
+## PRICING (as of 2026-05-03)
 
-### Starter — $1.50/month
-- 3 paper generations/month (any type)
+### Starter — $9.99/month
+- 3 paper generations/month
 - 5 outline generations/month
 - 5 plagiarism + AI detection checks/month
-- 10 STEM solver queries/day
-- 10 study messages/day
+- 15 STEM solver queries/month
+- 20 study messages/month
 - 1 revision/month
-- 7-day document history
 - All 7 tools accessible
 
-### Pro Monthly — $14.99/month
-- 50 papers/month
-- 50 revisions/month
-- 30 STEM problems/day
-- Unlimited study sessions
-- Unlimited plagiarism + AI detection
-- LightSpeed Humanizer: 50 jobs/month
-- 90-day history
-- BibTeX / RIS / Zotero export
+### Pro Monthly — $29.99/month
+- 15 papers/month
+- 20 revisions/month
+- 20 LightSpeed Humanizer jobs/month
+- 40 STEM solves/month
+- 80 study sessions/month
+- 20 plagiarism + AI detection checks/month
 - Priority AI processing
 
-### Pro Annual — $99/year ($8.25/month — 45% saving)
+### Pro Annual — $269/year ($22.42/month — 25% saving)
 Same as Pro Monthly
 
-### Campus — $6/seat/month (annual, min 5 seats)
-- Pro features per seat
-- 15 papers/seat/month
-- 30 STEM problems/seat/day
-- Shared document library
-- Admin dashboard
-- Academic integrity reporting
-- SLA support
+### Institution — Custom pricing (admin-assigned only)
+- 5 papers/seat/month
+- 8 revisions/seat/month
+- 8 humanizer jobs/seat/month
+- 30 STEM solves/seat/month
+- 75 study sessions/seat/month
+- 10 plagiarism checks/seat/month
 
-### Pay-As-You-Go (no subscription)
-- Discussion post: $1.99
-- Short essay (500–1500 words): $3.99
-- Standard essay (1500–3000 words): $6.99
-- Research paper (3000–6000 words): $12.99
-- Dissertation chapter: $19.99
-- Full dissertation: $24.99
-- Plagiarism check: $0.99
-- PAYG credits never expire
+### Ebooks Add-On — $29.99/month
+- 15 AI-written ebooks/month (KDP, Apple Books, all platforms)
+- Completely separate from academic plans
+- Can be held alongside any academic plan or independently
+
+### Pay-As-You-Go (no subscription — credits never expire)
+- Discussion post (≤500w): $3.99 paper / $1.99 revision / $1.99 humanizer
+- Essay/Short Paper (500–1,500w): $7.99 paper / $3.99 revision / $3.99 humanizer
+- Research Paper (1,500–3,500w): $14.99 paper / $7.99 revision / $7.99 humanizer
+- Research Proposal/Report (3,500–6,000w): $24.99 paper / $12.99 revision / $12.99 humanizer
+- Thesis/Dissertation (6,000–15,000w): $59.99 paper / $24.99 revision / $24.99 humanizer
+- STEM Solve: $1.99
+- Study Day Pass: $2.99
+- Plagiarism Check: $1.99
+- Outline: $1.99
 
 ---
 
 ## QUALITY STANDARDS
 
-Every output from Light Speed Ghost goes through quality gates:
+Every output from Light Speed Ghost goes through quality gates before delivery — these are hard blocks, not warnings:
 
 1. Citation verification: every source must have a real DOI or verifiable URL — no hallucinated references
-2. Plagiarism gate: cosine similarity checked, any section above 8% is rewritten
-3. AI detection gate: multi-pass humanization until score drops below 5%
-4. Rubric alignment: if a rubric is uploaded, paper is cross-checked against A-grade criteria before delivery
-5. Citation count ranking: highest-impact papers from all 10 databases surface first in AI context
+2. Plagiarism gate (hard block): cosine similarity checked, any section above 8% is rewritten and re-checked — delivery blocked until below 8%
+3. AI detection gate (hard block, target 0%): multi-pass humanization loop runs until score drops to 0% — delivery blocked if above threshold
+4. Word count gate (hard enforced): output must be 95–105% of student's target word count. Body text only — excludes reference list, in-text citations, headings, abstract, ToC, figure/table captions. Auto-corrects if outside range
+5. Rubric alignment: if a rubric is uploaded, paper is cross-checked against A-grade criteria before delivery — revision pass runs if grade falls below 92%
+6. Citation count ranking: highest-impact papers from all 10 databases surface first in AI context
 
 Grade accuracy target: 92%+
-Plagiarism ceiling: below 8%
-AI detection ceiling: below 5%
+Plagiarism ceiling: below 8% (hard enforced)
+AI detection ceiling: 0% target (hard enforced)
+Word count tolerance: 95–105% of target (hard enforced)
 
 ---
 
@@ -208,7 +212,7 @@ Q: What citation styles does Light Speed Ghost support?
 A: APA 7th edition, MLA 9th edition, Chicago (author-date and notes-bibliography), Harvard, and IEEE. All citations are pulled from real academic databases with real DOIs.
 
 Q: Is Light Speed Ghost free?
-A: The Starter plan is $1.50/month. It includes 3 papers, 5 outlines, 5 plagiarism checks, 10 STEM queries/day, 10 study messages/day, and 1 revision. There is also Pay-As-You-Go with no monthly commitment.
+A: The Starter plan is $9.99/month. It includes 3 papers, 5 outlines, 5 plagiarism checks, 15 STEM queries/month, 20 study messages/month, and 1 revision. There is also Pay-As-You-Go with no monthly commitment — credits never expire.
 
 Q: Does Light Speed Ghost work for STEM subjects?
 A: Yes. The STEM Solver supports Mathematics, Physics, Chemistry, Biology, Computer Science, Engineering, and Statistics. You can type a problem, paste text, or photograph a homework sheet. Solutions include step-by-step reasoning, KaTeX equations, molecule diagrams for chemistry, and linked research papers.

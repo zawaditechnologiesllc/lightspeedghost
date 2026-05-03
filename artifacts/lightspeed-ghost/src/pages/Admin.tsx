@@ -19,12 +19,16 @@ import { Link } from "wouter";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
+// adminFetch automatically adds x-admin-email header when a sector admin is
+// logged in (stored in sessionStorage by handleAdminLogin).
 async function adminFetch(path: string, password: string, options?: RequestInit) {
+  const email = sessionStorage.getItem("admin_email") ?? "";
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
       "x-admin-password": password,
+      ...(email ? { "x-admin-email": email } : {}),
       ...options?.headers,
     },
   });
@@ -32,7 +36,45 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "tools" | "documents" | "ebooks" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings" | "messages" | "intelligence";
+type Tab = "overview" | "users" | "tools" | "documents" | "ebooks" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings" | "messages" | "intelligence" | "admin-management";
+
+interface AdminRole {
+  role: "super" | "sector";
+  sectors: string[];
+  name: string;
+  email?: string;
+  adminId?: number;
+}
+
+interface SectorAdminUser {
+  id: number;
+  name: string;
+  email: string;
+  sectors: string[];
+  active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+const SECTOR_LABELS: Record<string, string> = {
+  content:   "Content & Users",
+  finance:   "Finance & Billing",
+  analytics: "Analytics & Intelligence",
+  support:   "Customer Support",
+  technical: "Technical Operations",
+};
+
+const ALL_SECTORS = ["content", "finance", "analytics", "support", "technical"] as const;
+
+// Map each sector to the tabs it can access
+const SECTOR_TABS: Record<string, Tab[]> = {
+  content:   ["overview", "users", "documents", "ebooks", "announcements", "messages"],
+  finance:   ["overview", "payments", "credits", "finance", "referrals", "gateways"],
+  analytics: ["overview", "analytics", "logs", "intelligence"],
+  support:   ["overview", "users", "messages", "credits"],
+  technical: ["overview", "tools", "gateways", "settings", "logs"],
+};
 
 interface ContactMessage {
   id: string;
@@ -396,22 +438,67 @@ export default function Admin() {
   } | null>(null);
   const [intelligenceLoading, setIntelligenceLoading] = useState(false);
 
+  // ── Sector admin management state ──────────────────────────────────────────
+  const [adminRole, setAdminRole] = useState<AdminRole | null>(null);
+  const [sectorAdminUsers, setSectorAdminUsers] = useState<SectorAdminUser[]>([]);
+  const [sectorAdminLoading, setSectorAdminLoading] = useState(false);
+  const [newAdminName, setNewAdminName] = useState("");
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [newAdminSectors, setNewAdminSectors] = useState<string[]>([]);
+  const [creatingAdmin, setCreatingAdmin] = useState(false);
+  const [createAdminError, setCreateAdminError] = useState("");
+  const [editingSectorAdmin, setEditingSectorAdmin] = useState<SectorAdminUser | null>(null);
+  const [editSectorAdminPassword, setEditSectorAdminPassword] = useState("");
+  const [savingSectorAdmin, setSavingSectorAdmin] = useState(false);
+  const [deletingSectorAdminId, setDeletingSectorAdminId] = useState<number | null>(null);
+  const [loginEmail, setLoginEmail] = useState("");
+
   const isAuthed = !!password;
+
+  // Derived: allowed tabs based on role
+  const allowedTabs: Set<Tab> = (() => {
+    if (!adminRole || adminRole.role === "super") return new Set<Tab>(["overview","users","tools","documents","ebooks","gateways","payments","credits","finance","analytics","logs","announcements","referrals","settings","messages","intelligence","admin-management"]);
+    const tabs = new Set<Tab>(["overview"]);
+    for (const sector of adminRole.sectors) {
+      for (const t of (SECTOR_TABS[sector] ?? [])) tabs.add(t);
+    }
+    return tabs;
+  })();
 
   async function handleAdminLogin(e: React.FormEvent) {
     e.preventDefault();
     setAuthError("");
     setAuthLoading(true);
     try {
+      const body: Record<string, string> = { password: inputPassword };
+      if (loginEmail.trim()) body.email = loginEmail.trim().toLowerCase();
       const res = await fetch(`${API_BASE}/mwaramuriuki-login/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: inputPassword }),
+        body: JSON.stringify(body),
       });
-      const data = await res.json() as { ok: boolean; error?: string };
+      const data = await res.json() as {
+        ok: boolean; error?: string;
+        role?: "super" | "sector"; sectors?: string[]; name?: string; email?: string; adminId?: number;
+      };
       if (data.ok) {
         setPassword(inputPassword);
         sessionStorage.setItem("admin_token", inputPassword);
+        const role: AdminRole = {
+          role: data.role ?? "super",
+          sectors: data.sectors ?? ["all"],
+          name: data.name ?? "Admin",
+          email: data.email,
+          adminId: data.adminId,
+        };
+        setAdminRole(role);
+        sessionStorage.setItem("admin_role", JSON.stringify(role));
+        if (data.email) {
+          sessionStorage.setItem("admin_email", data.email);
+        } else {
+          sessionStorage.removeItem("admin_email");
+        }
       } else {
         setAuthError(data.error ?? "Invalid password");
       }
@@ -425,6 +512,10 @@ export default function Admin() {
   useEffect(() => {
     const stored = sessionStorage.getItem("admin_token");
     if (stored) setPassword(stored);
+    const storedRole = sessionStorage.getItem("admin_role");
+    if (storedRole) {
+      try { setAdminRole(JSON.parse(storedRole) as AdminRole); } catch { /* ignore */ }
+    }
   }, []);
 
   const loadStats = useCallback(async () => {
@@ -675,6 +766,7 @@ export default function Admin() {
     if (activeTab === "referrals") loadReferrals();
     if (activeTab === "ebooks") loadEbooks();
     if (activeTab === "messages") loadMessages();
+    if (activeTab === "admin-management") loadSectorAdmins();
   }, [isAuthed, activeTab]);
 
   useEffect(() => {
@@ -779,7 +871,10 @@ export default function Admin() {
 
   function signOut() {
     sessionStorage.removeItem("admin_token");
+    sessionStorage.removeItem("admin_role");
+    sessionStorage.removeItem("admin_email");
     setPassword("");
+    setAdminRole(null);
   }
 
   function refreshTab() {
@@ -794,7 +889,73 @@ export default function Admin() {
     else if (activeTab === "logs") loadLogs();
     else if (activeTab === "announcements") loadAnnouncements();
     else if (activeTab === "ebooks") loadEbooks();
+    else if (activeTab === "admin-management") loadSectorAdmins();
     else loadStats();
+  }
+
+  const loadSectorAdmins = useCallback(async () => {
+    setSectorAdminLoading(true);
+    try {
+      const data = await adminFetch("/mwaramuriuki-login/admin-users", password) as { adminUsers: SectorAdminUser[] };
+      setSectorAdminUsers(data.adminUsers);
+    } catch { setSectorAdminUsers([]); }
+    finally { setSectorAdminLoading(false); }
+  }, [password]);
+
+  async function createSectorAdmin(e: React.FormEvent) {
+    e.preventDefault();
+    setCreateAdminError("");
+    if (!newAdminName.trim() || !newAdminEmail.trim() || !newAdminPassword || newAdminSectors.length === 0) {
+      setCreateAdminError("All fields are required and at least one sector must be selected.");
+      return;
+    }
+    setCreatingAdmin(true);
+    try {
+      await adminFetch("/mwaramuriuki-login/admin-users", password, {
+        method: "POST",
+        body: JSON.stringify({ name: newAdminName.trim(), email: newAdminEmail.trim(), password: newAdminPassword, sectors: newAdminSectors }),
+      });
+      setNewAdminName(""); setNewAdminEmail(""); setNewAdminPassword(""); setNewAdminSectors([]);
+      await loadSectorAdmins();
+    } catch (err) {
+      setCreateAdminError(err instanceof Error ? err.message : "Failed to create admin");
+    } finally { setCreatingAdmin(false); }
+  }
+
+  async function toggleSectorAdminActive(admin: SectorAdminUser) {
+    try {
+      await adminFetch(`/mwaramuriuki-login/admin-users/${admin.id}`, password, {
+        method: "PATCH", body: JSON.stringify({ active: !admin.active }),
+      });
+      setSectorAdminUsers((prev) => prev.map((a) => a.id === admin.id ? { ...a, active: !a.active } : a));
+    } catch { /* ignore */ }
+  }
+
+  async function saveSectorAdminEdit() {
+    if (!editingSectorAdmin) return;
+    setSavingSectorAdmin(true);
+    try {
+      const body: Record<string, unknown> = {
+        name: editingSectorAdmin.name,
+        sectors: editingSectorAdmin.sectors,
+      };
+      if (editSectorAdminPassword) body.password = editSectorAdminPassword;
+      await adminFetch(`/mwaramuriuki-login/admin-users/${editingSectorAdmin.id}`, password, {
+        method: "PATCH", body: JSON.stringify(body),
+      });
+      setSectorAdminUsers((prev) => prev.map((a) => a.id === editingSectorAdmin.id ? { ...editingSectorAdmin } : a));
+      setEditingSectorAdmin(null); setEditSectorAdminPassword("");
+    } catch { /* ignore */ }
+    finally { setSavingSectorAdmin(false); }
+  }
+
+  async function deleteSectorAdmin(id: number) {
+    setDeletingSectorAdminId(id);
+    try {
+      await adminFetch(`/mwaramuriuki-login/admin-users/${id}`, password, { method: "DELETE" });
+      setSectorAdminUsers((prev) => prev.filter((a) => a.id !== id));
+    } catch { /* ignore */ }
+    finally { setDeletingSectorAdminId(null); }
   }
 
   async function createAnnouncement() {
@@ -860,13 +1021,22 @@ export default function Admin() {
             <div className="p-8">
               <form onSubmit={handleAdminLogin} className="space-y-4">
                 <div>
+                  <label className="block text-xs font-medium text-white/50 uppercase tracking-wide mb-2">Sector Admin Email <span className="text-white/25 normal-case font-normal">(leave blank for super admin)</span></label>
+                  <input
+                    type="email" value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="sector.admin@example.com"
+                    className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-red-500/40 focus:bg-white/[0.07] transition-all"
+                  />
+                </div>
+                <div>
                   <label className="block text-xs font-medium text-white/50 uppercase tracking-wide mb-2">Password</label>
                   <div className="relative">
                     <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25" />
                     <input
                       type="password" value={inputPassword}
                       onChange={(e) => setInputPassword(e.target.value)}
-                      placeholder="Enter admin password" required autoFocus
+                      placeholder="Enter admin password" required autoFocus={!loginEmail}
                       className="w-full pl-10 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-red-500/40 focus:bg-white/[0.07] transition-all"
                     />
                   </div>
@@ -922,24 +1092,26 @@ export default function Admin() {
   }
 
   // ── Dashboard ───────────────────────────────────────────────────────────────
-  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "overview",       label: "Overview",       icon: Activity },
-    { id: "users",          label: "Users",          icon: Users },
-    { id: "tools",          label: "Tools",          icon: Wrench },
-    { id: "documents",      label: "Documents",      icon: FileText },
-    { id: "ebooks",         label: "Ebooks",         icon: BookOpen },
-    { id: "analytics",      label: "Analytics",      icon: TrendingUp },
-    { id: "logs",           label: "Logs",           icon: Radio },
-    { id: "gateways",       label: "Gateways",       icon: Globe },
-    { id: "payments",       label: "Payments",       icon: CreditCard },
-    { id: "credits",        label: "Credits",        icon: Coins },
-    { id: "finance",        label: "Finance",        icon: BarChart3 },
-    { id: "announcements",  label: "Announcements",  icon: Megaphone },
-    { id: "referrals",      label: "Referrals",      icon: Share2 },
-    { id: "messages",       label: "Messages",       icon: Inbox },
-    { id: "settings",       label: "Settings",       icon: Settings },
-    { id: "intelligence",   label: "Intelligence",   icon: Brain },
+  const allTabs: { id: Tab; label: string; icon: React.ElementType }[] = [
+    { id: "overview",          label: "Overview",       icon: Activity },
+    { id: "users",             label: "Users",          icon: Users },
+    { id: "tools",             label: "Tools",          icon: Wrench },
+    { id: "documents",         label: "Documents",      icon: FileText },
+    { id: "ebooks",            label: "Ebooks",         icon: BookOpen },
+    { id: "analytics",         label: "Analytics",      icon: TrendingUp },
+    { id: "logs",              label: "Logs",           icon: Radio },
+    { id: "gateways",          label: "Gateways",       icon: Globe },
+    { id: "payments",          label: "Payments",       icon: CreditCard },
+    { id: "credits",           label: "Credits",        icon: Coins },
+    { id: "finance",           label: "Finance",        icon: BarChart3 },
+    { id: "announcements",     label: "Announcements",  icon: Megaphone },
+    { id: "referrals",         label: "Referrals",      icon: Share2 },
+    { id: "messages",          label: "Messages",       icon: Inbox },
+    { id: "settings",          label: "Settings",       icon: Settings },
+    { id: "intelligence",      label: "Intelligence",   icon: Brain },
+    { id: "admin-management",  label: "Admins",         icon: Shield },
   ];
+  const tabs = allTabs.filter((t) => allowedTabs.has(t.id));
 
   const filteredUsers = userSearch
     ? users.filter((u) => (u.email ?? u.id).toLowerCase().includes(userSearch.toLowerCase()))
@@ -959,8 +1131,13 @@ export default function Admin() {
             <Logo size={24} textSize="text-xs" className="opacity-80" />
             <div className="mt-2 flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-              <span className="text-[10px] text-white/35 font-medium uppercase tracking-widest">Admin</span>
+              <span className="text-[10px] text-white/35 font-medium uppercase tracking-widest">
+                {adminRole?.role === "sector" ? "Sector Admin" : "Super Admin"}
+              </span>
             </div>
+            {adminRole?.name && adminRole.role === "sector" && (
+              <p className="mt-1 text-[10px] text-white/25 truncate">{adminRole.name}</p>
+            )}
           </div>
           <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
             {tabs.map((t) => {
@@ -2794,6 +2971,214 @@ export default function Admin() {
                 )}
               </div>
             )}
+
+            {/* ── Admin Management ──────────────────────────────────────────── */}
+            {activeTab === "admin-management" && (
+              <div className="space-y-6 max-w-4xl">
+                <div className="flex items-center justify-between">
+                  <SectionHeader title="Sector Admin Management" sub="Create and manage sector admins — each admin has access to specific dashboard sections" />
+                  <button onClick={loadSectorAdmins} disabled={sectorAdminLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-all disabled:opacity-40">
+                    <RefreshCw size={12} className={sectorAdminLoading ? "animate-spin" : ""} /> Refresh
+                  </button>
+                </div>
+
+                {/* Create new sector admin */}
+                <div className="bg-white/[0.02] border border-white/8 rounded-xl p-5">
+                  <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4">Create Sector Admin</p>
+                  <form onSubmit={createSectorAdmin} className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-white/30 uppercase tracking-wide mb-1.5">Name</label>
+                        <input
+                          type="text" value={newAdminName}
+                          onChange={(e) => setNewAdminName(e.target.value)}
+                          placeholder="e.g. Finance Team Lead"
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-red-500/30 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-white/30 uppercase tracking-wide mb-1.5">Email</label>
+                        <input
+                          type="email" value={newAdminEmail}
+                          onChange={(e) => setNewAdminEmail(e.target.value)}
+                          placeholder="admin@example.com" required
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-red-500/30 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-white/30 uppercase tracking-wide mb-1.5">Password</label>
+                        <input
+                          type="password" value={newAdminPassword}
+                          onChange={(e) => setNewAdminPassword(e.target.value)}
+                          placeholder="Min 8 characters" required
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-red-500/30 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-white/30 uppercase tracking-wide mb-1.5">Sectors (access)</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(["content","finance","analytics","support","technical"] as const).map((s) => (
+                            <button key={s} type="button"
+                              onClick={() => setNewAdminSectors((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s])}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-medium border transition-all capitalize ${
+                                newAdminSectors.includes(s)
+                                  ? "bg-red-500/15 border-red-500/30 text-red-300"
+                                  : "bg-white/[0.03] border-white/10 text-white/30 hover:text-white/50"
+                              }`}
+                            >{s}</button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {createAdminError && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs">
+                        <AlertCircle size={12} className="shrink-0" />{createAdminError}
+                      </div>
+                    )}
+                    <button type="submit"
+                      disabled={creatingAdmin || !newAdminEmail || !newAdminPassword || newAdminSectors.length === 0}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-600/80 hover:bg-red-500/80 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-all"
+                    >
+                      {creatingAdmin ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                      Create Admin
+                    </button>
+                  </form>
+                </div>
+
+                {/* Sector descriptions */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {(Object.entries(SECTOR_LABELS) as [string, string][]).map(([sector, label]) => (
+                    <div key={sector} className="bg-white/[0.02] border border-white/8 rounded-xl p-3">
+                      <p className="text-xs font-semibold text-white/60 mb-1">{label}</p>
+                      <p className="text-[10px] text-white/25 capitalize">
+                        {SECTOR_TABS[sector as keyof typeof SECTOR_TABS]?.join(", ")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Existing sector admins table */}
+                <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                  <div className="px-4 py-3 border-b border-white/6">
+                    <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Existing Sector Admins ({sectorAdminUsers.length})</p>
+                  </div>
+                  {sectorAdminLoading ? (
+                    <div className="py-10 flex justify-center"><Spinner /></div>
+                  ) : sectorAdminUsers.length === 0 ? (
+                    <div className="py-10 text-center">
+                      <Shield size={22} className="text-white/15 mx-auto mb-2" />
+                      <p className="text-sm text-white/25">No sector admins yet</p>
+                    </div>
+                  ) : (
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-white/6">
+                          <th className="text-left px-4 py-2.5 text-white/30 font-medium">Name / Email</th>
+                          <th className="text-left px-4 py-2.5 text-white/30 font-medium">Sectors</th>
+                          <th className="text-right px-4 py-2.5 text-white/30 font-medium">Status</th>
+                          <th className="text-right px-4 py-2.5 text-white/30 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/[0.04]">
+                        {sectorAdminUsers.map((admin) => (
+                          <tr key={admin.id} className="hover:bg-white/[0.02] transition-colors">
+                            <td className="px-4 py-3">
+                              {editingSectorAdmin?.id === admin.id ? (
+                                <div className="space-y-1.5">
+                                  <input
+                                    type="text" value={editingSectorAdmin.name ?? ""}
+                                    onChange={(e) => setEditingSectorAdmin((p) => p ? { ...p, name: e.target.value } : p)}
+                                    placeholder="Name"
+                                    className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:border-red-500/30"
+                                  />
+                                  <input
+                                    type="password" value={editSectorAdminPassword}
+                                    onChange={(e) => setEditSectorAdminPassword(e.target.value)}
+                                    placeholder="New password (leave blank to keep)"
+                                    className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:border-red-500/30"
+                                  />
+                                </div>
+                              ) : (
+                                <>
+                                  <p className="text-white/70 font-medium">{admin.name || "—"}</p>
+                                  <p className="text-white/30 font-mono mt-0.5">{admin.email}</p>
+                                </>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {editingSectorAdmin?.id === admin.id ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {(["content","finance","analytics","support","technical"] as const).map((s) => (
+                                    <button key={s} type="button"
+                                      onClick={() => setEditingSectorAdmin((p) => p ? {
+                                        ...p,
+                                        sectors: p.sectors.includes(s) ? p.sectors.filter((x) => x !== s) : [...p.sectors, s]
+                                      } : p)}
+                                      className={`px-2 py-0.5 rounded text-[10px] font-medium border transition-all capitalize ${
+                                        editingSectorAdmin.sectors.includes(s)
+                                          ? "bg-red-500/15 border-red-500/30 text-red-300"
+                                          : "bg-white/[0.03] border-white/10 text-white/25 hover:text-white/50"
+                                      }`}
+                                    >{s}</button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="flex flex-wrap gap-1">
+                                  {admin.sectors.map((s) => (
+                                    <span key={s} className="px-1.5 py-0.5 bg-red-500/10 border border-red-500/15 text-red-300 rounded text-[10px] capitalize">{s}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                onClick={() => toggleSectorAdminActive(admin)}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-medium border transition-all ${
+                                  admin.active
+                                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400"
+                                    : "bg-white/[0.03] border-white/10 text-white/30 hover:bg-emerald-500/10 hover:border-emerald-500/20 hover:text-emerald-400"
+                                }`}
+                              >
+                                {admin.active ? "Active" : "Inactive"}
+                              </button>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {editingSectorAdmin?.id === admin.id ? (
+                                <div className="flex items-center gap-1.5 justify-end">
+                                  <button onClick={saveSectorAdminEdit}
+                                    disabled={savingSectorAdmin}
+                                    className="px-2.5 py-1 bg-emerald-600/80 hover:bg-emerald-500/80 disabled:opacity-40 text-white text-[10px] font-semibold rounded-lg transition-all">
+                                    {savingSectorAdmin ? "Saving…" : "Save"}
+                                  </button>
+                                  <button onClick={() => { setEditingSectorAdmin(null); setEditSectorAdminPassword(""); }}
+                                    className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/40 text-[10px] font-semibold rounded-lg transition-all">
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 justify-end">
+                                  <button onClick={() => { setEditingSectorAdmin({ ...admin }); setEditSectorAdminPassword(""); }}
+                                    className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/70 text-[10px] rounded-lg transition-all">
+                                    Edit
+                                  </button>
+                                  <button onClick={() => deleteSectorAdmin(admin.id)}
+                                    disabled={deletingSectorAdminId === admin.id}
+                                    className="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 text-[10px] rounded-lg transition-all border border-red-500/15">
+                                    {deletingSectorAdminId === admin.id ? "…" : "Delete"}
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            )}
+
           </main>
         </div>
       </div>
