@@ -1779,7 +1779,7 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: wordsToTokens(outlineWordCount, 400, 3000),
+      max_tokens: wordsToTokens(outlineWordCount, 600),
       system: `${WRITER_SOUL}\n\n${qualityRules}\n\nGenerate a detailed academic paper outline. Return ONLY valid JSON: {"title": string, "sections": [{"heading": string, "subsections": string[]}]}`,
       messages: [{
         role: "user",
