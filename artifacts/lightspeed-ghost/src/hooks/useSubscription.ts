@@ -1,0 +1,109 @@
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+
+const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
+
+export type PlanTier = "starter" | "pro" | "institution" | "payg" | null;
+
+export interface UsageData {
+  paper: number;
+  revision: number;
+  humanizer: number;
+  stem: number;
+  study: number;
+  plagiarism: number;
+  outline: number;
+}
+
+const PLAN_LIMITS: Record<string, Partial<Record<keyof UsageData, number | null>>> = {
+  starter: {
+    paper:      3,
+    revision:   1,
+    humanizer:  1,
+    stem:       5,
+    study:      20,
+    plagiarism: 5,
+    outline:    5,
+  },
+  pro: {
+    paper:      15,
+    revision:   20,
+    humanizer:  20,
+    stem:       10,
+    study:      150,
+    plagiarism: 20,
+    outline:    20,
+  },
+  institution: {
+    paper:      5,
+    revision:   8,
+    humanizer:  8,
+    stem:       5,
+    study:      75,
+    plagiarism: 10,
+    outline:    10,
+  },
+};
+
+export function useSubscription() {
+  const { session, loading: authLoading } = useAuth();
+  const [plan, setPlan] = useState<PlanTier>(null);
+  const [usage, setUsage] = useState<Partial<UsageData>>({});
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = session?.access_token;
+      const headers: HeadersInit = token
+        ? { Authorization: `Bearer ${token}` }
+        : {};
+      const res = await fetch(`${API_BASE}/payments/usage`, {
+        credentials: "include",
+        headers,
+      });
+      if (!res.ok) {
+        setPlan("starter");
+        setUsage({});
+        return;
+      }
+      const data = await res.json() as { usage: Partial<UsageData>; plan: string };
+      setUsage(data.usage ?? {});
+      setPlan((data.plan as PlanTier) ?? "starter");
+    } catch {
+      setPlan("starter");
+      setUsage({});
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.access_token]);
+
+  useEffect(() => {
+    if (!authLoading) {
+      refresh();
+    }
+  }, [refresh, authLoading]);
+
+  function getLimit(tool: keyof UsageData): number | null {
+    if (!plan || plan === "payg") return 0;
+    const limits = PLAN_LIMITS[plan];
+    if (!limits) return 0;
+    const val = limits[tool];
+    return val === undefined ? 0 : val;
+  }
+
+  function isAtLimit(tool: keyof UsageData): boolean {
+    const limit = getLimit(tool);
+    if (limit === null) return false;
+    if (limit === 0) return true;
+    return (usage[tool] ?? 0) >= limit;
+  }
+
+  function remaining(tool: keyof UsageData): number | null {
+    const limit = getLimit(tool);
+    if (limit === null) return null;
+    return Math.max(0, limit - (usage[tool] ?? 0));
+  }
+
+  return { plan, usage, loading, isAtLimit, remaining, getLimit, refresh };
+}

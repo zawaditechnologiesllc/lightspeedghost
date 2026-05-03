@@ -1,0 +1,41 @@
+2026-04-07T01:53:43.530417846Z ==> Downloading cache...
+2026-04-07T01:53:43.573407391Z ==> It looks like we don't have access to your repo, but we'll try to clone it anyway.
+2026-04-07T01:53:43.573429092Z ==> Cloning from https://github.com/zawaditechnologiesllc/lightspeedghost
+2026-04-07T01:53:44.210237105Z ==> Checking out commit 88afa4e1c13d3265b76216a0b9e8d6768c51168b in branch main
+2026-04-07T01:54:06.777645546Z ==> Downloaded 434MB in 4s. Extraction took 19s.
+2026-04-07T01:54:12.28862904Z ==> Using Node.js version 22.22.0 (default)
+2026-04-07T01:54:12.313263283Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2026-04-07T01:54:12.429473933Z ==> Running build command 'pnpm install && pnpm --filter @workspace/api-server run build'...
+2026-04-07T01:54:14.591059147Z 
+2026-04-07T01:54:14.591080887Z > @workspace/api-server@0.0.0 build /opt/render/project/src/artifacts/api-server
+2026-04-07T01:54:14.591086298Z > node ./build.mjs
+2026-04-07T01:54:14.591089418Z 
+2026-04-07T01:54:15.432267068Z 
+2026-04-07T01:54:15.432290659Z   dist/index.mjs                       4.2mb ⚠️
+2026-04-07T01:54:15.432296519Z   dist/pino-worker.mjs               153.4kb
+2026-04-07T01:54:15.432300679Z   dist/pino-file.mjs                 142.1kb
+2026-04-07T01:54:15.432304599Z   dist/pino-pretty.mjs               114.6kb
+2026-04-07T01:54:15.432308449Z   dist/thread-stream-worker.mjs        7.3kb
+2026-04-07T01:54:15.432312269Z   dist/index.mjs.map                   7.9mb
+2026-04-07T01:54:15.43231609Z   dist/pino-worker.mjs.map           256.9kb
+2026-04-07T01:54:15.43232009Z   dist/pino-file.mjs.map             229.0kb
+2026-04-07T01:54:15.43232385Z   dist/pino-pretty.mjs.map           203.9kb
+2026-04-07T01:54:15.43232799Z   dist/thread-stream-worker.mjs.map   12.0kb
+2026-04-07T01:54:15.43233175Z 
+2026-04-07T01:54:15.4323364Z ⚡ Done in 783ms
+2026-04-07T01:54:18.984849149Z ==> Uploading build...
+2026-04-07T01:54:37.372855456Z ==> Uploaded in 9.9s. Compression took 8.5s
+2026-04-07T01:54:37.489323001Z ==> Build successful 🎉
+2026-04-07T01:54:58.495581037Z ==> Deploying...
+2026-04-07T01:54:58.551884549Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-04-07T01:55:39.355996331Z ==> Running 'node --enable-source-maps artifacts/api-server/dist/index.mjs'
+2026-04-07T01:55:43.154029574Z [auth] FATAL: SUPABASE_JWT_SECRET env var is not set. Bearer JWT authentication will be disabled until this is configured. Set it in your Render environment variables (Supabase → Project Settings → API → JWT Secret).
+2026-04-07T01:55:43.164654662Z {"level":30,"time":1775526943160,"pid":68,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6d45b5b5cc-l4vb2","port":10000,"msg":"Server listening"}
+2026-04-07T01:55:43.513533611Z {"level":30,"time":1775526943512,"pid":68,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6d45b5b5cc-l4vb2","req":{"id":1,"method":"HEAD","url":"/"},"res":{"statusCode":404},"responseTime":8,"msg":"request completed"}
+2026-04-07T01:55:49.689565289Z ==> Your service is live 🎉
+2026-04-07T01:55:49.833067677Z ==> 
+2026-04-07T01:55:49.83547754Z ==> ///////////////////////////////////////////////////////////
+2026-04-07T01:55:49.837958174Z ==> 
+2026-04-07T01:55:49.839960039Z ==> Available at your primary URL https://lightspeedghost-5szz.onrender.com
+2026-04-07T01:55:49.84227199Z ==> 
+2026-04-07T01:55:49.844232543Z ==> ///////////////////////////////////////////////////////////

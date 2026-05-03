@@ -1,0 +1,42 @@
+2026-04-07T01:21:48.145373035Z ==> Downloading cache...
+2026-04-07T01:21:48.189856192Z ==> It looks like we don't have access to your repo, but we'll try to clone it anyway.
+2026-04-07T01:21:48.189888253Z ==> Cloning from https://github.com/zawaditechnologiesllc/lightspeedghost
+2026-04-07T01:21:48.790730978Z ==> Checking out commit f65b41254a85869d5c5de1c236069e20501d8f3c in branch main
+2026-04-07T01:22:09.98992242Z ==> Downloaded 434MB in 5s. Extraction took 16s.
+2026-04-07T01:22:28.740190264Z ==> Using Node.js version 22.22.0 (default)
+2026-04-07T01:22:28.764636926Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2026-04-07T01:22:28.879325782Z ==> Running build command 'pnpm install && pnpm --filter @workspace/api-server run build'...
+2026-04-07T01:22:31.281619184Z 
+2026-04-07T01:22:31.281653395Z > @workspace/api-server@0.0.0 build /opt/render/project/src/artifacts/api-server
+2026-04-07T01:22:31.281660615Z > node ./build.mjs
+2026-04-07T01:22:31.281664715Z 
+2026-04-07T01:22:32.154859532Z 
+2026-04-07T01:22:32.154879892Z   dist/index.mjs                       4.2mb ⚠️
+2026-04-07T01:22:32.154884163Z   dist/pino-worker.mjs               153.4kb
+2026-04-07T01:22:32.154887423Z   dist/pino-file.mjs                 142.1kb
+2026-04-07T01:22:32.154890723Z   dist/pino-pretty.mjs               114.6kb
+2026-04-07T01:22:32.154894083Z   dist/thread-stream-worker.mjs        7.3kb
+2026-04-07T01:22:32.154897683Z   dist/index.mjs.map                   7.9mb
+2026-04-07T01:22:32.154902233Z   dist/pino-worker.mjs.map           256.9kb
+2026-04-07T01:22:32.154907243Z   dist/pino-file.mjs.map             229.0kb
+2026-04-07T01:22:32.154912013Z   dist/pino-pretty.mjs.map           203.9kb
+2026-04-07T01:22:32.154916033Z   dist/thread-stream-worker.mjs.map   12.0kb
+2026-04-07T01:22:32.154919973Z 
+2026-04-07T01:22:32.154924914Z ⚡ Done in 816ms
+2026-04-07T01:22:37.480271971Z ==> Uploading build...
+2026-04-07T01:22:56.671361276Z ==> Uploaded in 9.6s. Compression took 9.6s
+2026-04-07T01:22:56.754180691Z ==> Build successful 🎉
+2026-04-07T01:22:58.946278702Z ==> Deploying...
+2026-04-07T01:22:59.000600811Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-04-07T01:23:39.372527337Z ==> Running 'node --enable-source-maps artifacts/api-server/dist/index.mjs'
+2026-04-07T01:23:42.765812552Z [auth] FATAL: SUPABASE_JWT_SECRET env var is not set. Bearer JWT authentication will be disabled until this is configured. Set it in your Render environment variables (Supabase → Project Settings → API → JWT Secret).
+2026-04-07T01:23:42.773112554Z {"level":30,"time":1775525022772,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-778b459fdb-bb2mk","port":10000,"msg":"Server listening"}
+2026-04-07T01:23:44.477837144Z {"level":50,"time":1775525022775,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-778b459fdb-bb2mk","err":{"type":"Error","message":"connect ENETUNREACH 2600:1f18:2e13:9d00:3f10:b1d8:4f2b:243f:5432 - Local (:::0)","stack":"Error: connect ENETUNREACH 2600:1f18:2e13:9d00:3f10:b1d8:4f2b:243f:5432 - Local (:::0)\n    at <anonymous> (/opt/render/project/src/node_modules/.pnpm/pg-pool@3.13.0_pg@8.20.0/node_modules/pg-pool/index.js:45:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async initTables (/opt/render/project/src/artifacts/api-server/src/routes/payments.ts:27:3)\n    at async init (/opt/render/project/src/artifacts/api-server/src/routes/payments.ts:91:3)","errno":-101,"code":"ENETUNREACH","syscall":"connect","address":"2600:1f18:2e13:9d00:3f10:b1d8:4f2b:243f","port":5432},"msg":"Failed to init payment tables"}
+2026-04-07T01:23:44.57366791Z {"level":30,"time":1775525024572,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-778b459fdb-bb2mk","req":{"id":1,"method":"HEAD","url":"/"},"res":{"statusCode":404},"responseTime":91,"msg":"request completed"}
+2026-04-07T01:23:50.245329565Z ==> Your service is live 🎉
+2026-04-07T01:23:50.312451141Z ==> 
+2026-04-07T01:23:50.315088239Z ==> ///////////////////////////////////////////////////////////
+2026-04-07T01:23:50.317432371Z ==> 
+2026-04-07T01:23:50.319898955Z ==> Available at your primary URL https://lightspeedghost-5szz.onrender.com
+2026-04-07T01:23:50.323252868Z ==> 
+2026-04-07T01:23:50.325548139Z ==> ///////////////////////////////////////////////////////////

@@ -1,0 +1,84 @@
+You are a senior full-stack engineer. Convert my existing web app into a fully functional Progressive Web App (PWA) without breaking any current features.
+
+My stack:
+
+* Frontend hosted on Vercel
+* Backend on Render
+* Database on Supabase
+* Codebase is already responsive and mobile-friendly
+
+Your task is to implement a production-ready PWA with the following requirements:
+
+1. Create a valid manifest.json in the public root:
+
+* Include name, short_name, start_url "/", display "standalone", theme_color, background_color
+* Add icons (192x192 and 512x512) using existing logo assets or placeholders
+* Ensure proper paths and MIME types
+
+2. Inject manifest into the HTML:
+
+* Add <link rel="manifest" href="/manifest.json">
+* Add <meta name="theme-color">
+
+3. Implement a service worker (service-worker.js):
+
+* Register it in the main frontend entry file
+* Add install, activate, and fetch event listeners
+* Use a simple caching strategy:
+
+  * Cache static assets (HTML, CSS, JS, icons)
+  * Network-first for API calls
+* Include skipWaiting() and clients.claim() for instant updates
+
+4. Ensure HTTPS compatibility (assume Vercel handles SSL)
+
+5. Add install prompt logic:
+
+* Capture beforeinstallprompt event
+* Store deferredPrompt
+* Show a custom “Install App” button in UI
+* Trigger prompt on button click
+* Handle userChoice result
+
+6. Add iOS install fallback:
+
+* Detect iOS devices
+* Display a banner or modal:
+  “Tap Share → Add to Home Screen to install this app”
+
+7. Optimize for mobile app experience:
+
+* Ensure viewport meta tag is correct
+* Remove unnecessary browser UI dependencies
+* Ensure navigation works smoothly in standalone mode
+
+8. Add basic offline fallback:
+
+* Cache a fallback page or message
+* If fetch fails, return fallback response
+
+9. Validate PWA compliance:
+
+* Ensure app passes Lighthouse PWA audit:
+
+  * Installable
+  * Has service worker
+  * Has manifest
+  * Works offline (basic level)
+
+10. Do NOT:
+
+* Break any existing API calls (Render backend)
+* Modify Supabase integration
+* Change business logic of the app
+
+11. Output:
+
+* All new files (manifest.json, service-worker.js)
+* Exact code changes needed in existing files
+* Clear file paths for each change
+
+Goal:
+Users should be able to visit the website and install it as an app on Android and iOS, with a smooth experience and working backend.
+
+Keep implementation clean, minimal, and production-ready.

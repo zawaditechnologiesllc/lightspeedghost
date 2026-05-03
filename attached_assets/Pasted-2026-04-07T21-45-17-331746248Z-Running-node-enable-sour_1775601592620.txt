@@ -1,0 +1,63 @@
+2026-04-07T21:45:17.331746248Z ==> Running 'node --enable-source-maps artifacts/api-server/dist/index.mjs'
+2026-04-07T21:45:23.527851515Z {"level":30,"time":1775598323527,"pid":50,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-884d7766d-9hs7r","port":10000,"msg":"Server listening"}
+2026-04-07T21:45:28.834902696Z ValidationError: The 'X-Forwarded-For' header is set but the Express 'trust proxy' setting is false (default). This could indicate a misconfiguration which would prevent express-rate-limit from accurately identifying users. See https://express-rate-limit.github.io/ERR_ERL_UNEXPECTED_X_FORWARDED_FOR/ for more information.
+2026-04-07T21:45:28.834927927Z     at Object.xForwardedForHeader (/opt/render/project/src/node_modules/.pnpm/express-rate-limit@8.3.2_express@5.2.1/node_modules/express-rate-limit/dist/index.mjs:342:13)
+2026-04-07T21:45:28.834932717Z     at Object.wrappedValidations.<computed> (/opt/render/project/src/node_modules/.pnpm/express-rate-limit@8.3.2_express@5.2.1/node_modules/express-rate-limit/dist/index.mjs:656:22)
+2026-04-07T21:45:28.834935537Z     at Object.keyGenerator (/opt/render/project/src/node_modules/.pnpm/express-rate-limit@8.3.2_express@5.2.1/node_modules/express-rate-limit/dist/index.mjs:759:20)
+2026-04-07T21:45:28.834938767Z     at <anonymous> (/opt/render/project/src/node_modules/.pnpm/express-rate-limit@8.3.2_express@5.2.1/node_modules/express-rate-limit/dist/index.mjs:823:32)
+2026-04-07T21:45:28.834941757Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-04-07T21:45:28.834944627Z     at async <anonymous> (/opt/render/project/src/node_modules/.pnpm/express-rate-limit@8.3.2_express@5.2.1/node_modules/express-rate-limit/dist/index.mjs:801:5) {
+2026-04-07T21:45:28.834948078Z   code: 'ERR_ERL_UNEXPECTED_X_FORWARDED_FOR',
+2026-04-07T21:45:28.834951278Z   help: 'https://express-rate-limit.github.io/ERR_ERL_UNEXPECTED_X_FORWARDED_FOR/'
+2026-04-07T21:45:28.834953348Z }
+2026-04-07T21:45:28.936362077Z {"level":30,"time":1775598328936,"pid":50,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-884d7766d-9hs7r","req":{"id":1,"method":"GET","url":"/api/announcements"},"res":{"statusCode":304},"responseTime":105,"msg":"request completed"}
+2026-04-07T21:45:29.00854094Z {"level":30,"time":1775598329008,"pid":50,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-884d7766d-9hs7r","req":{"id":2,"method":"GET","url":"/api/announcements"},"res":{"statusCode":200},"responseTime":67,"msg":"request completed"}
+2026-04-07T21:46:27.864712897Z {"level":30,"time":1775598387864,"pid":50,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-884d7766d-9hs7r","req":{"id":3,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T21:50:46.845558542Z ==> Deploying...
+2026-04-07T21:50:46.900995615Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-04-07T21:51:32.038540144Z {"level":30,"time":1775598692038,"pid":50,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-884d7766d-9hs7r","req":{"id":4,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T21:51:40.396376356Z ==> Your service is live 🎉
+2026-04-07T21:51:40.624462863Z ==> 
+2026-04-07T21:51:40.626940453Z ==> ///////////////////////////////////////////////////////////
+2026-04-07T21:51:40.628815226Z ==> 
+2026-04-07T21:51:40.631253865Z ==> Available at your primary URL https://lightspeedghost-5szz.onrender.com
+2026-04-07T21:51:40.633887768Z ==> 
+2026-04-07T21:51:40.636347958Z ==> ///////////////////////////////////////////////////////////
+2026-04-07T21:56:44.590534774Z ==> Detected service running on port 10000
+2026-04-07T21:56:44.663589341Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2026-04-07T22:02:39.072621369Z {"level":30,"time":1775599359072,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":10,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T22:02:48.535017258Z {"level":30,"time":1775599368534,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":11,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":0,"msg":"request completed"}
+2026-04-07T22:03:04.581846326Z {"level":30,"time":1775599384581,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":12,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":0,"msg":"request completed"}
+2026-04-07T22:03:13.065424463Z {"level":30,"time":1775599393065,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":13,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T22:03:34.880265762Z {"level":30,"time":1775599414880,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":14,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":0,"msg":"request completed"}
+2026-04-07T22:04:50.753230606Z {"level":30,"time":1775599490753,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":15,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T22:06:30.121865081Z {"level":30,"time":1775599590121,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":16,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":0,"msg":"request completed"}
+2026-04-07T22:08:21.464310179Z {"level":30,"time":1775599701462,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":17,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":0,"msg":"request completed"}
+2026-04-07T22:09:20.015872914Z {"level":30,"time":1775599760015,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":18,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":0,"msg":"request completed"}
+2026-04-07T22:13:26.552237484Z {"level":30,"time":1775600006551,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":19,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":0,"msg":"request completed"}
+2026-04-07T22:15:50.973926954Z {"level":30,"time":1775600150973,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":20,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":0,"msg":"request completed"}
+2026-04-07T22:16:37.572458044Z {"level":30,"time":1775600197572,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":21,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T22:17:04.031502308Z {"level":30,"time":1775600224030,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":22,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T22:17:55.090419727Z {"level":30,"time":1775600275090,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":23,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T22:18:30.995529846Z {"level":30,"time":1775600310995,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":24,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T22:21:01.403813512Z {"level":30,"time":1775600461403,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":25,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":0,"msg":"request completed"}
+2026-04-07T22:23:35.265372707Z {"level":30,"time":1775600615265,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":26,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T22:27:30.698642121Z {"level":30,"time":1775600850698,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":27,"method":"HEAD","url":"/api/health"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T22:28:38.746943935Z {"level":30,"time":1775600918746,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":28,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":0,"msg":"request completed"}
+2026-04-07T22:33:47.115257863Z {"level":30,"time":1775601227115,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-6bd8c656c5-kpnmn","req":{"id":29,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T22:35:22.544124149Z ==> Deploying...
+2026-04-07T22:35:22.612470134Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-04-07T22:37:24.354008086Z ==> No open ports detected, continuing to scan...
+2026-04-07T22:37:24.451254447Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2026-04-07T22:37:32.351231568Z ==> Running 'node --enable-source-maps artifacts/api-server/dist/index.mjs'
+2026-04-07T22:37:38.342999392Z {"level":30,"time":1775601458342,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-7d979597f9-z8km5","port":10000,"msg":"Server listening"}
+2026-04-07T22:37:38.639180666Z {"level":30,"time":1775601458554,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-7d979597f9-z8km5","req":{"id":1,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":6,"msg":"request completed"}
+2026-04-07T22:37:39.38265879Z ==> Your service is live 🎉
+2026-04-07T22:37:39.507182933Z ==> 
+2026-04-07T22:37:39.509979727Z ==> ///////////////////////////////////////////////////////////
+2026-04-07T22:37:39.512285395Z ==> 
+2026-04-07T22:37:39.514273439Z ==> Available at your primary URL https://lightspeedghost-5szz.onrender.com
+2026-04-07T22:37:39.516323904Z ==> 
+2026-04-07T22:37:39.518231608Z ==> ///////////////////////////////////////////////////////////
+2026-04-07T22:37:40.084097909Z {"level":30,"time":1775601460083,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-7d979597f9-z8km5","req":{"id":2,"method":"GET","url":"/"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}
+2026-04-07T22:38:56.619728Z {"level":30,"time":1775601536619,"pid":69,"hostname":"srv-d7865h7kijhs7380pp9g-hibernate-7d979597f9-z8km5","req":{"id":3,"method":"HEAD","url":"/"},"res":{"statusCode":403},"responseTime":1,"msg":"request completed"}

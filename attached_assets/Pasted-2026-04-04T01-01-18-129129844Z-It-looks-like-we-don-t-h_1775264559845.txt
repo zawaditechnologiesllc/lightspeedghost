@@ -1,0 +1,28 @@
+2026-04-04T01:01:18.129129844Z ==> It looks like we don't have access to your repo, but we'll try to clone it anyway.
+2026-04-04T01:01:18.129182545Z ==> Cloning from https://github.com/zawaditechnologiesllc/lightspeedghost
+2026-04-04T01:01:18.712526784Z ==> Checking out commit 396dbb5b1df3849fa41ff824517054e28c1e103c in branch main
+2026-04-04T01:01:20.198294531Z ==> Using Node.js version 22.22.0 (default)
+2026-04-04T01:01:20.222531918Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2026-04-04T01:01:22.162583702Z ==> Running build command 'pnpm install --frozen-lockfile; pnpm run build'...
+2026-04-04T01:01:30.466818293Z 
+2026-04-04T01:01:30.466850173Z > workspace@0.0.0 build /opt/render/project/src
+2026-04-04T01:01:30.466856714Z > pnpm run typecheck && pnpm -r --if-present run build
+2026-04-04T01:01:30.466860714Z 
+2026-04-04T01:01:30.759859811Z 
+2026-04-04T01:01:30.759883662Z > workspace@0.0.0 typecheck /opt/render/project/src
+2026-04-04T01:01:30.759889052Z > pnpm run typecheck:libs && pnpm -r --filter "./artifacts/**" --filter "./scripts" --if-present run typecheck
+2026-04-04T01:01:30.759894532Z 
+2026-04-04T01:01:31.056431438Z 
+2026-04-04T01:01:31.056456939Z > workspace@0.0.0 typecheck:libs /opt/render/project/src
+2026-04-04T01:01:31.056463639Z > tsc --build
+2026-04-04T01:01:31.056470219Z 
+2026-04-04T01:01:33.697448888Z lib/api-client-react/src/generated/api.ts(1524,42): error TS2339: Property 'useMutation' does not exist on type 'Promise<typeof import("/opt/render/project/src/node_modules/.pnpm/@tanstack+react-query@5.90.21_react@19.1.0/node_modules/@tanstack/react-query/build/modern/index")>'.
+2026-04-04T01:01:34.215929282Z lib/api-zod/src/index.ts(2,1): error TS2308: Module "./generated/api" has already exported a member named 'CreateDocumentBody'. Consider explicitly re-exporting to resolve the ambiguity.
+2026-04-04T01:01:34.215954913Z lib/api-zod/src/index.ts(2,1): error TS2308: Module "./generated/api" has already exported a member named 'GenerateOutlineBody'. Consider explicitly re-exporting to resolve the ambiguity.
+2026-04-04T01:01:34.215960133Z lib/api-zod/src/index.ts(2,1): error TS2308: Module "./generated/api" has already exported a member named 'GeneratePaperBody'. Consider explicitly re-exporting to resolve the ambiguity.
+2026-04-04T01:01:34.215964233Z lib/api-zod/src/index.ts(2,1): error TS2308: Module "./generated/api" has already exported a member named 'UpdateDocumentBody'. Consider explicitly re-exporting to resolve the ambiguity.
+2026-04-04T01:01:34.267593996Z  ELIFECYCLE  Command failed with exit code 2.
+2026-04-04T01:01:34.299036774Z  ELIFECYCLE  Command failed with exit code 2.
+2026-04-04T01:01:34.330528372Z  ELIFECYCLE  Command failed with exit code 2.
+2026-04-04T01:01:34.381206651Z ==> Build failed 😞
+2026-04-04T01:01:34.381229922Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys

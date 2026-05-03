@@ -1,0 +1,1333 @@
+import { Router } from "express";
+import { db, pool } from "@workspace/db";
+import { documentsTable, studySessionsTable } from "@workspace/db";
+import { desc, sql, eq, ilike, and } from "drizzle-orm";
+import type { Request, Response } from "express";
+import { invalidateSettingsCache } from "../lib/systemSettings";
+import { getUsageLog, checkBudget } from "../lib/apiCost";
+import crypto from "node:crypto";
+
+const router = Router();
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+function timingSafeCompare(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a, "utf8");
+  const bBuf = Buffer.from(b, "utf8");
+  const maxLen = Math.max(aBuf.length, bBuf.length);
+  const aPadded = Buffer.alloc(maxLen);
+  const bPadded = Buffer.alloc(maxLen);
+  aBuf.copy(aPadded);
+  bBuf.copy(bPadded);
+  return crypto.timingSafeEqual(aPadded, bPadded) && aBuf.length === bBuf.length;
+}
+
+function verifyAdminToken(req: Request): boolean {
+  if (!ADMIN_PASSWORD) return false;
+  const token = req.headers["x-admin-password"] as string | undefined;
+  if (!token) return false;
+  return timingSafeCompare(token, ADMIN_PASSWORD);
+}
+
+// ── Bootstrap admin tables ───────────────────────────────────────────────────
+
+async function initAdminTables() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS user_bans (
+      user_id TEXT PRIMARY KEY,
+      reason TEXT,
+      banned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      banned_by TEXT
+    );
+    CREATE TABLE IF NOT EXISTS announcements (
+      id SERIAL PRIMARY KEY,
+      title TEXT,
+      message TEXT NOT NULL,
+      link TEXT,
+      link_text TEXT DEFAULT 'Learn more',
+      color TEXT NOT NULL DEFAULT 'blue',
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS tool_feedback (
+      id BIGSERIAL PRIMARY KEY,
+      user_id TEXT,
+      tool TEXT NOT NULL,
+      rating SMALLINT NOT NULL,
+      comment TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      institution TEXT,
+      message TEXT NOT NULL,
+      seats INTEGER,
+      read BOOLEAN NOT NULL DEFAULT false,
+      replied BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    INSERT INTO system_settings (key, value) VALUES
+      ('maintenance_mode',        'false'),
+      ('allow_signups',           'true'),
+      ('payg_enabled',            'true'),
+      ('starter_paper',           '3'),
+      ('starter_revision',        '1'),
+      ('starter_humanizer',       '1'),
+      ('starter_stem',            '5'),
+      ('starter_study',           '20'),
+      ('starter_plagiarism',      '5'),
+      ('starter_outline',         '5'),
+      ('tool_write_enabled',      'true'),
+      ('tool_outline_enabled',    'true'),
+      ('tool_revision_enabled',   'true'),
+      ('tool_humanizer_enabled',  'true'),
+      ('tool_plagiarism_enabled', 'true'),
+      ('tool_stem_enabled',       'true'),
+      ('tool_study_enabled',      'true'),
+      ('tool_ebooks_enabled',     'true'),
+      ('pro_paper',               '15'),
+      ('pro_revision',            '20'),
+      ('pro_humanizer',           '20'),
+      ('pro_stem',                '60'),
+      ('pro_study',               '150'),
+      ('pro_plagiarism',          '20'),
+      ('pro_outline',             '20'),
+      ('institution_paper',            '5'),
+      ('institution_revision',         '8'),
+      ('institution_humanizer',        '8'),
+      ('institution_stem',             '30'),
+      ('institution_study',            '75'),
+      ('institution_plagiarism',       '10'),
+      ('institution_outline',          '10')
+    ON CONFLICT (key) DO NOTHING;
+  `);
+}
+
+initAdminTables().catch(() => {});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function getSettings(): Promise<Record<string, string>> {
+  try {
+    const rows = await pool.query<{ key: string; value: string }>("SELECT key, value FROM system_settings");
+    return Object.fromEntries(rows.rows.map((r) => [r.key, r.value]));
+  } catch {
+    return {};
+  }
+}
+
+// ── POST /admin/verify ────────────────────────────────────────────────────────
+
+router.post("/mwaramuriuki-login/verify", (req, res) => {
+  const { password } = req.body as { password?: string };
+  if (!ADMIN_PASSWORD) {
+    res.status(503).json({ error: "Admin not configured. Set ADMIN_PASSWORD environment variable." });
+    return;
+  }
+  if (timingSafeCompare(password ?? "", ADMIN_PASSWORD)) {
+    res.json({ ok: true });
+  } else {
+    res.status(401).json({ ok: false, error: "Invalid admin password" });
+  }
+});
+
+// ── GET /admin/stats ──────────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/stats", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const q = <T>(sql: string, fallback: T) =>
+    pool.query<T extends Array<infer R> ? R : T>(sql).then((r) => r.rows).catch(() => (Array.isArray(fallback) ? fallback : [fallback]) as (T extends Array<infer R> ? R : T)[]);
+
+  const [
+    docTypeRows, docUserRow, sessionCountRow, sessionUserRow,
+    revenueRows, creditsRow, activeSubsRow, planDistRows,
+    newUsersWeekRow, mrrRow, authUserRow, recentDocRows,
+  ] = await Promise.all([
+    q<{ type: string; cnt: string }[]>("SELECT type, COUNT(*) as cnt FROM documents GROUP BY type", []),
+    q<{ cnt: string }[]>("SELECT COUNT(DISTINCT user_id) as cnt FROM documents WHERE user_id IS NOT NULL", [{ cnt: "0" }]),
+    q<{ cnt: string }[]>("SELECT COUNT(*) as cnt FROM study_sessions", [{ cnt: "0" }]),
+    q<{ cnt: string }[]>("SELECT COUNT(DISTINCT user_id) as cnt FROM study_sessions WHERE user_id IS NOT NULL", [{ cnt: "0" }]),
+    q<{ gateway: string; total: string; cnt: string }[]>("SELECT gateway, SUM(amount_cents) as total, COUNT(*) as cnt FROM payments WHERE status = 'completed' GROUP BY gateway", []),
+    q<{ total: string }[]>("SELECT COALESCE(SUM(lifetime_earned_cents), 0) as total FROM user_credits", [{ total: "0" }]),
+    q<{ cnt: string }[]>("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE plan != 'starter'", [{ cnt: "0" }]),
+    q<{ plan: string; cnt: string }[]>("SELECT plan, COUNT(*) as cnt FROM user_subscriptions GROUP BY plan", []),
+    q<{ cnt: string }[]>("SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs WHERE user_id IS NOT NULL AND created_at > NOW() - INTERVAL '7 days'", [{ cnt: "0" }]),
+    q<{ mrr: string }[]>("SELECT COALESCE(SUM(amount_cents), 0) as mrr FROM payments WHERE status = 'completed' AND type = 'subscription' AND created_at > NOW() - INTERVAL '30 days'", [{ mrr: "0" }]),
+    pool.query<{ cnt: string }>("SELECT COUNT(*) as cnt FROM auth.users").then((r) => r.rows).catch(() => null),
+    pool.query<{ id: number; user_id: string | null; title: string; type: string; word_count: number; updated_at: Date; created_at: Date }>(
+      "SELECT id, user_id, title, type, word_count, updated_at, created_at FROM documents ORDER BY updated_at DESC LIMIT 10"
+    ).then((r) => r.rows).catch(() => []),
+  ]);
+
+  const docsByType = Object.fromEntries(docTypeRows.map((r) => [r.type, Number(r.cnt)]));
+  const totalDocsFromTypes = Object.values(docsByType).reduce((s, v) => s + v, 0);
+
+  // Prefer auth.users count, fall back to distinct user_ids across tables
+  const docUsers = Number((docUserRow[0] as { cnt: string } | undefined)?.cnt ?? 0);
+  const sessUsers = Number((sessionUserRow[0] as { cnt: string } | undefined)?.cnt ?? 0);
+  const totalUsers = authUserRow
+    ? Number(authUserRow[0]?.cnt ?? 0)
+    : Math.max(docUsers, sessUsers);
+
+  const totalRevenue = revenueRows.reduce((s, r) => s + Number(r.total), 0);
+  const planDistribution: Record<string, number> = {};
+  for (const r of planDistRows) planDistribution[r.plan] = Number(r.cnt);
+
+  res.json({
+    totalUsers,
+    totalDocuments: totalDocsFromTypes,
+    papersWritten:       docsByType["paper"]      ?? 0,
+    revisionsCompleted:  docsByType["revision"]   ?? 0,
+    stemSolved:          docsByType["stem"]        ?? 0,
+    studySessions:       Number((sessionCountRow[0] as { cnt: string } | undefined)?.cnt ?? 0),
+    humanizerCompleted:  docsByType["humanizer"]  ?? 0,
+    plagiarismChecks:    docsByType["plagiarism"] ?? 0,
+    outlineCount:        docsByType["outline"]    ?? 0,
+    totalRevenueCents:   totalRevenue,
+    activeSubscriptions: Number((activeSubsRow[0] as { cnt: string } | undefined)?.cnt ?? 0),
+    totalCreditsIssuedCents: Number((creditsRow[0] as { total: string } | undefined)?.total ?? 0),
+    planDistribution,
+    newUsersThisWeek:    Number((newUsersWeekRow[0] as { cnt: string } | undefined)?.cnt ?? 0),
+    mrrCents:            Number((mrrRow[0] as { mrr: string } | undefined)?.mrr ?? 0),
+    revenueByGateway: Object.fromEntries(
+      revenueRows.map((r) => [r.gateway, { revenue: Number(r.total), count: Number(r.cnt) }])
+    ),
+    recentDocuments: recentDocRows.map((d) => ({
+      id: d.id,
+      userId: d.user_id,
+      title: d.title,
+      type: d.type,
+      wordCount: d.word_count,
+      createdAt: d.created_at instanceof Date ? d.created_at.toISOString() : String(d.created_at),
+      updatedAt: d.updated_at instanceof Date ? d.updated_at.toISOString() : String(d.updated_at),
+    })),
+  });
+});
+
+// ── GET /admin/tools ─────────────────────────────────────────────────────────
+
+const TOOL_DEFS = [
+  { key: "write",      label: "Write Paper",      settingKey: "tool_write_enabled",      docType: "paper",      path: "/writing/" },
+  { key: "outline",    label: "Outline",           settingKey: "tool_outline_enabled",    docType: "outline",    path: "/writing/outline" },
+  { key: "revision",   label: "Revision",          settingKey: "tool_revision_enabled",   docType: "revision",   path: "/revision/" },
+  { key: "humanizer",  label: "AI Humanizer",      settingKey: "tool_humanizer_enabled",  docType: "humanizer",  path: "/humanizer/" },
+  { key: "plagiarism", label: "Plagiarism Check",  settingKey: "tool_plagiarism_enabled", docType: "plagiarism", path: "/plagiarism/" },
+  { key: "stem",       label: "STEM Solver",       settingKey: "tool_stem_enabled",       docType: "stem",       path: "/stem/" },
+  { key: "study",      label: "Study Assistant",   settingKey: "tool_study_enabled",      docType: null,         path: "/study/" },
+  { key: "ebook",      label: "Ebook Generator",   settingKey: "tool_ebooks_enabled",     docType: "ebook",      path: "/ebooks/" },
+];
+
+router.get("/mwaramuriuki-login/tools", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const settings = await getSettings();
+
+    const [docTypeCounts, studyCount, logRows] = await Promise.all([
+      pool.query<{ type: string; total: string; this_month: string; this_week: string; last_used: string | null }>(`
+        SELECT type,
+          COUNT(*)                                                          AS total,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') AS this_month,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')  AS this_week,
+          MAX(created_at)                                                   AS last_used
+        FROM documents GROUP BY type
+      `).catch(() => ({ rows: [] })),
+      pool.query<{ total: string; this_month: string; this_week: string; last_used: string | null }>(`
+        SELECT
+          COUNT(*)                                                          AS total,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') AS this_month,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')  AS this_week,
+          MAX(created_at)                                                   AS last_used
+        FROM study_sessions
+      `).catch(() => ({ rows: [] })),
+      pool.query<{ path_group: string; total: string; errors: string; total_7d: string; errors_7d: string; avg_ms: string; last_used: string | null }>(`
+        SELECT
+          CASE
+            WHEN path LIKE '%/writing/outline%'    THEN 'outline'
+            WHEN path LIKE '%/writing/%'           THEN 'write'
+            WHEN path LIKE '%/revision/%'          THEN 'revision'
+            WHEN path LIKE '%/humanizer/%'         THEN 'humanizer'
+            WHEN path LIKE '%/plagiarism/%'        THEN 'plagiarism'
+            WHEN path LIKE '%/stem/%'              THEN 'stem'
+            WHEN path LIKE '%/study/%'             THEN 'study'
+            WHEN path LIKE '%/ebooks/%'            THEN 'ebook'
+          END AS path_group,
+          COUNT(*)                                                          AS total,
+          COUNT(*) FILTER (WHERE status >= 500)                            AS errors,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')  AS total_7d,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days' AND status >= 500) AS errors_7d,
+          ROUND(AVG(duration_ms))::TEXT                                    AS avg_ms,
+          MAX(created_at)                                                   AS last_used
+        FROM request_logs
+        WHERE (path LIKE '%/writing/%' OR path LIKE '%/revision/%' OR path LIKE '%/humanizer/%'
+            OR path LIKE '%/plagiarism/%' OR path LIKE '%/stem/%' OR path LIKE '%/study/%'
+            OR path LIKE '%/ebooks/%')
+          AND created_at > NOW() - INTERVAL '30 days'
+        GROUP BY 1
+      `).catch(() => ({ rows: [] })),
+    ]);
+
+    const docMap = Object.fromEntries(docTypeCounts.rows.map((r) => [r.type, r]));
+    const logMap = Object.fromEntries(logRows.rows.filter((r) => r.path_group).map((r) => [r.path_group, r]));
+    const studyRow = studyCount.rows[0];
+
+    const tools = TOOL_DEFS.map(({ key, label, settingKey, docType }) => {
+      const doc = docType ? docMap[docType] : null;
+      const study = key === "study" ? studyRow : null;
+      const log = logMap[key];
+      const total       = Number(doc?.total ?? study?.total ?? 0);
+      const thisMonth   = Number(doc?.this_month ?? study?.this_month ?? 0);
+      const thisWeek    = Number(doc?.this_week ?? study?.this_week ?? 0);
+      const lastUsed    = doc?.last_used ?? study?.last_used ?? null;
+      const totalReqs   = Number(log?.total ?? 0);
+      const errorCount  = Number(log?.errors ?? 0);
+      const errorRate   = totalReqs > 0 ? Math.round((errorCount / totalReqs) * 100) : 0;
+      const totalReqs7d = Number(log?.total_7d ?? 0);
+      const errors7d    = Number(log?.errors_7d ?? 0);
+      const errorRate7d = totalReqs7d > 0 ? Math.round((errors7d / totalReqs7d) * 100) : 0;
+      const avgMs       = Number(log?.avg_ms ?? 0);
+      const hasApiData  = totalReqs > 0;
+      return {
+        key, label,
+        enabled: settings[settingKey] !== "false",
+        total, thisMonth, thisWeek, lastUsed,
+        totalRequests: totalReqs, errorCount, errorRate,
+        totalRequests7d: totalReqs7d, errors7d, errorRate7d,
+        avgMs, hasApiData,
+      };
+    });
+
+    res.json({ tools });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── PATCH /admin/tools/:key/toggle ───────────────────────────────────────────
+
+router.patch("/mwaramuriuki-login/tools/:key/toggle", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { key } = req.params;
+  const tool = TOOL_DEFS.find((t) => t.key === key);
+  if (!tool) { res.status(404).json({ error: "Unknown tool" }); return; }
+  try {
+    const { enabled } = req.body as { enabled: boolean };
+    await pool.query(
+      "UPDATE system_settings SET value = $1, updated_at = NOW() WHERE key = $2",
+      [enabled ? "true" : "false", tool.settingKey]
+    );
+    res.json({ ok: true, key, enabled });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/users ──────────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/users", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [docUsers, sessionUsers, creditRows, subRows, banRows, logUserRows] = await Promise.all([
+      db.select({ userId: documentsTable.userId }).from(documentsTable)
+        .where(sql`${documentsTable.userId} is not null`),
+      db.select({ userId: studySessionsTable.userId }).from(studySessionsTable)
+        .where(sql`${studySessionsTable.userId} is not null`),
+      pool.query<{ user_id: string; balance_cents: number; lifetime_earned_cents: number; lifetime_spent_cents: number }>(
+        "SELECT user_id, balance_cents, lifetime_earned_cents, lifetime_spent_cents FROM user_credits"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ user_id: string; plan: string; billing: string | null }>(
+        "SELECT user_id, plan, billing FROM user_subscriptions"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ user_id: string; reason: string | null; banned_at: string }>(
+        "SELECT user_id, reason, banned_at FROM user_bans"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ user_id: string }>(
+        "SELECT DISTINCT user_id FROM request_logs WHERE user_id IS NOT NULL"
+      ).catch(() => ({ rows: [] })),
+    ]);
+
+    const userDocCounts: Record<string, number> = {};
+    for (const { userId } of docUsers) if (userId) userDocCounts[userId] = (userDocCounts[userId] ?? 0) + 1;
+
+    const userSessionCounts: Record<string, number> = {};
+    for (const { userId } of sessionUsers) if (userId) userSessionCounts[userId] = (userSessionCounts[userId] ?? 0) + 1;
+
+    const creditMap = Object.fromEntries(creditRows.rows.map((r) => [r.user_id, r]));
+    const planMap = Object.fromEntries(subRows.rows.map((r) => [r.user_id, r]));
+    const banMap = Object.fromEntries(banRows.rows.map((r) => [r.user_id, r]));
+
+    // Query Supabase users via the Admin REST API (requires SUPABASE_SERVICE_ROLE_KEY).
+    // Direct SQL against auth.users is blocked by Supabase's RLS/role restrictions.
+    type AuthUser = { id: string; email: string | null; created_at: string; last_sign_in_at: string | null };
+    let authUsers: AuthUser[] = [];
+    let hasEmailData = false;
+    let supabaseError: string | null = null;
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseUrl && serviceRoleKey) {
+      try {
+        // Paginate through all users (Supabase default page size is 50, max 1000)
+        let page = 1;
+        const perPage = 1000;
+        let fetchMore = true;
+        while (fetchMore) {
+          const resp = await fetch(
+            `${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
+            {
+              headers: {
+                Authorization: `Bearer ${serviceRoleKey}`,
+                apikey: serviceRoleKey,
+              },
+            }
+          );
+          if (!resp.ok) {
+            const errText = await resp.text().catch(() => resp.statusText);
+            throw new Error(`Supabase Admin API ${resp.status}: ${errText}`);
+          }
+          const body = await resp.json() as { users?: AuthUser[]; total?: number };
+          const batch = body.users ?? [];
+          authUsers = authUsers.concat(
+            batch.map((u) => ({
+              id: u.id,
+              email: u.email ?? null,
+              created_at: u.created_at,
+              last_sign_in_at: u.last_sign_in_at ?? null,
+            }))
+          );
+          // Stop when we receive fewer users than requested (last page)
+          fetchMore = batch.length === perPage;
+          page++;
+        }
+        hasEmailData = true;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        supabaseError = `Supabase Admin API error: ${msg}`;
+      }
+    } else {
+      const missing = [
+        !supabaseUrl && "SUPABASE_URL",
+        !serviceRoleKey && "SUPABASE_SERVICE_ROLE_KEY",
+      ].filter(Boolean).join(", ");
+      supabaseError = `Add ${missing} to Render env vars to see user emails here. Showing users from activity data only.`;
+    }
+
+    const authUserMap = Object.fromEntries(authUsers.map((u) => [u.id, u]));
+
+    const allUserIds = new Set([
+      ...authUsers.map((u) => u.id),
+      ...Object.keys(userDocCounts),
+      ...Object.keys(userSessionCounts),
+      ...Object.keys(creditMap),
+      ...Object.keys(planMap),
+      ...logUserRows.rows.map((r) => r.user_id),
+    ]);
+
+    const enrich = (id: string) => {
+      const authUser = authUserMap[id];
+      return {
+        id,
+        email: authUser?.email ?? null,
+        createdAt: authUser?.created_at ?? null,
+        lastSignIn: authUser?.last_sign_in_at ?? null,
+        documentCount: userDocCounts[id] ?? 0,
+        sessionCount: userSessionCounts[id] ?? 0,
+        plan: planMap[id]?.plan ?? "starter",
+        billing: planMap[id]?.billing ?? null,
+        creditBalance: creditMap[id]?.balance_cents ?? 0,
+        lifetimeEarned: creditMap[id]?.lifetime_earned_cents ?? 0,
+        lifetimeSpent: creditMap[id]?.lifetime_spent_cents ?? 0,
+        banned: !!banMap[id],
+        banReason: banMap[id]?.reason ?? null,
+      };
+    };
+
+    const users = Array.from(allUserIds).map((id) => enrich(id));
+
+    res.json({ users, hasEmailData, supabaseError });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── DELETE /admin/users/:id ───────────────────────────────────────────────────
+
+router.delete("/mwaramuriuki-login/users/:id", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  try {
+    // 1. Remove all local activity data from public tables
+    await Promise.allSettled([
+      pool.query("DELETE FROM documents WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM study_sessions WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM user_usage WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM user_subscriptions WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM user_bans WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM user_credits WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM credit_transactions WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM request_logs WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM referral_codes WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM referral_signups WHERE referred_user_id = $1", [id]),
+      pool.query("DELETE FROM student_profiles WHERE user_id = $1", [id]),
+      pool.query("DELETE FROM user_ebook_subscriptions WHERE user_id = $1", [id]),
+    ]);
+
+    // 2. Hard-delete the Supabase auth user via Admin API
+    // Direct SQL against auth.users is blocked by Supabase's connection pooler —
+    // the Admin REST API is the correct path.
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    let authDeleteError: string | null = null;
+
+    if (supabaseUrl && serviceRoleKey) {
+      const delResp = await fetch(`${supabaseUrl}/auth/v1/admin/users/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: serviceRoleKey,
+        },
+      });
+      if (!delResp.ok) {
+        const errText = await delResp.text().catch(() => delResp.statusText);
+        authDeleteError = `Supabase auth delete failed (${delResp.status}): ${errText}`;
+        logger.warn({ id, authDeleteError }, "[admin] Could not delete Supabase auth user");
+      }
+    } else {
+      authDeleteError = "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set — Supabase auth user was NOT deleted";
+      logger.warn({ id }, "[admin] Supabase env vars missing — skipped auth user deletion");
+    }
+
+    res.json({ ok: true, authDeleteError });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── PATCH /admin/users/:id/ban ────────────────────────────────────────────────
+
+router.patch("/mwaramuriuki-login/users/:id/ban", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  const { banned, reason } = req.body as { banned: boolean; reason?: string };
+  try {
+    if (banned) {
+      await pool.query(
+        "INSERT INTO user_bans (user_id, reason) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET reason = $2, banned_at = NOW()",
+        [id, reason ?? null]
+      );
+    } else {
+      await pool.query("DELETE FROM user_bans WHERE user_id = $1", [id]);
+    }
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to update ban status" });
+  }
+});
+
+// ── PATCH /admin/users/:id/plan ───────────────────────────────────────────────
+
+router.patch("/mwaramuriuki-login/users/:id/plan", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  const { plan, billing, seats, durationDays } = req.body as { plan: string; billing?: string; seats?: number; durationDays?: number };
+  if (!plan || !["starter", "pro", "institution", "ebooks_monthly"].includes(plan)) {
+    res.status(400).json({ error: "Invalid plan value" }); return;
+  }
+  if (billing !== undefined && billing !== null && !["monthly", "annual"].includes(billing)) {
+    res.status(400).json({ error: "Invalid billing value" }); return;
+  }
+  if (seats !== undefined && (typeof seats !== "number" || seats < 1 || seats > 10000)) {
+    res.status(400).json({ error: "Invalid seats value" }); return;
+  }
+  if (durationDays !== undefined && (typeof durationDays !== "number" || durationDays < 1 || durationDays > 1825)) {
+    res.status(400).json({ error: "Invalid durationDays value" }); return;
+  }
+  try {
+    // When admin sets a plan manually, use durationDays if provided; institution defaults to 365 days
+    const days = durationDays ?? (plan === "institution" ? 365 : 30);
+    const periodEnd = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    await pool.query(`
+      INSERT INTO user_subscriptions (user_id, plan, billing, gateway, status, current_period_end, seats)
+      VALUES ($1, $2, $3, 'manual', 'active', $4, $5)
+      ON CONFLICT (user_id) DO UPDATE SET plan = $2, billing = $3, gateway = 'manual', status = 'active', current_period_end = $4, seats = $5, updated_at = NOW()
+    `, [id, plan, billing ?? null, periodEnd, seats ?? null]);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to update plan" });
+  }
+});
+
+// ── POST /admin/users/:id/credits ─────────────────────────────────────────────
+
+router.post("/mwaramuriuki-login/users/:id/credits", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  const { amountCents, reason } = req.body as { amountCents: number; reason?: string };
+  if (!amountCents || amountCents === 0) {
+    res.status(400).json({ error: "amountCents must be non-zero" }); return;
+  }
+  if (typeof amountCents !== "number" || !Number.isInteger(amountCents) || Math.abs(amountCents) > 10_000_000) {
+    res.status(400).json({ error: "amountCents must be an integer and cannot exceed ±$100,000" }); return;
+  }
+  if (reason !== undefined && (typeof reason !== "string" || reason.length > 300)) {
+    res.status(400).json({ error: "reason must be a string under 300 characters" }); return;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      "INSERT INTO user_credits (user_id, balance_cents, lifetime_earned_cents, lifetime_spent_cents) VALUES ($1, 0, 0, 0) ON CONFLICT (user_id) DO NOTHING",
+      [id]
+    );
+    const earns = amountCents > 0 ? amountCents : 0;
+    const spends = amountCents < 0 ? Math.abs(amountCents) : 0;
+    const updated = await client.query<{ balance_cents: number }>(
+      "UPDATE user_credits SET balance_cents = balance_cents + $2, lifetime_earned_cents = lifetime_earned_cents + $3, lifetime_spent_cents = lifetime_spent_cents + $4, updated_at = NOW() WHERE user_id = $1 RETURNING balance_cents",
+      [id, amountCents, earns, spends]
+    );
+    const newBalance = updated.rows[0]?.balance_cents ?? 0;
+    if (newBalance < 0) { await client.query("ROLLBACK"); res.status(400).json({ error: "Insufficient credits" }); return; }
+    await client.query(
+      "INSERT INTO credit_transactions (user_id, amount_cents, type, description) VALUES ($1, $2, $3, $4)",
+      [id, amountCents, amountCents > 0 ? "bonus" : "spend", reason ?? "Admin adjustment"]
+    );
+    await client.query("COMMIT");
+    res.json({ ok: true, newBalanceCents: newBalance });
+  } catch {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: "Failed to adjust credits" });
+  } finally {
+    client.release();
+  }
+});
+
+// ── GET /admin/credits ────────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/credits", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [creditsRows, recentTx] = await Promise.all([
+      pool.query<{ user_id: string; balance_cents: number; lifetime_earned_cents: number; lifetime_spent_cents: number; updated_at: string }>(
+        "SELECT user_id, balance_cents, lifetime_earned_cents, lifetime_spent_cents, updated_at FROM user_credits ORDER BY balance_cents DESC LIMIT 100"
+      ),
+      pool.query<{ user_id: string; amount_cents: number; type: string; description: string; created_at: string }>(
+        "SELECT user_id, amount_cents, type, description, created_at FROM credit_transactions ORDER BY created_at DESC LIMIT 50"
+      ),
+    ]);
+    const totals = await pool.query<{ total_balance: string; total_earned: string; total_spent: string }>(
+      "SELECT COALESCE(SUM(balance_cents),0) as total_balance, COALESCE(SUM(lifetime_earned_cents),0) as total_earned, COALESCE(SUM(lifetime_spent_cents),0) as total_spent FROM user_credits"
+    );
+    res.json({
+      users: creditsRows.rows,
+      recentTransactions: recentTx.rows,
+      totals: totals.rows[0] ?? { total_balance: "0", total_earned: "0", total_spent: "0" },
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/users/:id/credit-transactions ─────────────────────────────────
+
+router.get("/mwaramuriuki-login/users/:id/credit-transactions", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  try {
+    const [txRows, balanceRow] = await Promise.all([
+      pool.query<{ id: number; amount_cents: number; type: string; description: string; created_at: string }>(
+        "SELECT id, amount_cents, type, description, created_at::text FROM credit_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100",
+        [id]
+      ),
+      pool.query<{ balance_cents: number; lifetime_earned_cents: number; lifetime_spent_cents: number }>(
+        "SELECT balance_cents, lifetime_earned_cents, lifetime_spent_cents FROM user_credits WHERE user_id = $1",
+        [id]
+      ),
+    ]);
+    res.json({
+      transactions: txRows.rows,
+      balance: balanceRow.rows[0] ?? { balance_cents: 0, lifetime_earned_cents: 0, lifetime_spent_cents: 0 },
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/revenue ────────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/revenue", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [byGateway, byMonth, byType, topUsers, summary] = await Promise.all([
+      pool.query<{ gateway: string; revenue: string; count: string }>(
+        "SELECT gateway, SUM(amount_cents) as revenue, COUNT(*) as count FROM payments WHERE status = 'completed' GROUP BY gateway ORDER BY revenue DESC"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ month: string; revenue: string; count: string }>(
+        "SELECT TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') as month, SUM(amount_cents) as revenue, COUNT(*) as count FROM payments WHERE status = 'completed' GROUP BY month ORDER BY month DESC LIMIT 12"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ type: string; revenue: string; count: string }>(
+        "SELECT type, SUM(amount_cents) as revenue, COUNT(*) as count FROM payments WHERE status = 'completed' GROUP BY type ORDER BY revenue DESC"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ user_id: string; revenue: string; count: string }>(
+        "SELECT user_id, SUM(amount_cents) as revenue, COUNT(*) as count FROM payments WHERE status = 'completed' GROUP BY user_id ORDER BY revenue DESC LIMIT 10"
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ total: string; this_month: string; last_month: string; pending: string }>(
+        `SELECT
+          COALESCE(SUM(amount_cents) FILTER (WHERE status = 'completed'), 0) as total,
+          COALESCE(SUM(amount_cents) FILTER (WHERE status = 'completed' AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())), 0) as this_month,
+          COALESCE(SUM(amount_cents) FILTER (WHERE status = 'completed' AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW() - INTERVAL '1 month')), 0) as last_month,
+          COALESCE(SUM(amount_cents) FILTER (WHERE status = 'pending'), 0) as pending
+        FROM payments`
+      ).catch(() => ({ rows: [{ total: "0", this_month: "0", last_month: "0", pending: "0" }] })),
+    ]);
+    res.json({
+      byGateway: byGateway.rows,
+      byMonth: byMonth.rows,
+      byType: byType.rows,
+      topUsers: topUsers.rows,
+      summary: summary.rows[0] ?? { total: "0", this_month: "0", last_month: "0", pending: "0" },
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/subscriptions ──────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/subscriptions", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const rows = await pool.query<{ user_id: string; plan: string; billing: string | null; gateway: string | null; created_at: string }>(
+      "SELECT user_id, plan, billing, gateway, created_at FROM user_subscriptions WHERE plan != 'starter' ORDER BY created_at DESC"
+    ).catch(() => ({ rows: [] }));
+    const counts = await pool.query<{ plan: string; cnt: string }>(
+      "SELECT plan, COUNT(*) as cnt FROM user_subscriptions GROUP BY plan"
+    ).catch(() => ({ rows: [] }));
+    res.json({
+      subscriptions: rows.rows,
+      counts: Object.fromEntries(counts.rows.map((r) => [r.plan, Number(r.cnt)])),
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/settings ───────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/settings", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const settings = await getSettings();
+    res.json({ settings });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /admin/settings ──────────────────────────────────────────────────────
+
+router.post("/mwaramuriuki-login/settings", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { settings } = req.body as { settings: Record<string, string> };
+  if (!settings || typeof settings !== "object") {
+    res.status(400).json({ error: "Invalid settings" }); return;
+  }
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const [key, value] of Object.entries(settings)) {
+        await client.query(
+          "INSERT INTO system_settings (key, value, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()",
+          [key, String(value)]
+        );
+      }
+      await client.query("COMMIT");
+    } finally {
+      client.release();
+    }
+    invalidateSettingsCache();
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to save settings" });
+  }
+});
+
+// ── GET /admin/ping ───────────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/ping", (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  res.json({ ok: true, timestamp: new Date().toISOString(), uptimeSeconds: Math.floor(process.uptime()) });
+});
+
+// ── GET /admin/traffic ────────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/traffic", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [activeAll, activeToday, activeLive, byCountry, byHour] = await Promise.all([
+      pool.query<{ cnt: string }>(
+        `SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs WHERE user_id IS NOT NULL`
+      ).catch(() => ({ rows: [{ cnt: "0" }] })),
+      pool.query<{ cnt: string }>(
+        `SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs WHERE user_id IS NOT NULL AND created_at > NOW() - INTERVAL '24 hours'`
+      ).catch(() => ({ rows: [{ cnt: "0" }] })),
+      pool.query<{ cnt: string }>(
+        `SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs WHERE user_id IS NOT NULL AND created_at > NOW() - INTERVAL '5 minutes'`
+      ).catch(() => ({ rows: [{ cnt: "0" }] })),
+      pool.query<{ country: string; requests: string; users: string }>(
+        `SELECT country, COUNT(*) as requests, COUNT(DISTINCT user_id) as users
+         FROM request_logs WHERE created_at > NOW() - INTERVAL '30 days'
+         GROUP BY country ORDER BY requests DESC LIMIT 30`
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ hour: string; requests: string; errors: string }>(
+        `SELECT TO_CHAR(DATE_TRUNC('hour', created_at), 'HH24:MI') as hour,
+                COUNT(*) as requests,
+                COUNT(*) FILTER (WHERE status >= 400) as errors
+         FROM request_logs WHERE created_at > NOW() - INTERVAL '24 hours'
+         GROUP BY DATE_TRUNC('hour', created_at) ORDER BY DATE_TRUNC('hour', created_at) ASC`
+      ).catch(() => ({ rows: [] })),
+    ]);
+
+    let totalRegisteredUsers = 0;
+    try {
+      const r = await pool.query<{ cnt: string }>("SELECT COUNT(*) as cnt FROM auth.users");
+      totalRegisteredUsers = Number(r.rows[0]?.cnt ?? 0);
+    } catch {
+      const r = await pool.query<{ cnt: string }>("SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs WHERE user_id IS NOT NULL").catch(() => ({ rows: [{ cnt: "0" }] }));
+      totalRegisteredUsers = Number(r.rows[0]?.cnt ?? 0);
+    }
+
+    // Clean up logs older than 60 days (fire-and-forget)
+    pool.query(`DELETE FROM request_logs WHERE created_at < NOW() - INTERVAL '60 days'`).catch(() => {});
+
+    res.json({
+      totalRegisteredUsers,
+      totalActiveUsers: Number(activeAll.rows[0]?.cnt ?? 0),
+      dailyActiveUsers: Number(activeToday.rows[0]?.cnt ?? 0),
+      liveUsers: Number(activeLive.rows[0]?.cnt ?? 0),
+      byCountry: byCountry.rows,
+      byHour: byHour.rows,
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/documents ──────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/documents", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { type, search } = req.query as { type?: string; search?: string };
+  try {
+    const conditions = [];
+    if (type && type !== "all") conditions.push(eq(documentsTable.type, type));
+    if (search && search.trim()) conditions.push(ilike(documentsTable.title, `%${search.trim()}%`));
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const [docs, countResult] = await Promise.all([
+      db.select({
+        id: documentsTable.id,
+        userId: documentsTable.userId,
+        title: documentsTable.title,
+        type: documentsTable.type,
+        subject: documentsTable.subject,
+        wordCount: documentsTable.wordCount,
+        createdAt: documentsTable.createdAt,
+        updatedAt: documentsTable.updatedAt,
+      }).from(documentsTable).where(where).orderBy(desc(documentsTable.updatedAt)).limit(200),
+      db.select({ count: sql<string>`count(*)` }).from(documentsTable).where(where),
+    ]);
+    res.json({
+      documents: docs.map((d) => ({
+        ...d,
+        createdAt: d.createdAt.toISOString(),
+        updatedAt: d.updatedAt.toISOString(),
+      })),
+      total: Number(countResult[0]?.count ?? 0),
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/logs ───────────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/logs", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const filter = (req.query.filter as string) ?? "all";
+  try {
+    let where = `WHERE path NOT IN ('/api/healthz') AND path NOT LIKE '%/mwaramuriuki-login/%'`;
+    if (filter === "success") where += " AND status < 400";
+    else if (filter === "errors") where += " AND status >= 400";
+
+    const [requestLogs, errorLogs, summary] = await Promise.all([
+      pool.query(
+        `SELECT id, method, path, status, duration_ms, user_id, country, error_msg,
+                created_at::text as created_at
+         FROM request_logs ${where}
+         ORDER BY created_at DESC LIMIT 200`
+      ).catch(() => ({ rows: [] })),
+      pool.query(
+        `SELECT id, method, path, status, user_id, country, error_msg, created_at::text as created_at
+         FROM api_errors ORDER BY created_at DESC LIMIT 100`
+      ).catch(() => ({ rows: [] })),
+      pool.query<{ total: string; success: string; client_errors: string; server_errors: string; avg_ms: string }>(
+        `SELECT
+           COUNT(*) as total,
+           COUNT(*) FILTER (WHERE status < 400) as success,
+           COUNT(*) FILTER (WHERE status >= 400 AND status < 500) as client_errors,
+           COUNT(*) FILTER (WHERE status >= 500) as server_errors,
+           ROUND(AVG(duration_ms))::text as avg_ms
+         FROM request_logs WHERE created_at > NOW() - INTERVAL '24 hours'`
+      ).catch(() => ({ rows: [] })),
+    ]);
+
+    res.json({
+      logs: requestLogs.rows,
+      errors: errorLogs.rows,
+      summary: summary.rows[0] ?? { total: "0", success: "0", client_errors: "0", server_errors: "0", avg_ms: "0" },
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /api/announcements (PUBLIC — no auth) ─────────────────────────────────
+
+router.get("/announcements", async (_req: Request, res: Response) => {
+  try {
+    const rows = await pool.query(
+      `SELECT id, title, message, link, link_text, color
+       FROM announcements WHERE is_active = true ORDER BY created_at DESC`
+    );
+    res.json({ announcements: rows.rows });
+  } catch {
+    res.json({ announcements: [] });
+  }
+});
+
+// ── GET /admin/announcements ─────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/announcements", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const rows = await pool.query(
+      `SELECT id, title, message, link, link_text, color, is_active,
+              created_at::text as created_at, updated_at::text as updated_at
+       FROM announcements ORDER BY created_at DESC`
+    );
+    res.json({ announcements: rows.rows });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /admin/announcements ─────────────────────────────────────────────────
+
+router.post("/mwaramuriuki-login/announcements", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { title, message, link, link_text, color } = req.body as {
+    title?: string; message: string; link?: string; link_text?: string; color?: string;
+  };
+  if (!message?.trim()) { res.status(400).json({ error: "message is required" }); return; }
+  try {
+    const row = await pool.query(
+      `INSERT INTO announcements (title, message, link, link_text, color)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, title, message, link, link_text, color, is_active,
+                 created_at::text as created_at`,
+      [title ?? null, message.trim(), link ?? null, link_text ?? "Learn more", color ?? "blue"]
+    );
+    res.json({ announcement: row.rows[0] });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── PATCH /admin/announcements/:id ───────────────────────────────────────────
+
+router.patch("/mwaramuriuki-login/announcements/:id", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  const { title, message, link, link_text, color, is_active } = req.body as {
+    title?: string; message?: string; link?: string; link_text?: string; color?: string; is_active?: boolean;
+  };
+  try {
+    await pool.query(
+      `UPDATE announcements SET
+         title = COALESCE($1, title),
+         message = COALESCE($2, message),
+         link = COALESCE($3, link),
+         link_text = COALESCE($4, link_text),
+         color = COALESCE($5, color),
+         is_active = COALESCE($6, is_active),
+         updated_at = NOW()
+       WHERE id = $7`,
+      [title ?? null, message ?? null, link ?? null, link_text ?? null, color ?? null, is_active ?? null, id]
+    );
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── DELETE /admin/announcements/:id ──────────────────────────────────────────
+
+router.delete("/mwaramuriuki-login/announcements/:id", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM announcements WHERE id = $1", [id]);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /api/feedback (authenticated) ───────────────────────────────────────
+
+router.post("/feedback", async (req: Request, res: Response) => {
+  const userId = (req as Request & { userId?: string }).userId;
+  const { tool, rating, comment } = req.body as { tool: string; rating: 1 | -1; comment?: string };
+  if (!tool || (rating !== 1 && rating !== -1)) {
+    res.status(400).json({ error: "tool and rating (1 or -1) required" }); return;
+  }
+  try {
+    await pool.query(
+      "INSERT INTO tool_feedback (user_id, tool, rating, comment) VALUES ($1, $2, $3, $4)",
+      [userId ?? null, tool, rating, comment ?? null]
+    );
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/ebooks ─────────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/ebooks", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [statsRows, recentRows, subRows] = await Promise.all([
+      pool.query<{ total: string; this_month: string; this_week: string; avg_words: string }>(`
+        SELECT
+          COUNT(*)                                                          AS total,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') AS this_month,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')  AS this_week,
+          ROUND(AVG(word_count))::TEXT                                     AS avg_words
+        FROM documents WHERE type = 'ebook'
+      `).catch(() => ({ rows: [] })),
+      pool.query<{ id: number; user_id: string | null; title: string; word_count: number; created_at: string }>(`
+        SELECT id, user_id, title, word_count, created_at
+        FROM documents WHERE type = 'ebook'
+        ORDER BY created_at DESC LIMIT 50
+      `).catch(() => ({ rows: [] })),
+      pool.query<{ user_id: string; status: string; billing: string | null; gateway: string | null; created_at: string }>(`
+        SELECT user_id, status, billing, gateway, created_at
+        FROM user_ebook_subscriptions
+        ORDER BY created_at DESC LIMIT 100
+      `).catch(() => ({ rows: [] })),
+    ]);
+    const s = statsRows.rows[0];
+    res.json({
+      total:      Number(s?.total      ?? 0),
+      thisMonth:  Number(s?.this_month ?? 0),
+      thisWeek:   Number(s?.this_week  ?? 0),
+      avgWords:   Math.round(Number(s?.avg_words ?? 0)),
+      recent: recentRows.rows.map((r) => ({
+        ...r,
+        created_at: r.created_at instanceof Date ? (r.created_at as unknown as Date).toISOString() : String(r.created_at),
+      })),
+      subscriptions: subRows.rows.map((r) => ({
+        ...r,
+        created_at: r.created_at instanceof Date ? (r.created_at as unknown as Date).toISOString() : String(r.created_at),
+      })),
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/feedback ───────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/feedback", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const rows = await pool.query<{ tool: string; positive: string; negative: string; total: string; score: string }>(
+      `SELECT tool,
+              COUNT(*) FILTER (WHERE rating = 1) as positive,
+              COUNT(*) FILTER (WHERE rating = -1) as negative,
+              COUNT(*) as total,
+              ROUND(100.0 * COUNT(*) FILTER (WHERE rating = 1) / NULLIF(COUNT(*), 0)) as score
+       FROM tool_feedback WHERE created_at > NOW() - INTERVAL '30 days'
+       GROUP BY tool ORDER BY total DESC`
+    );
+    res.json({ feedback: rows.rows });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /admin/pwa/stats ──────────────────────────────────────────────────────
+
+router.get("/mwaramuriuki-login/pwa/stats", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const [totals, byPlatform, byDay] = await Promise.all([
+      pool.query<{
+        total_installs: string; android_installs: string; ios_installs: string;
+        installs_7d: string; installs_30d: string;
+        total_launches: string; launches_7d: string; launches_30d: string;
+      }>(`
+        SELECT
+          COUNT(*) FILTER (WHERE event_type = 'installed')                                             AS total_installs,
+          COUNT(*) FILTER (WHERE event_type = 'installed'  AND platform = 'android')                   AS android_installs,
+          COUNT(*) FILTER (WHERE event_type = 'installed'  AND platform = 'ios')                       AS ios_installs,
+          COUNT(*) FILTER (WHERE event_type = 'installed'  AND created_at > NOW() - INTERVAL '7 days') AS installs_7d,
+          COUNT(*) FILTER (WHERE event_type = 'installed'  AND created_at > NOW() - INTERVAL '30 days') AS installs_30d,
+          COUNT(*) FILTER (WHERE event_type = 'standalone_launch')                                     AS total_launches,
+          COUNT(*) FILTER (WHERE event_type = 'standalone_launch' AND created_at > NOW() - INTERVAL '7 days') AS launches_7d,
+          COUNT(*) FILTER (WHERE event_type = 'standalone_launch' AND created_at > NOW() - INTERVAL '30 days') AS launches_30d
+        FROM pwa_installs
+      `).catch(() => ({ rows: [{ total_installs:"0", android_installs:"0", ios_installs:"0", installs_7d:"0", installs_30d:"0", total_launches:"0", launches_7d:"0", launches_30d:"0" }] })),
+
+      pool.query<{ platform: string; installs: string; launches: string }>(`
+        SELECT platform,
+               COUNT(*) FILTER (WHERE event_type = 'installed')        AS installs,
+               COUNT(*) FILTER (WHERE event_type = 'standalone_launch') AS launches
+        FROM pwa_installs
+        GROUP BY platform ORDER BY installs DESC
+      `).catch(() => ({ rows: [] })),
+
+      pool.query<{ day: string; installs: string; launches: string }>(`
+        SELECT TO_CHAR(DATE_TRUNC('day', created_at), 'Mon DD') AS day,
+               COUNT(*) FILTER (WHERE event_type = 'installed')         AS installs,
+               COUNT(*) FILTER (WHERE event_type = 'standalone_launch') AS launches
+        FROM pwa_installs
+        WHERE created_at > NOW() - INTERVAL '30 days'
+        GROUP BY DATE_TRUNC('day', created_at)
+        ORDER BY DATE_TRUNC('day', created_at) ASC
+      `).catch(() => ({ rows: [] })),
+    ]);
+
+    const t = totals.rows[0];
+    res.json({
+      totalInstalls:    Number(t?.total_installs   ?? 0),
+      androidInstalls:  Number(t?.android_installs ?? 0),
+      iosInstalls:      Number(t?.ios_installs     ?? 0),
+      installs7d:       Number(t?.installs_7d      ?? 0),
+      installs30d:      Number(t?.installs_30d     ?? 0),
+      totalLaunches:    Number(t?.total_launches    ?? 0),
+      launches7d:       Number(t?.launches_7d       ?? 0),
+      launches30d:      Number(t?.launches_30d      ?? 0),
+      byPlatform: byPlatform.rows,
+      byDay: byDay.rows,
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /admin/contact (no auth — public form submission) ───────────────────
+router.post("/contact", async (req: Request, res: Response) => {
+  try {
+    const { name, email, institution, message, seats } = req.body as {
+      name?: string; email?: string; institution?: string; message?: string; seats?: number;
+    };
+    if (!name?.trim() || !email?.trim() || !message?.trim()) {
+      return res.status(400).json({ error: "name, email, and message are required" });
+    }
+    if (name.trim().length > 200 || email.trim().length > 320 || message.trim().length > 5000) {
+      return res.status(400).json({ error: "Input too long" });
+    }
+    if (institution && institution.trim().length > 300) {
+      return res.status(400).json({ error: "Institution name too long" });
+    }
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRe.test(email.trim())) {
+      return res.status(400).json({ error: "Invalid email address" });
+    }
+    await pool.query(
+      `INSERT INTO contact_messages (name, email, institution, message, seats) VALUES ($1,$2,$3,$4,$5)`,
+      [name.trim(), email.trim(), institution?.trim() ?? null, message.trim(), seats ?? null]
+    );
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ error: "Failed to submit message" });
+  }
+});
+
+// ── GET /admin/messages ──────────────────────────────────────────────────────
+router.get("/mwaramuriuki-login/messages", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const { rows } = await pool.query<{
+      id: string; name: string; email: string; institution: string | null;
+      message: string; seats: string | null; read: boolean; replied: boolean; created_at: string;
+    }>(`SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 200`);
+    return res.json({ messages: rows });
+  } catch {
+    return res.status(500).json({ error: "Failed to load messages" });
+  }
+});
+
+// ── PATCH /admin/messages/:id/mark-read ─────────────────────────────────────
+router.patch("/mwaramuriuki-login/messages/:id/mark-read", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    await pool.query(`UPDATE contact_messages SET read = true WHERE id = $1`, [req.params.id]);
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ error: "Failed to update" });
+  }
+});
+
+// ── PATCH /admin/messages/:id/mark-replied ───────────────────────────────────
+router.patch("/mwaramuriuki-login/messages/:id/mark-replied", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    await pool.query(`UPDATE contact_messages SET read = true, replied = true WHERE id = $1`, [req.params.id]);
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ error: "Failed to update" });
+  }
+});
+
+// ── GET /admin/documents/all ─────────────────────────────────────────────────
+router.get("/mwaramuriuki-login/documents/all", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const limit = Math.min(parseInt((req.query.limit as string) || "50", 10) || 50, 200);
+    const offset = parseInt((req.query.offset as string) || "0", 10) || 0;
+    const typeFilter = req.query.type as string | undefined;
+    const userFilter = req.query.userId as string | undefined;
+
+    const conditions: string[] = [];
+    const values: unknown[] = [limit, offset];
+
+    if (typeFilter) { values.push(typeFilter); conditions.push(`d.type = $${values.length}`); }
+    if (userFilter) { values.push(userFilter); conditions.push(`d.user_id = $${values.length}`); }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const { rows } = await pool.query(
+      `SELECT d.id, d.user_id, d.title, d.type, d.word_count, d.subject, d.doc_number,
+              d.created_at, d.updated_at
+       FROM documents d
+       ${where}
+       ORDER BY d.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      values,
+    );
+
+    const countVals = conditions.length > 0 ? values.slice(2) : [];
+    const { rows: countRows } = await pool.query(
+      `SELECT COUNT(*) AS count FROM documents d ${where}`,
+      countVals,
+    );
+
+    return res.json({
+      documents: rows.map((d: Record<string, unknown>) => ({
+        id: d.id,
+        userId: d.user_id,
+        title: d.title,
+        type: d.type,
+        wordCount: d.word_count,
+        subject: d.subject,
+        docNumber: d.doc_number,
+        createdAt: d.created_at,
+        updatedAt: d.updated_at,
+      })),
+      total: parseInt((countRows[0] as Record<string, string>)?.count ?? "0", 10),
+      limit,
+      offset,
+    });
+  } catch (err) {
+    console.error("[admin] Failed to fetch all documents:", err);
+    return res.status(500).json({ error: "Failed to fetch documents" });
+  }
+});
+
+// ── GET /admin/api-costs — Claude Code Usage Monitor pattern ──────────────────
+// Exposes the in-process API cost log so admins can see exactly which operations
+// are burning budget. Groups usage by model and operation for easy diagnosis.
+// Technique: Claude Code Usage Monitor (github.com/Macawls/claude-code-usage-monitor)
+// applied server-side — track token spend per task type in real time.
+
+router.get("/mwaramuriuki-login/api-costs", (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const log   = getUsageLog();
+  const budget = checkBudget();
+
+  // Aggregate by operation
+  const byOperation: Record<string, { calls: number; inputTokens: number; outputTokens: number; costUsd: number; model: string }> = {};
+  const byModel:     Record<string, { calls: number; inputTokens: number; outputTokens: number; costUsd: number }> = {};
+
+  for (const r of log) {
+    // By operation
+    if (!byOperation[r.operation]) {
+      byOperation[r.operation] = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, model: r.model };
+    }
+    byOperation[r.operation].calls++;
+    byOperation[r.operation].inputTokens  += r.inputTokens;
+    byOperation[r.operation].outputTokens += r.outputTokens;
+    byOperation[r.operation].costUsd      += r.costUsd;
+
+    // By model
+    if (!byModel[r.model]) {
+      byModel[r.model] = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0 };
+    }
+    byModel[r.model].calls++;
+    byModel[r.model].inputTokens  += r.inputTokens;
+    byModel[r.model].outputTokens += r.outputTokens;
+    byModel[r.model].costUsd      += r.costUsd;
+  }
+
+  // Sort operations by cost descending (highest burning first)
+  const topOperations = Object.entries(byOperation)
+    .sort(([, a], [, b]) => b.costUsd - a.costUsd)
+    .map(([operation, data]) => ({
+      operation,
+      ...data,
+      costUsd: parseFloat(data.costUsd.toFixed(6)),
+    }));
+
+  const modelSummary = Object.entries(byModel)
+    .sort(([, a], [, b]) => b.costUsd - a.costUsd)
+    .map(([model, data]) => ({
+      model,
+      ...data,
+      costUsd: parseFloat(data.costUsd.toFixed(6)),
+    }));
+
+  return res.json({
+    budget: {
+      sessionCostUsd:  parseFloat(budget.sessionCost.toFixed(6)),
+      dailyBudgetUsd:  budget.dailyBudget,
+      percentUsed:     parseFloat(budget.percentUsed.toFixed(2)),
+      warning:         budget.warning,
+      ok:              budget.ok,
+    },
+    totalCalls:   log.length,
+    topOperations,
+    byModel:      modelSummary,
+    recentLog:    log.slice(-50).reverse().map(r => ({
+      ...r,
+      costUsd:   parseFloat(r.costUsd.toFixed(6)),
+      timestamp: r.timestamp.toISOString(),
+    })),
+  });
+});
+
+export default router;

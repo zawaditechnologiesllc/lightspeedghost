@@ -1,0 +1,91 @@
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import path from "path";
+
+const isProd = process.env.NODE_ENV === "production";
+
+const rawPort = process.env.PORT;
+
+if (!rawPort && !isProd) {
+  throw new Error(
+    "PORT environment variable is required but was not provided.",
+  );
+}
+
+const port = rawPort ? Number(rawPort) : 3000;
+
+if (!isProd && (Number.isNaN(port) || port <= 0)) {
+  throw new Error(`Invalid PORT value: "${rawPort}"`);
+}
+
+const basePath = process.env.BASE_PATH ?? "/";
+
+export default defineConfig({
+  base: basePath,
+  plugins: [
+    react(),
+    tailwindcss(),
+    ...(!isProd
+      ? [
+          (await import("@replit/vite-plugin-runtime-error-modal")).default(),
+        ]
+      : []),
+    ...(process.env.NODE_ENV !== "production" &&
+    process.env.REPL_ID !== undefined
+      ? [
+          await import("@replit/vite-plugin-cartographer").then((m) =>
+            m.cartographer({
+              root: path.resolve(import.meta.dirname, ".."),
+            }),
+          ),
+          await import("@replit/vite-plugin-dev-banner").then((m) =>
+            m.devBanner(),
+          ),
+        ]
+      : []),
+  ],
+  resolve: {
+    alias: {
+      "@": path.resolve(import.meta.dirname, "src"),
+      "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+    },
+    dedupe: ["react", "react-dom"],
+  },
+  root: path.resolve(import.meta.dirname),
+  build: {
+    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    emptyOutDir: true,
+  },
+  server: {
+    port,
+    host: "0.0.0.0",
+    allowedHosts: true,
+    fs: {
+      strict: true,
+      deny: ["**/.*"],
+    },
+    proxy: {
+      "/api": {
+        target: `http://localhost:${process.env.API_PORT ?? 8080}`,
+        changeOrigin: true,
+        // Required for SSE (text/event-stream) — prevents the proxy from
+        // buffering the response body before forwarding it to the browser.
+        selfHandleResponse: false,
+        configure: (proxy) => {
+          proxy.on("proxyRes", (proxyRes) => {
+            if (proxyRes.headers["content-type"]?.includes("text/event-stream")) {
+              proxyRes.headers["cache-control"] = "no-cache";
+              proxyRes.headers["x-accel-buffering"] = "no";
+            }
+          });
+        },
+      },
+    },
+  },
+  preview: {
+    port,
+    host: "0.0.0.0",
+    allowedHosts: true,
+  },
+});

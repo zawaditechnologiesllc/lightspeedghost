@@ -1,0 +1,1571 @@
+import { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useGetStemSubjects } from "@workspace/api-client-react";
+import { apiFetch } from "@/lib/apiFetch";
+import {
+  FlaskConical, CheckCircle, ExternalLink, Search,
+  ChevronDown, ChevronUp, Dna, Sparkles, ShieldCheck,
+  AlertTriangle, XCircle, Copy, CheckCheck,
+  Download, Loader2, RotateCcw, Camera, FileText, Zap,
+  BookOpen, Atom, Calculator, Cpu, BarChart2, Layers,
+  Database, GraduationCap, TrendingUp,
+} from "lucide-react";
+import type { StemSolution } from "@workspace/api-client-react";
+import StemImageOcr from "@/components/StemImageOcr";
+import MathRenderer from "@/components/MathRenderer";
+import { ExportButtons } from "@/components/ExportButtons";
+import { buildStemExportHtml, makeLsgFilename } from "@/lib/exportUtils";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
+import { stemResourcesBySubject, toolTypeColors } from "@/data/stemResources";
+import { cn } from "@/lib/utils";
+import { usePaywallGuard } from "@/hooks/usePaywallGuard";
+import { PaywallFlow } from "@/components/checkout/PaywallFlow";
+import { useWakeLock } from "@/hooks/useWakeLock";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useAuth } from "@/contexts/AuthContext";
+
+const schema = z.object({
+  problem: z.string().min(5, "Please describe your problem"),
+  subject: z.enum(["mathematics", "physics", "chemistry", "biology", "engineering", "computer_science", "statistics", "finance", "accounting", "economics", "actuarial_science"]),
+  showSteps: z.boolean().optional(),
+  generateGraph: z.boolean().optional(),
+});
+type FormData = z.infer<typeof schema>;
+
+interface Paper {
+  paperId: string; title: string; authors: string;
+  year: number | null; abstract: string | null;
+  url: string | null; citationCount: number;
+}
+interface BioModel {
+  id: string; name: string; description: string | null;
+  lastModified: string | null; publicationCount: number;
+  format: string; url: string;
+}
+interface MoleculeData {
+  cid: number; iupacName: string | null; commonName: string | null;
+  casNumber: string | null; smiles: string | null; formula: string | null;
+  molecularWeight: number | null; xLogP: number | null;
+  hBondDonors: number | null; hBondAcceptors: number | null;
+  rotatableBonds: number | null; tpsa: number | null;
+  ghsHazards: string[]; pubchemUrl: string; synonyms: string[];
+}
+
+const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+
+async function searchPapers(query: string, subject: string): Promise<Paper[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/stem/papers?q=${encodeURIComponent(query)}&subject=${encodeURIComponent(subject)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.papers ?? [];
+  } catch { return []; }
+}
+
+async function searchBioModels(query: string): Promise<{ models: BioModel[]; total: number }> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/stem/biomodels?q=${encodeURIComponent(query)}`);
+    if (!res.ok) return { models: [], total: 0 };
+    return await res.json();
+  } catch { return { models: [], total: 0 }; }
+}
+
+async function getPaperRecommendations(paperId: string): Promise<Paper[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/stem/papers/recommend?paperId=${encodeURIComponent(paperId)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.papers ?? [];
+  } catch { return []; }
+}
+
+async function lookupMolecule(query: string): Promise<MoleculeData | { error: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/stem/molecule?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? "Molecule not found" };
+    return data as MoleculeData;
+  } catch { return { error: "Request failed. Check your connection." }; }
+}
+
+function buildSolutionText(result: StemSolution, problem: string): string {
+  return [
+    `STEM SOLUTION — ${result.subject.toUpperCase()}`,
+    "─".repeat(52), "",
+    "Problem:", problem, "",
+    "Answer:", result.answer, "",
+    ...(result.corrections?.length ? ["Corrections:", ...result.corrections.map(c => `  • ${c}`), ""] : []),
+    ...(result.steps.length > 0
+      ? ["Step-by-Step:", ...result.steps.flatMap(s => [
+          `  Step ${s.stepNumber}: ${s.description}`,
+          ...(s.expression ? [`    ${s.expression}`] : []),
+          `    ${s.explanation}`, "",
+        ])]
+      : []),
+  ].join("\n");
+}
+
+const GHS_HAZARD_COLORS: Record<string, string> = {
+  "Flammable": "text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-950/40",
+  "Toxic": "text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/40",
+  "Health Hazard": "text-purple-600 dark:text-purple-400 border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950/40",
+  "Corrosive": "text-yellow-600 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-950/40",
+  "Irritant": "text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40",
+  "Environmental Hazard": "text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/40",
+};
+function ghsColor(h: string) {
+  for (const [key, val] of Object.entries(GHS_HAZARD_COLORS)) {
+    if (h.toLowerCase().includes(key.toLowerCase())) return val;
+  }
+  return "text-muted-foreground border-border bg-muted";
+}
+
+const SUBJECT_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  mathematics: { label: "Math", icon: <Calculator size={13} />, color: "blue" },
+  physics: { label: "Physics", icon: <Atom size={13} />, color: "violet" },
+  chemistry: { label: "Chemistry", icon: <FlaskConical size={13} />, color: "green" },
+  biology: { label: "Biology", icon: <Dna size={13} />, color: "emerald" },
+  engineering: { label: "Engineering", icon: <Layers size={13} />, color: "orange" },
+  computer_science: { label: "CS", icon: <Cpu size={13} />, color: "cyan" },
+  statistics: { label: "Stats", icon: <BarChart2 size={13} />, color: "rose" },
+  finance: { label: "Finance", icon: <BarChart2 size={13} />, color: "amber" },
+  accounting: { label: "Accounting", icon: <Calculator size={13} />, color: "teal" },
+  economics: { label: "Economics", icon: <BarChart2 size={13} />, color: "indigo" },
+  actuarial_science: { label: "Actuarial", icon: <Layers size={13} />, color: "purple" },
+};
+
+const API = import.meta.env.VITE_API_URL ?? "";
+
+interface SolveStep { id: string; message: string; status: "running" | "done" | "pending" }
+
+const ACADEMIC_LEVELS = [
+  { value: "high_school",   label: "High School" },
+  { value: "undergrad_1_2", label: "UG Year 1–2" },
+  { value: "undergrad_3_4", label: "UG Year 3–4" },
+  { value: "honours",       label: "Honours" },
+  { value: "masters",       label: "Masters" },
+  { value: "phd",           label: "PhD" },
+];
+
+export default function StemSolver() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const datasetInputRef = useRef<HTMLInputElement>(null);
+  const fsInputRef = useRef<HTMLInputElement>(null);
+  const { academicLevel, saveAcademicLevel } = useUserProfile();
+  const [isFileExtracting, setIsFileExtracting] = useState(false);
+  const [fileExtractError, setFileExtractError] = useState<string | null>(null);
+  const [datasetText, setDatasetText] = useState("");
+  const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
+  const [showDataset, setShowDataset] = useState(false);
+  const [financialStatements, setFinancialStatements] = useState("");
+  const [financialStatementType, setFinancialStatementType] = useState("all");
+  const [showFinancials, setShowFinancials] = useState(false);
+  const [isFsExtracting, setIsFsExtracting] = useState(false);
+
+  const STEM_FINANCIAL_STATEMENT_TYPES = [
+    { value: "income_statement", label: "Income Statement" },
+    { value: "balance_sheet",    label: "Balance Sheet" },
+    { value: "cash_flow",        label: "Cash Flow" },
+    { value: "all",              label: "Full Statements" },
+  ];
+  const [result, setResult] = useState<StemSolution | null>(null);
+  const [papers, setPapers] = useState<Paper[]>([]);
+  const [papersLoading, setPapersLoading] = useState(false);
+  const [bioModels, setBioModels] = useState<BioModel[]>([]);
+  const [bioModelsTotal, setBioModelsTotal] = useState(0);
+  const [bioModelsLoading, setBioModelsLoading] = useState(false);
+  const [recommendingFor, setRecommendingFor] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<Record<string, Paper[]>>({});
+  const [moleculeQuery, setMoleculeQuery] = useState("");
+  const [moleculeData, setMoleculeData] = useState<MoleculeData | null>(null);
+  const [moleculeError, setMoleculeError] = useState<string | null>(null);
+  const [moleculeLoading, setMoleculeLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"papers" | "biomodels" | "molecule" | "tools">("papers");
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [expandedSteps, setExpandedSteps] = useState<Record<number, boolean>>({});
+  const [copied, setCopied] = useState(false);
+  const [solvedProblem, setSolvedProblem] = useState("");
+  const [showInput, setShowInput] = useState(true);
+  const [solveStep, setSolveStep] = useState(0);
+  const solveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // SSE solve state
+  const [isSolving, setIsSolving] = useState(false);
+  useWakeLock(isSolving);
+  const [solveError, setSolveError] = useState<string | null>(null);
+  const [sseSteps, setSseSteps] = useState<SolveStep[]>([]);
+  // Live streaming thinking content — keyed by stage id ("react" | "cove")
+  const [thinkingContent, setThinkingContent] = useState<Record<string, string>>({});
+  const thinkingRef = useRef<HTMLDivElement>(null);
+  const { data: subjects } = useGetStemSubjects();
+  const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
+  const { user } = useAuth();
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: { subject: "mathematics", showSteps: true, generateGraph: false },
+  });
+
+  const selectedSubject = form.watch("subject");
+  const isFinanceSubjectForStem = ["finance", "accounting", "economics", "actuarial_science"].includes(selectedSubject);
+  const resources = stemResourcesBySubject[selectedSubject] ?? [];
+  const showBioModels = selectedSubject === "biology" || selectedSubject === "chemistry";
+  const showMolecule = selectedSubject === "chemistry";
+
+  const handleStemFileExtracted = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setIsFileExtracting(true);
+    setFileExtractError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${API}/api/files/extract`, { method: "POST", body: formData });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Server error ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.isImage) {
+        setFileExtractError("Image files are not supported here — use the camera/OCR button instead.");
+        return;
+      }
+      const extracted: string = data.text ?? "";
+      form.setValue("problem", extracted.slice(0, 2000));
+    } catch (err) {
+      setFileExtractError(err instanceof Error ? err.message : "Failed to extract file text");
+    } finally {
+      setIsFileExtracting(false);
+    }
+  };
+
+  const handleStemImageOcr = (text: string) => form.setValue("problem", text.slice(0, 1000));
+
+  const handleDatasetFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const raw = (ev.target?.result as string) ?? "";
+      setDatasetText(raw);
+      const lines = raw.trim().split("\n").filter(Boolean);
+      if (lines.length > 1) {
+        const sep = lines[0].split("\t").length > lines[0].split(",").length ? "\t" : ",";
+        setDatasetPreview(lines.slice(0, 4).map(l => l.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""))));
+      } else {
+        setDatasetPreview([]);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDatasetPaste = (raw: string) => {
+    setDatasetText(raw);
+    const lines = raw.trim().split("\n").filter(Boolean);
+    if (lines.length > 1) {
+      const sep = lines[0].split("\t").length > lines[0].split(",").length ? "\t" : ",";
+      setDatasetPreview(lines.slice(0, 4).map(l => l.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""))));
+    } else {
+      setDatasetPreview([]);
+    }
+  };
+
+  const handleFinancialStatementFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setIsFsExtracting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${API}/api/files/extract`, { method: "POST", body: formData });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? `Server error ${res.status}`);
+      }
+      const data = await res.json() as { text?: string; isImage?: boolean };
+      if (data.isImage) return;
+      setFinancialStatements((data.text ?? "").slice(0, 50000));
+      setShowFinancials(true);
+    } catch { /* silent — user can retry */ } finally {
+      setIsFsExtracting(false);
+    }
+  };
+
+  const onSubmit = async (data: FormData) => {
+    if (isAtLimit("stem")) { guard("stem", () => {}); return; }
+    setPapers([]);
+    setBioModels([]);
+    setRecommendations({});
+    setSolvedProblem(data.problem);
+    setExpandedSteps({});
+    setSolveStep(0);
+    setSolveError(null);
+    setSseSteps([]);
+    setThinkingContent({});
+    setIsSolving(true);
+
+    // Fake progress interval for visual feedback while SSE connects
+    const STEP_COUNT = 10;
+    solveIntervalRef.current = setInterval(() => {
+      setSolveStep(prev => (prev < STEP_COUNT - 1 ? prev + 1 : prev));
+    }, 1200);
+
+    try {
+      const resp = await apiFetch(`/stem/solve-stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          datasetText: datasetText.trim() || undefined,
+          academicLevel: academicLevel || undefined,
+          financialStatements: financialStatements.trim() || undefined,
+          financialStatementType: financialStatements.trim() ? financialStatementType : undefined,
+        }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        throw new Error("Server error — please try again");
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let receivedDone = false;
+
+      const updateStep = (id: string, message: string, status: SolveStep["status"]) => {
+        setSseSteps(prev => {
+          const exists = prev.some(s => s.id === id);
+          if (exists) return prev.map(s => s.id === id ? { ...s, message, status } : s);
+          return [...prev, { id, message, status }];
+        });
+      };
+
+      // event must live OUTSIDE the while loop — SSE headers and data can
+      // arrive in separate network chunks; resetting per-iteration drops events.
+      let event = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        // Always decode whatever arrived — the final frame (done=true) often
+        // carries the last SSE event (done/error). Breaking before decoding
+        // it causes the "connection interrupted" false-positive.
+        if (value?.length) {
+          buf += decoder.decode(value, { stream: !done });
+          const lines = buf.split("\n");
+          buf = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (line.startsWith("event: ")) { event = line.slice(7).trim(); }
+            else if (line.startsWith("data: ")) {
+              try {
+                const payload = JSON.parse(line.slice(6));
+                if (event === "token") {
+                  setThinkingContent(prev => ({
+                    ...prev,
+                    [payload.id]: (prev[payload.id] ?? "") + payload.text,
+                  }));
+                  requestAnimationFrame(() => {
+                    if (thinkingRef.current) {
+                      thinkingRef.current.scrollTop = thinkingRef.current.scrollHeight;
+                    }
+                  });
+                } else if (event === "step") {
+                  updateStep(payload.id, payload.message, payload.status);
+                } else if (event === "done") {
+                  receivedDone = true;
+                  setResult(payload as StemSolution);
+                  setActiveTab("papers");
+                  setShowInput(false);
+                } else if (event === "error") {
+                  receivedDone = true;
+                  setSolveError(payload.message ?? "Solve failed — please try again");
+                }
+              } catch { /* ignore parse errors */ }
+              event = "";
+            }
+          }
+        }
+
+        if (done) break;
+      }
+
+      // Flush any remaining data in the buffer (e.g. a partial line at EOF)
+      if (buf.trim()) {
+        try {
+          const payload = JSON.parse(buf.replace(/^data:\s*/, ""));
+          if (payload?.answer !== undefined) {
+            receivedDone = true;
+            setResult(payload as StemSolution);
+            setActiveTab("papers");
+            setShowInput(false);
+          } else if (payload?.message) {
+            receivedDone = true;
+            setSolveError(payload.message);
+          }
+        } catch { /* not valid JSON — ignore */ }
+      }
+
+      if (!receivedDone) {
+        setSolveError("The solve timed out or was interrupted — please try again. Complex problems may need to be broken into smaller steps.");
+      }
+    } catch (err) {
+      setSolveError(err instanceof Error ? err.message : "Network error — please try again");
+    } finally {
+      if (solveIntervalRef.current) { clearInterval(solveIntervalRef.current); solveIntervalRef.current = null; }
+      setIsSolving(false);
+    }
+
+    // After solve completes, load related papers
+    if (!solveError) {
+      setPapersLoading(true);
+      const foundPapers = await searchPapers(data.problem.slice(0, 100), data.subject);
+      setPapers(foundPapers);
+      setPapersLoading(false);
+
+      if (showBioModels) {
+        setBioModelsLoading(true);
+        const bioResult = await searchBioModels(data.problem.slice(0, 80));
+        setBioModels(bioResult.models);
+        setBioModelsTotal(bioResult.total);
+        setBioModelsLoading(false);
+      }
+    }
+  };
+
+  const handleReset = () => {
+    setResult(null);
+    setPapers([]);
+    setBioModels([]);
+    setRecommendations({});
+    setSolvedProblem("");
+    setExpandedSteps({});
+    setShowInput(true);
+    form.reset({ subject: selectedSubject, showSteps: true, generateGraph: false });
+  };
+
+  const handleGetRecommendations = async (paperId: string) => {
+    if (recommendations[paperId] || recommendingFor === paperId) return;
+    setRecommendingFor(paperId);
+    const recs = await getPaperRecommendations(paperId);
+    setRecommendations((prev) => ({ ...prev, [paperId]: recs }));
+    setRecommendingFor(null);
+  };
+
+  const handleMoleculeLookup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!moleculeQuery.trim()) return;
+    setMoleculeLoading(true);
+    setMoleculeData(null);
+    setMoleculeError(null);
+    const res = await lookupMolecule(moleculeQuery.trim());
+    if ("error" in res) setMoleculeError(res.error);
+    else setMoleculeData(res);
+    setMoleculeLoading(false);
+  };
+
+  const handleCopy = async () => {
+    if (!result) return;
+    await navigator.clipboard.writeText(buildSolutionText(result, solvedProblem));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownload = () => {
+    if (!result) return;
+    const blob = new Blob([buildSolutionText(result, solvedProblem)], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${makeLsgFilename("stem", result.subject + "-SOLUTION")}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const toggleStep = (n: number) => setExpandedSteps(p => ({ ...p, [n]: !(p[n] ?? true) }));
+  const toggleGroup = (label: string) => setExpandedGroups(p => ({ ...p, [label]: !p[label] }));
+
+  // ── Solving progress panel ─────────────────────────────────────────────────
+  const SOLVE_STEPS: { label: string; detail: string; icon: React.ReactNode }[] = [
+    { label: "Problem parsing", detail: "Identifying knowns, unknowns, and constraints", icon: <Search size={11} /> },
+    { label: "ReAct Engine — THOUGHT 1", detail: "Understanding domain scope and selecting approach", icon: <Sparkles size={11} /> },
+    { label: "ReAct Engine — ACTION 1", detail: "Choosing formula, theorem, or algorithm", icon: <Calculator size={11} /> },
+    { label: "ReAct Engine — OBSERVATION 1", detail: "Setting up equations and initial expressions", icon: <BookOpen size={11} /> },
+    { label: "ReAct Engine — THOUGHT 2", detail: "Executing full calculation with LaTeX notation", icon: <Sparkles size={11} /> },
+    { label: "Chain-of-Verification", detail: "Critic agent checking arithmetic, units, and logic", icon: <ShieldCheck size={11} /> },
+    { label: "Applying corrections", detail: "Updating answer based on critic findings", icon: <CheckCircle size={11} /> },
+    { label: "LaTeX & step formatting", detail: "Rendering math notation and building explanation", icon: <Layers size={11} /> },
+    { label: "Academic paper search", detail: "Fetching related research from Semantic Scholar", icon: <Database size={11} /> },
+    { label: "Saving to Documents", detail: "Storing solution for later retrieval", icon: <FileText size={11} /> },
+  ];
+
+  const currentSolveStageName = (() => {
+    if (sseSteps.length > 0) {
+      const running = sseSteps.find(s => s.status === "running");
+      if (running) {
+        if (running.id === "react") return "ReAct Engine running";
+        if (running.id === "cove") return "Chain-of-Verification";
+        if (running.id === "build") return "Formatting solution";
+        if (running.id === "saving") return "Saving to Documents";
+      }
+      const done = sseSteps.filter(s => s.status === "done");
+      if (done.length > 0) return `${done.length} stage${done.length > 1 ? "s" : ""} complete`;
+    }
+    if (solveStep < 5) return "ReAct Engine running";
+    if (solveStep < 7) return "Chain-of-Verification";
+    return "Finalising solution";
+  })();
+
+  const activeThinkingId = Object.keys(thinkingContent).at(-1) ?? null;
+  const activeThinkingText = activeThinkingId ? thinkingContent[activeThinkingId] : "";
+  const isThinking = activeThinkingText.length > 0;
+
+
+  // ── Shared subject pills ──────────────────────────────────────────────────
+  const SubjectPills = (
+    <div className="flex flex-wrap gap-2 justify-center">
+      {subjects
+        ? subjects.subjects.map((sub) => {
+            const meta = SUBJECT_META[sub.id];
+            const isActive = selectedSubject === sub.id;
+            return (
+              <button
+                key={sub.id}
+                onClick={() => { form.setValue("subject", sub.id as FormData["subject"]); setExpandedGroups({}); }}
+                className={cn(
+                  "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-all",
+                  isActive
+                    ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/25 scale-105"
+                    : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground hover:scale-[1.02]"
+                )}
+              >
+                {meta?.icon}
+                {meta?.label ?? sub.name}
+              </button>
+            );
+          })
+        : ["Math","Physics","Chemistry","Biology","Engineering","CS","Stats"].map(s => (
+            <div key={s} className="h-8 w-20 rounded-full bg-muted animate-pulse" />
+          ))}
+    </div>
+  );
+
+  // ── Shared input form ─────────────────────────────────────────────────────
+  const InputForm = (
+    <form onSubmit={form.handleSubmit(onSubmit)}>
+      {solveError && (
+        <div className="mb-3 flex items-start gap-2 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/30 text-xs text-destructive">
+          <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">Solve failed</p>
+            <p className="opacity-80 mt-0.5">{solveError}</p>
+          </div>
+        </div>
+      )}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm ring-1 ring-transparent focus-within:ring-primary/30 transition-all">
+        {/* Upload tools row */}
+        <div className="flex items-center gap-2 px-4 pt-3 pb-0 flex-wrap">
+          <StemImageOcr onExtracted={handleStemImageOcr} compact />
+          <input ref={fileInputRef} type="file" accept=".txt,.pdf,.docx,.doc,.md" className="sr-only" onChange={handleStemFileExtracted} />
+          <input ref={datasetInputRef} type="file" accept=".csv,.tsv,.txt" className="sr-only" onChange={handleDatasetFile} />
+          <input ref={fsInputRef} type="file" accept=".pdf,.docx,.doc,.txt,.md" className="sr-only" onChange={handleFinancialStatementFile} />
+          <button
+            type="button"
+            disabled={isFileExtracting}
+            onClick={() => { setFileExtractError(null); fileInputRef.current?.click(); }}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 bg-card transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isFileExtracting
+              ? <><Loader2 size={12} className="animate-spin" /> Extracting…</>
+              : <><FileText size={12} /> Upload file</>}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowDataset(v => !v)}
+            className={cn(
+              "flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all",
+              showDataset || datasetText
+                ? "border-violet-400/60 text-violet-600 dark:text-violet-400 bg-violet-50/30 dark:bg-violet-900/20"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-primary/50 bg-card"
+            )}
+          >
+            <Database size={12} />
+            {datasetText ? "Dataset loaded" : "Add dataset"}
+          </button>
+          {!!user && isFinanceSubjectForStem && (
+            <button
+              type="button"
+              onClick={() => setShowFinancials(v => !v)}
+              className={cn(
+                "flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all",
+                showFinancials || financialStatements
+                  ? "border-amber-400/60 text-amber-600 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-900/20"
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-amber-400/40 bg-card"
+              )}
+            >
+              <TrendingUp size={12} />
+              {financialStatements ? "Statements loaded" : "Financial statements"}
+            </button>
+          )}
+          {fileExtractError && (
+            <span className="text-xs text-destructive">{fileExtractError}</span>
+          )}
+        </div>
+        {/* Dataset panel */}
+        {showDataset && (
+          <div className="mx-4 mt-2 rounded-xl border border-violet-400/30 bg-violet-50/20 dark:bg-violet-900/10 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold text-violet-700 dark:text-violet-400">
+                Dataset <span className="font-normal text-muted-foreground">(CSV/TSV — AI computes statistics and incorporates them into the solution)</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => { setDatasetText(""); setDatasetPreview([]); }}
+                className="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => datasetInputRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-violet-300 dark:border-violet-700 rounded-lg py-2 transition-colors hover:border-violet-400"
+            >
+              <Database size={12} /> Upload CSV or TSV file
+            </button>
+            <textarea
+              value={datasetText}
+              onChange={e => handleDatasetPaste(e.target.value)}
+              rows={3}
+              placeholder={"Or paste CSV / tab-separated data…\ne.g.  Group,Value\n      A,3.14\n      B,2.71"}
+              className="w-full px-2.5 py-1.5 font-mono text-xs rounded-lg border border-violet-200 dark:border-violet-800 bg-background focus:outline-none focus:ring-1 focus:ring-violet-400 resize-none"
+            />
+            {datasetPreview.length > 1 && (
+              <div className="rounded-lg border border-violet-300/40 bg-background p-2 overflow-x-auto">
+                <p className="text-[10px] text-violet-600 dark:text-violet-400 flex items-center gap-1 mb-1.5 font-medium">
+                  <CheckCircle size={10} /> {datasetText.trim().split("\n").length - 1} rows × {datasetPreview[0]?.length ?? 0} columns loaded
+                </p>
+                <table className="text-[10px] w-full border-collapse">
+                  <thead>
+                    <tr>{datasetPreview[0]?.map((h, i) => <th key={i} className="text-left px-2 py-0.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {datasetPreview.slice(1).map((row, i) => (
+                      <tr key={i}>{row.map((cell, j) => <td key={j} className="px-2 py-0.5 text-muted-foreground whitespace-nowrap">{cell}</td>)}</tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+        {/* ── Financial Statements panel ── */}
+        {!!user && isFinanceSubjectForStem && showFinancials && (
+          <div className="mx-4 mt-2 rounded-xl border border-amber-400/30 bg-amber-50/20 dark:bg-amber-900/10 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                Financial Statements <span className="font-normal text-muted-foreground">(AI computes all ratios — profitability, liquidity, solvency, efficiency)</span>
+              </p>
+              <button type="button" onClick={() => { setFinancialStatements(""); }}
+                className="text-[10px] text-muted-foreground hover:text-destructive transition-colors">Clear</button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {STEM_FINANCIAL_STATEMENT_TYPES.map(st => (
+                <button key={st.value} type="button" onClick={() => setFinancialStatementType(st.value)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md border text-[10px] font-medium transition-all",
+                    financialStatementType === st.value
+                      ? "border-amber-500/60 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400"
+                      : "border-border text-muted-foreground hover:border-amber-400/40"
+                  )}>{st.label}</button>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={isFsExtracting}
+              onClick={() => fsInputRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-amber-300 dark:border-amber-700 rounded-lg py-2 transition-colors hover:border-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isFsExtracting ? <Loader2 size={12} className="animate-spin" /> : <TrendingUp size={12} />}
+              {isFsExtracting ? "Extracting…" : "Upload PDF, Word or text file"}
+            </button>
+            <textarea
+              value={financialStatements}
+              onChange={e => setFinancialStatements(e.target.value)}
+              rows={4}
+              placeholder={"Or paste statements directly…\n\nSingle year:\n  Revenue:   $2,450,000\n  Net Income: $416,500\n\nMulti-year (auto YoY + CAGR):\n  FY2023\n  Revenue:   $2,450,000\n  FY2022\n  Revenue:   $2,100,000"}
+              className="w-full px-2.5 py-1.5 font-mono text-xs rounded-lg border border-amber-200 dark:border-amber-800 bg-background focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
+            />
+            {financialStatements.trim() && (
+              <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <CheckCircle size={10} /> Statements loaded — AI will compute all key ratios automatically
+              </p>
+            )}
+          </div>
+        )}
+        {/* Textarea */}
+        <textarea
+          {...form.register("problem")}
+          rows={5}
+          placeholder={`Type your ${SUBJECT_META[selectedSubject]?.label ?? "STEM"} problem here…\n\ne.g.  Find the definite integral of x·sin(x) from 0 to π\ne.g.  A 5kg mass on a 30° incline with μ = 0.3. Find acceleration.`}
+          className="w-full px-4 pt-3 pb-2 bg-transparent text-sm focus:outline-none resize-none font-mono leading-relaxed placeholder:text-muted-foreground/40 placeholder:font-sans"
+        />
+        {form.formState.errors.problem && (
+          <p className="text-destructive text-xs px-4 pb-1">{form.formState.errors.problem.message}</p>
+        )}
+        {/* Bottom action row */}
+        <div className="px-4 py-3 border-t border-border bg-muted/20">
+          {/* Academic level */}
+          <div className="mb-3">
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
+              <GraduationCap size={12} /> Academic Level
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {ACADEMIC_LEVELS.map(lvl => (
+                <button
+                  key={lvl.value}
+                  type="button"
+                  onClick={() => saveAcademicLevel(lvl.value)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md border text-[11px] font-medium transition-all",
+                    academicLevel === lvl.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  )}
+                >
+                  {lvl.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" {...form.register("showSteps")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
+                <span className="text-xs text-muted-foreground">Show steps</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" {...form.register("generateGraph")} className="accent-primary w-3.5 h-3.5 cursor-pointer" />
+                <span className="text-xs text-muted-foreground">Generate graph</span>
+              </label>
+            </div>
+            <div className="flex items-center gap-3 ml-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => openBuy("stem")}
+                className="text-[11px] text-orange-400 hover:text-orange-300 transition-colors font-medium whitespace-nowrap"
+              >
+                Buy one solve →
+              </button>
+              <button
+                type="submit"
+                className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/25"
+              >
+                <Zap size={14} /> Solve
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  );
+
+  return (
+    <>
+    <div className="h-full flex flex-col overflow-hidden bg-background">
+
+      {/* ── Top bar — only shown when results exist ────────────────────────── */}
+      {result && (
+        <div className="shrink-0 border-b border-border bg-card/80 backdrop-blur-sm">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Zap size={14} className="text-primary" />
+              <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+              <span className="text-muted-foreground/40 text-xs">·</span>
+              <span className="text-xs text-muted-foreground">STEM Solver</span>
+            </div>
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-1.5 transition-all"
+            >
+              <RotateCcw size={11} /> New problem
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Input / loading state (no result) ───────────────────────────── */}
+      {!result && (
+        <div className="flex-1 overflow-y-auto">
+          <div className="w-full max-w-2xl mx-auto px-4 py-6 sm:py-10 space-y-5">
+
+            {isSolving ? (
+              /* ── Inline loading view ──────────────────────────────────────── */
+              <div className="space-y-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <FlaskConical size={15} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold leading-tight">Solving your problem…</p>
+                      <p className="text-[10px] text-muted-foreground leading-tight">{currentSolveStageName}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[10px] text-muted-foreground">AI working</span>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-700"
+                    style={{ width: `${Math.round(((solveStep + 1) / SOLVE_STEPS.length) * 100)}%` }}
+                  />
+                </div>
+
+                {/* Stage pills */}
+                {sseSteps.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {sseSteps.map(step => (
+                      <div
+                        key={step.id}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium border ${
+                          step.status === "done"
+                            ? "bg-primary/10 border-primary/30 text-primary"
+                            : "bg-card border-border text-muted-foreground"
+                        }`}
+                      >
+                        {step.status === "done"
+                          ? <CheckCircle size={9} className="shrink-0" />
+                          : <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />}
+                        <span className="truncate max-w-[200px]">{step.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Live thinking stream */}
+                {isThinking && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={10} className="text-primary" />
+                      <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+                        {activeThinkingId === "react" ? "ReAct Engine — Live" : "Chain-of-Verification — Live"}
+                      </span>
+                      <div className="flex gap-0.5">
+                        {[0, 1, 2].map(i => (
+                          <div key={i} className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                        ))}
+                      </div>
+                    </div>
+                    <div
+                      ref={thinkingRef}
+                      className="h-64 overflow-y-auto rounded-xl bg-muted/30 border border-border px-3.5 py-3 font-mono text-[11px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words"
+                    >
+                      {activeThinkingText}
+                      <span className="inline-block w-1.5 h-3.5 bg-primary/70 animate-pulse ml-0.5 translate-y-0.5" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* ── Normal input view ────────────────────────────────────────── */
+              <>
+                <div className="text-center space-y-2">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Zap size={18} className="text-primary" />
+                    <span className="text-xs font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+                  </div>
+                  <h1 className="text-2xl font-bold tracking-tight">STEM Solver</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Solve any problem instantly — Math · Physics · Chemistry · Biology · Engineering · CS · Statistics
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                    <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary">
+                      <Zap size={9} /> ReAct Loop
+                    </span>
+                    <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400">
+                      <ShieldCheck size={9} /> Chain-of-Verification
+                    </span>
+                    <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-border bg-muted text-muted-foreground">
+                      <Database size={9} /> Research-backed
+                    </span>
+                  </div>
+                </div>
+                {SubjectPills}
+                {InputForm}
+              </>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* ── RESULTS state (scrollable from top) ──────────────────────────── */}
+      {result && (
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 space-y-4">
+
+            {/* Collapsed edit bar or expanded form */}
+            {showInput ? (
+              <div className="space-y-4">
+                {SubjectPills}
+                {InputForm}
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowInput(true)}
+                className="w-full flex items-center gap-3 bg-card border border-border hover:border-primary/40 rounded-2xl px-4 py-3 text-left transition-all group"
+              >
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-primary/10 text-primary">
+                  {SUBJECT_META[selectedSubject]?.icon}
+                </div>
+                <span className="text-sm text-muted-foreground line-clamp-1 flex-1 font-mono">{solvedProblem}</span>
+                <span className="text-[10px] text-muted-foreground/60 group-hover:text-primary transition-colors shrink-0 font-medium">Edit →</span>
+              </button>
+            )}
+
+          {/* ── Results ─────────────────────────────────────────────────────── */}
+          <div className="space-y-4">
+
+              {/* Method badges row */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-primary/30 bg-primary/8 text-primary">
+                  <Zap size={9} /> ReAct Loop
+                </span>
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400">
+                  <ShieldCheck size={9} /> Chain-of-Verification
+                </span>
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-border bg-muted text-muted-foreground capitalize">
+                  {SUBJECT_META[result.subject]?.icon} {result.subject.replace(/_/g, " ")}
+                </span>
+                {result.confidence !== undefined && <ConfidenceBadge confidence={result.confidence} />}
+                {result.passedVerification !== undefined && (
+                  result.passedVerification ? (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-300 dark:border-green-700 px-2.5 py-1 rounded-full">
+                      <ShieldCheck size={9} /> Verified
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 px-2.5 py-1 rounded-full">
+                      <AlertTriangle size={9} /> Auto-corrected
+                    </span>
+                  )
+                )}
+              </div>
+
+              {/* ── Answer card ── */}
+              <div className="bg-card border border-green-200 dark:border-green-800/50 rounded-2xl overflow-hidden shadow-sm">
+                <div className="flex items-center justify-between px-5 py-3 bg-green-50 dark:bg-green-950/20 border-b border-green-200 dark:border-green-800/50">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle size={16} className="text-green-500 shrink-0" />
+                    <span className="text-sm font-bold text-green-800 dark:text-green-200">Answer</span>
+                  </div>
+                  <ExportButtons
+                    getHtml={() => buildStemExportHtml({
+                      problem: solvedProblem,
+                      subject: result.subject,
+                      answer: result.answer,
+                      steps: result.steps,
+                      corrections: result.corrections,
+                      confidence: result.confidence,
+                      passedVerification: result.passedVerification,
+                      latex: result.latex ?? undefined,
+                    })}
+                    getText={() => buildSolutionText(result, solvedProblem)}
+                    filename={makeLsgFilename("stem", result.subject + "-SOLUTION")}
+                    formats={["docx", "pdf", "txt", "copy"]}
+                  />
+                </div>
+                <div className="px-5 py-5">
+                  {result.graphData ? (
+                    <div className="rounded-xl border border-border bg-muted/30 px-5 py-4 font-mono text-sm leading-relaxed text-foreground">
+                      <MathRenderer text={result.answer} className="text-base" />
+                    </div>
+                  ) : (
+                    <div className="handwritten-block">
+                      <MathRenderer text={result.answer} className="text-base" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Steps accordion ── */}
+              {result.steps.length > 0 && (
+                <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                  <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20">
+                    <div className="flex items-center gap-2">
+                      <BookOpen size={14} className="text-primary" />
+                      <h3 className="font-bold text-sm">Step-by-Step Solution</h3>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground">{result.steps.length} steps</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary/10 text-primary">ReAct</span>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {result.steps.map((step) => {
+                      const isOpen = expandedSteps[step.stepNumber] ?? true;
+                      return (
+                        <div key={step.stepNumber}>
+                          <button
+                            onClick={() => toggleStep(step.stepNumber)}
+                            className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/20 transition-colors"
+                          >
+                            {result.graphData ? (
+                              <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{step.stepNumber}</span>
+                            ) : (
+                              <span className="handwritten-step-num shrink-0">{step.stepNumber}</span>
+                            )}
+                            <div className="flex-1 flex items-center gap-2 min-w-0">
+                              <span className="text-xs font-semibold text-foreground truncate">{step.description}</span>
+                              <StepTypeBadge desc={step.description} />
+                            </div>
+                            {isOpen
+                              ? <ChevronUp size={13} className="text-muted-foreground shrink-0" />
+                              : <ChevronDown size={13} className="text-muted-foreground shrink-0" />}
+                          </button>
+                          {isOpen && (
+                            <div className="px-5 pb-5 pl-14 space-y-2.5">
+                              {step.expression && (
+                                result.graphData ? (
+                                  <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5">
+                                    <MathRenderer text={step.expression} className="text-sm" />
+                                  </div>
+                                ) : (
+                                  <div className="handwritten-expression">
+                                    <MathRenderer text={step.expression} className="text-sm" />
+                                  </div>
+                                )
+                              )}
+                              {result.graphData ? (
+                                <div className="text-sm text-muted-foreground leading-relaxed">
+                                  <MathRenderer text={step.explanation} className="text-sm" />
+                                </div>
+                              ) : (
+                                <div className="handwritten-block">
+                                  <MathRenderer text={step.explanation} className="text-sm" />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+
+              {/* ── Graph ── */}
+              {result.graphData && (
+                <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                  <h3 className="font-bold text-sm mb-4 text-foreground">{result.graphData.labels?.title ?? "Graph"}</h3>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={result.graphData.data}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis dataKey="x" tick={{ fontSize: 11 }} label={{ value: result.graphData.labels?.x ?? "x", position: "insideBottom", offset: -2, fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} label={{ value: result.graphData.labels?.y ?? "y", angle: -90, position: "insideLeft", fontSize: 11 }} />
+                        <Tooltip contentStyle={{ fontSize: "12px", borderRadius: "8px" }} />
+                        <Line type="monotone" dataKey="y" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              {/* Repo attribution */}
+              <div className="px-1 pb-1">
+                <p className="text-[10px] text-muted-foreground/50 text-center leading-relaxed">
+                  Tool index from{" "}
+                  <a href="https://github.com/zawaditechnologiesllc/awesome-ai-for-science" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">awesome-ai-for-science</a>
+                  {" · "}
+                  <a href="https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">AIAgents4Pharmabio</a>
+                  {" · "}
+                  <a href="https://github.com/wu-yc/LabClaw" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary underline underline-offset-2">LabClaw (Stanford)</a>
+                </p>
+              </div>
+
+              {/* ── Research Stack ── */}
+              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <Database size={14} className="text-primary" />
+                    <h3 className="font-bold text-sm">Research Stack</h3>
+                  </div>
+                  {/* Live data source badges */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <LiveBadge label="Semantic Scholar" href="https://www.semanticscholar.org/" />
+                    {showBioModels && <LiveBadge label="EBI BioModels" href="https://www.ebi.ac.uk/biomodels/" />}
+                    {showMolecule && <LiveBadge label="PubChem" href="https://pubchem.ncbi.nlm.nih.gov/" />}
+                  </div>
+                </div>
+
+                {/* Tab row */}
+                <div className="flex border-b border-border overflow-x-auto scrollbar-none">
+                  {([
+                    { key: "papers", label: "Papers", icon: <Search size={12} />, badge: papersLoading ? "…" : papers.length > 0 ? String(papers.length) : null, always: true },
+                    { key: "biomodels", label: "BioModels", icon: <Dna size={12} />, badge: bioModelsLoading ? "…" : bioModels.length > 0 ? String(bioModels.length) : null, always: showBioModels },
+                    { key: "molecule", label: "Molecule", icon: <Atom size={12} />, badge: null, always: showMolecule },
+                    { key: "tools", label: "AI Toolkit", icon: <Sparkles size={12} />, badge: null, always: true },
+                  ] as Array<{ key: string; label: string; icon: React.ReactNode; badge: string | null; always: boolean }>)
+                    .filter(t => t.always)
+                    .map(tab => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key as typeof activeTab)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-all shrink-0",
+                          activeTab === tab.key
+                            ? "border-primary text-primary bg-primary/5"
+                            : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                        )}
+                      >
+                        {tab.icon}
+                        {tab.label}
+                        {tab.badge && (
+                          <span className="bg-primary/15 text-primary text-[9px] px-1.5 py-0.5 rounded-full font-bold">{tab.badge}</span>
+                        )}
+                      </button>
+                    ))}
+                </div>
+
+                {/* Papers tab */}
+                {activeTab === "papers" && (
+                  <PapersPanel
+                    papers={papers}
+                    loading={papersLoading}
+                    recommendingFor={recommendingFor}
+                    recommendations={recommendations}
+                    onRecommend={handleGetRecommendations}
+                  />
+                )}
+
+                {/* BioModels tab */}
+                {activeTab === "biomodels" && showBioModels && (
+                  <BioModelsPanel models={bioModels} total={bioModelsTotal} loading={bioModelsLoading} />
+                )}
+
+                {/* Molecule tab */}
+                {activeTab === "molecule" && showMolecule && (
+                  <MoleculePanel
+                    query={moleculeQuery}
+                    onQueryChange={setMoleculeQuery}
+                    onSubmit={handleMoleculeLookup}
+                    loading={moleculeLoading}
+                    data={moleculeData}
+                    error={moleculeError}
+                  />
+                )}
+
+                {/* AI Toolkit tab */}
+                {activeTab === "tools" && (
+                  <ToolkitPanel resources={resources} expandedGroups={expandedGroups} onToggle={toggleGroup} />
+                )}
+              </div>
+            </div>
+
+          <div className="h-6" />
+        </div>
+      </div>
+    )}
+
+    </div>
+
+    <PaywallFlow
+      pickerState={pickerState}
+      checkoutState={checkoutState}
+      plan={plan}
+      closePicker={closePicker}
+      closeCheckout={closeCheckout}
+      chooseSubscription={chooseSubscription}
+      choosePayg={choosePayg}
+    />
+    </>
+  );
+}
+
+// ── Sub-panels ─────────────────────────────────────────────────────────────
+
+function LiveBadge({ label, href }: { label: string; href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-1 text-[9px] font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-1.5 py-0.5 rounded-full hover:opacity-80 transition-opacity"
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+      {label}
+    </a>
+  );
+}
+
+function PapersPanel({
+  papers, loading, recommendingFor, recommendations, onRecommend,
+}: {
+  papers: Paper[]; loading: boolean;
+  recommendingFor: string | null;
+  recommendations: Record<string, Paper[]>;
+  onRecommend: (id: string) => void;
+}) {
+  return (
+    <div>
+      {loading && (
+        <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+          <Loader2 size={15} className="animate-spin" />
+          <span className="text-sm">Searching Semantic Scholar…</span>
+        </div>
+      )}
+      {!loading && papers.length === 0 && (
+        <div className="flex flex-col items-center py-10 text-muted-foreground/40">
+          <Search size={28} className="mb-2" />
+          <p className="text-sm">No papers found</p>
+        </div>
+      )}
+      {!loading && papers.length > 0 && (
+        <div className="divide-y divide-border">
+          {papers.map((paper) => (
+            <div key={paper.paperId} className="px-5 py-4 space-y-2">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <a
+                    href={paper.url ?? `https://www.semanticscholar.org/paper/${paper.paperId}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-foreground hover:text-primary transition-colors leading-snug block"
+                  >
+                    {paper.title}
+                  </a>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {paper.authors && (
+                      <span className="text-xs text-muted-foreground">
+                        {paper.authors.split(",").slice(0, 2).join(", ")}{paper.authors.split(",").length > 2 ? " et al." : ""}
+                      </span>
+                    )}
+                    {paper.year && <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-medium">{paper.year}</span>}
+                    {paper.citationCount > 0 && (
+                      <span className="text-[10px] bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">
+                        {paper.citationCount.toLocaleString()} cites
+                      </span>
+                    )}
+                  </div>
+                  {paper.abstract && (
+                    <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{paper.abstract}</p>
+                  )}
+                </div>
+                {paper.url && (
+                  <a href={paper.url} target="_blank" rel="noopener noreferrer"
+                    className="shrink-0 p-1.5 rounded-lg border border-border hover:border-primary hover:text-primary transition-all text-muted-foreground">
+                    <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+              <button
+                onClick={() => onRecommend(paper.paperId)}
+                disabled={!!recommendations[paper.paperId] || recommendingFor === paper.paperId}
+                className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary border border-border hover:border-primary/40 px-2.5 py-1 rounded-lg transition-all disabled:opacity-40"
+              >
+                {recommendingFor === paper.paperId
+                  ? <><Loader2 size={10} className="animate-spin" /> Finding similar…</>
+                  : recommendations[paper.paperId]
+                  ? <><Sparkles size={10} className="text-primary" /> {recommendations[paper.paperId].length} similar shown</>
+                  : <><Sparkles size={10} /> Find similar papers</>}
+              </button>
+              {recommendations[paper.paperId] && recommendations[paper.paperId].length > 0 && (
+                <div className="ml-4 border-l-2 border-primary/20 pl-3 space-y-2">
+                  {recommendations[paper.paperId].map((rec) => (
+                    <div key={rec.paperId}>
+                      <a href={rec.url ?? `https://www.semanticscholar.org/paper/${rec.paperId}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-xs font-medium text-foreground hover:text-primary transition-colors block">
+                        {rec.title}
+                      </a>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {rec.year && <span className="text-[10px] text-muted-foreground">{rec.year}</span>}
+                        {rec.citationCount > 0 && <span className="text-[10px] text-muted-foreground">· {rec.citationCount.toLocaleString()} cites</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="px-5 py-2.5 border-t border-border bg-muted/20">
+        <p className="text-[10px] text-muted-foreground">
+          <a href="https://www.semanticscholar.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Semantic Scholar</a>
+          {" "}&amp; <a href="https://github.com/Future-House/paper-qa" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Talk2Scholars</a> pattern — 200M+ papers (Allen AI)
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BioModelsPanel({ models, total, loading }: { models: BioModel[]; total: number; loading: boolean }) {
+  return (
+    <div>
+      {loading && (
+        <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+          <Loader2 size={15} className="animate-spin" />
+          <span className="text-sm">Searching EBI BioModels…</span>
+        </div>
+      )}
+      {!loading && models.length === 0 && (
+        <div className="flex flex-col items-center py-10 text-muted-foreground/40">
+          <Dna size={28} className="mb-2" />
+          <p className="text-sm">No curated models found</p>
+        </div>
+      )}
+      {!loading && models.length > 0 && (
+        <>
+          {total > 0 && (
+            <div className="px-5 py-2 border-b border-border bg-muted/20">
+              <span className="text-xs text-muted-foreground">{total.toLocaleString()} total matches — top {models.length}</span>
+            </div>
+          )}
+          <div className="divide-y divide-border">
+            {models.map((model) => (
+              <div key={model.id} className="px-5 py-4 flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <a href={model.url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-foreground hover:text-primary transition-colors block">{model.name}</a>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono font-medium">{model.id}</span>
+                    <span className="text-[10px] bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded font-medium">{model.format}</span>
+                    {model.publicationCount > 0 && (
+                      <span className="text-[10px] bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">
+                        {model.publicationCount} pub{model.publicationCount > 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                  {model.description && <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{model.description}</p>}
+                </div>
+                <a href={model.url} target="_blank" rel="noopener noreferrer"
+                  className="shrink-0 p-1.5 rounded-lg border border-border hover:border-primary hover:text-primary transition-all text-muted-foreground">
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      <div className="px-5 py-2.5 border-t border-border bg-muted/20">
+        <p className="text-[10px] text-muted-foreground">
+          <a href="https://www.ebi.ac.uk/biomodels/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">EBI BioModels</a>
+          {" "}&amp; <a href="https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Talk2BioModels</a> pattern — curated SBML models
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MoleculePanel({
+  query, onQueryChange, onSubmit, loading, data, error,
+}: {
+  query: string; onQueryChange: (v: string) => void; onSubmit: (e: React.FormEvent) => void;
+  loading: boolean; data: MoleculeData | null; error: string | null;
+}) {
+  return (
+    <div>
+      <div className="px-5 py-4 border-b border-border">
+        <form onSubmit={onSubmit} className="flex gap-2">
+          <input
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="Name or SMILES — e.g. aspirin, caffeine, C8H10N4O2"
+            className="flex-1 px-3 py-2 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono placeholder:font-sans placeholder:text-muted-foreground/50"
+          />
+          <button type="submit" disabled={loading || !query.trim()}
+            className="flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2 rounded-xl font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-all">
+            {loading ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+            Lookup
+          </button>
+        </form>
+        <p className="text-[10px] text-muted-foreground mt-1.5">
+          Powered by <a href="https://pubchem.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">PubChem</a>
+          {" "}&amp; <a href="https://github.com/zawaditechnologiesllc/chemcrow-public" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ChemCrow</a> pattern
+        </p>
+      </div>
+      {error && (
+        <div className="px-5 py-4">
+          <p className="text-sm text-destructive font-medium">{error}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Try: aspirin, glucose, ethanol, C6H12O6</p>
+        </div>
+      )}
+      {data && !loading && (
+        <div className="px-5 py-5 space-y-4">
+          <div>
+            <h3 className="text-base font-bold">{data.commonName ?? data.iupacName ?? `CID ${data.cid}`}</h3>
+            {data.iupacName && data.commonName && <p className="text-xs text-muted-foreground mt-0.5 font-mono">{data.iupacName}</p>}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {data.casNumber && <span className="text-[10px] bg-muted px-2 py-0.5 rounded font-mono">CAS {data.casNumber}</span>}
+              {data.formula && <span className="text-[10px] bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded font-mono font-bold">{data.formula}</span>}
+              <a href={data.pubchemUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-0.5">
+                PubChem CID {data.cid} <ExternalLink size={9} />
+              </a>
+            </div>
+          </div>
+          {data.smiles && (
+            <div>
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block mb-1">SMILES</label>
+              <div className="px-3 py-2.5 bg-muted rounded-xl font-mono text-xs border border-border break-all select-all leading-relaxed">{data.smiles}</div>
+            </div>
+          )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {[
+              { label: "Mol. Weight", val: data.molecularWeight != null ? `${data.molecularWeight} g/mol` : null },
+              { label: "XLogP", val: data.xLogP != null ? String(data.xLogP) : null },
+              { label: "H-Bond Donors", val: data.hBondDonors != null ? String(data.hBondDonors) : null },
+              { label: "H-Bond Acceptors", val: data.hBondAcceptors != null ? String(data.hBondAcceptors) : null },
+              { label: "Rotatable Bonds", val: data.rotatableBonds != null ? String(data.rotatableBonds) : null },
+              { label: "TPSA (Å²)", val: data.tpsa != null ? String(data.tpsa) : null },
+            ].filter(d => d.val != null).map(d => (
+              <div key={d.label} className="bg-muted/50 rounded-xl p-3 border border-border">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wide">{d.label}</div>
+                <div className="text-sm font-bold mt-0.5">{d.val}</div>
+              </div>
+            ))}
+          </div>
+          {data.ghsHazards.length > 0 && (
+            <div>
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block mb-1.5">GHS Safety Hazards</label>
+              <div className="flex flex-wrap gap-1.5">
+                {data.ghsHazards.map(h => (
+                  <span key={h} className={`text-[11px] px-2 py-0.5 rounded border font-medium ${ghsColor(h)}`}>{h}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {data.synonyms.length > 0 && (
+            <div>
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block mb-1.5">Known Names</label>
+              <div className="flex flex-wrap gap-1.5">
+                {data.synonyms.map(s => (
+                  <span key={s} className="text-[11px] px-2 py-0.5 bg-muted text-muted-foreground rounded border border-border">{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {!data && !loading && !error && (
+        <div className="flex flex-col items-center py-8 text-muted-foreground/40">
+          <Atom size={28} className="mb-2" />
+          <p className="text-sm">Look up any molecule by name or SMILES</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ToolkitPanel({
+  resources, expandedGroups, onToggle,
+}: {
+  resources: ReturnType<typeof stemResourcesBySubject[string]>;
+  expandedGroups: Record<string, boolean>;
+  onToggle: (label: string) => void;
+}) {
+  if (resources.length === 0) {
+    return <div className="px-5 py-8 text-center text-sm text-muted-foreground/40">No tools for this subject</div>;
+  }
+  return (
+    <div>
+      <div className="px-5 py-3 border-b border-border bg-muted/10">
+        <p className="text-[10px] text-muted-foreground">
+          Curated from{" "}
+          <a href="https://github.com/zawaditechnologiesllc/awesome-ai-for-science" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">awesome-ai-for-science</a>
+          {" "}&amp;{" "}
+          <a href="https://github.com/zawaditechnologiesllc/AIAgents4Pharmabio" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">AIAgents4Pharmabio</a>
+        </p>
+      </div>
+      <div className="divide-y divide-border">
+        {resources.map((group) => {
+          const isOpen = expandedGroups[group.label] ?? true;
+          return (
+            <div key={group.label}>
+              <button
+                onClick={() => onToggle(group.label)}
+                className="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-muted/20 transition-colors"
+              >
+                <span className="text-xs font-bold text-foreground">{group.label}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-medium">{group.tools.length}</span>
+                  {isOpen ? <ChevronUp size={12} className="text-muted-foreground" /> : <ChevronDown size={12} className="text-muted-foreground" />}
+                </div>
+              </button>
+              {isOpen && (
+                <div className="px-4 pb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {group.tools.map((tool) => (
+                    <a
+                      key={tool.name}
+                      href={tool.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col gap-1 p-3 rounded-xl border border-border hover:border-primary/50 hover:bg-muted/40 transition-all group"
+                    >
+                      <div className="flex items-center gap-1.5 justify-between">
+                        <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-tight">{tool.name}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded border font-bold uppercase tracking-wide ${toolTypeColors[tool.type]}`}>{tool.type}</span>
+                          <ExternalLink size={10} className="text-muted-foreground/50 group-hover:text-primary transition-colors" />
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{tool.description}</p>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Small helpers ──────────────────────────────────────────────────────────
+
+function ConfidenceBadge({ confidence }: { confidence: number }) {
+  const pct = Math.round(confidence * 100);
+  if (pct >= 85) return (
+    <span className="flex items-center gap-1 text-[10px] font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-300 dark:border-green-700 px-2.5 py-1 rounded-full">
+      <CheckCircle size={9} /> {pct}% confidence
+    </span>
+  );
+  if (pct >= 65) return (
+    <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 px-2.5 py-1 rounded-full">
+      <AlertTriangle size={9} /> {pct}% confidence
+    </span>
+  );
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-700 px-2.5 py-1 rounded-full">
+      <XCircle size={9} /> {pct}% confidence
+    </span>
+  );
+}
+
+function StepTypeBadge({ desc }: { desc: string }) {
+  const lower = desc.toLowerCase();
+  if (lower.includes("observe") || lower.includes("observation"))
+    return <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 shrink-0">Observe</span>;
+  if (lower.includes("think") || lower.includes("thought") || lower.includes("reason"))
+    return <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shrink-0">Thought</span>;
+  if (lower.includes("act") || lower.includes("action") || lower.includes("compute") || lower.includes("calculat"))
+    return <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 shrink-0">Action</span>;
+  if (lower.includes("final") || lower.includes("answer") || lower.includes("result"))
+    return <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-950/40 text-green-600 dark:text-green-400 shrink-0">Final</span>;
+  return null;
+}

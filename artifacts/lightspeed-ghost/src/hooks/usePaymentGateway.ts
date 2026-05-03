@@ -1,0 +1,136 @@
+import { useState, useCallback } from "react";
+import type { PaygTool, DocumentTier, PlanId } from "@/lib/pricing";
+import { supabase } from "@/lib/supabase";
+
+const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
+
+export interface GatewayInfo {
+  gateway: string;
+  reason: string;
+  countryCode: string | null;
+  isMobileMoney: boolean;
+  momoProvider: "mpesa" | "airtel" | "mtn" | null;
+  cardFallbackGateway: string | null;
+  stripePublishableKey: string | null;
+  paystackPublicKey: string | null;
+}
+
+export interface PaymentSession {
+  gateway: string;
+  sessionId: string;
+  checkoutUrl: string;
+  amountCents: number;
+  label: string;
+}
+
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export function usePaymentGateway() {
+  const [gatewayInfo, setGatewayInfo] = useState<GatewayInfo | null>(null);
+  const [session, setSession] = useState<PaymentSession | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const detectGateway = useCallback(async (): Promise<GatewayInfo | null> => {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/payments/gateway`, {
+        credentials: "include",
+        headers,
+      });
+      const data = await res.json() as GatewayInfo;
+      setGatewayInfo(data);
+      return data;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const createSubscriptionSession = useCallback(async (
+    plan: PlanId,
+    seats?: number,
+    preferredGateway?: string,
+  ): Promise<PaymentSession | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/payments/create`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ type: "subscription", plan, seats, preferredGateway }),
+      });
+      const data = await res.json() as PaymentSession & { error?: string };
+      if (data.error) throw new Error(data.error);
+      setSession(data);
+      return data;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Payment failed";
+      setError(msg);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const createPaygSession = useCallback(async (
+    tool: PaygTool,
+    tier?: DocumentTier,
+    preferredGateway?: string,
+  ): Promise<PaymentSession | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/payments/create`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ type: "payg", tool, tier, preferredGateway }),
+      });
+      const data = await res.json() as PaymentSession & { error?: string };
+      if (data.error) throw new Error(data.error);
+      setSession(data);
+      return data;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Payment failed";
+      setError(msg);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const verifyPayment = useCallback(async (gateway: string, ref: string): Promise<{
+    confirmed: boolean;
+    plan: string;
+  }> => {
+    try {
+      const authHeaders = await getAuthHeaders();
+      const params = new URLSearchParams({ gateway, session_id: ref });
+      const res = await fetch(`${API_BASE}/payments/verify?${params}`, {
+        credentials: "include",
+        headers: authHeaders,
+      });
+      return await res.json() as { confirmed: boolean; plan: string };
+    } catch {
+      return { confirmed: false, plan: "starter" };
+    }
+  }, []);
+
+  return {
+    gatewayInfo,
+    session,
+    loading,
+    error,
+    detectGateway,
+    createSubscriptionSession,
+    createPaygSession,
+    verifyPayment,
+  };
+}

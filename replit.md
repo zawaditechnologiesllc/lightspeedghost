@@ -1,0 +1,100 @@
+# Light Speed Ghost - AI Academic Writing Platform
+
+## Overview
+
+Light Speed Ghost is a full-stack AI academic writing platform designed to assist students and academics. It offers a comprehensive suite of features including AI-powered paper writing with accurate citations, paper revision with tracked changes and grade estimates, AI and plagiarism checking, STEM problem-solving with visualizations, and an AI study assistant. The platform aims to provide high-quality, undetectable, and plagiarism-free academic content, ensuring strict adherence to academic standards and word count requirements.
+
+## User Preferences
+
+- All work must be referenced and cited from academic sources unless student instructions say otherwise.
+- Word count excludes: reference list, in-text citations, headings, abstract, ToC, figure/table captions.
+- Word count includes: body text from introduction through conclusion.
+- Max words cap: target + 5% (hard limit).
+- Correction thresholds: expand if <95% of target, trim if >105% — word count is non-negotiable.
+- Citation ratio: 1 in-text citation per 150-200 words (minimum 3).
+- Non-negotiable Quality Promises:
+    - AI score: 0% — gate triggers humanization if score > 0%, up to 3 passes. Target is completely undetectable.
+    - Plagiarism: max 8% — gate triggers rephrasing if score > 8%. Non-negotiable ceiling.
+    - Grade: at least 92% — per prebuilt grading criteria or student-uploaded rubric. Grade optimizer loop runs if criteria gaps found.
+    - Word count: exact — 95-105% of target. Non-negotiable. Backend auto-corrects if outside range.
+    - No fake/capped scores — all quality stats reported are real measured values from detection gates.
+
+## System Architecture
+
+The platform is built as a monorepo using `pnpm workspaces`, Node.js 24, and TypeScript 5.9. The frontend is a React application powered by Vite, Tailwind CSS, Radix UI, and shadcn/ui components. The backend is an Express 5 API server. PostgreSQL with Drizzle ORM is used for data persistence.
+
+**Key Features:**
+- **Write Paper:** AI paper generation with citations in 11 academic styles (APA, MLA, Chicago, Harvard, IEEE, Turabian, Vancouver, AMA, ASA, Bluebook, OSCOLA). Supports 35 paper types across essays (argumentative, persuasive, narrative, descriptive, expository, admission, scholarship), research (research paper, thesis, dissertation, term paper, capstone project), reviews (literature review, article review, book review, movie review, critical analysis), professional (report, lab report, case study, business plan, financial analysis, white paper, policy brief, position paper), proposals (research, grant, general), personal (personal statement, reflective, coursework), and creative (speech, presentation). Form includes spacing (single/1.5/double), minimum sources, and language dialect (US/UK/Australian English). Data-oriented types accept CSV/Excel uploads with automatic descriptive statistics, correlation analysis, visualization guidance, and financial ratio computation.
+- **Outline Generator:** Structured paper outline generation with 35 paper types matching Write Paper, phase-based user experience.
+- **Revision Panel:** Allows revision of papers with tracked changes and estimated grades.
+- **LightSpeed Humanizer:** Detects AI-generated text and rewrites it to bypass AI detection, featuring tone selection and before/after comparisons.
+- **AI & Plagiarism Checker:** Provides AI detection scores and identifies plagiarism sources.
+- **STEM Solver:** Offers step-by-step solutions for 11 subject areas (Mathematics, Physics, Chemistry, Biology, Engineering, CS, Statistics, Finance, Accounting, Economics, Actuarial Science) with Recharts graph visualizations, using a handwritten, pen-on-paper aesthetic. Finance subjects support TVM, DCF, financial ratios, journal entries, actuarial tables, and credit analysis.
+- **AI Study Assistant:** A chat-based tutor with session history and image/screenshot upload capabilities, rendering math content in a handwritten style. Finance/economics subjects show a financial statements panel (amber theme) to inject ratio-computation context into generated study materials.
+- **Financial Statements Analysis Engine:** `financialStatements.ts` parses Income Statement / Balance Sheet / Cash Flow text, computes 25+ ratios (profitability, liquidity, solvency, efficiency, DuPont, FCF) and injects a structured AI instruction block. Available in Write Paper (finance subjects), STEM Solver (finance/accounting/economics/actuarial subjects), and Study Assistant. Statement type selector (Income / Balance Sheet / Cash Flow / Full) controls the analysis scope.
+- **Interpretive Commentary:** Toggle in Write Paper that adds plain-English explanations after every statistic, p-value, and financial ratio when dataset or financial statements are present.
+- **Documents:** Manages all saved documents with search and filter functionalities.
+
+**UI/UX Decisions:**
+- **Mobile Responsiveness:** All pages are fully optimized for mobile devices (390px+), featuring mobile navigation bars, collapsible sidebars, and responsive layouts.
+- **Handwritten Math Rendering:** Uses the Kalam font and specific CSS classes (`font-handwritten`, `handwritten-block`, `handwritten-expression`) to simulate a pen-on-paper style for STEM solutions and study assistant math.
+- **Phase-Based Progress UX:** Implemented across Outline, StemSolver, WritePaper, Revision, and Humanizer features for clear user guidance through multi-step processes.
+- **Color Palette:** A blue-forward brand palette with electric blue as primary, sky blue as accent, and deep navy for sidebars and dark mode backgrounds.
+- **PWA Install UX:** Provides app installation banners for Android and iOS.
+
+**Technical Implementations:**
+- **AI Architecture (OpenClaw-Inspired):**
+    - **Models & Routing (ClawRouter):** Utilizes `claude-3-5-sonnet` for reasoning (STEM, paper writing, tutoring, revision), `gpt-4o` for vision/OCR, and `gpt-4o-mini` for cheaper tasks (bibliography, AI detection, data extraction).
+    - **Core Libs:** Includes modules for Anthropic/OpenAI client initialization (`ai.ts`), AI personas (`soul.ts`), ReAct loops for STEM solving (`reactLoop.ts`), Chain-of-Verification (`cove.ts`), student persistent memory (`memory.ts`, `memvidMemory.ts`), adaptive learning (`learningEngine.ts`), real citation verification (`citationVerifier.ts`), academic source aggregation (`academicSources.ts`), open-source plagiarism detection (`openSourceSearch.ts`), text analysis (`textAnalysis.ts`), Winnowing algorithm for code similarity (`winnow.ts`), shared AI detection pipeline (`aiDetection.ts`), dataset analysis (`datasetAnalysis.ts`), grade standards (`gradeStandards.ts`), and various utility functions.
+- **Frontend Infrastructure:**
+    - **Service Worker:** Provides offline support with a cache-first strategy for static assets and network-first for navigation.
+    - **Offline Banner:** Displays an amber banner when offline and a green banner upon reconnection.
+- **Quota Enforcement:** All AI tool routes enforce usage limits server-side via `enforceLimit()` in `usageTracker.ts`. Returns quota errors before any AI processing starts. Tools enforced: paper, outline, stem, study, revision, humanizer, plagiarism, assistant. The assistant route checks plan-gated features (image mode) before consuming quota to avoid charging users for blocked requests. Frontend paywall guards provide UX-level enforcement; backend enforcement is the security layer.
+- **Document Ownership:** All document CRUD operations scope queries by `userId` to prevent cross-user access.
+- **Payment Security:** All amounts calculated server-side from `SUBSCRIPTION_PLANS` / `getPaygPrice()` — never from client input. Credit spending validates amount against server-side pricing. Plan mapping in `/payments/verify` correctly distinguishes starter, pro, and campus plans. PaymentSuccess page only shows success when verification confirms payment (no false-success fallback).
+- **Memory System:** Combines short-term conversational context with long-term student profiles stored in PostgreSQL, leveraging semantic memory for recall.
+- **File Upload Feature:** Supports server-side extraction from PDF, DOCX, and text files, client-side OCR for images, and smart autofill for various input fields across services.
+- **Shared AI Detection Pipeline:** A critical architecture ensuring consistent AI detection across all tools (Plagiarism Checker, Humanizer, Paper Writer, Revision) using GPT-4o-mini and burstiness blend with retry mechanisms.
+- **Open-Source Plagiarism Engine:** Replicates plagiarism detection using free APIs like Open Library, Wikipedia, Google Books, Internet Archive, and CrossRef, employing sentence-level fingerprinting.
+
+## External Dependencies
+
+- **Database:** PostgreSQL (Replit-hosted)
+- **AI Models:** Anthropic (Claude 3.5 Sonnet), OpenAI (GPT-4o, GPT-4o-mini)
+- **ORM:** Drizzle ORM
+- **Validation:** Zod, `drizzle-zod`
+- **API Codegen:** Orval
+- **Charts:** Recharts
+- **State Management:** TanStack React Query
+- **UI Components:** Radix UI, shadcn/ui
+- **Payment Gateways:** Stripe, Paystack, IntaSend
+- **Caching:** Upstash Redis
+- **Academic APIs (for `citationVerifier.ts` and `academicSources.ts`):**
+    - Semantic Scholar
+    - OpenAlex
+    - arXiv
+    - Europe PMC
+    - PubMed
+    - CrossRef
+    - CORE
+    - DOAJ
+    - ERIC
+    - Zenodo
+    - BASE
+    - DataCite
+    - OpenAIRE
+- **Open-Source Plagiarism Sources (for `openSourceSearch.ts`):**
+    - Open Library (openlibrary.org)
+    - Wikipedia REST API
+    - Google Books Volumes API
+    - Internet Archive
+    - CrossRef DOI search
+- **STEM-Specific APIs:**
+    - EBI BioModels
+    - PubChem
+- **File Processing:**
+    - `pdf2json`
+    - `mammoth`
+    - `tesseract.js` (client-side OCR)
+- **Memory SDK:** `@memvid/sdk`
+- **Logging:** Pino

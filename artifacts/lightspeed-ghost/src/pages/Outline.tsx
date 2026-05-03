@@ -1,0 +1,745 @@
+import { useState, useCallback } from "react";
+import {
+  ListTree, ChevronRight, PenLine, ChevronDown,
+  BookOpen, FileText, Zap, CheckCircle, AlertTriangle, RotateCcw, GraduationCap,
+} from "lucide-react";
+import { useLocation } from "wouter";
+import { cn } from "@/lib/utils";
+import { ExportButtons } from "@/components/ExportButtons";
+import { wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
+import { renderInlineMd } from "@/lib/renderInline";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiFetch } from "@/lib/apiFetch";
+import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
+import { detectPaperType, extractTopic, extractSubject } from "@/lib/autofill";
+import { usePaywallGuard } from "@/hooks/usePaywallGuard";
+import { PaywallFlow } from "@/components/checkout/PaywallFlow";
+import { SubjectSelect } from "@/components/SubjectSelect";
+import { useUserProfile } from "@/hooks/useUserProfile";
+
+// ── Types ──────────────────────────────────────────────────────────────────────
+
+type PaperType = string;
+type Phase = "config" | "generating" | "results";
+
+interface OutlineSection {
+  heading: string;
+  subsections: string[];
+  wordTarget: number;
+}
+
+interface OutlineResult {
+  title: string;
+  sections: OutlineSection[];
+  totalWordTarget: number;
+}
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const ACADEMIC_LEVELS = [
+  { value: "high_school",   label: "High School" },
+  { value: "undergrad_1_2", label: "UG Year 1–2" },
+  { value: "undergrad_3_4", label: "UG Year 3–4" },
+  { value: "honours",       label: "Honours" },
+  { value: "masters",       label: "Masters" },
+  { value: "phd",           label: "PhD" },
+];
+
+const PAPER_TYPES: { value: PaperType; label: string }[] = [
+  { value: "research",               label: "Research Paper" },
+  { value: "essay",                  label: "Essay" },
+  { value: "argumentative",          label: "Argumentative" },
+  { value: "persuasive",             label: "Persuasive" },
+  { value: "narrative",              label: "Narrative" },
+  { value: "descriptive",            label: "Descriptive" },
+  { value: "expository",             label: "Expository" },
+  { value: "admission essay",        label: "Admission Essay" },
+  { value: "scholarship essay",      label: "Scholarship Essay" },
+  { value: "thesis",                 label: "Thesis" },
+  { value: "dissertation",           label: "Dissertation" },
+  { value: "literature_review",      label: "Lit. Review" },
+  { value: "annotated bibliography", label: "Annotated Bib." },
+  { value: "research proposal",      label: "Research Proposal" },
+  { value: "grant proposal",         label: "Grant Proposal" },
+  { value: "proposal",               label: "General Proposal" },
+  { value: "report",                 label: "Report" },
+  { value: "lab report",             label: "Lab Report" },
+  { value: "case study",             label: "Case Study" },
+  { value: "term paper",             label: "Term Paper" },
+  { value: "coursework",             label: "Coursework" },
+  { value: "capstone project",       label: "Capstone Project" },
+  { value: "critical analysis",      label: "Critical Analysis" },
+  { value: "article review",         label: "Article Review" },
+  { value: "book review",            label: "Book Review" },
+  { value: "movie review",           label: "Film/Movie Review" },
+  { value: "reflective",             label: "Reflective" },
+  { value: "personal statement",     label: "Personal Statement" },
+  { value: "speech",                 label: "Speech" },
+  { value: "presentation",           label: "Presentation" },
+  { value: "position paper",         label: "Position Paper" },
+  { value: "policy brief",           label: "Policy Brief" },
+  { value: "white paper",            label: "White Paper" },
+  { value: "business plan",          label: "Business Plan" },
+  { value: "financial analysis",     label: "Financial Analysis" },
+];
+
+
+const SECTION_COLORS = [
+  "border-l-blue-500 bg-blue-500/5",
+  "border-l-indigo-500 bg-indigo-500/5",
+  "border-l-violet-500 bg-violet-500/5",
+  "border-l-cyan-500 bg-cyan-500/5",
+  "border-l-sky-500 bg-sky-500/5",
+  "border-l-purple-500 bg-purple-500/5",
+  "border-l-blue-400 bg-blue-400/5",
+  "border-l-indigo-400 bg-indigo-400/5",
+];
+
+interface Step {
+  id: string;
+  message: string;
+  status: "pending" | "running" | "done";
+}
+
+// ── Component ──────────────────────────────────────────────────────────────────
+
+export default function Outline() {
+  useAuth();
+  const [, navigate] = useLocation();
+  const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
+
+  const { academicLevel, saveAcademicLevel } = useUserProfile();
+
+  const [topic, setTopic] = useState("");
+  const [subject, setSubject] = useState("");
+  const [paperType, setPaperType] = useState<PaperType>("research");
+  const [wordCount, setWordCount] = useState(1000);
+  const [instructionsText, setInstructionsText] = useState("");
+  const [referenceText, setReferenceText] = useState("");
+  const [instructionsLoaded, setInstructionsLoaded] = useState(false);
+  const [referenceWordCount, setReferenceWordCount] = useState(0);
+
+  const [phase, setPhase] = useState<Phase>("config");
+  const [steps, setSteps] = useState<Step[]>([]);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<OutlineResult | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
+
+  // ── autofill from instructions upload
+  const handleInstructionsExtracted = useCallback((file: ExtractedFile) => {
+    const text = file.text;
+    if (!topic) setTopic(extractTopic(text) ?? "");
+    if (!subject) setSubject(extractSubject(text) ?? "");
+    setPaperType((detectPaperType(text) as PaperType) || "essay");
+    setInstructionsText(text.slice(0, 3000));
+    setInstructionsLoaded(true);
+  }, [topic, subject]);
+
+  // ── accumulate reading materials
+  const handleReferenceExtracted = useCallback((file: ExtractedFile) => {
+    setReferenceText(prev => {
+      const next = (prev ? prev + "\n\n" : "") + file.text.slice(0, 5000);
+      setReferenceWordCount(next.split(/\s+/).filter(Boolean).length);
+      return next;
+    });
+  }, []);
+
+  const toggleSection = (i: number) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  };
+
+  const exportOutline = () => {
+    if (!result) return;
+    const lines = [
+      `# ${result.title}`,
+      "",
+      `**Subject:** ${subject}  |  **Type:** ${paperType.replace("_", " ")}  |  **Sections:** ${result.sections.length}`,
+      "",
+      "---",
+      "",
+      ...result.sections.flatMap((s, i) => [
+        `## ${i + 1}. ${s.heading}`,
+        "",
+        ...s.subsections.map((sub, j) => `- **${i + 1}.${j + 1}** ${sub}`),
+        "",
+      ]),
+      "---",
+      `*Generated by LightSpeed AI — Write the full paper at lightspeedghost.com*`,
+    ];
+    const text = lines.join("\n");
+    const blob = new Blob([text], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${makeLsgFilename("outline", "OUTLINE")}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const updateStep = (id: string, patch: Partial<Step>) => {
+    setSteps((prev) => {
+      const exists = prev.find((s) => s.id === id);
+      if (exists) return prev.map((s) => (s.id === id ? { ...s, ...patch } : s));
+      return [...prev, { id, message: "", status: "pending", ...patch }];
+    });
+  };
+
+  const handleGenerate = async () => {
+    if (!topic.trim() || !subject.trim()) return;
+    if (isAtLimit("outline")) { guard("outline", () => {}); return; }
+
+    setPhase("generating");
+    setError("");
+    setSteps([]);
+
+    try {
+      const resp = await apiFetch(`/writing/outline`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: topic.trim(),
+          subject: subject.trim(),
+          paperType,
+          wordCount,
+          academicLevel: academicLevel || undefined,
+          instructionsText: instructionsText || undefined,
+          referenceText: referenceText || undefined,
+        }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        throw new Error("Failed to generate outline — please try again");
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let event = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            event = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (event === "step") {
+                updateStep(data.id, { message: data.message, status: data.status });
+              } else if (event === "done") {
+                setResult(data as OutlineResult);
+                setExpandedSections(new Set((data as OutlineResult).sections.map((_: unknown, i: number) => i)));
+                setPhase("results");
+              } else if (event === "error") {
+                setError(data.message ?? "Outline generation failed");
+                setPhase("config");
+              }
+            } catch { /* ignore parse errors */ }
+            event = "";
+          }
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setPhase("config");
+    }
+  };
+
+  const handleReset = () => {
+    setPhase("config");
+    setResult(null);
+    setError("");
+    setTopic("");
+    setSubject("");
+    setInstructionsText("");
+    setReferenceText("");
+    setInstructionsLoaded(false);
+    setReferenceWordCount(0);
+  };
+
+  const formatOutlineAsText = (r: OutlineResult): string => {
+    const lines = [
+      `OUTLINE: ${r.title}`,
+      "",
+      "Use the following outline structure to write the paper. Each section heading and sub-point below must be addressed in the corresponding section of the paper:",
+      "",
+      ...r.sections.flatMap((s, i) => [
+        `## ${i + 1}. ${s.heading}`,
+        ...s.subsections.map((sub, j) => `   ${i + 1}.${j + 1} ${sub}`),
+        "",
+      ]),
+    ];
+    return lines.join("\n");
+  };
+
+  const handleWritePaper = () => {
+    if (!result) return;
+    const outlineText = formatOutlineAsText(result);
+    sessionStorage.setItem("outline_prefill", JSON.stringify({
+      topic,
+      subject,
+      paperType,
+      wordCount,
+      additionalInstructions: outlineText,
+    }));
+    navigate("/write");
+  };
+
+  // ── PHASE: GENERATING ─────────────────────────────────────────────────────
+
+  if (phase === "generating") {
+    const doneCount = steps.filter(s => s.status === "done").length;
+    const total = steps.length || 1;
+    const pct = Math.round((doneCount / total) * 100);
+    const runningStep = steps.find(s => s.status === "running");
+
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-background px-6 gap-8">
+        <div className="text-center space-y-3">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Zap size={16} className="text-primary" />
+            <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+          </div>
+          <h2 className="text-xl font-bold">Generating your outline…</h2>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            {runningStep?.message || `Building a structured plan for "${topic}" in ${subject}`}
+          </p>
+        </div>
+
+        <div className="w-full max-w-sm">
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-700"
+              style={{ width: `${Math.max(pct, 8)}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground/60 text-right mt-1.5 tabular-nums">
+            {pct}%
+          </p>
+        </div>
+
+        <div className="w-full max-w-sm space-y-2">
+          {steps.map((step) => (
+            <div
+              key={step.id}
+              className={cn(
+                "flex items-center gap-3 px-4 py-2.5 rounded-lg border transition-all duration-500",
+                step.status === "done"
+                  ? "bg-primary/5 border-primary/20 text-foreground"
+                  : step.status === "running"
+                    ? "bg-card border-border text-foreground shadow-sm"
+                    : "bg-muted/30 border-transparent text-muted-foreground/40"
+              )}
+            >
+              {step.status === "done" ? (
+                <CheckCircle size={13} className="text-primary shrink-0" />
+              ) : step.status === "running" ? (
+                <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shrink-0" />
+              ) : (
+                <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20 shrink-0" />
+              )}
+              <span className="text-xs">{step.message}</span>
+            </div>
+          ))}
+          {steps.length === 0 && (
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border bg-card border-border text-foreground shadow-sm">
+              <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shrink-0" />
+              <span className="text-xs">Connecting to LightSpeed AI…</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── PHASE: CONFIG ─────────────────────────────────────────────────────────
+
+  if (phase === "config") {
+    return (
+      <>
+      <div className="h-full flex flex-col overflow-hidden bg-background">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-xl mx-auto w-full px-5 py-5 space-y-5">
+
+            {/* Page header */}
+            <div className="text-center space-y-1.5 pt-2 pb-1">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Zap size={16} className="text-primary" />
+                <span className="text-[11px] font-semibold text-primary uppercase tracking-widest">LightSpeed AI</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Outline Generator</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Structure your paper before writing — 0% AI · &lt;8% plagiarism · one click to full paper
+              </p>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
+                <AlertTriangle size={14} className="shrink-0" />
+                {error}
+              </div>
+            )}
+
+            {/* Upload: assignment instructions */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block flex items-center gap-1.5">
+                <FileText size={11} />
+                Assignment Instructions
+                <span className="font-normal lowercase tracking-normal text-muted-foreground/60">(auto-fills fields)</span>
+              </label>
+              <FileUploadZone
+                onExtracted={handleInstructionsExtracted}
+                accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg"
+                label="Upload brief or assignment sheet"
+                hint="PDF, Word, image — topic, subject & type will be detected"
+                compact
+              />
+              {instructionsLoaded && (
+                <p className="text-[10px] text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                  <CheckCircle size={10} /> Instructions loaded — fields auto-filled below
+                </p>
+              )}
+            </div>
+
+            {/* Upload: reading materials */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block flex items-center gap-1.5">
+                <BookOpen size={11} />
+                Reading Materials
+                <span className="font-normal lowercase tracking-normal text-muted-foreground/60">(optional)</span>
+              </label>
+              <FileUploadZone
+                onExtracted={handleReferenceExtracted}
+                accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg"
+                label="Upload lecture notes, textbook excerpts, articles…"
+                hint="AI will use these to build a deeper, more accurate outline"
+                compact
+              />
+              {referenceWordCount > 0 && (
+                <p className="text-[10px] text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                  <CheckCircle size={10} /> {referenceWordCount.toLocaleString()} words of reading material loaded
+                </p>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+              <div className="relative flex justify-center">
+                <span className="px-2 text-[10px] text-muted-foreground bg-background">or fill manually</span>
+              </div>
+            </div>
+
+            {/* Topic */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Topic *</label>
+              <input
+                value={topic}
+                onChange={e => setTopic(e.target.value)}
+                placeholder="e.g., Neural Networks in Medical Diagnosis"
+                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            {/* Subject */}
+            <SubjectSelect
+              value={subject}
+              onChange={setSubject}
+              label="Subject"
+              required
+            />
+
+            {/* Paper type */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Paper Type</label>
+              <div className="flex flex-wrap gap-2">
+                {PAPER_TYPES.map(pt => (
+                  <button
+                    key={pt.value}
+                    type="button"
+                    onClick={() => setPaperType(pt.value)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                      paperType === pt.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    )}
+                  >
+                    {pt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Word count */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Word Count</label>
+              <input
+                type="number"
+                min={100}
+                max={15000}
+                value={wordCount}
+                onChange={e => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!isNaN(v)) setWordCount(v);
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1.5">
+                Outline word targets will be distributed across sections based on <strong>{wordCount.toLocaleString()}</strong> words total.
+              </p>
+            </div>
+
+            {/* Academic level */}
+            <div>
+              <label className="text-sm font-medium mb-2 flex items-center gap-1.5 block">
+                <GraduationCap size={14} />
+                Academic Level
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {ACADEMIC_LEVELS.map(lvl => (
+                  <button
+                    key={lvl.value}
+                    type="button"
+                    onClick={() => saveAcademicLevel(lvl.value)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                      academicLevel === lvl.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    )}
+                  >
+                    {lvl.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Quality badge */}
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-green-500/5 border border-green-500/20 text-[11px] text-green-700 dark:text-green-400">
+              <CheckCircle size={13} className="shrink-0" />
+              <span>Engineered for <strong>0% AI detection</strong> and <strong>&lt;8% plagiarism risk</strong> when written into a full paper</span>
+            </div>
+
+            {/* Generate button */}
+            <button
+              onClick={handleGenerate}
+              disabled={!topic.trim() || !subject.trim()}
+              className="w-full flex items-center justify-center gap-2.5 bg-primary text-primary-foreground px-4 py-3.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+            >
+              <ListTree size={16} />
+              Generate Outline
+            </button>
+
+            {(!topic.trim() || !subject.trim()) && (
+              <p className="text-center text-xs text-muted-foreground -mt-2">Enter a topic and subject to continue</p>
+            )}
+            <p className="text-center text-[11px] text-muted-foreground/50">
+              or{" "}
+              <button type="button" onClick={() => openBuy("outline")} className="text-orange-400 hover:text-orange-300 transition-colors font-medium">
+                buy a single outline →
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <PaywallFlow
+        pickerState={pickerState}
+        checkoutState={checkoutState}
+        plan={plan}
+        closePicker={closePicker}
+        closeCheckout={closeCheckout}
+        chooseSubscription={chooseSubscription}
+        choosePayg={choosePayg}
+      />
+      </>
+    );
+  }
+
+  // ── PHASE: RESULTS ────────────────────────────────────────────────────────
+
+  return (
+    <>
+    <div className="h-full flex flex-col overflow-hidden bg-background">
+
+      {/* Top bar */}
+      <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border bg-card/80 backdrop-blur-sm">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <ListTree size={14} className="text-primary" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-bold text-sm text-foreground leading-tight truncate">{result?.title}</h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{result?.sections.length} sections</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <ExportButtons
+            getHtml={() => {
+              if (!result) return "";
+              const sectionsHtml = result.sections.map((sec, i) => `
+                <h2>${i + 1}. ${sec.heading}</h2>
+                ${sec.subsections.length ? `<ul>${sec.subsections.map((sub, j) => `<li><strong>${i + 1}.${j + 1}</strong> ${sub}</li>`).join("")}</ul>` : ""}
+              `).join("");
+              return wrapDocHtml(result.title || topic, sectionsHtml, `${subject} · ${paperType.replace("_", " ")}`);
+            }}
+            getText={() => {
+              if (!result) return "";
+              return [
+                `# ${result.title || topic}`,
+                `Subject: ${subject} | Type: ${paperType}`,
+                "",
+                ...result.sections.flatMap((sec, i) => [
+                  `## ${i + 1}. ${sec.heading}`,
+                  ...sec.subsections.map((sub, j) => `  ${i + 1}.${j + 1} ${sub}`),
+                  "",
+                ]),
+              ].join("\n");
+            }}
+            filename={makeLsgFilename("outline", "OUTLINE")}
+            formats={["docx", "pdf", "md", "copy"]}
+          />
+          <button
+            onClick={handleWritePaper}
+            className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:opacity-80 border border-primary/30 bg-primary/5 rounded-lg px-2.5 py-1.5 transition-all cursor-pointer"
+          >
+            <PenLine size={12} />
+            Write paper
+          </button>
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2.5 py-1.5 transition-colors"
+          >
+            <RotateCcw size={11} /> New
+          </button>
+        </div>
+      </div>
+
+      {/* Sections */}
+      <div className="flex-1 overflow-y-auto">
+        {result && (
+          <>
+          {/* Paper brief */}
+          <div className="px-5 py-4 border-b border-border bg-muted/10">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">{topic}</span>
+              <span className="text-border">·</span>
+              <span>{subject}</span>
+              <span className="text-border">·</span>
+              <span className="capitalize">{paperType.replace("_", " ")}</span>
+              <span className="text-border">·</span>
+              <span>{result.sections.length} sections</span>
+              <span className="text-border">·</span>
+              <span>{result.sections.reduce((acc, s) => acc + s.subsections.length, 0)} sub-points</span>
+              {result.totalWordTarget > 0 && (
+                <>
+                  <span className="text-border">·</span>
+                  <span className="font-semibold text-primary">{result.totalWordTarget.toLocaleString()} words total</span>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="divide-y divide-border">
+            {result.sections.map((section, i) => {
+              const isExpanded = expandedSections.has(i);
+              const colorClass = SECTION_COLORS[i % SECTION_COLORS.length];
+              return (
+                <div key={i}>
+                  <button
+                    onClick={() => toggleSection(i)}
+                    className="w-full text-left px-5 py-4 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border-l-[3px] shrink-0", colorClass)}>
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <span className="text-sm font-semibold text-foreground block">{renderInlineMd(section.heading)}</span>
+                        {!isExpanded && section.subsections.length > 0 && (
+                          <span className="text-[11px] text-muted-foreground/60 mt-0.5 block">
+                            {section.subsections.slice(0, 2).join(" · ")}{section.subsections.length > 2 ? ` +${section.subsections.length - 2} more` : ""}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {section.wordTarget > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded bg-primary/8 text-primary/70 border border-primary/15 hidden sm:block">
+                            ~{section.wordTarget.toLocaleString()}w
+                          </span>
+                        )}
+                        {section.subsections.length > 0 && (
+                          <span className="text-[10px] text-muted-foreground/50 hidden sm:block">
+                            {section.subsections.length} points
+                          </span>
+                        )}
+                        {isExpanded
+                          ? <ChevronDown size={14} className="text-muted-foreground" />
+                          : <ChevronRight size={14} className="text-muted-foreground" />}
+                      </div>
+                    </div>
+                  </button>
+
+                  {isExpanded && section.subsections.length > 0 && (
+                    <div className="px-5 pb-4 space-y-2 bg-muted/5">
+                      {section.subsections.map((sub, j) => (
+                        <div key={j} className="flex items-start gap-3 py-1.5 pl-11 border-l-2 border-primary/10 ml-1">
+                          <span className="text-[10px] text-primary font-mono mt-0.5 shrink-0 w-6 tabular-nums">
+                            {i + 1}.{j + 1}
+                          </span>
+                          <span className="text-sm text-foreground/80 leading-relaxed">{renderInlineMd(sub)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          </>
+        )}
+
+        {/* Write paper CTA */}
+        <div className="p-5 max-w-2xl mx-auto">
+          <button
+            onClick={handleWritePaper}
+            className="w-full flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-5 py-4 hover:bg-primary/10 transition-colors cursor-pointer group text-left"
+          >
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <PenLine size={15} className="text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-primary">Write the full paper using this outline</div>
+              <div className="text-xs text-muted-foreground">Topic, subject, paper type, word count, and outline structure will all be auto-filled in Write Paper</div>
+            </div>
+            <ChevronRight size={16} className="text-primary group-hover:translate-x-0.5 transition-transform shrink-0" />
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <PaywallFlow
+      pickerState={pickerState}
+      checkoutState={checkoutState}
+      plan={plan}
+      closePicker={closePicker}
+      closeCheckout={closeCheckout}
+      chooseSubscription={chooseSubscription}
+      choosePayg={choosePayg}
+    />
+    </>
+  );
+}
