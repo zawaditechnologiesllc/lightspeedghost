@@ -617,6 +617,11 @@ export default function Admin() {
 
   useEffect(() => {
     if (!isAuthed) return;
+    loadMessages();
+  }, [isAuthed]);
+
+  useEffect(() => {
+    if (!isAuthed) return;
     if (activeTab === "overview") loadStats();
     if (activeTab === "tools") { loadTools(); loadEbooks(); }
     if (activeTab === "documents") loadDocuments();
@@ -919,16 +924,24 @@ export default function Admin() {
             </div>
           </div>
           <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
-            {tabs.map((t) => (
-              <button key={t.id} onClick={() => { setActiveTab(t.id); setMobileNav(false); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === t.id ? "bg-white/8 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"
-                }`}
-              >
-                <t.icon size={14} className={activeTab === t.id ? "text-red-400" : ""} />
-                {t.label}
-              </button>
-            ))}
+            {tabs.map((t) => {
+              const unreadMsgCount = t.id === "messages" ? contactMessages.filter((m) => !m.read && !m.replied).length : 0;
+              return (
+                <button key={t.id} onClick={() => { setActiveTab(t.id); setMobileNav(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    activeTab === t.id ? "bg-white/8 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                  }`}
+                >
+                  <t.icon size={14} className={activeTab === t.id ? "text-red-400" : ""} />
+                  {t.label}
+                  {unreadMsgCount > 0 && (
+                    <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-blue-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+                      {unreadMsgCount > 9 ? "9+" : unreadMsgCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
           <div className="px-3 py-4 border-t border-white/8">
             <button onClick={signOut} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white/35 hover:text-white/60 hover:bg-white/5 transition-all">
@@ -2627,7 +2640,7 @@ export default function Admin() {
               <label className="block text-xs text-white/40 mb-1.5">Plan</label>
               <select value={planEditValue} onChange={(e) => { setPlanEditValue(e.target.value); if (e.target.value === "institution") { setPlanEditSeats("5"); setPlanEditDuration("365"); } if (e.target.value === "pro") { setPlanEditBilling("monthly"); } }}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
-                <option value="starter">Starter — $9.99/mo</option>
+                <option value="starter">Starter — $4.99/mo</option>
                 <option value="pro">Pro (select billing below)</option>
                 <option value="institution">Institution (select seats &amp; duration below)</option>
               </select>
@@ -2637,8 +2650,8 @@ export default function Admin() {
                 <label className="block text-xs text-white/40 mb-1.5">Billing Cycle</label>
                 <select value={planEditBilling} onChange={(e) => setPlanEditBilling(e.target.value)}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
-                  <option value="monthly">Monthly — $29.99/mo</option>
-                  <option value="annual">Annual — $269/yr ($22.42/mo)</option>
+                  <option value="monthly">Monthly — $14.99/mo</option>
+                  <option value="annual">Annual — $139/yr ($11.58/mo)</option>
                 </select>
               </div>
             )}
@@ -2673,8 +2686,8 @@ export default function Admin() {
               {planEditValue === "institution"
                 ? `Activate Institution (${planEditSeats} seats, ${planEditDuration}d)`
                 : planEditValue === "pro"
-                  ? `Set Pro — ${planEditBilling === "annual" ? "Annual ($269/yr)" : "Monthly ($29.99/mo)"}`
-                  : "Set Starter ($9.99/mo)"}
+                  ? `Set Pro — ${planEditBilling === "annual" ? "Annual ($139/yr)" : "Monthly ($14.99/mo)"}`
+                  : "Set Starter ($4.99/mo)"}
             </button>
           </div>
         </Modal>

@@ -32,40 +32,72 @@ function saveDismissed(ids: Set<number>) {
   try { localStorage.setItem(DISMISSED_KEY, JSON.stringify([...ids])); } catch {}
 }
 
+// ── Shared module-level state so all hook instances stay in sync ──────────────
+let _sharedDismissed: Set<number> = getDismissed();
+const _dismissListeners = new Set<() => void>();
+
+function sharedDismiss(id: number) {
+  _sharedDismissed = new Set(_sharedDismissed);
+  _sharedDismissed.add(id);
+  saveDismissed(_sharedDismissed);
+  _dismissListeners.forEach((fn) => fn());
+}
+
+function sharedDismissAll(ids: number[]) {
+  _sharedDismissed = new Set([..._sharedDismissed, ...ids]);
+  saveDismissed(_sharedDismissed);
+  _dismissListeners.forEach((fn) => fn());
+}
+
+function subscribeTosDismissed(fn: () => void) {
+  _dismissListeners.add(fn);
+  return () => _dismissListeners.delete(fn);
+}
+
+// ── Shared items state so all hook instances share one fetch ──────────────────
+let _sharedItems: Announcement[] = [];
+const _itemListeners = new Set<() => void>();
+let _fetchStarted = false;
+
+function setSharedItems(items: Announcement[]) {
+  _sharedItems = items;
+  _itemListeners.forEach((fn) => fn());
+}
+
+function subscribeToItems(fn: () => void) {
+  _itemListeners.add(fn);
+  return () => _itemListeners.delete(fn);
+}
+
+function startSharedFetch() {
+  if (_fetchStarted) return;
+  _fetchStarted = true;
+  async function fetch_() {
+    try {
+      const res = await fetch(`${API_BASE}/announcements`);
+      if (!res.ok) return;
+      const data = await res.json() as { announcements: Announcement[] };
+      setSharedItems(data.announcements ?? []);
+    } catch {}
+  }
+  fetch_();
+  setInterval(fetch_, 5 * 60 * 1000);
+}
+
 export function useAnnouncements() {
-  const [items, setItems] = useState<Announcement[]>([]);
-  const [dismissed, setDismissed] = useState<Set<number>>(getDismissed);
+  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
-    async function fetch_() {
-      try {
-        const res = await fetch(`${API_BASE}/announcements`);
-        if (!res.ok) return;
-        const data = await res.json() as { announcements: Announcement[] };
-        setItems(data.announcements ?? []);
-      } catch {}
-    }
-    fetch_();
-    const t = setInterval(fetch_, 5 * 60 * 1000);
-    return () => clearInterval(t);
+    startSharedFetch();
+    const unsubItems = subscribeToItems(() => forceUpdate((n) => n + 1));
+    const unsubDismissed = subscribeTosDismissed(() => forceUpdate((n) => n + 1));
+    return () => { unsubItems(); unsubDismissed(); };
   }, []);
 
-  function dismiss(id: number) {
-    setDismissed((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      saveDismissed(next);
-      return next;
-    });
-  }
+  function dismiss(id: number) { sharedDismiss(id); }
+  function dismissAll() { sharedDismissAll(_sharedItems.map((a) => a.id)); }
 
-  function dismissAll() {
-    const next = new Set(items.map((a) => a.id));
-    saveDismissed(next);
-    setDismissed(next);
-  }
-
-  const visible = items.filter((a) => !dismissed.has(a.id));
+  const visible = _sharedItems.filter((a) => !_sharedDismissed.has(a.id));
   return { visible, dismiss, dismissAll };
 }
 
