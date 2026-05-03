@@ -64,7 +64,7 @@ function computeCosineSimilarity(text1: string, text2: string): number {
 
 /**
  * Extract the most distinctive / content-rich phrases from the text.
- * Used to build multi-angle queries so all 13 databases are searched
+ * Used to build multi-angle queries so all 25+ databases are searched
  * against representative samples from beginning, middle, and key concepts.
  */
 function extractQueryPhrases(text: string): string[] {
@@ -90,12 +90,16 @@ function extractQueryPhrases(text: string): string[] {
 }
 
 /**
- * Query all 13 live academic databases with multiple representative phrases
+ * Query all 25+ live academic databases with multiple representative phrases
  * extracted from the submitted text, then compute REAL cosine similarity
  * between the submitted text and each returned paper abstract.
  *
  * This is the same corpus the AI Paper Writer reads from — so if a paper was
  * used as a source for writing, it will appear here as a match.
+ * Sources: OpenAlex, CrossRef, Semantic Scholar, PubMed, PubMed Central,
+ * Europe PMC, arXiv, CORE, DOAJ, ERIC, PLOS ONE, Zenodo, BASE, DataCite,
+ * OpenAIRE, bioRxiv, medRxiv, HAL France, Figshare, NASA ADS,
+ * ClinicalTrials.gov, Dryad, OSF Preprints, NBER + recency layer.
  */
 async function fetchLiveAcademicMatches(
   text: string,

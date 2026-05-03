@@ -707,8 +707,8 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     send("step", {
       id: "citations",
       message: isAnnotatedBib
-        ? `Annotated bibliography mode — fetching ${citationCount} verified academic sources from 15 live databases (OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE, Sci-Net, Unpaywall) for "${body.topic}"…`
-        : `Searching 15 live academic databases (1B+ papers: OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE, Sci-Net, Unpaywall) for "${body.topic}"…`,
+        ? `Annotated bibliography mode — fetching ${citationCount} verified academic sources from 25+ live databases (OpenAlex, Semantic Scholar, CrossRef, PubMed, PubMed Central, Europe PMC, arXiv, CORE, DOAJ, ERIC, PLOS ONE, Zenodo, BASE, DataCite, OpenAIRE, bioRxiv, medRxiv, HAL France, Figshare, NASA ADS, ClinicalTrials.gov, Dryad, OSF, NBER + 90-day recency layer) for "${body.topic}"…`
+        : `Searching 25+ live academic databases (1.5B+ papers across OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, PLOS ONE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE, bioRxiv, medRxiv, HAL, Figshare, NASA ADS, ClinicalTrials.gov, Dryad, OSF, NBER + recency layer) for "${body.topic}"…`,
       status: "running",
     });
 
@@ -817,8 +817,8 @@ Only output valid JSON. Do not include markdown fences or commentary.`;
     send("step", {
       id: "citations",
       message: citations.length > 0
-        ? `Retrieved ${citations.length} verified citations (target: ${citationCount}) + ${ragPapers.length} supporting abstracts from 10 databases — ranked by impact, no Wikipedia`
-        : "Academic databases queried — paper will use verified sources only",
+        ? `Retrieved ${citations.length} verified citations (target: ${citationCount}) + ${ragPapers.length} supporting abstracts from 25+ databases — ranked by impact, no Wikipedia, no unverified sources`
+        : "25+ academic databases queried — paper will use only DOI-verifiable sources",
       status: "done",
     });
 

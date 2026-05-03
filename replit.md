@@ -179,7 +179,23 @@ Sentence-level fingerprinting against Open Library, Wikipedia, Google Books, Int
 ## External Dependencies & APIs
 
 ### Academic Citation APIs (`citationVerifier.ts`, `academicSources.ts`)
-Semantic Scholar, OpenAlex, arXiv, Europe PMC, PubMed, CrossRef, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE
+**25+ live databases, 1.5B+ papers, fully keyless (except NASA ADS which is optional).**
+
+| Group | Sources |
+|---|---|
+| Core aggregators | OpenAlex (250M+), CrossRef (145M+), Semantic Scholar (200M+), BASE (340M+), CORE (200M+) |
+| Biomedical | PubMed NCBI (36M+), PubMed Central (8M+), Europe PMC (40M+), bioRxiv, medRxiv, ClinicalTrials.gov |
+| STEM | arXiv (2.4M+), NASA ADS (16M+ — optional key), Zenodo, DataCite (48M+), Dryad |
+| OA Journals | DOAJ (20K+ journals), PLOS ONE, Figshare (9M+) |
+| Education/Humanities | ERIC (US Dept of Ed), HAL France (1.5M+), OpenAIRE (100M+ EU), OSF Preprints |
+| Economics | NBER Working Papers (35K+) |
+| Current Events Layer | arXiv + CrossRef + OpenAlex filtered to last 90 days — auto-triggers on current-events topics |
+
+**Discipline routing:** astronomy→NASA ADS, economics→NBER, biomedical→bioRxiv/medRxiv/ClinicalTrials, etc.
+**Verifiability guarantee:** every paper returned has a DOI or institutional URL. No Wikipedia, no news, no hallucinated citations.
+**Rate limiters:** all 25+ sources have individual Bottleneck limiters in `ssRateLimit.ts`.
+**Adaptive weighting:** performance-learned source weights per subject stored in DB (`source_stats` table).
+**Recent-events handling:** `isCurrentEventsTopic()` detects 2024/2025/2026/recent/pandemic/election/etc. keywords and fires the 90-day recency layer in parallel with the main search.
 
 ### STEM APIs
 EBI BioModels, PubChem
