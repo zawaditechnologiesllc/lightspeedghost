@@ -20,6 +20,7 @@ import { parseAndAnalyzeDataset, buildInterpretiveContext } from "../lib/dataset
 import { buildFinancialStatementsContext, isFinanceSubject } from "../lib/financialStatements";
 import { cavemanSystem } from "../lib/caveman.js";
 import { fastCall } from "../lib/aiGateway.js";
+import { wordsToTokens } from "../lib/tokenBudget.js";
 
 const router = Router();
 
@@ -547,9 +548,8 @@ async function enforceBodyWordCount(
       status: "running",
     });
 
-    // Token budget: 1.75 tokens/word for the full paper output, plus overhead.
-    // Min 8000 so small papers always have enough room.
-    const optimizerMaxTokens = Math.max(8000, Math.min(16000, Math.ceil(targetWords * 1.75) + 2000));
+    // Dynamic token budget: words × 1.485 + 2000 structural overhead. Min 8000 for small papers.
+    const optimizerMaxTokens = Math.max(8000, wordsToTokens(targetWords, 2000));
     const wordsNeeded = Math.abs(targetWords - currentCount);
     const sectionsHint = isExpand
       ? `Prioritize expanding the largest body sections first (analysis, discussion, body paragraphs). Add ${wordsNeeded} substantive words of analytical depth, evidence, and argumentation — no padding or repetition.`
@@ -685,9 +685,8 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     const citationCount = body.numSources ? Math.min(Math.max(body.numSources, 3), 50) : autoCitations;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
     const refsOverhead = Math.min(2000, Math.max(400, citationCount * 120));
-    // Use 1.65 tokens/word — accounts for markdown structure, headings, and citation formatting overhead.
-    // This ensures the model is never token-starved and can always reach the target word count.
-    const maxTokens = Math.min(16000, Math.ceil(maxWords * 1.65) + refsOverhead);
+    // Dynamic token budget: words × 1.35 (token/word) × 1.10 (±10% margin) + citation overhead.
+    const maxTokens = wordsToTokens(maxWords, refsOverhead);
 
     // Keep-alive ping so the SSE connection stays open during slow citation/DB calls
     send("ping", { t: Date.now() });
@@ -1142,7 +1141,7 @@ ${body.additionalInstructions}
       for (let secIdx = 0; secIdx < sectionPlan.length; secIdx++) {
         const section = sectionPlan[secIdx];
         const isFirst = secIdx === 0;
-        const sectionMaxTokens = Math.min(16000, Math.ceil(section.targetWords * 1.7) + 800);
+        const sectionMaxTokens = wordsToTokens(section.targetWords, 800);
         const headingName = section.name.split("—")[0].trim();
 
         send("step", {
@@ -1191,7 +1190,7 @@ ${body.additionalInstructions}
           try {
             const correctionResp = await anthropic.messages.create({
               model: "claude-sonnet-4-5",
-              max_tokens: Math.min(16000, Math.ceil(section.targetWords * 1.75) + 600),
+              max_tokens: wordsToTokens(section.targetWords, 600),
               system: systemPrompt,
               messages: [{
                 role: "user",
@@ -1325,7 +1324,7 @@ Return JSON:
 
           const improvResp = await anthropic.messages.create({
             model: "claude-sonnet-4-5",
-            max_tokens: 12000,
+            max_tokens: wordsToTokens(maxWords, 1500),
             system: `${WRITER_SOUL}
 
 You are the LightSpeed Grade Optimizer. A paper has been written but a cross-check found it does not fully meet the A-grade criteria.
@@ -1425,7 +1424,7 @@ RULES:
 
         const rephrasedResp = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
-          max_tokens: 12000,
+          max_tokens: wordsToTokens(maxWords, 1500),
           system: `${WRITER_SOUL}
 
 You are the LightSpeed Originality Engine. Your task is to rephrase flagged sections of an academic paper to reduce textual similarity below 8% while preserving:
