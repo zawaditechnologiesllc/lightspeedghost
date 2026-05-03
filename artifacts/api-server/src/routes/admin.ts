@@ -837,6 +837,7 @@ router.get("/mwaramuriuki-login/documents", async (req: Request, res: Response) 
         id: documentsTable.id,
         userId: documentsTable.userId,
         title: documentsTable.title,
+        content: documentsTable.content,
         type: documentsTable.type,
         subject: documentsTable.subject,
         wordCount: documentsTable.wordCount,

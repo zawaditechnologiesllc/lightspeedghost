@@ -16,7 +16,7 @@ Light Speed Ghost is a full-stack AI academic writing platform for students and 
 | Starter | **$9.99/mo** | Monthly — amountCents: 999 |
 | Pro | **$29.99/mo** | Monthly — amountCents: 2999 |
 | Pro Annual | **$269/yr ($22.42/mo)** | Annual — amountCents: 26900 · saves 25% vs monthly |
-| Institution | **$9/seat/mo** | Annual minimum 5 seats — amountCents: 900 |
+| Institution | **Custom pricing** | Admin-assigned only. Not available for self-service purchase. amountCents set per contract. |
 | Ebooks Add-On | **$29.99/mo** | Monthly — amountCents: 2999 · **completely separate from academic plans** |
 
 ### Pay-As-You-Go (PAYG) prices — no subscription required, credits never expire

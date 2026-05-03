@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useListDocuments, useDeleteDocument, getListDocumentsQueryKey } from "@workspace/api-client-react";
 import type { ListDocumentsType } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, FileText, PenLine, FlaskConical, GraduationCap, Files, Search, ListOrdered, Wand2, ShieldCheck, BookMarked, ListTree, Download, Clock, Infinity } from "lucide-react";
+import { Trash2, FileText, PenLine, FlaskConical, GraduationCap, Files, Search, Wand2, ShieldCheck, BookMarked, ListTree, Copy, FileDown, Printer, Clock, Infinity, Loader2 } from "lucide-react";
+import { exportAsDocx, exportAsPDF, exportAsTxt, copyText, richToHtml, wrapDocHtml } from "@/lib/exportUtils";
 
 const typeFilters = [
   { value: undefined,       label: "All" },
@@ -57,20 +58,10 @@ function parseLsgTitle(title: string): { code: string | null; label: string } {
   return { code: null, label: title };
 }
 
-function downloadDocument(title: string, content: string, type: string) {
-  const ext = type === "ebook" ? "md" : "txt";
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${title.replace(/[^a-zA-Z0-9-_]/g, "_")}.${ext}`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 export default function Documents() {
   const [selectedType, setSelectedType] = useState<DocType>(undefined);
   const [search, setSearch] = useState("");
+  const [exportingKey, setExportingKey] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useListDocuments(
@@ -79,6 +70,21 @@ export default function Documents() {
   );
 
   const deleteDocument = useDeleteDocument();
+
+  const handleExport = async (fmt: string, docId: number, title: string, content: string) => {
+    const key = `${docId}-${fmt}`;
+    setExportingKey(key);
+    const { label } = parseLsgTitle(title);
+    const slug = title.replace(/[^a-zA-Z0-9-_ ]/g, "_").replace(/\s+/g, "_").slice(0, 60).trim();
+    try {
+      if (fmt === "copy") await copyText(content);
+      else if (fmt === "docx") await exportAsDocx(content, slug, label);
+      else if (fmt === "pdf") exportAsPDF(wrapDocHtml(label, richToHtml(content)));
+      else if (fmt === "txt") exportAsTxt(content, slug);
+    } finally {
+      setExportingKey(null);
+    }
+  };
 
   const handleDelete = async (id: number) => {
     await deleteDocument.mutateAsync({ id });
@@ -203,13 +209,30 @@ export default function Documents() {
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {doc.content && (
-                    <button
-                      onClick={() => downloadDocument(doc.title, doc.content, doc.type)}
-                      title="Download"
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                    >
-                      <Download size={14} />
-                    </button>
+                    <>
+                      {(["copy", "docx", "pdf", "txt"] as const).map((fmt) => {
+                        const isLoading = exportingKey === `${doc.id}-${fmt}`;
+                        const icons: Record<string, React.ReactNode> = {
+                          copy: <Copy size={13} />,
+                          docx: <FileDown size={13} />,
+                          pdf:  <Printer size={13} />,
+                          txt:  <FileText size={13} />,
+                        };
+                        const labels: Record<string, string> = { copy: "Copy", docx: "Word", pdf: "PDF", txt: ".txt" };
+                        return (
+                          <button
+                            key={fmt}
+                            onClick={() => handleExport(fmt, doc.id, doc.title, doc.content)}
+                            disabled={!!exportingKey}
+                            title={labels[fmt]}
+                            className="flex items-center gap-1 px-1.5 py-1 rounded-md text-[11px] text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-40"
+                          >
+                            {isLoading ? <Loader2 size={13} className="animate-spin" /> : icons[fmt]}
+                            <span className="hidden sm:inline">{labels[fmt]}</span>
+                          </button>
+                        );
+                      })}
+                    </>
                   )}
                   <button
                     onClick={() => handleDelete(doc.id)}
