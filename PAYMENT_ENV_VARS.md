@@ -29,13 +29,16 @@ STRIPE_PUBLISHABLE_KEY=pk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
 # Price IDs — create products/prices in Stripe Dashboard → Products
-# Pro Monthly: $14.99/month recurring
+# Starter Monthly: $9.99/month recurring
+STRIPE_PRICE_STARTER_MONTHLY=price_...
+
+# Pro Monthly: $29.99/month recurring
 STRIPE_PRICE_PRO_MONTHLY=price_...
 
-# Pro Annual: $99/year recurring
+# Pro Annual: $269/year recurring
 STRIPE_PRICE_PRO_ANNUAL=price_...
 
-# Campus Annual: $6/seat/month recurring (or handle as one-time)
+# Campus Annual: $22.04/seat/month recurring (or handle as one-time)
 STRIPE_PRICE_CAMPUS_ANNUAL=price_...
 
 
