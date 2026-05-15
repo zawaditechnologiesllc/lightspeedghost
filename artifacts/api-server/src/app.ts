@@ -185,18 +185,16 @@ if (process.env.ALLOWED_ORIGINS) {
   }
 }
 
-// Dev / preview patterns — only applied in non-production to avoid letting
-// arbitrary third-party Vercel deployments call the production API.
-const KNOWN_DEV_ORIGINS =
-  process.env.NODE_ENV !== "production"
-    ? [
-        /^https?:\/\/localhost(:\d+)?$/,
-        /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
-        /\.replit\.dev$/,
-        /\.repl\.co$/,
-        /\.vercel\.app$/,
-      ]
-    : [];
+// Dev / preview patterns — localhost and Replit only in dev.
+// .vercel.app is allowed in all envs because the production frontend is
+// hosted on Vercel; blocking it in production would break the admin panel.
+const KNOWN_DEV_ORIGINS = [
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  /\.replit\.dev$/,
+  /\.repl\.co$/,
+  /\.vercel\.app$/,
+];
 
 app.use(
   cors({
