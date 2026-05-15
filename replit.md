@@ -255,4 +255,5 @@ The `Start application` workflow conflicts with `artifacts/lightspeed-ghost: web
 
 Repository: `zawaditechnologiesllc/lightspeedghost`
 Branch: `main`
+Git author email: `zawaditechnologiesllc@gmail.com`
 All commits are pushed automatically at the end of each agent session.
