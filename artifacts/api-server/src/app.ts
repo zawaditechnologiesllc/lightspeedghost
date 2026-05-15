@@ -166,28 +166,31 @@ app.use(
 );
 
 // ── CORS — strict allowlist, never open wildcard ───────────────────────────────
-// Build the origin set from ALLOWED_ORIGINS and automatically include
-// both the www and non-www variant of every listed domain so the user
-// only needs to set one form (e.g. https://example.com is enough to
-// also allow https://www.example.com and vice-versa).
+// Production domains are hardcoded here. Additional origins can be added via
+// the ALLOWED_ORIGINS env var (comma-separated). Both www and non-www variants
+// are added automatically for every listed domain.
+const PRODUCTION_ORIGINS = new Set<string>([
+  "https://lightspeedghost.com",
+  "https://www.lightspeedghost.com",
+]);
+
 const ENV_ORIGINS = new Set<string>();
-if (process.env.ALLOWED_ORIGINS) {
-  for (const raw of process.env.ALLOWED_ORIGINS.split(",")) {
-    const o = raw.trim();
-    if (!o) continue;
-    ENV_ORIGINS.add(o);
-    try {
-      const url = new URL(o);
-      const host = url.hostname;
-      const alt = host.startsWith("www.") ? host.slice(4) : `www.${host}`;
-      ENV_ORIGINS.add(`${url.protocol}//${alt}${url.port ? `:${url.port}` : ""}`);
-    } catch { /* ignore malformed entries */ }
-  }
+const allStaticOrigins = [
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : []),
+];
+for (const raw of allStaticOrigins) {
+  const o = raw.trim();
+  if (!o) continue;
+  ENV_ORIGINS.add(o);
+  try {
+    const url = new URL(o);
+    const host = url.hostname;
+    const alt = host.startsWith("www.") ? host.slice(4) : `www.${host}`;
+    ENV_ORIGINS.add(`${url.protocol}//${alt}${url.port ? `:${url.port}` : ""}`);
+  } catch { /* ignore malformed entries */ }
 }
 
-// Dev / preview patterns — localhost and Replit only in dev.
-// .vercel.app is allowed in all envs because the production frontend is
-// hosted on Vercel; blocking it in production would break the admin panel.
+// Preview / dev patterns — Vercel previews and local dev.
 const KNOWN_DEV_ORIGINS = [
   /^https?:\/\/localhost(:\d+)?$/,
   /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
@@ -204,9 +207,11 @@ app.use(
         if (process.env.NODE_ENV !== "production") return cb(null, true);
         return cb(new Error("CORS: origin required in production"), false);
       }
-      // Explicit allowlist from env var always wins (includes auto-added www variant)
+      // Hardcoded production domains always allowed
+      if (PRODUCTION_ORIGINS.has(origin)) return cb(null, true);
+      // Explicit allowlist from ALLOWED_ORIGINS env var
       if (ENV_ORIGINS.has(origin)) return cb(null, true);
-      // Dev/Replit/Vercel preview pattern match
+      // Dev / Vercel preview pattern match
       if (KNOWN_DEV_ORIGINS.some((pat) => pat.test(origin))) return cb(null, true);
       cb(new Error(`CORS: origin '${origin}' is not allowed`), false);
     },
