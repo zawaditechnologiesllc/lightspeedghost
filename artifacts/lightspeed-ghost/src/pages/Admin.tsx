@@ -17,7 +17,7 @@ import { exportAsDocx, exportAsPDF, exportAsTxt, copyText, richToHtml, wrapDocHt
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "";
+const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
 // adminFetch automatically adds x-admin-email header when a sector admin is
 // logged in (stored in sessionStorage by handleAdminLogin).
@@ -476,7 +476,7 @@ export default function Admin() {
     try {
       const body: Record<string, string> = { password: inputPassword };
       if (loginEmail.trim()) body.email = loginEmail.trim().toLowerCase();
-      const res = await fetch(`${API_BASE}/api/mwaramuriuki-login/verify`, {
+      const res = await fetch(`${API_BASE}/mwaramuriuki-login/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -899,7 +899,7 @@ export default function Admin() {
   const loadSectorAdmins = useCallback(async () => {
     setSectorAdminLoading(true);
     try {
-      const data = await adminFetch("/api/mwaramuriuki-login/admin-users", password) as { adminUsers: SectorAdminUser[] };
+      const data = await adminFetch("/mwaramuriuki-login/admin-users", password) as { adminUsers: SectorAdminUser[] };
       setSectorAdminUsers(data.adminUsers);
     } catch { setSectorAdminUsers([]); }
     finally { setSectorAdminLoading(false); }
@@ -914,7 +914,7 @@ export default function Admin() {
     }
     setCreatingAdmin(true);
     try {
-      await adminFetch("/api/mwaramuriuki-login/admin-users", password, {
+      await adminFetch("/mwaramuriuki-login/admin-users", password, {
         method: "POST",
         body: JSON.stringify({ name: newAdminName.trim(), email: newAdminEmail.trim(), password: newAdminPassword, sectors: newAdminSectors }),
       });
@@ -927,7 +927,7 @@ export default function Admin() {
 
   async function toggleSectorAdminActive(admin: SectorAdminUser) {
     try {
-      await adminFetch(`/api/mwaramuriuki-login/admin-users/${admin.id}`, password, {
+      await adminFetch(`/mwaramuriuki-login/admin-users/${admin.id}`, password, {
         method: "PATCH", body: JSON.stringify({ active: !admin.active }),
       });
       setSectorAdminUsers((prev) => prev.map((a) => a.id === admin.id ? { ...a, active: !a.active } : a));
@@ -943,7 +943,7 @@ export default function Admin() {
         sectors: editingSectorAdmin.sectors,
       };
       if (editSectorAdminPassword) body.password = editSectorAdminPassword;
-      await adminFetch(`/api/mwaramuriuki-login/admin-users/${editingSectorAdmin.id}`, password, {
+      await adminFetch(`/mwaramuriuki-login/admin-users/${editingSectorAdmin.id}`, password, {
         method: "PATCH", body: JSON.stringify(body),
       });
       setSectorAdminUsers((prev) => prev.map((a) => a.id === editingSectorAdmin.id ? { ...editingSectorAdmin } : a));
@@ -955,7 +955,7 @@ export default function Admin() {
   async function deleteSectorAdmin(id: number) {
     setDeletingSectorAdminId(id);
     try {
-      await adminFetch(`/api/mwaramuriuki-login/admin-users/${id}`, password, { method: "DELETE" });
+      await adminFetch(`/mwaramuriuki-login/admin-users/${id}`, password, { method: "DELETE" });
       setSectorAdminUsers((prev) => prev.filter((a) => a.id !== id));
     } catch { /* ignore */ }
     finally { setDeletingSectorAdminId(null); }
