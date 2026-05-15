@@ -1520,7 +1520,7 @@ router.get("/mwaramuriuki-login/admin-users", async (req: Request, res: Response
   }
 });
 
-router.post("/api/mwaramuriuki-login/admin-users", async (req: Request, res: Response) => {
+router.post("/mwaramuriuki-login/admin-users", async (req: Request, res: Response) => {
   if (!requireSuperAdmin(req)) { res.status(401).json({ error: "Unauthorized — super admin only" }); return; }
   const { name, email, password, sectors } = req.body as {
     name?: string; email?: string; password?: string; sectors?: string[];
