@@ -140,6 +140,15 @@ async function initAdminTables() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS gateway_settings (
+      gateway TEXT PRIMARY KEY,
+      paused BOOLEAN NOT NULL DEFAULT FALSE,
+      notes TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    INSERT INTO gateway_settings (gateway) VALUES
+      ('stripe'),('paddle'),('lemon_squeezy'),('paystack'),('intasend')
+    ON CONFLICT (gateway) DO NOTHING;
     INSERT INTO system_settings (key, value) VALUES
       ('maintenance_mode',        'false'),
       ('allow_signups',           'true'),
