@@ -336,16 +336,6 @@ export default function Ebooks() {
           setUsedThisMonth(d.usedThisMonth);
           setPhase("results");
           setResultTab("content");
-          apiFetch("/documents", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              title: d.outline.title,
-              content: d.content,
-              type: "ebook",
-              subject: d.outline.subtitle ?? "",
-            }),
-          }).catch(() => {});
         } else if (event === "error") {
           setError((data as { message: string }).message);
           setPhase("config");
