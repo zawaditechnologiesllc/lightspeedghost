@@ -31,6 +31,13 @@ app.get("/api/health", (_req: Request, res: Response) => {
 app.head("/api/health", (_req: Request, res: Response) => {
   res.status(200).end();
 });
+// Alias — some older frontend builds used /api/healthz
+app.get("/api/healthz", (_req: Request, res: Response) => {
+  res.json({ status: "ok" });
+});
+app.head("/api/healthz", (_req: Request, res: Response) => {
+  res.status(200).end();
+});
 
 // ── Diagnostic config — DISABLED in production to avoid env-var disclosure ───
 // Only available in development. In production, returns 404.
