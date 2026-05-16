@@ -519,6 +519,8 @@ export default function Admin() {
     if (storedRole) {
       try { setAdminRole(JSON.parse(storedRole) as AdminRole); } catch { /* ignore */ }
     }
+    // Auto-wake Render on page load so it's ready before the user hits Login
+    if (!stored) wakeBeforeLogin();
   }, []);
 
   const loadStats = useCallback(async () => {
@@ -716,7 +718,7 @@ export default function Admin() {
   async function wakeBeforeLogin() {
     setPreLoginWaking(true);
     setPreLoginStatus("idle");
-    const HEALTH_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "") + "/api/healthz";
+    const HEALTH_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "") + "/api/health";
     let ok = false;
     try {
       const res = await fetch(HEALTH_URL, {
