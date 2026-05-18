@@ -25,7 +25,7 @@ STRIPE_PUBLISHABLE_KEY=pk_live_...
 # Webhook signing secret
 # Create endpoint at: Stripe Dashboard → Developers → Webhooks → Add endpoint
 # URL: https://YOUR-RENDER-URL.onrender.com/api/payments/webhook/stripe
-# Events to select: checkout.session.completed, customer.subscription.deleted
+# Events to select: checkout.session.completed, customer.subscription.deleted, invoice.payment_succeeded, invoice.payment_failed, customer.subscription.updated
 STRIPE_WEBHOOK_SECRET=whsec_...
 
 # Price IDs — create products/prices in Stripe Dashboard → Products
@@ -40,6 +40,9 @@ STRIPE_PRICE_PRO_ANNUAL=price_...
 
 # Campus Annual: $22.04/seat/month recurring (or handle as one-time)
 STRIPE_PRICE_CAMPUS_ANNUAL=price_...
+
+# Ebooks Monthly: $29.99/month recurring — 15 ebooks/month, separate add-on subscription
+STRIPE_PRICE_EBOOK_MONTHLY=price_...
 
 
 # ─────────────────────────────────────────────────────────────────────────────
