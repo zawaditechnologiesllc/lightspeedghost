@@ -1,4 +1,5 @@
 import { pool } from "@workspace/db";
+import { getDynamicPlanLimits } from "./systemSettings";
 
 export type ToolName = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline" | "assistant" | "ebook";
 
@@ -171,6 +172,14 @@ export async function getUserPlan(userId: string): Promise<string> {
   } catch {
     return "starter";
   }
+}
+
+async function getEffectiveLimits(plan: string): Promise<Record<ToolName, number | null>> {
+  try {
+    const dynamic = await getDynamicPlanLimits();
+    if (dynamic[plan]) return dynamic[plan];
+  } catch { /* fall through */ }
+  return PLAN_LIMITS[plan] ?? PLAN_LIMITS.starter;
 }
 
 export async function isAtLimit(userId: string, tool: ToolName): Promise<boolean> {

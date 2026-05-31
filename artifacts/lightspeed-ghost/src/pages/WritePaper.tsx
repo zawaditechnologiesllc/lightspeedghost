@@ -263,7 +263,11 @@ const ANALYSIS_TOOLS: { value: string; label: string; badge: string; desc: strin
   { value: "tableau", label: "Tableau",         badge: "TAB",     desc: "Visual analytics, trend lines, LOD" },
   { value: "powerbi", label: "Power BI",        badge: "PBI",     desc: "DAX measures, Power Query, KPIs" },
   { value: "julia",   label: "Julia",           badge: "JL",      desc: "GLM.jl, HypothesisTests.jl, Plots.jl" },
-];
+const FINANCE_SUBJECTS = new Set([
+  "finance", "accounting", "financial analysis", "economics", "banking",
+  "investment", "insurance", "actuarial", "business studies", "business",
+  "financial management", "corporate finance", "managerial accounting",
+]);
 
 const PAPER_TYPES = [
   { value: "research",               label: "Research Paper" },

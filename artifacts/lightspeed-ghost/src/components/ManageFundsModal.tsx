@@ -49,7 +49,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
   const resolvedPlan = planLoading ? null : (plan ?? "starter");
   const PlanIcon = PLAN_ICON[resolvedPlan ?? "starter"] ?? Zap;
   const planColor = PLAN_COLOR[resolvedPlan ?? "starter"] ?? "text-blue-400";
-  const planName = resolvedPlan === "pro" ? "Pro" : resolvedPlan === "institution" ? "Institution" : resolvedPlan === null ? "…" : "Starter";
+  const planName = resolvedPlan === "pro" ? "Pro" : resolvedPlan === "institution" ? "Institution" : resolvedPlan === "campus" ? "Institution" : resolvedPlan === null ? "…" : "Starter";
 
   const creditDollars = (balanceCents / 100).toFixed(2);
 

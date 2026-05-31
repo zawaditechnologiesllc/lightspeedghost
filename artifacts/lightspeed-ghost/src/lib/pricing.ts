@@ -39,10 +39,10 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: "institution_annual",
     name: "Institution",
-    amountCents: 900,
+    amountCents: 0,
     interval: "month",
-    displayPrice: "$9/seat/mo",
-    description: "Annual plan, minimum 5 seats",
+    displayPrice: "Custom pricing",
+    description: "Custom seats, one invoice — contact us for a quote",
   },
   {
     id: "ebooks_monthly",

@@ -21,6 +21,7 @@ import { buildFinancialStatementsContext, isFinanceSubject } from "../lib/financ
 import { cavemanSystem } from "../lib/caveman.js";
 import { fastCall } from "../lib/aiGateway.js";
 import { wordsToTokens } from "../lib/tokenBudget.js";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -494,11 +495,18 @@ function getSectionBudgets(paperType: string, targetWords: number): { name: stri
 }
 
 function computeBodyWordCount(content: string): number {
+  // Remove everything from the references/bibliography section onwards
   const withoutRefs = content.replace(/^#{1,3}\s*(references?|bibliography|works?\s*cited|further\s*reading|reference\s*list)\b[\s\S]*/im, "");
-  const withoutCitations = withoutRefs
+  // Remove Markdown footnote definitions: [^1]: text (may be multi-line with indent)
+  const withoutFootnoteDefs = withoutRefs.replace(/^\[\^[^\]]+\]:[^\n]*/gm, "");
+  // Remove footnote/endnote markers in text: [^1], [^note], ^1
+  const withoutFootnoteRefs = withoutFootnoteDefs.replace(/\[\^[^\]]+\]|\^[\d]+/g, "");
+  // Remove inline citation brackets
+  const withoutCitations = withoutFootnoteRefs
     .replace(/\[[\d,;\s–-]+\]/g, "")
     .replace(/\([A-Z][A-Za-z\s&.,]+(?:et\s+al\.?)?,?\s*\d{4}[a-z]?(?:,\s*pp?\.?\s*[\d–-]+)?\)/g, "")
     .replace(/\([A-Z][A-Za-z\s&.,]+\d{4}[a-z]?\)/g, "");
+  // Remove structural noise
   const clean = withoutCitations
     .replace(/^#+\s*.*/gm, "")
     .replace(/\*\*|__|\*|_/g, "")
@@ -823,6 +831,13 @@ Only output valid JSON. Do not include markdown fences or commentary.`;
     });
 
     // ── Step 1.5: Dataset analysis (if student provided quantitative data) ────
+    let financialContext = "";
+    if (body.financialStatementText?.trim() && isFinanceSubject(body.subject ?? "")) {
+      send("step", { id: "financial-analysis", message: "Parsing financial statements — extracting ratios, trends, and red flags…", status: "running" });
+      financialContext = buildFinancialStatementsContext(body.financialStatementText, body.financialStatementType ?? "all");
+      send("step", { id: "financial-analysis", message: "Financial statement analysis complete — ratios and trends injected into paper context.", status: "done" });
+    }
+
     let datasetAnalysis = "";
     if (body.datasetText?.trim()) {
       send("step", {
@@ -1046,7 +1061,7 @@ DO NOT write a generic paper body — the entire body IS the annotated entries.
 
     const systemPrompt = `${WRITER_SOUL}
 
-${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${financialContext ? `${financialContext}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
+${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${financialContext ? `FINANCIAL STATEMENTS ANALYSIS (PRIMARY DATA — cite specific figures, ratios, and trends from this analysis in your paper. Do NOT present raw data tables; interpret and cite the metrics):\n${financialContext}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
 
 ${stemBlock ? `${stemBlock}\n` : ""}${aGradeCriteria ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GRADING TARGET — ${aGradeCriteria}
@@ -1651,6 +1666,24 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
       : ` | All ${citations.length} citations used in-text`;
 
     send("step", { id: "stats", message: `Quality assessment complete — estimated grade ${stats.grade}%, AI score ${stats.aiScore}%, plagiarism ${stats.plagiarismScore}% (verified) | Body: ${bodyWordCount.toLocaleString()} words (target: ${targetWords.toLocaleString()})${citationMsg}`, status: "done" });
+
+    logger.info({
+      tool: "paper_write",
+      userId: req.userId,
+      topic: body.topic,
+      subject: body.subject,
+      paperType: body.paperType,
+      targetWords,
+      bodyWordCount,
+      rawWordCount,
+      withinTolerance: bodyWordCount >= Math.floor(targetWords * 0.9) && bodyWordCount <= Math.ceil(targetWords * 1.1),
+      aiScore: stats.aiScore,
+      plagiarismScore: stats.plagiarismScore,
+      grade: stats.grade,
+      citations: citations.length,
+      hasDataset: !!body.datasetText,
+      hasFinancialData: !!body.financialStatementText,
+    }, "[write] paper generation complete");
 
     // ── Fire quality signals into the learning engine (fire-and-forget) ───────
     // These accumulate over time so the admin dashboard can track platform-wide
