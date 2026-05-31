@@ -7,7 +7,7 @@
   <!-- ── Core pages ────────────────────────────────────────────────────── -->
   <url>
     <loc>https://lightspeedghost.com/</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -15,69 +15,83 @@
   <!-- ── Tool pages (high-value — 0.95) ───────────────────────────────── -->
   <url>
     <loc>https://lightspeedghost.com/write</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/humanizer</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://lightspeedghost.com/ebooks</loc>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/plagiarism</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.92</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/revision</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.90</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/stem</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.90</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/study</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.90</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/outline</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
+  </url>
+
+  <!-- ── Pricing & billing ─────────────────────────────────────────────── -->
+  <url>
+    <loc>https://lightspeedghost.com/billing</loc>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
   </url>
 
   <!-- ── Content / SEO pages ───────────────────────────────────────────── -->
   <url>
     <loc>https://lightspeedghost.com/blog</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/about</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.70</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/contact</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/careers</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.60</priority>
   </url>
@@ -85,31 +99,31 @@
   <!-- ── Legal / policy pages ──────────────────────────────────────────── -->
   <url>
     <loc>https://lightspeedghost.com/privacy</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.40</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/terms</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.40</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/academic-use</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.40</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/refund</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.35</priority>
   </url>
   <url>
     <loc>https://lightspeedghost.com/cookies</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.30</priority>
   </url>

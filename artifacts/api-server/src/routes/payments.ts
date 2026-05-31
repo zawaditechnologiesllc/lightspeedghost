@@ -166,7 +166,9 @@ async function createStripeSession(params: {
   let session: Stripe.Checkout.Session;
 
   if (params.type === "subscription" && params.plan) {
-    const priceId = process.env[`STRIPE_PRICE_${params.plan.toUpperCase()}`];
+    // Check canonical name (STRIPE_PRICE_EBOOKS_MONTHLY) then legacy name (STRIPE_PRICE_EBOOK_MONTHLY)
+    const priceId = process.env[`STRIPE_PRICE_${params.plan.toUpperCase()}`]
+      ?? (params.plan === "ebooks_monthly" ? process.env.STRIPE_PRICE_EBOOK_MONTHLY : undefined);
     if (!priceId) throw new Error(`Stripe price ID not configured for plan: ${params.plan}`);
     session = await stripe.checkout.sessions.create({
       mode: "subscription",
