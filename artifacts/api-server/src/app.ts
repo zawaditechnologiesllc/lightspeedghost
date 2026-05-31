@@ -10,6 +10,7 @@ import { createRemoteJWKSet, jwtVerify, decodeProtectedHeader, decodeJwt } from 
 import router from "./routes";
 import seoPublicRouter from "./routes/seo-public";
 import { authMiddleware } from "./middlewares/auth";
+import { resolveAdminAuth } from "./middlewares/adminAuth";
 import { requestLoggerMiddleware } from "./lib/requestLogger";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
@@ -353,6 +354,8 @@ app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 // ── Auth — resolve userId from session or Bearer JWT ─────────────────────────
 app.use(authMiddleware);
+// Resolve admin identity for every request — allows seo.ts and other non-admin routers to check req.adminAuth
+app.use(resolveAdminAuth);
 
 // ── /api/me — returns the authenticated user's id/email (auth debug helper) ───
 // Visit https://your-render-url.onrender.com/api/me in the browser with a valid
