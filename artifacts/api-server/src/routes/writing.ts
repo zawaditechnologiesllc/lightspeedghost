@@ -442,22 +442,18 @@ function computeBodyWordCount(content: string): number {
   return clean.split(/\s+/).filter((w) => w.trim().length > 0).length;
 }
 
-function tokenBudgetFromWords(words: number, extra = 0): number {
-  return Math.max(1200, Math.ceil(words * 2.2) + extra);
-}
-
 async function enforceBodyWordCount(
   content: string,
   targetWords: number,
   send: (event: string, data: object) => void,
 ): Promise<string> {
   let current = content;
-  const minTarget = targetWords;
-  const maxTarget = targetWords;
+  const minTarget = Math.floor(targetWords * 0.95);
+  const maxTarget = Math.ceil(targetWords * 1.05);
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     const currentCount = computeBodyWordCount(current);
-    if (currentCount === targetWords) {
+    if (currentCount >= minTarget && currentCount <= maxTarget) {
       if (attempt > 1) {
         send("step", {
           id: "word-count-fix",
@@ -468,7 +464,7 @@ async function enforceBodyWordCount(
       return current;
     }
 
-    const isExpand = currentCount < targetWords;
+    const isExpand = currentCount < minTarget;
     const delta = Math.abs(targetWords - currentCount);
     send("step", {
       id: "word-count-fix",
@@ -480,7 +476,7 @@ async function enforceBodyWordCount(
 
     const adjustResp = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: tokenBudgetFromWords(Math.max(targetWords, delta), 1600),
+      max_tokens: Math.min(16000, Math.ceil(Math.max(targetWords, delta) * 1.8) + 1800),
       system: `${WRITER_SOUL}
 
 You are the LightSpeed Word Count Optimizer.
@@ -496,7 +492,7 @@ RULES:
 5) Return ONLY the full revised paper content.`,
       messages: [{
         role: "user",
-        content: `${isExpand ? "Expand" : "Trim"} this paper so the body text is exactly ${targetWords} words:\n\n${current}`,
+        content: `${isExpand ? "Expand" : "Trim"} this paper so the body text lands in ${minTarget}-${maxTarget} words (target ${targetWords}):\n\n${current}`,
       }],
     });
 
@@ -509,12 +505,7 @@ RULES:
     current = adjustResp.content[0].type === "text" ? adjustResp.content[0].text : current;
   }
 
-  let finalCount = computeBodyWordCount(current);
-  if (finalCount > targetWords) {
-    const words = current.split(/\s+/).filter(Boolean);
-    current = words.slice(0, targetWords).join(" ");
-    finalCount = computeBodyWordCount(current);
-  }
+  const finalCount = computeBodyWordCount(current);
   send("step", {
     id: "word-count-fix",
     message: `Word-count optimization ended at ${finalCount.toLocaleString()} words (target ${targetWords.toLocaleString()}).`,
@@ -602,10 +593,9 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     };
 
     const requestedWords = body.wordCount ?? 1500;
-    // Target must match exactly what the user requested.
+    // Target = exactly what was requested. Max = requested + 5%. Both are hard limits.
     const targetWords = requestedWords;
-    const minWords = requestedWords;
-    const maxWords = requestedWords;
+    const maxWords = Math.ceil(requestedWords * 1.05);
     const isAnnotatedBib = body.paperType.toLowerCase().includes("annotated");
     const autoCitations = isAnnotatedBib
       ? Math.max(8, Math.ceil(requestedWords / 175))
@@ -613,7 +603,7 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     const citationCount = body.numSources ? Math.min(Math.max(body.numSources, 3), 50) : autoCitations;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
     const refsOverhead = Math.min(2000, Math.max(400, citationCount * 120));
-    const maxTokens = tokenBudgetFromWords(maxWords, refsOverhead);
+    const maxTokens = Math.min(16000, Math.ceil(maxWords * 1.5) + refsOverhead);
 
     // Keep-alive ping so the SSE connection stays open during slow citation/DB calls
     send("ping", { t: Date.now() });
@@ -980,8 +970,8 @@ SPACING: ${body.spacing === "single" ? "Single-spaced" : body.spacing === "1.5" 
 LANGUAGE: ${body.language === "uk" ? "British English (use British spelling: colour, analyse, organisation, behaviour, centre, programme, defence)" : body.language === "au" ? "Australian English (use Australian spelling: colour, analyse, organisation, behaviour, centre, but program for computing)" : "American English (use US spelling: color, analyze, organization, behavior, center, program, defense)"}
 ${body.numSources ? `MINIMUM SOURCES: Use at least ${body.numSources} sources in the paper` : ""}
 WORD COUNT — ALL THREE RULES ARE MANDATORY:
-• Body content (introduction through conclusion): MINIMUM ${minWords} words · MAXIMUM ${maxWords} words
-• Target ${targetWords} words of body text, with allowed tolerance ${minWords}-${maxWords}. Do NOT exceed ${maxWords} words under any circumstances.
+• Body content (introduction through conclusion): MINIMUM ${targetWords} words · MAXIMUM ${maxWords} words
+• Target exactly ${targetWords} words of body text. Do NOT exceed ${maxWords} words under any circumstances.
 • Count your running word total after EVERY section. If you are behind budget, write more in the next section. If ahead, trim.
 • A complete, on-target ${targetWords}-word paper is the goal — neither padded nor truncated.
 • Word count EXCLUDES: reference list, in-text citation parentheses, headings, abstract, table of contents, figure/table captions
@@ -1054,7 +1044,7 @@ ${body.additionalInstructions}
       for (let secIdx = 0; secIdx < sectionPlan.length; secIdx++) {
         const section = sectionPlan[secIdx];
         const isFirst = secIdx === 0;
-        const sectionMaxTokens = tokenBudgetFromWords(section.targetWords, 800);
+        const sectionMaxTokens = Math.min(16000, Math.ceil(section.targetWords * 1.7) + 800);
         const headingName = section.name.split("—")[0].trim();
 
         send("step", {
@@ -1113,7 +1103,7 @@ ${body.additionalInstructions}
           role: "user",
           content: isAnnotatedBib
             ? `Write a complete annotated bibliography on: "${body.topic}"\n\nYou have ${citations.length} verified sources listed above. Write one annotated entry for EACH source — full citation then a 150-200 word annotation (Summary → Critical Evaluation → Relevance). Sort entries alphabetically by first author's surname. Include an Introduction and Conclusion. Total annotation content must reach at least ${targetWords} words.${body.additionalInstructions ? `\n\nADDITIONAL STUDENT INSTRUCTIONS (follow exactly): ${body.additionalInstructions}` : ""}`
-            : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Body word count (introduction through conclusion, excluding references and in-text citations): minimum ${minWords} words, maximum ${maxWords} words. Aim for ${targetWords} words. Stop writing body content once you reach ${maxWords} words, then add the references section.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
+            : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Body word count (introduction through conclusion, excluding references and in-text citations): minimum ${targetWords} words, maximum ${maxWords} words. Stop writing body content once you reach ${maxWords} words, then add the references section.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
         }],
       });
 
@@ -1214,7 +1204,7 @@ ${gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}
 RULES:
 - Keep all existing citations, facts, and arguments — only strengthen weak sections
 - Add evidence, analysis, or depth where criteria are missing — do not waffle or pad
-- Keep final body word count exactly at the requested target
+- Maintain the same approximate word count (±5%)
 - Preserve all markdown formatting and LaTeX equations
 - Return ONLY the revised paper — no commentary, no preamble`,
             messages: [{
@@ -1296,7 +1286,7 @@ RULES:
 You are the LightSpeed Originality Engine. Your task is to rephrase flagged sections of an academic paper to reduce textual similarity below 8% while preserving:
 • All facts, arguments, conclusions, and in-text citations EXACTLY
 • The same academic level and tone
-• Keep final body word count exactly at the requested target
+• The same word count (±5%)
 • All LaTeX equations and markdown formatting
 
 Rephrase by:
@@ -1755,13 +1745,7 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
     send("step", { id: "headings", message: "Section headings and sub-headings complete", status: "done" });
     send("step", { id: "finalise", message: "Adding evidence points and research angles per section…", status: "running" });
     send("step", { id: "finalise", message: "Outline finalised — ready to write", status: "done" });
-    send("done", {
-      ...outline,
-      sections: enrichedSections,
-      totalWordTarget: targetWordCount,
-      totalWordMin: targetWordCount,
-      totalWordMax: targetWordCount,
-    });
+    send("done", { ...outline, sections: enrichedSections, totalWordTarget: targetWordCount });
     res.end();
   } catch (err) {
     req.log.error({ err }, "Error generating outline");
