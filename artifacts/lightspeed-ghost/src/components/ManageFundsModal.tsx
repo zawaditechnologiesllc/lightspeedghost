@@ -104,7 +104,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                 </div>
                 {!planLoading && resolvedPlan === "starter" && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20 font-medium">
-                    $4.99/mo
+                    $9.99/mo
                   </span>
                 )}
                 {!planLoading && resolvedPlan === "pro" && (
@@ -168,20 +168,20 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                   <p className="text-sm font-semibold text-primary">Upgrade to Pro</p>
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-3">
-                  Unlock 50 of every tool per month, priority LightSpeed AI, and unlimited Study &amp; Plagiarism checks.
+                  15 papers · 20 revisions &amp; humanizations · 60 STEM · 150 study sessions · 20 plagiarism checks per month.
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setCheckoutPlan("pro_monthly")}
                     className="flex-1 py-2 rounded-lg bg-muted border border-border text-foreground text-xs font-semibold hover:bg-muted/80 transition-colors flex items-center justify-center gap-1.5"
                   >
-                    $14.99/mo <ChevronRight size={12} />
+                    $29.99/mo <ChevronRight size={12} />
                   </button>
                   <button
                     onClick={() => setCheckoutPlan("pro_annual")}
                     className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
                   >
-                    $139/yr · Save 23% <ChevronRight size={12} />
+                    $269/yr · Save 25% <ChevronRight size={12} />
                   </button>
                 </div>
               </div>

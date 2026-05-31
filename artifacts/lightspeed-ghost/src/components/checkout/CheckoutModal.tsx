@@ -6,6 +6,7 @@ import {
 import { usePaymentGateway, type GatewayInfo } from "@/hooks/usePaymentGateway";
 import { useCredits } from "@/hooks/useCredits";
 import {
+  SUBSCRIPTION_PLANS,
   formatAmount,
   getPaygPrice,
   getPaygLabel,
@@ -49,12 +50,17 @@ const GATEWAY_ICONS: Record<string, React.ElementType> = {
   intasend:      Smartphone,
 };
 
-const PLAN_AMOUNTS: Record<PlanId, number> = {
-  starter_monthly:   499,
-  pro_monthly:      1499,
-  pro_annual:       13900,
-  campus_annual:     900,
-};
+function planAmount(planId: PlanId, seats: number): number {
+  const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
+  if (!plan) return 0;
+  if (planId === "campus_annual") return plan.amountCents * Math.max(5, seats) * 12;
+  return plan.amountCents;
+}
+
+function planLabel(planId: PlanId, seats: number): string {
+  if (planId === "campus_annual") return `Campus (${seats} seats)`;
+  return SUBSCRIPTION_PLANS.find(p => p.id === planId)?.name ?? planId;
+}
 
 export function CheckoutModal({
   open,
@@ -90,17 +96,13 @@ export function CheckoutModal({
   const amountCents = mode === "credits" && creditPackageCents
     ? creditPackageCents
     : mode === "subscription" && plan
-      ? (plan === "campus_annual"
-        ? PLAN_AMOUNTS[plan] * Math.max(5, seats) * 12
-        : PLAN_AMOUNTS[plan])
+      ? planAmount(plan, seats)
       : (tool ? getPaygPrice(tool, tier) : 0);
 
   const label = mode === "credits" && creditPackageCredits
     ? `${creditPackageCredits.toLocaleString()} Credits`
     : mode === "subscription" && plan
-      ? plan === "pro_monthly" ? "Pro — Monthly"
-        : plan === "pro_annual" ? "Pro — Annual"
-        : `Campus (${seats} seats)`
+      ? planLabel(plan, seats)
       : (tool ? getPaygLabel(tool, tier) : "");
 
   const canPayWithCredits = mode === "payg" && tool && balanceCents >= amountCents && amountCents > 0;
@@ -225,12 +227,12 @@ export function CheckoutModal({
             </div>
             {mode === "subscription" && plan === "campus_annual" && (
               <div className="mt-1.5 text-xs text-white/35">
-                {seats} seats × $9/seat/mo × 12 months
+                {seats} seats · custom pricing · contact us
               </div>
             )}
             {mode === "subscription" && plan === "pro_annual" && (
               <div className="mt-1.5 text-xs text-green-400/80">
-                Save 23% vs monthly billing
+                Save 25% vs monthly billing
               </div>
             )}
           </div>
