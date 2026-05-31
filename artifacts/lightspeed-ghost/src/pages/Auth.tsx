@@ -5,6 +5,15 @@ import { Logo } from "@/components/Logo";
 import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
 
+const GOOGLE_ICON = (
+  <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
+    <path d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21c10.5 0 20-7.8 20-21 0-1.4-.2-2.7-.5-4z" fill="#FFC107"/>
+    <path d="M6.3 14.7l7 5.1C15.1 16.1 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3c-7.6 0-14.2 4.3-17.7 10.7z" fill="#FF3D00"/>
+    <path d="M24 45c5.5 0 10.5-2 14.3-5.3l-6.6-5.6C29.7 35.9 27 37 24 37c-6 0-10.6-3.9-11.8-9.2l-7 5.4C8 39.6 15.4 45 24 45z" fill="#4CAF50"/>
+    <path d="M44.5 20H24v8.5h11.8c-.9 2.7-2.7 4.9-5.1 6.4l6.6 5.6C41.4 36.9 45 31 45 24c0-1.4-.2-2.7-.5-4z" fill="#1976D2"/>
+  </svg>
+);
+
 type Tab = "login" | "signup";
 
 export default function Auth() {
@@ -42,6 +51,19 @@ export default function Auth() {
     } else {
       setStatus("done");
       navigate("/app");
+    }
+  }
+
+  async function handleGoogleLogin() {
+    setError("");
+    setStatus("loading");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) {
+      setError(error.message);
+      setStatus("error");
     }
   }
 
@@ -123,8 +145,25 @@ export default function Auth() {
                 <p className="text-white/40 text-sm mb-6">
                   {tab === "login"
                     ? "Sign in to your Light Speed Ghost account"
-                    : "Starter plan from $4.99/month — cancel any time"}
+                    : "Starter plan from $9.99/month — cancel any time"}
                 </p>
+
+                {/* Google OAuth */}
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={status === "loading"}
+                  className="w-full flex items-center justify-center gap-3 py-2.5 mb-5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {GOOGLE_ICON}
+                  Continue with Google
+                </button>
+
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="flex-1 h-px bg-white/10" />
+                  <span className="text-xs text-white/25">or</span>
+                  <div className="flex-1 h-px bg-white/10" />
+                </div>
 
                 <form
                   onSubmit={tab === "login" ? handleLogin : handleSignup}

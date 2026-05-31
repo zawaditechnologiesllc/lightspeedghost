@@ -1,4 +1,4 @@
-export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "campus_annual";
+export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "campus_annual" | "ebooks_monthly";
 export type PaygTool = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline";
 export type DocumentTier = "discussion" | "essay" | "research" | "proposal" | "dissertation";
 
@@ -15,34 +15,42 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: "starter_monthly",
     name: "Starter — Monthly",
-    amountCents: 499,
+    amountCents: 999,
     interval: "month",
-    displayPrice: "$4.99/mo",
+    displayPrice: "$9.99/mo",
     description: "Essential access to LightSpeed Ghost tools",
   },
   {
     id: "pro_monthly",
     name: "Pro — Monthly",
-    amountCents: 1499,
+    amountCents: 2999,
     interval: "month",
-    displayPrice: "$14.99/mo",
+    displayPrice: "$29.99/mo",
     description: "Full access to all LightSpeed Ghost tools",
   },
   {
     id: "pro_annual",
     name: "Pro — Annual",
-    amountCents: 13900,
+    amountCents: 26900,
     interval: "year",
-    displayPrice: "$139/yr ($11.58/mo)",
-    description: "Best value — save 23% vs monthly",
+    displayPrice: "$269/yr ($22.42/mo)",
+    description: "Best value — save 25% vs monthly",
   },
   {
     id: "campus_annual",
     name: "Campus",
-    amountCents: 900,
+    amountCents: 0,
     interval: "month",
-    displayPrice: "$9/seat/mo",
-    description: "Annual plan, minimum 5 seats",
+    displayPrice: "Custom pricing",
+    description: "Admin-assigned per seat — contact us",
+  },
+  {
+    id: "ebooks_monthly",
+    name: "Ebooks Add-On",
+    amountCents: 2999,
+    interval: "month",
+    displayPrice: "$29.99/mo",
+    description: "15 AI-written ebooks/month — KDP, Apple Books, all platforms",
   },
 ];
 
