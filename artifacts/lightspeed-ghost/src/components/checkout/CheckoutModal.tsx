@@ -58,7 +58,7 @@ function planAmount(planId: PlanId, seats: number): number {
 }
 
 function planLabel(planId: PlanId, seats: number): string {
-  if (planId === "campus_annual") return `Campus (${seats} seats)`;
+  if (planId === "campus_annual") return `Institution (${seats} seats)`;
   return SUBSCRIPTION_PLANS.find(p => p.id === planId)?.name ?? planId;
 }
 

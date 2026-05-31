@@ -38,11 +38,11 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
   {
     id: "campus_annual",
-    name: "Campus",
+    name: "Institution",
     amountCents: 0,
     interval: "month",
     displayPrice: "Custom pricing",
-    description: "Admin-assigned per seat — contact us",
+    description: "Custom seats, one invoice — contact us for a quote",
   },
   {
     id: "ebooks_monthly",

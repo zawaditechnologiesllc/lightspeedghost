@@ -254,6 +254,11 @@ const PLAN_COLORS: Record<string, string> = {
   campus: "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
 };
 
+function planDisplayName(plan: string): string {
+  if (plan === "campus") return "Institution";
+  return plan.charAt(0).toUpperCase() + plan.slice(1);
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Admin() {
@@ -2149,28 +2154,31 @@ export default function Admin() {
                       <SettingsToggle label="PAYG Enabled" sub="Allow pay-per-use purchases (all tools)" value={settings.payg_enabled === "true"} onChange={(v) => { const val = String(v); setSettings((s) => s ? { ...s, payg_enabled: val } : s); setSettingsDirty(true); quickSaveSetting("payg_enabled", val); }} />
                     </SettingsCard>
 
-                    {/* Starter limits */}
-                    <SettingsCard title="Starter Plan Monthly Limits">
-                      <div className="grid grid-cols-2 gap-3">
-                        {[
-                          { key: "starter_paper" as const,      label: "Papers" },
-                          { key: "starter_revision" as const,   label: "Revisions" },
-                          { key: "starter_humanizer" as const,  label: "Humanizer" },
-                          { key: "starter_stem" as const,       label: "STEM Solves" },
-                          { key: "starter_study" as const,      label: "Study Sessions" },
-                          { key: "starter_plagiarism" as const, label: "Plagiarism" },
-                          { key: "starter_outline" as const,    label: "Outlines" },
-                        ].map(({ key, label }) => (
-                          <div key={key}>
-                            <label className="block text-xs text-white/40 mb-1.5">{label} / month</label>
-                            <input type="number" min="0" value={settings[key]}
-                              onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
-                              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </SettingsCard>
+                    {/* Plan limits */}
+                    {(["starter", "pro", "campus"] as const).map((plan) => (
+                      <SettingsCard key={plan} title={`${plan === "campus" ? "Institution" : plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Monthly Limits`}>
+                        <p className="text-[10px] text-white/30 mb-3">Changes take effect within 30 seconds across all active sessions.</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {([
+                            { key: `${plan}_paper`,      label: "Papers" },
+                            { key: `${plan}_revision`,   label: "Revisions" },
+                            { key: `${plan}_humanizer`,  label: "Humanizer" },
+                            { key: `${plan}_stem`,       label: "STEM Solves" },
+                            { key: `${plan}_study`,      label: "Study Sessions" },
+                            { key: `${plan}_plagiarism`, label: "Plagiarism" },
+                            { key: `${plan}_outline`,    label: "Outlines" },
+                          ] as { key: string; label: string }[]).map(({ key, label }) => (
+                            <div key={key}>
+                              <label className="block text-xs text-white/40 mb-1.5">{label} / month</label>
+                              <input type="number" min="0" value={settings[key] ?? ""}
+                                onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </SettingsCard>
+                    ))}
                   </div>
                 ) : <Empty text="Settings unavailable" />}
               </div>

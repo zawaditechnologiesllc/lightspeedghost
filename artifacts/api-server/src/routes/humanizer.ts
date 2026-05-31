@@ -8,6 +8,7 @@ import { recordUsage } from "../lib/apiCost";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { detectAIScore } from "../lib/aiDetection.js";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -443,6 +444,20 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       documentId,
       passesApplied: currentScore > 10 ? 3 : currentScore > 5 ? 2 : 1,
     });
+
+    const passesApplied = currentScore > 10 ? 3 : currentScore > 5 ? 2 : 1;
+    logger.info({
+      tool: "humanizer",
+      userId: req.userId,
+      tone,
+      originalWordCount: wordCount,
+      humanizedWordCount,
+      wordCountWithinTolerance: Math.abs(humanizedWordCount - wordCount) <= wordCount * 0.1,
+      finalAiScore: currentScore,
+      passesApplied,
+      targetAchieved: currentScore === 0,
+      documentId,
+    }, "[humanizer] humanization complete");
 
   } catch (err) {
     req.log.error({ err }, "Error in humanizer stream");

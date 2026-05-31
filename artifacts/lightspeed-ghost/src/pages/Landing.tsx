@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,7 +28,7 @@ const tools = [
   {
     icon: PenLine,
     name: "AI Paper Writer",
-    desc: "Papers grounded in 10 live academic databases (1B+ papers). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
+    desc: "Papers grounded in 25+ live academic databases (1B+ papers). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
     badge: "Most used",
     href: "/auth",
     color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -122,7 +123,7 @@ const faqs = [
   },
   {
     q: "How is the paper quality? I've tried AI writers before and they're terrible.",
-    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 10 live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, and Europe PMC — pulling over a billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop until the AI score is below 5%. That is the pipeline on every single output.",
+    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 25+ live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, Europe PMC, JSTOR, Scopus, SSRN, NBER, BASE, PhilPapers, EconPapers, WHO IRIS, MEDLINE, ClinicalTrials.gov, Cochrane Library, bioRxiv, medRxiv, PsycINFO, ProQuest and more — pulling over a billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop until the AI score reaches 0%. That is the pipeline on every single output.",
   },
   {
     q: "Does file upload work with PDFs from my university portal?",
@@ -194,29 +195,26 @@ const pricingPlans = [
     badge: "Most popular",
   },
   {
-    name: "Campus",
+    name: "Institution",
     priceMonthly: null,
-    priceAnnual: "$9",
+    priceAnnual: "Custom",
     perMonthly: "",
-    perAnnual: "/ seat / month  ·  min 5 seats  ·  annual",
-    desc: "For study groups, tutoring centers, and institutions. Annual billing only.",
+    perAnnual: "pricing · contact us for a quote",
+    desc: "For universities, tutoring centers, and study groups. Custom seats, custom pricing, one invoice.",
     features: [
-      "5 papers / seat / month",
-      "8 revisions / seat / month",
-      "8 humanizer jobs / seat / month",
-      "30 STEM problems / seat / month",
-      "75 study messages / seat / month",
-      "10 plagiarism + AI checks / seat / month",
-      "10 outlines / seat / month",
-      "Minimum 5 seats — single invoice",
+      "All Pro tools for every seat",
+      "Flexible seat count — no minimums imposed",
       "Shared document library + admin dashboard",
-      "Academic integrity reporting + SLA support",
+      "Bulk billing — single invoice per period",
+      "Academic integrity reporting + audit logs",
+      "Priority SLA support + onboarding",
+      "Custom branding available",
     ],
     locked: [],
     cta: "Contact Us",
     ctaLink: "/contact",
     highlight: false,
-    badge: "Annual only",
+    badge: "Custom pricing",
   },
 ];
 
@@ -285,17 +283,71 @@ function FAQItem({ q, a }: { q: string; a: string }) {
         className="w-full flex items-center justify-between py-5 text-left gap-4 group"
       >
         <span className="text-white font-medium group-hover:text-blue-300 transition-colors">{q}</span>
-        {open
-          ? <ChevronUp size={18} className="text-blue-400 shrink-0" />
-          : <ChevronDown size={18} className="text-white/40 group-hover:text-blue-400 shrink-0 transition-colors" />}
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }}>
+          <ChevronDown size={18} className={`${open ? "text-blue-400" : "text-white/40 group-hover:text-blue-400"} shrink-0 transition-colors`} />
+        </motion.div>
       </button>
-      {open && <p className="pb-5 text-white/60 leading-relaxed text-sm">{a}</p>}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            style={{ overflow: "hidden" }}
+          >
+            <p className="pb-5 text-white/60 leading-relaxed text-sm">{a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 const previewNavItems = ["Dashboard", "Write Paper", "Outline", "Revision", "Humanizer", "AI & Plagiarism", "STEM Solver", "Study Assistant"];
 const previewUrls = ["write", "outline", "revision", "humanizer", "plagiarism", "stem", "study"];
+
+// ── Scroll-triggered reveal ────────────────────────────────────────────────────
+function FadeUp({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+  return (
+    <motion.div
+      ref={ref}
+      className={className}
+      initial={{ opacity: 0, y: 28 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerGrid({ children, className = "", id }: { children: React.ReactNode; className?: string; id?: string }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  return (
+    <motion.div
+      ref={ref}
+      id={id}
+      className={className}
+      initial="hidden"
+      animate={inView ? "visible" : "hidden"}
+      variants={{
+        visible: { transition: { staggerChildren: 0.08 } },
+        hidden: {},
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+const cardVariant = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
+};
 
 export default function Landing() {
   const scrolled = useScrolled();
@@ -436,33 +488,41 @@ export default function Landing() {
         </div>
 
         {/* Mobile menu */}
-        {mobileOpen && (
-          <div className="md:hidden bg-[#04080f]/98 border-t border-white/8 px-4 py-4 space-y-1">
-            {navLinks.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center px-3 py-3 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
-              >
-                {item.label}
-              </a>
-            ))}
-            <Link href="/about">
-              <span onClick={() => setMobileOpen(false)} className="flex items-center px-3 py-3 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
-                About
-              </span>
-            </Link>
-            <div className="pt-3 flex flex-col gap-2.5 border-t border-white/5 mt-2">
-              <Link href="/auth">
-                <span className="block text-center px-4 py-2.5 text-sm border border-white/15 text-white rounded-lg cursor-pointer hover:bg-white/5 transition-colors">Sign In</span>
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div
+              className="md:hidden bg-[#04080f]/98 border-t border-white/8 px-4 py-4 space-y-1"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              {navLinks.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center px-3 py-3 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
+              <Link href="/about">
+                <span onClick={() => setMobileOpen(false)} className="flex items-center px-3 py-3 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
+                  About
+                </span>
               </Link>
-              <Link href="/auth">
-                <span className="block text-center px-4 py-2.5 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg cursor-pointer transition-colors">Get Started</span>
-              </Link>
-            </div>
-          </div>
-        )}
+              <div className="pt-3 flex flex-col gap-2.5 border-t border-white/5 mt-2">
+                <Link href="/auth">
+                  <span className="block text-center px-4 py-2.5 text-sm border border-white/15 text-white rounded-lg cursor-pointer hover:bg-white/5 transition-colors">Sign In</span>
+                </Link>
+                <Link href="/auth">
+                  <span className="block text-center px-4 py-2.5 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg cursor-pointer transition-colors">Get Started</span>
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* ─── HERO ─── */}
@@ -472,11 +532,21 @@ export default function Landing() {
           <div className="absolute top-1/3 left-1/3 w-[200px] sm:w-[300px] h-[200px] sm:h-[300px] bg-violet-600/8 rounded-full blur-[100px]" />
         </div>
 
-        <div className="relative max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium mb-6 sm:mb-8">
+        <motion.div
+          className="relative max-w-4xl mx-auto"
+          initial={{ opacity: 0, y: 32 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <motion.div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium mb-6 sm:mb-8"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+          >
             <Zap size={11} className="text-blue-400" />
             8 AI tools. One platform. Actually works.
-          </div>
+          </motion.div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-5 sm:mb-6">
             Your deadline is{" "}
@@ -545,7 +615,7 @@ export default function Landing() {
 
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* ── Animated product preview ── */}
         <div className="relative mt-12 sm:mt-20 w-full max-w-5xl mx-auto">
@@ -695,10 +765,10 @@ export default function Landing() {
                     </div>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[9px] text-white/40">AI score after</span>
-                      <span className="text-[9px] font-mono font-bold text-emerald-400">8%</span>
+                      <span className="text-[9px] font-mono font-bold text-emerald-400">0%</span>
                     </div>
                     <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: "8%" }} />
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: "2%" }} />
                     </div>
                     <div className="mt-1.5 text-[9px] text-white/30 flex items-center gap-1.5">
                       <CheckCircle size={10} className="text-emerald-400" />
@@ -817,7 +887,7 @@ export default function Landing() {
       <section className="border-y border-white/5 bg-white/[0.02] py-8 sm:py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <p className="text-center text-[11px] font-semibold text-white/25 uppercase tracking-widest mb-6 sm:mb-8">Quality guarantees — enforced on every output</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+          <StaggerGrid className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
             {[
               {
                 value: "92%+",
@@ -834,27 +904,27 @@ export default function Landing() {
                 border: "border-emerald-500/20 bg-emerald-500/5",
               },
               {
-                value: "< 5%",
+                value: "0%",
                 label: "AI detection score",
-                sub: "Multi-pass humanization loop — real detector, not self-reported",
+                sub: "Multi-pass humanization loop — real detector, not self-reported. We don't deliver until it passes.",
                 color: "text-violet-400",
                 border: "border-violet-500/20 bg-violet-500/5",
               },
               {
-                value: "10",
+                value: "25+",
                 label: "Live academic databases",
-                sub: "1B+ papers · OpenAlex · PubMed · CrossRef · Semantic Scholar · ERIC · Zenodo · arXiv + 3 more",
+                sub: "1B+ papers · OpenAlex · PubMed · CrossRef · Semantic Scholar · JSTOR · Scopus · arXiv · CORE · SSRN + 16 more",
                 color: "text-amber-400",
                 border: "border-amber-500/20 bg-amber-500/5",
               },
             ].map(({ value, label, sub, color, border }) => (
-              <div key={label} className={`rounded-xl border p-4 sm:p-5 text-center ${border}`}>
+              <motion.div key={label} variants={cardVariant} className={`rounded-xl border p-4 sm:p-5 text-center ${border}`}>
                 <div className={`text-2xl sm:text-3xl font-bold mb-1 ${color}`}>{value}</div>
                 <div className="text-xs sm:text-sm font-semibold text-white mb-1.5">{label}</div>
                 <div className="text-[10px] sm:text-[11px] text-white/35 leading-relaxed">{sub}</div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </StaggerGrid>
         </div>
       </section>
 
@@ -871,24 +941,26 @@ export default function Landing() {
             </p>
           </div>
 
-          <div id="features" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          <StaggerGrid id="features" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {tools.map(({ icon: Icon, name, desc, badge, color, href }) => (
-              <Link href={href} key={name}>
-                <div className="group relative p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/15 hover:bg-white/[0.05] transition-all cursor-pointer h-full">
-                  {badge && (
-                    <span className={`absolute top-4 right-4 sm:top-5 sm:right-5 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${color}`}>
-                      {badge}
-                    </span>
-                  )}
-                  <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center mb-4 border ${color}`}>
-                    <Icon size={18} />
+              <motion.div key={name} variants={cardVariant}>
+                <Link href={href}>
+                  <div className="group relative p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/15 hover:bg-white/[0.05] transition-all cursor-pointer h-full hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-900/20">
+                    {badge && (
+                      <span className={`absolute top-4 right-4 sm:top-5 sm:right-5 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${color}`}>
+                        {badge}
+                      </span>
+                    )}
+                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center mb-4 border ${color}`}>
+                      <Icon size={18} />
+                    </div>
+                    <h3 className="font-semibold text-white mb-2">{name}</h3>
+                    <p className="text-sm text-white/50 leading-relaxed">{desc}</p>
                   </div>
-                  <h3 className="font-semibold text-white mb-2">{name}</h3>
-                  <p className="text-sm text-white/50 leading-relaxed">{desc}</p>
-                </div>
-              </Link>
+                </Link>
+              </motion.div>
             ))}
-          </div>
+          </StaggerGrid>
         </div>
       </section>
 
@@ -921,8 +993,8 @@ export default function Landing() {
               },
               {
                 icon: "📚",
-                title: "50,000+ Database Knowledge Base",
-                desc: "Every paper searches OpenAlex (250M+ papers), CrossRef (145M+ DOIs), Semantic Scholar, arXiv, and Europe PMC in parallel. Real abstracts are fed as grounding context — so the AI answers from verified peer-reviewed content, not guesswork. No Wikipedia.",
+                title: "25+ Live Academic Databases",
+                desc: "Every paper queries 25+ live databases in parallel — OpenAlex (250M+ papers), CrossRef (145M+ DOIs), PubMed, Semantic Scholar, JSTOR, Scopus, SSRN, NBER, arXiv, CORE, DOAJ, Europe PMC, MEDLINE, Cochrane Library, ClinicalTrials.gov, bioRxiv, medRxiv, BASE, PsycINFO, ProQuest, ERIC, Zenodo, PhilPapers, EconPapers, WHO IRIS, and more. Real abstracts as grounding context — not guesswork.",
                 color: "border-violet-500/20 bg-violet-500/5",
                 tag: "Paper Writer · Study Assistant",
               },
@@ -950,7 +1022,7 @@ export default function Landing() {
               {
                 icon: "✍️",
                 title: "AI Humanization Engine",
-                desc: "The humanizer runs a real detect → rewrite → re-detect loop using an actual AI detection model between each pass — not self-reporting. Up to three passes until the score drops below 5%. Each pass targets the specific patterns the detector flagged.",
+                desc: "The humanizer runs a real detect → rewrite → re-detect loop using an actual AI detection model between each pass — not self-reporting. Up to three passes until the score reaches 0%. Each pass targets the specific patterns the detector flagged. We do not deliver until the score is zero.",
                 color: "border-indigo-500/20 bg-indigo-500/5",
                 tag: "LightSpeed Humanizer",
               },
@@ -1083,11 +1155,11 @@ export default function Landing() {
               <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-4 sm:mb-5">Paper Writer</p>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4 sm:mb-5 leading-tight">A draft you can actually submit. Not cringe at.</h2>
               <p className="text-white/55 leading-relaxed mb-6 sm:mb-8 text-sm sm:text-base">
-                Upload your rubric and we extract the A-grade criteria first — before writing a single word. The paper is then grounded in 50,000+ peer-reviewed databases, plagiarism-gated below 8%, and cross-checked against your rubric before delivery.
+                Upload your rubric and we extract the A-grade criteria first — before writing a single word. The paper is then grounded in 25+ live academic databases, plagiarism-gated below 8%, and cross-checked against your rubric before delivery.
               </p>
               <ul className="space-y-3">
                 {[
-                  "50,000+ peer-reviewed databases searched per paper",
+                  "25+ live academic databases queried per paper — 1B+ papers",
                   "A-grade rubric extraction + cross-check on every output",
                   "Plagiarism enforced below 8% — not estimated, measured",
                   "STEM mode: equations mapped to the right section (Methods, Results, etc.)",
@@ -1237,14 +1309,14 @@ export default function Landing() {
           </div>
 
           {/* ── Subscription plan cards ── */}
-          <div className="grid md:grid-cols-3 gap-4 sm:gap-6 mb-16 sm:mb-24">
+          <StaggerGrid className="grid md:grid-cols-3 gap-4 sm:gap-6 mb-16 sm:mb-24">
             {pricingPlans.map(({ name, priceMonthly, priceAnnual, perMonthly, perAnnual, desc, features, locked, cta, ctaLink, highlight, badge }) => {
               const showAnnual = billingAnnual || priceMonthly === null;
               const price = showAnnual ? priceAnnual : priceMonthly;
               const per   = showAnnual ? perAnnual   : perMonthly;
-              const isCampus = name === "Campus";
+              const isCampus = name === "Institution";
               return (
-                <div key={name} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col ${highlight ? "bg-blue-600/10 border-blue-500/40 shadow-xl shadow-blue-900/20" : "bg-white/[0.02] border-white/8"}`}>
+                <motion.div key={name} variants={cardVariant} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col hover:-translate-y-1 transition-transform duration-300 ${highlight ? "bg-blue-600/10 border-blue-500/40 shadow-xl shadow-blue-900/20" : "bg-white/[0.02] border-white/8"}`}>
                   {badge && (
                     <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${highlight ? "bg-blue-600 text-white" : "bg-white/10 text-white/55 border border-white/15"}`}>
                       {badge}
@@ -1274,8 +1346,8 @@ export default function Landing() {
                     ))}
                   </ul>
 
-                  {isCampus && !billingAnnual && (
-                    <p className="text-[10px] text-white/30 italic mb-3">Campus plan requires annual billing. Toggle above.</p>
+                  {isInstitution && (
+                    <p className="text-[10px] text-white/30 italic mb-3">Custom pricing — we'll get back to you within 1 business day.</p>
                   )}
 
                   {name === "Pro" ? (
@@ -1285,13 +1357,12 @@ export default function Landing() {
                     >
                       {cta}
                     </button>
-                  ) : name === "Campus" ? (
-                    <button
-                      onClick={() => billingAnnual ? setCheckoutPlan("campus_annual") : setBillingAnnual(true)}
-                      className={`w-full block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5`}
-                    >
-                      {billingAnnual ? "Get Campus" : "Switch to Annual"}
-                    </button>
+                  ) : isInstitution ? (
+                    <Link href="/contact">
+                      <span className="w-full block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-emerald-500/30 text-emerald-400 hover:border-emerald-500/60 hover:bg-emerald-500/5">
+                        Contact Us for Pricing
+                      </span>
+                    </Link>
                   ) : (
                     <Link href={ctaLink}>
                       <span className={`block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${highlight ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20" : "border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5"}`}>
@@ -1299,10 +1370,10 @@ export default function Landing() {
                       </span>
                     </Link>
                   )}
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </StaggerGrid>
 
           {/* ── Pay-As-You-Go ── */}
           <div id="payg">

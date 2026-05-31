@@ -1,63 +1,98 @@
+# robots.txt — LightSpeed Ghost (lightspeedghost.com)
+# Last updated: 2026-05-31
+# Spec: https://www.robotstxt.org/robotstxt.html
+
 User-agent: *
 Allow: /
 Disallow: /api/
-Crawl-delay: 1
+Disallow: /app
+Disallow: /documents
+Disallow: /billing
+Disallow: /write
+Disallow: /humanizer
+Disallow: /plagiarism
+Disallow: /revision
+Disallow: /stem
+Disallow: /study
+Disallow: /outline
+Disallow: /ebooks
+Disallow: /admin
+Crawl-delay: 2
 
 # ── Google ────────────────────────────────────────────────────────────────────
 User-agent: Googlebot
 Allow: /
+Disallow: /api/
+Disallow: /app
+Disallow: /admin
 Crawl-delay: 0
 
 User-agent: Googlebot-Image
 Allow: /
+Disallow: /api/
 
-# Google AI — allow training on our content (builds AI citations)
+# Google AI / Gemini — allow training on our public content
 User-agent: Google-Extended
 Allow: /
+Disallow: /api/
+Disallow: /app
+Disallow: /admin
 
-# Google Gemini
 User-agent: Googlebot-Gemini
 Allow: /
+Disallow: /api/
 
 # ── Bing / Microsoft ──────────────────────────────────────────────────────────
 User-agent: Bingbot
 Allow: /
+Disallow: /api/
+Disallow: /app
+Disallow: /admin
 Crawl-delay: 0
 
 User-agent: BingPreview
 Allow: /
 
-# Microsoft Copilot
 User-agent: MicrosoftCopilot
 Allow: /
+Disallow: /api/
 
 # ── OpenAI / ChatGPT ──────────────────────────────────────────────────────────
 User-agent: GPTBot
 Allow: /
+Disallow: /api/
+Disallow: /app
+Disallow: /admin
 
 User-agent: ChatGPT-User
 Allow: /
 
 User-agent: OAI-SearchBot
 Allow: /
+Disallow: /api/
 
 # ── Anthropic / Claude ────────────────────────────────────────────────────────
 User-agent: Claude-Web
 Allow: /
+Disallow: /api/
 
 User-agent: anthropic-ai
 Allow: /
+Disallow: /api/
 
 User-agent: ClaudeBot
 Allow: /
+Disallow: /api/
 
 # ── Perplexity ────────────────────────────────────────────────────────────────
 User-agent: PerplexityBot
 Allow: /
+Disallow: /api/
 
 # ── Meta AI ───────────────────────────────────────────────────────────────────
 User-agent: meta-externalagent
 Allow: /
+Disallow: /api/
 
 User-agent: FacebookBot
 Allow: /
@@ -65,59 +100,72 @@ Allow: /
 # ── Apple ─────────────────────────────────────────────────────────────────────
 User-agent: Applebot
 Allow: /
+Disallow: /api/
 
 User-agent: Applebot-Extended
 Allow: /
+Disallow: /api/
 
-# ── Grok / xAI ───────────────────────────────────────────────────────────────
+# ── Grok / xAI ────────────────────────────────────────────────────────────────
 User-agent: Grok
 Allow: /
+Disallow: /api/
 
 User-agent: xAI-Grok
 Allow: /
+Disallow: /api/
 
-# ── Mistral / Le Chat ─────────────────────────────────────────────────────────
+# ── Mistral ───────────────────────────────────────────────────────────────────
 User-agent: Mistral-AI
 Allow: /
+Disallow: /api/
 
 # ── Cohere ────────────────────────────────────────────────────────────────────
 User-agent: cohere-ai
 Allow: /
+Disallow: /api/
 
 # ── Amazon / Alexa ────────────────────────────────────────────────────────────
 User-agent: Amazonbot
 Allow: /
+Disallow: /api/
 
 # ── Common Crawl (feeds many AI models) ──────────────────────────────────────
 User-agent: CCBot
 Allow: /
+Disallow: /api/
 
 # ── ByteDance / TikTok ────────────────────────────────────────────────────────
 User-agent: Bytespider
 Allow: /
+Disallow: /api/
 
 # ── DuckDuckGo ────────────────────────────────────────────────────────────────
 User-agent: DuckDuckBot
 Allow: /
+Disallow: /api/
 
 # ── You.com ───────────────────────────────────────────────────────────────────
 User-agent: YouBot
 Allow: /
 
-# ── SEO crawlers (Ahrefs, Semrush, Moz) ──────────────────────────────────────
+# ── SEO analysis crawlers ─────────────────────────────────────────────────────
 User-agent: AhrefsBot
 Allow: /
+Crawl-delay: 2
 
 User-agent: SemrushBot
 Allow: /
+Crawl-delay: 2
 
 User-agent: MJ12bot
 Allow: /
+Crawl-delay: 5
 
 # ── Sitemaps ──────────────────────────────────────────────────────────────────
 Sitemap: https://lightspeedghost.com/sitemap.xml
 
 # ── AI context files ──────────────────────────────────────────────────────────
-# llms.txt and llms-full.txt are available for AI model context
-# https://lightspeedghost.com/llms.txt
-# https://lightspeedghost.com/llms-full.txt
+# Structured AI-readable documentation is available at:
+# https://lightspeedghost.com/llms.txt        (summary)
+# https://lightspeedghost.com/llms-full.txt   (full product spec)

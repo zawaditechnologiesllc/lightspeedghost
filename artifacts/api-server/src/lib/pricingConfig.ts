@@ -36,8 +36,8 @@ export const SUBSCRIPTION_PLANS: Record<PlanId, PlanPrice> = {
     amountCents: 0,
     currency: "USD",
     interval: "month",
-    label: "Campus — Per Seat",
-    description: "Admin-assigned — contact us for pricing",
+    label: "Institution",
+    description: "Custom seats, one invoice — contact us for a quote",
   },
   ebooks_monthly: {
     amountCents: 2999,

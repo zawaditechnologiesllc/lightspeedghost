@@ -105,5 +105,13 @@ export function useSubscription() {
     return Math.max(0, limit - (usage[tool] ?? 0));
   }
 
-  return { plan, usage, loading, isAtLimit, remaining, getLimit, refresh };
+  function planDisplayName(): string {
+    if (!plan || plan === "starter") return "Starter";
+    if (plan === "pro") return "Pro";
+    if (plan === "campus") return "Institution";
+    if (plan === "payg") return "Pay As You Go";
+    return plan;
+  }
+
+  return { plan, usage, loading, isAtLimit, remaining, getLimit, refresh, planDisplayName };
 }

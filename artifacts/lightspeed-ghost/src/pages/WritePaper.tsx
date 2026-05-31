@@ -66,6 +66,12 @@ const DATA_PAPER_TYPES = new Set([
   "business plan", "financial analysis", "capstone project",
 ]);
 
+const FINANCE_SUBJECTS = new Set([
+  "finance", "accounting", "financial analysis", "economics", "banking",
+  "investment", "insurance", "actuarial", "business studies", "business",
+  "financial management", "corporate finance", "managerial accounting",
+]);
+
 const PAPER_TYPES = [
   { value: "research",               label: "Research Paper" },
   { value: "essay",                  label: "Essay" },
