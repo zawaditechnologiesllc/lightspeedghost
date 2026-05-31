@@ -11,7 +11,7 @@ import {
   Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
   BookOpen, Inbox, MailOpen, MailCheck, Building2,
   Copy, FileDown, Printer, FileText as FileTextIcon, Loader2 as Loader2Icon,
-  Brain,
+  Brain, Search,
 } from "lucide-react";
 import { exportAsDocx, exportAsPDF, exportAsTxt, copyText, richToHtml, wrapDocHtml } from "@/lib/exportUtils";
 import { Logo } from "@/components/Logo";
@@ -1566,6 +1566,29 @@ export default function Admin() {
                 {!loading && adminTools.length === 0 && (
                   <Empty text="No tool data — push to Render to seed system settings" />
                 )}
+
+                {/* ── SEO Engine ───────────────────────────────────────── */}
+                <div className="border-t border-white/6 pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Search size={15} className="text-emerald-400" />
+                      <p className="text-sm font-semibold text-white/80">SEO Engine</p>
+                      <span className="text-[11px] text-white/25 font-normal">· programmatic page generation, sitemap & budget</span>
+                    </div>
+                  </div>
+                  <Link href="/mwaramuriuki-login/seo">
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/8 border border-emerald-500/15 hover:bg-emerald-500/12 transition-colors cursor-pointer group">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                        <Search size={15} className="text-emerald-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Open SEO Admin Dashboard</p>
+                        <p className="text-[11px] text-white/35 mt-0.5">Generate pages, monitor LLM budget, manage sitemap, view performance</p>
+                      </div>
+                      <ChevronRight size={14} className="text-white/25 group-hover:text-emerald-400 transition-colors flex-shrink-0" />
+                    </div>
+                  </Link>
+                </div>
 
                 {/* ── Ebook Management ──────────────────────────────────── */}
                 <div className="border-t border-white/6 pt-6 space-y-5">

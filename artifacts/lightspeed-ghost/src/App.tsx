@@ -37,6 +37,8 @@ import PaymentSuccess from "@/pages/PaymentSuccess";
 import NotFound from "@/pages/not-found";
 import FloatingAssistant from "@/pages/FloatingAssistant";
 import Ebooks from "@/pages/Ebooks";
+import SeoPage from "@/pages/SeoPage";
+import SeoAdmin from "@/pages/SeoAdmin";
 import { Loader2, Wrench } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { Logo } from "@/components/Logo";
@@ -222,6 +224,8 @@ function Router() {
       <Route path="/blog/:slug" component={BlogPost} />
       <Route path="/blog" component={Blog} />
       <Route path="/payment/success" component={PaymentSuccess} />
+      <Route path="/seo/:slug" component={SeoPage} />
+      <Route path="/mwaramuriuki-login/seo" component={SeoAdmin} />
       <Route component={AppRoutes} />
     </Switch>
   );
