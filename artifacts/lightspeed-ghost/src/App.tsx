@@ -205,6 +205,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/auth" component={Auth} />
       <Route path="/admin" component={Admin} />
+      <Route path="/admin/:tab" component={Admin} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/confirm-email" component={ConfirmEmail} />
       <Route path="/invite" component={Invite} />

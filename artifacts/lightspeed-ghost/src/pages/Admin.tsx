@@ -11,7 +11,7 @@ import {
   Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { Link } from "wouter";
+import { Link, useParams, useLocation } from "wouter";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
@@ -266,7 +266,16 @@ export default function Admin() {
   const [inputPassword, setInputPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const { tab: urlTab } = useParams<{ tab?: string }>();
+  const [, setLocation] = useLocation();
+  const validTabs: Tab[] = ["overview","users","tools","documents","gateways","payments","credits","finance","analytics","logs","announcements","referrals","settings"];
+  const initialTab = (urlTab && validTabs.includes(urlTab as Tab) ? urlTab : "overview") as Tab;
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+
+  function navigate(tab: Tab) {
+    setActiveTab(tab);
+    setLocation(`/admin/${tab}`, { replace: true });
+  }
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [hasEmailData, setHasEmailData] = useState(false);
@@ -845,7 +854,7 @@ export default function Admin() {
           </div>
           <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
             {tabs.map((t) => (
-              <button key={t.id} onClick={() => { setActiveTab(t.id); setMobileNav(false); }}
+              <button key={t.id} onClick={() => { navigate(t.id); setMobileNav(false); }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                   activeTab === t.id ? "bg-white/8 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"
                 }`}
@@ -977,7 +986,7 @@ export default function Admin() {
                       <div>
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-sm font-semibold text-white/70">Recent Activity</h3>
-                          <button onClick={() => setActiveTab("documents")} className="text-xs text-white/30 hover:text-white/60 transition-colors flex items-center gap-1">View all <ChevronRight size={11} /></button>
+                          <button onClick={() => navigate("documents")} className="text-xs text-white/30 hover:text-white/60 transition-colors flex items-center gap-1">View all <ChevronRight size={11} /></button>
                         </div>
                         <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
                           {stats.recentDocuments.slice(0, 5).map((doc, i) => (
@@ -1016,7 +1025,7 @@ export default function Admin() {
                         ] as const).map(({ id, label, sub, icon: Icon, color, bg, border }) => (
                           <button
                             key={id}
-                            onClick={() => setActiveTab(id)}
+                            onClick={() => navigate(id)}
                             className={`flex items-start gap-2.5 p-3 rounded-xl ${bg} border ${border} hover:bg-white/8 hover:border-white/15 transition-all text-left group`}
                           >
                             <div className={`w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-white/10 transition-colors`}>

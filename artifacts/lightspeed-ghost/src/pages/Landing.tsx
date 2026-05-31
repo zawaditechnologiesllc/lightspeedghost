@@ -528,8 +528,13 @@ export default function Landing() {
       {/* ─── HERO ─── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 pt-20 pb-12 sm:pt-24 sm:pb-16 text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] sm:w-[700px] h-[400px] sm:h-[500px] bg-blue-600/12 rounded-full blur-[120px]" />
-          <div className="absolute top-1/3 left-1/3 w-[200px] sm:w-[300px] h-[200px] sm:h-[300px] bg-violet-600/8 rounded-full blur-[100px]" />
+          {/* Dot grid texture */}
+          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "36px 36px" }} />
+          {/* Gradient glow blobs */}
+          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] sm:w-[1000px] h-[500px] sm:h-[700px] bg-blue-600/20 rounded-full blur-[140px]" />
+          <div className="absolute top-1/2 -left-32 w-[400px] h-[400px] bg-violet-600/18 rounded-full blur-[110px]" />
+          <div className="absolute top-1/3 -right-20 w-[350px] h-[350px] bg-cyan-500/10 rounded-full blur-[100px]" />
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-blue-900/30 rounded-full blur-[80px]" />
         </div>
 
         <motion.div
@@ -538,15 +543,26 @@ export default function Landing() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
-          <motion.div
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium mb-6 sm:mb-8"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-          >
-            <Zap size={11} className="text-blue-400" />
-            8 AI tools. One platform. Actually works.
-          </motion.div>
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-6 sm:mb-8">
+            <motion.div
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+            >
+              <Zap size={11} className="text-blue-400" />
+              8 AI tools. One platform. Actually works.
+            </motion.div>
+            <motion.div
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              12,000+ active students
+            </motion.div>
+          </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-5 sm:mb-6">
             Your deadline is{" "}
@@ -883,6 +899,21 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ─── UNIVERSITY TRUST STRIP ─── */}
+      <section className="border-y border-white/5 bg-white/[0.015] py-4 sm:py-5 overflow-hidden">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-5 text-center">
+            <span className="text-[10px] font-semibold text-white/22 uppercase tracking-[0.2em] shrink-0">Used by students at</span>
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5">
+              {["MIT","UCL","Georgia Tech","Edinburgh","Columbia","Nairobi","Witwatersrand","Makerere","Lagos","Melbourne","Toronto"].map(uni => (
+                <span key={uni} className="text-[11px] font-medium text-white/38 hover:text-white/60 transition-colors cursor-default">{uni}</span>
+              ))}
+            </div>
+            <span className="text-[10px] font-medium text-blue-400/50 shrink-0 whitespace-nowrap">+ 200 more</span>
+          </div>
+        </div>
+      </section>
+
       {/* ─── QUALITY COMMITMENT STRIP ─── */}
       <section className="border-y border-white/5 bg-white/[0.02] py-8 sm:py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -929,7 +960,8 @@ export default function Landing() {
       </section>
 
       {/* ─── TOOLS ─── */}
-      <section id="tools" className="py-14 sm:py-20 md:py-28 px-4 sm:px-6">
+      <section id="tools" className="py-14 sm:py-20 md:py-28 px-4 sm:px-6 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-950/10 to-transparent pointer-events-none" />
         <div className="max-w-7xl mx-auto">
           <div className="max-w-2xl mb-10 sm:mb-16">
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">What it does</p>
@@ -945,17 +977,20 @@ export default function Landing() {
             {tools.map(({ icon: Icon, name, desc, badge, color, href }) => (
               <motion.div key={name} variants={cardVariant}>
                 <Link href={href}>
-                  <div className="group relative p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/15 hover:bg-white/[0.05] transition-all cursor-pointer h-full hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-900/20">
+                  <div className="group relative p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/18 hover:bg-white/[0.055] transition-all cursor-pointer h-full hover:-translate-y-1 hover:shadow-xl hover:shadow-black/30">
                     {badge && (
                       <span className={`absolute top-4 right-4 sm:top-5 sm:right-5 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${color}`}>
                         {badge}
                       </span>
                     )}
-                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center mb-4 border ${color}`}>
+                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center mb-4 border ${color} group-hover:scale-110 transition-transform duration-300`}>
                       <Icon size={18} />
                     </div>
-                    <h3 className="font-semibold text-white mb-2">{name}</h3>
-                    <p className="text-sm text-white/50 leading-relaxed">{desc}</p>
+                    <h3 className="font-semibold text-white mb-2 group-hover:text-white transition-colors">{name}</h3>
+                    <p className="text-sm text-white/50 leading-relaxed group-hover:text-white/60 transition-colors">{desc}</p>
+                    <div className="mt-4 flex items-center gap-1 text-[11px] text-white/25 group-hover:text-white/40 transition-colors font-medium">
+                      Open tool <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                    </div>
                   </div>
                 </Link>
               </motion.div>
@@ -1267,25 +1302,40 @@ export default function Landing() {
             <h2 className="text-3xl sm:text-4xl font-bold">It's not perfect. But it gets the job done.</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
-            {testimonials.map(({ name, role, text, stars }) => (
-              <div key={name} className="p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8">
-                <Quote size={18} className="text-blue-500/40 mb-4" />
-                <p className="text-white/70 text-sm leading-relaxed mb-5">{text}</p>
-                <div className="flex items-center gap-0.5 mb-3">
+            {testimonials.map(({ name, role, text, stars }, idx) => {
+              const avatarColors = [
+                "bg-blue-600/30 border-blue-500/30 text-blue-200",
+                "bg-emerald-600/30 border-emerald-500/30 text-emerald-200",
+                "bg-violet-600/30 border-violet-500/30 text-violet-200",
+              ];
+              const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2);
+              return (
+              <div key={name} className="p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/14 hover:bg-white/[0.05] transition-all flex flex-col">
+                <div className="flex items-center gap-0.5 mb-4">
                   {Array.from({ length: stars }).map((_, i) => (
                     <Star key={i} size={12} className="fill-amber-400 text-amber-400" />
                   ))}
                 </div>
-                <div className="font-semibold text-white text-sm">{name}</div>
-                <div className="text-white/35 text-xs mt-0.5">{role}</div>
+                <Quote size={16} className="text-blue-500/30 mb-3" />
+                <p className="text-white/70 text-sm leading-relaxed flex-1 mb-5">{text}</p>
+                <div className="flex items-center gap-3 mt-auto pt-4 border-t border-white/5">
+                  <div className={`w-9 h-9 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 ${avatarColors[idx % 3]}`}>
+                    {initials}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-white text-sm">{name}</div>
+                    <div className="text-white/35 text-xs mt-0.5">{role}</div>
+                  </div>
+                </div>
               </div>
-            ))}
+            );})}
           </div>
         </div>
       </section>
 
       {/* ─── PRICING ─── */}
-      <section id="pricing" className="py-14 sm:py-20 md:py-28 px-4 sm:px-6">
+      <section id="pricing" className="py-14 sm:py-20 md:py-28 px-4 sm:px-6 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/15 to-transparent pointer-events-none" />
         <div className="max-w-6xl mx-auto">
 
           {/* Header + toggle */}
@@ -1316,7 +1366,7 @@ export default function Landing() {
               const per   = showAnnual ? perAnnual   : perMonthly;
               const isInstitution = name === "Institution";
               return (
-                <motion.div key={name} variants={cardVariant} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col hover:-translate-y-1 transition-transform duration-300 ${highlight ? "bg-blue-600/10 border-blue-500/40 shadow-xl shadow-blue-900/20" : "bg-white/[0.02] border-white/8"}`}>
+                <motion.div key={name} variants={cardVariant} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col hover:-translate-y-1 transition-all duration-300 ${highlight ? "bg-gradient-to-b from-blue-600/15 to-blue-900/10 border-blue-500/40 shadow-2xl shadow-blue-900/30" : "bg-white/[0.02] border-white/8 hover:border-white/14 hover:bg-white/[0.04]"}`}>
                   {badge && (
                     <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${highlight ? "bg-blue-600 text-white" : "bg-white/10 text-white/55 border border-white/15"}`}>
                       {badge}
