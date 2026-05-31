@@ -8,6 +8,7 @@ import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
 import { createRemoteJWKSet, jwtVerify, decodeProtectedHeader, decodeJwt } from "jose";
 import router from "./routes";
+import seoPublicRouter from "./routes/seo-public";
 import { authMiddleware } from "./middlewares/auth";
 import { requestLoggerMiddleware } from "./lib/requestLogger";
 import { logger } from "./lib/logger";
@@ -409,6 +410,8 @@ app.use(requestLoggerMiddleware);
 // ── Suppress noisy X-Powered-By header ───────────────────────────────────────
 app.disable("x-powered-by");
 
+// SEO public routes — must be before /api to serve at root paths (/robots.txt, /sitemap.xml, /seo/:slug)
+app.use(seoPublicRouter);
 app.use("/api", router);
 
 // ── Global error handler ──────────────────────────────────────────────────────
