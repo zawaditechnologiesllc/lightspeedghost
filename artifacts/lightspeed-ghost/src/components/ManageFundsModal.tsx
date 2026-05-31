@@ -125,9 +125,9 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
               </div>
               <p className="text-[11px] text-muted-foreground">
                 {planLoading                  && "Fetching your plan…"}
-                {!planLoading && resolvedPlan === "starter" && "3 papers · 1 revision · 1 humanization per month included"}
-                {!planLoading && resolvedPlan === "pro"     && "15 papers · 20 revisions · 20 humanizations per month"}
-                {!planLoading && resolvedPlan === "campus"  && "5 papers · 8 revisions · 8 humanizations per month (seat)"}
+                {!planLoading && resolvedPlan === "starter" && "3 papers · 1 revision · 15 STEM · 20 study · 5 plagiarism/outlines per month"}
+                {!planLoading && resolvedPlan === "pro"     && "15 papers · 20 revisions · 20 humanizations · 20 outlines · 60 STEM · 150 study · 20 plagiarism per month"}
+                {!planLoading && resolvedPlan === "campus"  && "5 papers · 8 revisions · 8 humanizations · 30 STEM · 75 study · 10 plagiarism · 10 outlines per seat/month"}
               </p>
             </div>
 
@@ -168,7 +168,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                   <p className="text-sm font-semibold text-primary">Upgrade to Pro</p>
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-3">
-                  15 papers · 20 revisions &amp; humanizations · 60 STEM · 150 study sessions · 20 plagiarism checks per month.
+                  15 papers · 20 revisions · 20 humanizations · 20 outlines · 60 STEM · 150 study sessions · 20 plagiarism checks per month.
                 </p>
                 <div className="flex gap-2">
                   <button

@@ -19,7 +19,7 @@ const PLAN_LIMITS: Record<string, Partial<Record<keyof UsageData, number | null>
   starter: {
     paper:      3,
     revision:   1,
-    humanizer:  1,
+    humanizer:  0,   // locked on Starter — requires Pro or PAYG
     stem:       15,
     study:      20,
     plagiarism: 5,

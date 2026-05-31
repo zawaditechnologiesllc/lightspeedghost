@@ -8,7 +8,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
   starter: {
     paper:      3,
     revision:   1,
-    humanizer:  1,
+    humanizer:  0,   // locked on Starter — requires Pro or PAYG
     stem:       15,  // per month
     study:      20,  // per month
     plagiarism: 5,   // per month

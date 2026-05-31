@@ -134,7 +134,7 @@ const faqs = [
   },
   {
     q: "What's the cheapest plan?",
-    a: "The Starter plan is $9.99/month. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves per month, 20 study messages per month, and 1 revision. All 8 tools accessible.",
+    a: "The Starter plan is $9.99/month. It includes 3 papers, 1 revision, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves, and 20 study messages per month. The LightSpeed Humanizer is not included in Starter — upgrade to Pro or buy it per use.",
   },
   {
     q: "What's the difference between Pro monthly and annual?",
@@ -206,6 +206,8 @@ const pricingPlans = [
       "8 humanizer jobs / seat / month",
       "30 STEM problems / seat / month",
       "75 study messages / seat / month",
+      "10 plagiarism + AI checks / seat / month",
+      "10 outlines / seat / month",
       "Minimum 5 seats — single invoice",
       "Shared document library + admin dashboard",
       "Academic integrity reporting + SLA support",
