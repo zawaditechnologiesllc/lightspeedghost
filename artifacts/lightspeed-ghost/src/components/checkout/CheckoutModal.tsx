@@ -10,7 +10,6 @@ import {
   getPaygPrice,
   getPaygLabel,
   GATEWAY_LABELS,
-  SUBSCRIPTION_PLANS,
   type PlanId,
   type PaygTool,
   type DocumentTier,
@@ -50,9 +49,12 @@ const GATEWAY_ICONS: Record<string, React.ElementType> = {
   intasend:      Smartphone,
 };
 
-const PLAN_AMOUNTS = Object.fromEntries(
-  SUBSCRIPTION_PLANS.map(p => [p.id, p.amountCents])
-) as Record<PlanId, number>;
+const PLAN_AMOUNTS: Record<PlanId, number> = {
+  starter_monthly:   499,
+  pro_monthly:      1499,
+  pro_annual:       13900,
+  campus_annual:     900,
+};
 
 export function CheckoutModal({
   open,
@@ -88,7 +90,7 @@ export function CheckoutModal({
   const amountCents = mode === "credits" && creditPackageCents
     ? creditPackageCents
     : mode === "subscription" && plan
-      ? (plan === "institution_annual"
+      ? (plan === "campus_annual"
         ? PLAN_AMOUNTS[plan] * Math.max(5, seats) * 12
         : PLAN_AMOUNTS[plan])
       : (tool ? getPaygPrice(tool, tier) : 0);
@@ -98,8 +100,7 @@ export function CheckoutModal({
     : mode === "subscription" && plan
       ? plan === "pro_monthly" ? "Pro — Monthly"
         : plan === "pro_annual" ? "Pro — Annual"
-        : plan === "ebooks_monthly" ? `Ebooks — ${SUBSCRIPTION_PLANS.find(p => p.id === "ebooks_monthly")!.displayPrice}`
-        : `Institution (${seats} seats)`
+        : `Campus (${seats} seats)`
       : (tool ? getPaygLabel(tool, tier) : "");
 
   const canPayWithCredits = mode === "payg" && tool && balanceCents >= amountCents && amountCents > 0;
@@ -222,14 +223,14 @@ export function CheckoutModal({
               <span className="text-sm text-white/80">{label}</span>
               <span className="text-base font-bold text-white">{formatAmount(amountCents)}</span>
             </div>
-            {mode === "subscription" && plan === "institution_annual" && (
+            {mode === "subscription" && plan === "campus_annual" && (
               <div className="mt-1.5 text-xs text-white/35">
                 {seats} seats × $9/seat/mo × 12 months
               </div>
             )}
             {mode === "subscription" && plan === "pro_annual" && (
               <div className="mt-1.5 text-xs text-green-400/80">
-                Save 25% vs monthly billing
+                Save 23% vs monthly billing
               </div>
             )}
           </div>

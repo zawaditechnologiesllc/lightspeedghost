@@ -14,8 +14,4 @@ export const CreateDocumentBodyType = {
   revision: "revision",
   stem: "stem",
   study: "study",
-  ebook: "ebook",
-  humanizer: "humanizer",
-  plagiarism: "plagiarism",
-  outline: "outline",
 } as const;

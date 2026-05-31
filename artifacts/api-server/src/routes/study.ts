@@ -5,7 +5,7 @@ import { studySessionsTable, studyMessagesTable, documentsTable } from "@workspa
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { eq, desc, and } from "drizzle-orm";
 import { AskStudyAssistantBody, GetSessionMessagesParams } from "@workspace/api-zod";
-import { anthropic, openai } from "../lib/ai";
+import { anthropic } from "../lib/ai";
 import { TUTOR_SOUL } from "../lib/soul";
 import { getStudentMemory, updateStudentMemory, buildMemoryContext, memoryFlush } from "../lib/memory";
 import { recordSearchResults, recordTopicSearch } from "../lib/learningEngine";
@@ -14,9 +14,6 @@ import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSource
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
-import { buildFinancialStatementsContext } from "../lib/financialStatements";
-import { cavemanSystem } from "../lib/caveman.js";
-import { wordsToTokens } from "../lib/tokenBudget.js";
 import { z } from "zod";
 
 const router = Router();
@@ -171,8 +168,7 @@ router.post("/study/ask", requireAuth, async (req, res) => {
 
     const modeInstruction = modeInstructions[body.mode ?? "tutor"] ?? modeInstructions.tutor;
 
-    const datasetAnalysis  = body.datasetText?.trim()         ? parseAndAnalyzeDataset(body.datasetText) : "";
-    const financialContext = body.financialStatements?.trim() ? buildFinancialStatementsContext(body.financialStatements, body.financialStatementType ?? "all") : "";
+    const datasetAnalysis = body.datasetText?.trim() ? parseAndAnalyzeDataset(body.datasetText) : "";
 
     const systemPrompt = `${TUTOR_SOUL}
 
@@ -186,9 +182,6 @@ INSTRUCTION: The student has uploaded their own notes/materials above. Base your
 ` : ""}${datasetAnalysis ? `
 ${datasetAnalysis}
 
-` : ""}${financialContext ? `
-${financialContext}
-
 ` : ""}${ragContext ? `${ragContext}\n\n` : ""}ANSWER QUALITY STANDARDS:
 • Accuracy target: 92%+ — ground every claim in the student's materials or the verified sources above
 • Do NOT cite Wikipedia or unverified sources
@@ -198,7 +191,7 @@ ${financialContext}
 • If a factual claim cannot be grounded in the provided materials or academic sources, flag it: "[unverified — recommend checking primary sources]"
 
 CURRENT MODE: ${(body.mode ?? "tutor").toUpperCase()}
-Mode instructions: ${modeInstruction}${body.academicLevel ? `\nSTUDENT ACADEMIC LEVEL: ${ACADEMIC_LEVEL_LABELS[body.academicLevel] ?? body.academicLevel} — calibrate vocabulary, depth, and difficulty accordingly.` : ""}
+Mode instructions: ${modeInstruction}
 
 End every response with:
 FOLLOW_UP_1: [relevant follow-up question]
@@ -294,70 +287,59 @@ const GenerateBody = z.object({
   subject: z.string().optional(),
   weakTopics: z.array(z.string()).optional(),
   datasetText: z.string().optional(),
-  academicLevel: z.string().optional(),
-  financialStatements: z.string().optional(),
-  financialStatementType: z.string().optional(),
   images: z.array(z.object({
     base64: z.string().max(10_000_000),
     mimeType: z.string(),
   })).optional(),
 });
 
-const ACADEMIC_LEVEL_LABELS: Record<string, string> = {
-  high_school:    "High School (grade 9-12)",
-  undergrad_1_2:  "Undergraduate — Years 1-2 (introductory college)",
-  undergrad_3_4:  "Undergraduate — Years 3-4 (advanced college)",
-  masters:        "Master's level (graduate)",
-  phd:            "PhD / Doctoral level",
-  professional:   "Professional / Continuing Education",
-};
+const GENERATE_PROMPTS: Record<string, (content: string, subject: string, weakTopics?: string[]) => string> = {
+  flashcards: (content, subject) => `
+You are an expert educator. Create 15 high-quality flashcards from this study material on ${subject}.
 
-function levelNote(academicLevel?: string) {
-  const label = academicLevel ? (ACADEMIC_LEVEL_LABELS[academicLevel] ?? academicLevel) : null;
-  return label ? `STUDENT ACADEMIC LEVEL: ${label} — calibrate vocabulary, depth, and difficulty accordingly.\n\n` : "";
-}
+Study material:
+${content.slice(0, 40000)}
 
-// ── Caveman compression ───────────────────────────────────────────────────────
-// Applied to GPT-4o-mini prompts only. Removes verbose "You are an expert…"
-// preamble and trailing redundant instructions. Since gpt-4o-mini runs in
-// JSON mode, "Return ONLY valid JSON / no markdown" is already enforced by the
-// API — repeating it wastes input tokens. Caveman = extreme brevity.
-// Saves ~80–120 input tokens per call; negligible per request but meaningful
-// across thousands of daily study sessions.
+Return ONLY valid JSON (no markdown, no code blocks), exactly this format:
+{"flashcards":[{"front":"Question or concept","back":"Answer or explanation","tag":"subtopic"}]}
 
-const GENERATE_PROMPTS: Record<string, (content: string, subject: string, weakTopics?: string[], academicLevel?: string) => string> = {
-  // ── GPT-4o-mini eligible (Caveman-compressed) ─────────────────────────────
-  flashcards: (content, subject, _wt, academicLevel) => `${levelNote(academicLevel)}Subject: ${subject}
-15 flashcards from this material. Schema: {"flashcards":[{"front":"...","back":"...","tag":"subtopic"}]}
+Generate 15 flashcards covering the most important concepts, definitions, formulas, and facts.`,
 
-${content.slice(0, 40000)}`,
+  quiz: (content, subject) => `
+You are an expert educator. Create 10 multiple-choice quiz questions from this study material on ${subject}.
 
-  quiz: (content, subject, _wt, academicLevel) => `${levelNote(academicLevel)}Subject: ${subject}
-10 MCQ questions. "correct" = 0-based index. Mix 30% easy / 50% medium / 20% hard.
-Schema: {"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"explanation":"..."}]}
+Study material:
+${content.slice(0, 40000)}
 
-${content.slice(0, 40000)}`,
+Return ONLY valid JSON, exactly this format:
+{"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"explanation":"Why this is correct and others are wrong"}]}
 
-  summary: (content, subject, _wt, academicLevel) => `${levelNote(academicLevel)}Subject: ${subject}
-Structured summary. 4-6 sections.
-Schema: {"title":"...","overview":"2-3 sentences","sections":[{"heading":"...","points":["..."],"keyTerms":[{"term":"...","definition":"..."}]}],"takeaways":["..."],"relatedConcepts":["..."]}
+"correct" is the 0-based index of the right answer. Mix easy (30%), medium (50%), and hard (20%) questions.`,
 
-${content.slice(0, 40000)}`,
+  summary: (content, subject) => `
+You are an expert educator. Create a comprehensive structured summary of this study material on ${subject}.
 
-  // ── Claude Sonnet (full verbosity — richer reasoning needed) ─────────────
-  studyguide: (content, subject, _wt, academicLevel) => `
+Study material:
+${content.slice(0, 40000)}
+
+Return ONLY valid JSON, exactly this format:
+{"title":"Topic Title","overview":"2-3 sentence overview","sections":[{"heading":"Section name","points":["Key point 1","Key point 2"],"keyTerms":[{"term":"Term","definition":"Definition"}]}],"takeaways":["Most important thing to remember 1","..."],"relatedConcepts":["Related topic 1","Related topic 2"]}
+
+Create 4-6 sections covering all major concepts.`,
+
+  studyguide: (content, subject) => `
 You are an expert educator. Create a comprehensive study guide for ${subject} from this material.
 
-${levelNote(academicLevel)}Study material:
+Study material:
 ${content.slice(0, 40000)}
 
 Return ONLY valid JSON, exactly this format:
 {"title":"Study Guide: Topic","sections":[{"type":"overview","heading":"What This Is About","content":"..."},{"type":"concepts","heading":"Core Concepts","items":[{"name":"Concept","explanation":"...","example":"..."}]},{"type":"process","heading":"Step-by-Step Process","steps":["Step 1: ...","Step 2: ..."]},{"type":"tips","heading":"Exam Tips","tips":["Remember that...","Common mistake: ..."]}],"quickRef":[{"label":"Formula/Key","value":"..."}]}`,
 
-  slides: (content, subject, _wt, academicLevel) => `
+  slides: (content, subject) => `
 You are an expert presentation designer. Create a 10-slide presentation from this study material on ${subject}.
 
-${levelNote(academicLevel)}Study material:
+Study material:
 ${content.slice(0, 40000)}
 
 Return ONLY valid JSON, exactly this format:
@@ -365,10 +347,10 @@ Return ONLY valid JSON, exactly this format:
 
 Include: 1 title slide, 1 agenda, 6-7 content slides, 1 conclusion. Each content slide has 3-5 bullets and speaker notes.`,
 
-  weakpoints: (content, subject, weakTopics = [], academicLevel) => `
+  weakpoints: (content, subject, weakTopics = []) => `
 You are an adaptive learning expert. The student has struggled with these topics: ${weakTopics.join(", ") || "general concepts"}.
 
-${levelNote(academicLevel)}Study material:
+Study material:
 ${content.slice(0, 30000)}
 
 Create 8 targeted practice questions focusing on their weak areas.
@@ -376,32 +358,6 @@ Create 8 targeted practice questions focusing on their weak areas.
 Return ONLY valid JSON, exactly this format:
 {"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"explanation":"...","targetsTopic":"which weak topic this addresses"}]}`,
 };
-
-// ── Portkey-style model router ─────────────────────────────────────────────────
-// Routes study generation tasks to the most cost-effective model.
-//
-// Strategy (adapted from Portkey / Kaizen AI Consulting patterns):
-//   • flashcards / quiz / summary  → GPT-4o-mini
-//     These are pure structured-JSON tasks. The prompt is deterministic,
-//     the schema is simple, and GPT-4o-mini is ~30x cheaper than Sonnet.
-//     Quality is indistinguishable for students.
-//   • studyguide / slides / weakpoints → Claude Sonnet
-//     Richer reasoning, longer multi-section JSON, and adaptive learning
-//     logic benefit from Sonnet's deeper context window and instruction-
-//     following precision.
-//   • Any type WITH images → always Claude Sonnet
-//     Claude has superior multimodal reasoning for diagram/screenshot
-//     extraction. GPT-4o-mini can handle vision but misses nuance.
-//
-// Estimated cost reduction: ~55% across typical study session distributions.
-
-const MINI_ELIGIBLE_TYPES = new Set(["flashcards", "quiz", "summary"]);
-
-function selectStudyModel(type: string, hasImages: boolean): "gpt-4o-mini" | "claude-sonnet-4-5" {
-  if (hasImages) return "claude-sonnet-4-5";
-  if (MINI_ELIGIBLE_TYPES.has(type)) return "gpt-4o-mini";
-  return "claude-sonnet-4-5";
-}
 
 router.post("/study/generate", requireAuth, async (req, res) => {
   req.socket?.setTimeout(0);
@@ -419,60 +375,36 @@ router.post("/study/generate", requireAuth, async (req, res) => {
     const promptFn = GENERATE_PROMPTS[body.type];
     if (!promptFn) return res.status(400).json({ error: "Invalid type" });
 
-    const datasetAnalysis = body.datasetText?.trim()         ? parseAndAnalyzeDataset(body.datasetText) : "";
-    const financialCtx    = body.financialStatements?.trim() ? buildFinancialStatementsContext(body.financialStatements, body.financialStatementType ?? "all") : "";
-    const enrichedContent = [
-      body.content,
-      datasetAnalysis && `---\n\n${datasetAnalysis}`,
-      financialCtx    && `---\n\n${financialCtx}`,
-    ].filter(Boolean).join("\n\n");
+    const datasetAnalysis = body.datasetText?.trim() ? parseAndAnalyzeDataset(body.datasetText) : "";
+    const enrichedContent = datasetAnalysis
+      ? `${body.content}\n\n---\n\n${datasetAnalysis}`
+      : body.content;
 
-    const prompt    = promptFn(enrichedContent, subject, body.weakTopics, body.academicLevel);
-    const hasImages = (body.images ?? []).length > 0;
-    const model     = selectStudyModel(body.type, hasImages);
+    const prompt = promptFn(enrichedContent, subject, body.weakTopics);
 
-    // Dynamic token budget based on input content size.
-    // Output is always shorter than input: summaries ~35%, flashcards/quiz ~40%,
-    // study guides / slides ~60%. Claude path handles longer-form outputs.
-    const contentWordCount = enrichedContent.split(/\s+/).filter(Boolean).length;
+    // Build message content — include images as vision blocks if provided
+    type ImageBlock = { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+    type TextBlock  = { type: "text"; text: string };
+    type ContentBlock = ImageBlock | TextBlock;
 
-    let raw = "";
-
-    if (model === "gpt-4o-mini") {
-      // ── GPT-4o-mini path (flashcards / quiz / summary, no images) ──────────
-      // Uses OpenAI's JSON mode to guarantee valid JSON output, eliminating the
-      // regex-strip fallback needed for Claude. Caveman-style: no system prompt,
-      // just the task. Strip verbose preamble to save input tokens.
-      // Caveman: compress the prompt before sending to gpt-4o-mini to save input tokens
-      const compressedPrompt = cavemanSystem(prompt, "lite");
-      const gptResp = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        max_tokens: wordsToTokens(Math.ceil(contentWordCount * 0.40), 200, 4000),
-        response_format: { type: "json_object" },
-        messages: [{ role: "user", content: compressedPrompt }],
+    const userContent: ContentBlock[] = [];
+    for (const img of body.images ?? []) {
+      userContent.push({
+        type: "image",
+        source: { type: "base64", media_type: img.mimeType, data: img.base64 },
       });
-      if (gptResp.usage) recordUsage("gpt-4o-mini", gptResp.usage.prompt_tokens, gptResp.usage.completion_tokens, `study-${body.type}`);
-      raw = gptResp.choices[0]?.message?.content ?? "";
-    } else {
-      // ── Claude Sonnet path (studyguide / slides / weakpoints / vision) ──────
-      type ImageBlock   = { type: "image"; source: { type: "base64"; media_type: string; data: string } };
-      type TextBlock    = { type: "text"; text: string };
-      type ContentBlock = ImageBlock | TextBlock;
-
-      const userContent: ContentBlock[] = [];
-      for (const img of body.images ?? []) {
-        userContent.push({ type: "image", source: { type: "base64", media_type: img.mimeType, data: img.base64 } });
-      }
-      userContent.push({ type: "text", text: prompt });
-
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
-        max_tokens: wordsToTokens(Math.ceil(contentWordCount * 0.60), 300, 6000),
-        messages: [{ role: "user", content: userContent }],
-      });
-      recordUsage("claude-sonnet-4-5", response.usage.input_tokens, response.usage.output_tokens, `study-${body.type}`);
-      raw = response.content[0].type === "text" ? response.content[0].text : "";
     }
+    userContent.push({ type: "text", text: prompt });
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-5",
+      max_tokens: 4000,
+      messages: [{ role: "user", content: userContent }],
+    });
+
+    recordUsage("claude-sonnet-4-5", response.usage.input_tokens, response.usage.output_tokens, `study-${body.type}`);
+
+    const raw = response.content[0].type === "text" ? response.content[0].text : "";
 
     let parsed: unknown;
     try {

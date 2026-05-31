@@ -42,7 +42,7 @@ export function PaywallGate({ tool, tier, children }: PaywallGateProps) {
   const period = PLAN_PERIOD[tool];
   const rem = remaining(tool);
   const paygPrice = getPaygPrice(tool, tier);
-  const isPro = plan === "pro" || plan === "institution";
+  const isPro = plan === "pro" || plan === "campus";
 
   return (
     <>
@@ -72,7 +72,7 @@ export function PaywallGate({ tool, tier, children }: PaywallGateProps) {
                   className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-sm font-semibold rounded-xl transition-all"
                 >
                   <Zap size={14} />
-                  Upgrade to Pro — $29.99/mo
+                  Upgrade to Pro — $14.99/mo
                 </button>
               )}
               {paygPrice > 0 && (
@@ -88,7 +88,7 @@ export function PaywallGate({ tool, tier, children }: PaywallGateProps) {
 
             {!isPro && (
               <p className="mt-3 text-[11px] text-white/25">
-                Pro: 15 papers/mo · 20 revisions/mo · 40 STEM/mo · 80 study/mo · 20 plagiarism/mo
+                Pro: 15 papers/mo · 20 plagiarism/mo · 150 study/mo · 60 STEM/mo
               </p>
             )}
           </div>

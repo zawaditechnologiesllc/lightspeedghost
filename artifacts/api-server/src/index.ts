@@ -2,7 +2,6 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureUsageTable } from "./lib/usageTracker";
 import { initReferralTables } from "./routes/referral";
-import { initEbooksTable } from "./routes/ebooks";
 import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
@@ -165,64 +164,6 @@ async function runStartupTasks(): Promise<void> {
     logger.info("[startup] referral tables ready");
   } catch (err) {
     logger.error({ err }, "[startup] Failed to ensure referral tables — affiliate program may fail");
-  }
-
-  // 8. Ensure ebook subscriptions table exists (separate from academic plans)
-  try {
-    await initEbooksTable();
-    logger.info("[startup] user_ebook_subscriptions table ready");
-  } catch (err) {
-    logger.error({ err }, "[startup] Failed to ensure ebook subscriptions table — ebook access checks may fail");
-  }
-
-  // 9. Subscription expiry sweep — mark any subscriptions past their period end as expired.
-  //    This handles gateways that don't fire webhook renewal events (Paystack, IntaSend, manual).
-  //    Stripe subscriptions are updated in real-time via webhooks; this is a safety net for all.
-  try {
-    const { rowCount } = await pool.query(`
-      UPDATE user_subscriptions
-      SET status = 'expired', updated_at = NOW()
-      WHERE status = 'active'
-        AND current_period_end IS NOT NULL
-        AND current_period_end < NOW()
-    `);
-    if (rowCount && rowCount > 0) {
-      logger.info(`[startup] Expired ${rowCount} subscription(s) past their period end`);
-    } else {
-      logger.info("[startup] Subscription expiry sweep complete — no expired subscriptions found");
-    }
-  } catch (err) {
-    logger.warn({ err }, "[startup] Subscription expiry sweep failed — will retry on next restart");
-  }
-
-  // 10. Performance indexes — idempotent (IF NOT EXISTS). Critical for 10M+ users/month.
-  //     Without these, every document lookup, session expiry scan, and usage count query
-  //     does a full sequential scan. Each index below targets a specific hot query path.
-  try {
-    await pool.query(`
-      -- Documents: user's paper history (most common query on the dashboard)
-      CREATE INDEX IF NOT EXISTS idx_documents_user_id       ON documents (user_id);
-      CREATE INDEX IF NOT EXISTS idx_documents_user_created  ON documents (user_id, created_at DESC);
-
-      -- Study sessions: per-user session list + activity sort
-      CREATE INDEX IF NOT EXISTS idx_study_sessions_user_id  ON study_sessions (user_id);
-      CREATE INDEX IF NOT EXISTS idx_study_sessions_activity ON study_sessions (user_id, last_activity DESC);
-
-      -- Study messages: message history lookup by session (join path)
-      CREATE INDEX IF NOT EXISTS idx_study_messages_session  ON study_messages (session_id);
-
-      -- Student profiles: single-row per user — needs fast lookup
-      CREATE INDEX IF NOT EXISTS idx_student_profiles_user   ON student_profiles (user_id);
-
-      -- User usage: per-user quota checks run on every AI request (column is 'period', not 'month')
-      CREATE INDEX IF NOT EXISTS idx_user_usage_user_period  ON user_usage (user_id, period);
-
-      -- Sessions: already has expire index from earlier startup step; add sid index for lookups
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_sid     ON user_sessions (sid);
-    `);
-    logger.info("[startup] Performance indexes ready (10M+ user scale)");
-  } catch (err) {
-    logger.warn({ err }, "[startup] Could not create performance indexes — queries may be slower under load");
   }
 }
 

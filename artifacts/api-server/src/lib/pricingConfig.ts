@@ -1,4 +1,4 @@
-export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "institution_annual" | "ebooks_monthly";
+export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "campus_annual";
 export type PaygTool = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline";
 export type DocumentTier = "discussion" | "essay" | "research" | "proposal" | "dissertation";
 
@@ -12,39 +12,32 @@ export interface PlanPrice {
 
 export const SUBSCRIPTION_PLANS: Record<PlanId, PlanPrice> = {
   starter_monthly: {
-    amountCents: 999,
+    amountCents: 499,
     currency: "USD",
     interval: "month",
     label: "Starter — Monthly",
     description: "Essential access to LightSpeed Ghost tools",
   },
   pro_monthly: {
-    amountCents: 2999,
+    amountCents: 1499,
     currency: "USD",
     interval: "month",
     label: "Pro — Monthly",
     description: "Full access to all LightSpeed Ghost tools",
   },
   pro_annual: {
-    amountCents: 26900,
+    amountCents: 13900,
     currency: "USD",
     interval: "year",
     label: "Pro — Annual",
     description: "Full access to all LightSpeed Ghost tools (billed annually)",
   },
-  institution_annual: {
+  campus_annual: {
     amountCents: 900,
     currency: "USD",
     interval: "month",
-    label: "Institution — Per Seat",
-    description: "Institution plan billed annually (minimum 5 seats)",
-  },
-  ebooks_monthly: {
-    amountCents: 2999,
-    currency: "USD",
-    interval: "month",
-    label: "Ebooks — Monthly",
-    description: "15 AI-written ebooks per month for Amazon, Apple Books & all platforms",
+    label: "Campus — Per Seat",
+    description: "Campus plan billed annually (minimum 5 seats)",
   },
 };
 

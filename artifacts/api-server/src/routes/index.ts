@@ -14,16 +14,11 @@ import paymentsRouter from "./payments";
 import pwaRouter from "./pwa";
 import referralRouter from "./referral";
 import assistantRouter from "./assistant";
-import profileRouter from "./profile";
-import ebooksRouter from "./ebooks";
-import feedbackRouter from "./feedback";
-import seoRouter from "./seo";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
-router.use(profileRouter);
 router.use(documentsRouter);
 router.use(writingRouter);
 router.use(revisionRouter);
@@ -37,10 +32,5 @@ router.use(paymentsRouter);
 router.use(pwaRouter);
 router.use(referralRouter);
 router.use(assistantRouter);
-router.use(ebooksRouter);
-router.use(feedbackRouter);
-// SEO routes after adminRouter so req.adminAuth is already resolved for /api/seo/* admin routes
-// Public routes (robots.txt, sitemap.xml, /seo/:slug) work without auth
-router.use(seoRouter);
 
 export default router;

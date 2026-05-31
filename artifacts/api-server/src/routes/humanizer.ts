@@ -8,9 +8,12 @@ import { recordUsage } from "../lib/apiCost";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { detectAIScore } from "../lib/aiDetection.js";
-import { wordsToTokens } from "../lib/tokenBudget.js";
 
 const router = Router();
+
+function tokenBudgetFromWords(words: number, extra = 0): number {
+  return Math.max(1200, Math.ceil(words * 2.2) + extra);
+}
 
 // ── Humanize pass helper ──────────────────────────────────────────────────────
 
@@ -19,9 +22,9 @@ async function humanizePass(
   tone: string,
   toneGuide: string,
   passNumber: number,
-  remainingIndicators: string[],
-  maxTokens: number,
+  remainingIndicators: string[]
 ): Promise<string> {
+  const targetScore = 0;
   const focusNote =
     passNumber > 1 && remainingIndicators.length > 0
       ? `\nFOCUS FOR THIS PASS — fix these specific remaining AI patterns:\n${remainingIndicators.map((i) => `• ${i}`).join("\n")}`
@@ -35,7 +38,7 @@ You are the LightSpeed Humanizer — the most advanced AI-to-human text transfor
 Your output must score 0% on ALL major AI detectors: Turnitin, GPTZero, Originality.AI, ZeroGPT, Winston AI, Copyleaks AI Detector — completely undetectable.
 
 TARGET TONE: ${toneGuide}
-WORD COUNT TARGET: ~${wordCount} words (±5%)${focusNote}
+WORD COUNT TARGET: exactly ${wordCount} words (match input length)${focusNote}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PASS ${passNumber} — STEALTH WRITER + QUILLBOT TECHNIQUES (MANDATORY)
@@ -105,7 +108,7 @@ Return ONLY the humanized text. No commentary, no JSON wrapper, no preamble, no 
 
   const resp = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
-    max_tokens: maxTokens,
+    max_tokens: tokenBudgetFromWords(wordCount, 1400),
     system: systemPrompt,
     messages: [
       {
@@ -215,8 +218,6 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
 
     const tone = body.tone ?? "academic";
     const wordCount = body.text.split(/\s+/).filter(Boolean).length;
-    // Dynamic token budget: words × 1.35 (token/word) × 1.10 (±10% margin) + 600 instruction overhead.
-    const humanizeMaxTokens = wordsToTokens(wordCount, 600);
 
     const toneGuide: Record<string, string> = {
       academic:
@@ -270,7 +271,6 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       toneGuide[tone],
       1,
       baselineIndicators,
-      humanizeMaxTokens,
     );
 
     send("step", {
@@ -315,7 +315,6 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
         toneGuide[tone],
         2,
         currentIndicators,
-        humanizeMaxTokens,
       );
 
       send("step", {
@@ -359,7 +358,6 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
           toneGuide[tone],
           3,
           currentIndicators,
-          humanizeMaxTokens,
         );
 
         send("step", {
@@ -391,58 +389,12 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       }
     }
 
-    // ── Word count enforcement (not just a warning) ──────────────────────────
-    let humanizedWordCount = currentText.split(/\s+/).filter(Boolean).length;
-    let wcRatio = humanizedWordCount / wordCount;
+    // ── Word count enforcement check ────────────────────────────────────────
+    const humanizedWordCount = currentText.split(/\s+/).filter(Boolean).length;
+    const wcRatio = humanizedWordCount / wordCount;
     let wordCountWarning = "";
-    if (wcRatio < 0.95 || wcRatio > 1.05) {
-      const isExpand = humanizedWordCount < wordCount;
-      const wordsNeeded = Math.abs(wordCount - humanizedWordCount);
-      send("step", {
-        id: "word-count-fix",
-        message: `Word count drifted after humanization: ${humanizedWordCount} → target ${wordCount} (${isExpand ? "short" : "over"} by ${wordsNeeded}). Running word-count correction pass…`,
-        status: "running",
-      });
-      try {
-        const minTarget = Math.floor(wordCount * 0.95);
-        const maxTarget = Math.ceil(wordCount * 1.05);
-        const corrResp = await anthropic.messages.create({
-          model: "claude-sonnet-4-5",
-          max_tokens: wordsToTokens(wordCount, 600),
-          system: `${WRITER_SOUL}
-
-You are a precise word count adjuster.
-Current word count: ${humanizedWordCount}
-Target word count: ${wordCount}
-Allowed range: ${minTarget}–${maxTarget} words
-
-${isExpand
-  ? `Add ~${wordsNeeded} words of substantive content — deepen analysis, add specific examples, expand key points. No padding or repetition.`
-  : `Remove ~${wordsNeeded} words — cut redundant phrasing, over-explained points, and wordy transitions while keeping all core arguments and citations intact.`}
-
-Preserve ALL citations, facts, headings, LaTeX equations, and markdown formatting exactly. Return ONLY the adjusted text.`,
-          messages: [{
-            role: "user",
-            content: `${isExpand ? "Expand" : "Trim"} this text to reach ${wordCount} words (±5%):\n\n${currentText}`,
-          }],
-        });
-        recordUsage("claude-sonnet-4-5", corrResp.usage.input_tokens, corrResp.usage.output_tokens, "humanizer-wordcount-fix");
-        const corrected = corrResp.content[0].type === "text" ? corrResp.content[0].text.trim() : currentText;
-        currentText = corrected;
-        humanizedWordCount = currentText.split(/\s+/).filter(Boolean).length;
-        wcRatio = humanizedWordCount / wordCount;
-        send("step", {
-          id: "word-count-fix",
-          message: `Word count corrected: ${humanizedWordCount} words (target ${wordCount}${wcRatio >= 0.95 && wcRatio <= 1.05 ? ", within ±5%" : " — best achievable"}).`,
-          status: "done",
-        });
-        if (wcRatio < 0.95 || wcRatio > 1.05) {
-          wordCountWarning = ` Word count: ${wordCount} → ${humanizedWordCount} (outside ±5% target after correction).`;
-        }
-      } catch {
-        wordCountWarning = ` Word count shifted: ${wordCount} → ${humanizedWordCount} (${wcRatio < 1 ? "-" : "+"}${Math.abs(Math.round((wcRatio - 1) * 100))}%). Target was ±5%.`;
-        send("step", { id: "word-count-fix", message: "Word count correction skipped due to error.", status: "done" });
-      }
+    if (humanizedWordCount !== wordCount) {
+      wordCountWarning = ` Word count shifted: ${wordCount} → ${humanizedWordCount} (${humanizedWordCount < wordCount ? "-" : "+"}${Math.abs(humanizedWordCount - wordCount)} words). Target is exact word-count match.`;
     }
 
     // ── Final verification step ──────────────────────────────────────────────
@@ -477,7 +429,7 @@ Preserve ALL citations, facts, headings, LaTeX equations, and markdown formattin
       "Sentence rhythm restructured — short/medium/long variation throughout",
       "All AI clichés eliminated (delve, crucial, pivotal, furthermore as opener)",
       "Authentic voice markers added — em dashes, parentheticals, rhetorical questions",
-      `${wordCount} words → ${humanizedWordCount} in output${wordCountWarning ? " (outside ±5% target)" : " (within ±5% target)"}`,
+      `${wordCount} words → ${humanizedWordCount} in output${wordCountWarning ? " (outside exact-match target)" : " (exact-match achieved)"}`,
     ];
 
     send("done", {

@@ -9,87 +9,26 @@ import {
   Radio, ServerCrash, Database, Clock, CheckCheck, XCircle, Signal,
   Megaphone, Link2, Eye, EyeOff, ThumbsUp, ThumbsDown,
   Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
-  BookOpen, Inbox, MailOpen, MailCheck, Building2,
-  Copy, FileDown, Printer, FileText as FileTextIcon, Loader2 as Loader2Icon,
-  Brain, Search,
 } from "lucide-react";
-import { exportAsDocx, exportAsPDF, exportAsTxt, copyText, richToHtml, wrapDocHtml } from "@/lib/exportUtils";
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
-// adminFetch automatically adds x-admin-email header when a sector admin is
-// logged in (stored in sessionStorage by handleAdminLogin).
 async function adminFetch(path: string, password: string, options?: RequestInit) {
-  const email = sessionStorage.getItem("admin_email") ?? "";
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
       "x-admin-password": password,
-      ...(email ? { "x-admin-email": email } : {}),
       ...options?.headers,
     },
   });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text ? text : `${res.status}: ${res.statusText}`);
-  }
+  if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
   return res.json();
 }
 
-type Tab = "overview" | "users" | "tools" | "documents" | "ebooks" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings" | "messages" | "intelligence" | "admin-management";
-
-interface AdminRole {
-  role: "super" | "sector";
-  sectors: string[];
-  name: string;
-  email?: string;
-  adminId?: number;
-}
-
-interface SectorAdminUser {
-  id: number;
-  name: string;
-  email: string;
-  sectors: string[];
-  active: boolean;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-}
-
-const SECTOR_LABELS: Record<string, string> = {
-  content:   "Content & Users",
-  finance:   "Finance & Billing",
-  analytics: "Analytics & Intelligence",
-  support:   "Customer Support",
-  technical: "Technical Operations",
-};
-
-const ALL_SECTORS = ["content", "finance", "analytics", "support", "technical"] as const;
-
-// Map each sector to the tabs it can access
-const SECTOR_TABS: Record<string, Tab[]> = {
-  content:   ["overview", "users", "documents", "ebooks", "announcements", "messages"],
-  finance:   ["overview", "payments", "credits", "finance", "referrals", "gateways"],
-  analytics: ["overview", "analytics", "logs", "intelligence"],
-  support:   ["overview", "users", "messages", "credits"],
-  technical: ["overview", "tools", "gateways", "settings", "logs"],
-};
-
-interface ContactMessage {
-  id: string;
-  name: string;
-  email: string;
-  institution: string | null;
-  message: string;
-  seats: string | null;
-  read: boolean;
-  replied: boolean;
-  created_at: string;
-}
+type Tab = "overview" | "users" | "tools" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings";
 
 interface AdminTool {
   key: string;
@@ -162,7 +101,6 @@ interface AdminDocument {
   id: number;
   userId: string | null;
   title: string;
-  content?: string | null;
   type: string;
   subject: string | null;
   wordCount: number;
@@ -254,22 +192,6 @@ interface SystemSettings {
   starter_study: string;
   starter_plagiarism: string;
   starter_outline: string;
-  pro_paper: string;
-  pro_revision: string;
-  pro_humanizer: string;
-  pro_stem: string;
-  pro_study: string;
-  pro_plagiarism: string;
-  pro_outline: string;
-  institution_paper: string;
-  institution_revision: string;
-  institution_humanizer: string;
-  institution_stem: string;
-  institution_study: string;
-  institution_plagiarism: string;
-  institution_outline: string;
-  tool_ebooks_enabled: string;
-  [key: string]: string;
 }
 
 interface TrafficData {
@@ -329,7 +251,7 @@ function countryName(code: string): string {
 const PLAN_COLORS: Record<string, string> = {
   starter: "bg-blue-500/12 text-blue-300 border-blue-500/20",
   pro: "bg-amber-500/12 text-amber-300 border-amber-500/20",
-  institution: "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
+  campus: "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -370,13 +292,7 @@ export default function Admin() {
   const [creditAdjusting, setCreditAdjusting] = useState(false);
   const [planEditUser, setPlanEditUser] = useState<AdminUser | null>(null);
   const [planEditValue, setPlanEditValue] = useState("starter");
-  const [planEditBilling, setPlanEditBilling] = useState("monthly");
-  const [planEditSeats, setPlanEditSeats] = useState("5");
-  const [planEditDuration, setPlanEditDuration] = useState("365");
   const [planEditing, setPlanEditing] = useState(false);
-  const [selectedCreditUserId, setSelectedCreditUserId] = useState<string | null>(null);
-  const [userCreditTx, setUserCreditTx] = useState<Array<{ id: number; amount_cents: number; type: string; description: string; created_at: string }>>([]);
-  const [userCreditTxLoading, setUserCreditTxLoading] = useState(false);
   const [banTogglingId, setBanTogglingId] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "completed" | "pending" | "failed">("all");
@@ -400,7 +316,6 @@ export default function Admin() {
   const [docTotal, setDocTotal] = useState(0);
   const [docSearch, setDocSearch] = useState("");
   const [docTypeFilter, setDocTypeFilter] = useState("all");
-  const [adminExportingKey, setAdminExportingKey] = useState<string | null>(null);
   const [pwaStats, setPwaStats] = useState<{
     totalInstalls: number; androidInstalls: number; iosInstalls: number;
     installs7d: number; installs30d: number;
@@ -424,84 +339,23 @@ export default function Admin() {
     }>;
   } | null>(null);
   const [applyingDiscountId, setApplyingDiscountId] = useState<number | null>(null);
-  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
-  const [ebookData, setEbookData] = useState<{
-    total: number; thisMonth: number; thisWeek: number; avgWords: number;
-    recent: Array<{ id: number; user_id: string | null; title: string; word_count: number; created_at: string }>;
-    subscriptions: Array<{ user_id: string; status: string; billing: string | null; gateway: string | null; created_at: string }>;
-  } | null>(null);
-  const [intelligenceData, setIntelligenceData] = useState<{
-    qualityAverages: {
-      allTime:    { avgAiDetection: number | null; avgPlagiarism: number | null; avgGrade: number | null; totalSignals: number };
-      last30Days: { avgAiDetection: number | null; avgPlagiarism: number | null; avgGrade: number | null; totalSignals: number };
-    };
-    weeklyTrends: Array<{ week: string; avgAiDetection: number | null; avgPlagiarism: number | null; avgGrade: number | null }>;
-    topSources: Array<{ source: string; subject: string; totalQueries: number; successRate: number; avgResults: number }>;
-    feedbackStats: { totalUp: number; totalDown: number; byType: Record<string, { up: number; down: number }> };
-  } | null>(null);
-  const [intelligenceLoading, setIntelligenceLoading] = useState(false);
-
-  // ── Sector admin management state ──────────────────────────────────────────
-  const [adminRole, setAdminRole] = useState<AdminRole | null>(null);
-  const [sectorAdminUsers, setSectorAdminUsers] = useState<SectorAdminUser[]>([]);
-  const [sectorAdminLoading, setSectorAdminLoading] = useState(false);
-  const [newAdminName, setNewAdminName] = useState("");
-  const [newAdminEmail, setNewAdminEmail] = useState("");
-  const [newAdminPassword, setNewAdminPassword] = useState("");
-  const [newAdminSectors, setNewAdminSectors] = useState<string[]>([]);
-  const [creatingAdmin, setCreatingAdmin] = useState(false);
-  const [createAdminError, setCreateAdminError] = useState("");
-  const [editingSectorAdmin, setEditingSectorAdmin] = useState<SectorAdminUser | null>(null);
-  const [editSectorAdminPassword, setEditSectorAdminPassword] = useState("");
-  const [savingSectorAdmin, setSavingSectorAdmin] = useState(false);
-  const [deletingSectorAdminId, setDeletingSectorAdminId] = useState<number | null>(null);
-  const [loginEmail, setLoginEmail] = useState("");
 
   const isAuthed = !!password;
-
-  // Derived: allowed tabs based on role
-  const allowedTabs: Set<Tab> = (() => {
-    if (!adminRole || adminRole.role === "super") return new Set<Tab>(["overview","users","tools","documents","ebooks","gateways","payments","credits","finance","analytics","logs","announcements","referrals","settings","messages","intelligence","admin-management"]);
-    const tabs = new Set<Tab>(["overview"]);
-    for (const sector of adminRole.sectors) {
-      for (const t of (SECTOR_TABS[sector] ?? [])) tabs.add(t);
-    }
-    return tabs;
-  })();
 
   async function handleAdminLogin(e: React.FormEvent) {
     e.preventDefault();
     setAuthError("");
     setAuthLoading(true);
     try {
-      const body: Record<string, string> = { password: inputPassword };
-      if (loginEmail.trim()) body.email = loginEmail.trim().toLowerCase();
-      const res = await fetch(`${API_BASE}/mwaramuriuki-login/verify`, {
+      const res = await fetch(`${API_BASE}/admin/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ password: inputPassword }),
       });
-      const data = await res.json() as {
-        ok: boolean; error?: string;
-        role?: "super" | "sector"; sectors?: string[]; name?: string; email?: string; adminId?: number;
-      };
+      const data = await res.json() as { ok: boolean; error?: string };
       if (data.ok) {
         setPassword(inputPassword);
         sessionStorage.setItem("admin_token", inputPassword);
-        const role: AdminRole = {
-          role: data.role ?? "super",
-          sectors: data.sectors ?? ["all"],
-          name: data.name ?? "Admin",
-          email: data.email,
-          adminId: data.adminId,
-        };
-        setAdminRole(role);
-        sessionStorage.setItem("admin_role", JSON.stringify(role));
-        if (data.email) {
-          sessionStorage.setItem("admin_email", data.email);
-        } else {
-          sessionStorage.removeItem("admin_email");
-        }
       } else {
         setAuthError(data.error ?? "Invalid password");
       }
@@ -515,25 +369,19 @@ export default function Admin() {
   useEffect(() => {
     const stored = sessionStorage.getItem("admin_token");
     if (stored) setPassword(stored);
-    const storedRole = sessionStorage.getItem("admin_role");
-    if (storedRole) {
-      try { setAdminRole(JSON.parse(storedRole) as AdminRole); } catch { /* ignore */ }
-    }
-    // Auto-wake Render on page load so it's ready before the user hits Login
-    if (!stored) wakeBeforeLogin();
   }, []);
 
   const loadStats = useCallback(async () => {
     setLoading(true);
     setStatsError(null);
-    try { setStats(await adminFetch("/mwaramuriuki-login/stats", password) as AdminStats); }
+    try { setStats(await adminFetch("/admin/stats", password) as AdminStats); }
     catch (e) { setStats(null); setStatsError(e instanceof Error ? e.message : "Failed to load stats"); }
     finally { setLoading(false); }
   }, [password]);
 
   const loadTools = useCallback(async () => {
     setLoading(true);
-    try { setAdminTools((await adminFetch("/mwaramuriuki-login/tools", password) as { tools: AdminTool[] }).tools); }
+    try { setAdminTools((await adminFetch("/admin/tools", password) as { tools: AdminTool[] }).tools); }
     catch { setAdminTools([]); }
     finally { setLoading(false); }
   }, [password]);
@@ -542,7 +390,7 @@ export default function Admin() {
     setTogglingTool(key);
     setToggleError(null);
     try {
-      await adminFetch(`/mwaramuriuki-login/tools/${key}/toggle`, password, {
+      await adminFetch(`/admin/tools/${key}/toggle`, password, {
         method: "PATCH",
         body: JSON.stringify({ enabled }),
       });
@@ -556,7 +404,7 @@ export default function Admin() {
 
   async function quickSaveSetting(key: string, value: string) {
     try {
-      await adminFetch("/mwaramuriuki-login/settings", password, {
+      await adminFetch("/admin/settings", password, {
         method: "POST",
         body: JSON.stringify({ settings: { [key]: value } }),
       });
@@ -566,7 +414,7 @@ export default function Admin() {
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/mwaramuriuki-login/users", password) as { users: AdminUser[]; hasEmailData: boolean; supabaseError: string | null };
+      const data = await adminFetch("/admin/users", password) as { users: AdminUser[]; hasEmailData: boolean; supabaseError: string | null };
       setUsers(data.users); setHasEmailData(data.hasEmailData); setSupabaseError(data.supabaseError ?? null);
     } catch { setUsers([]); }
     finally { setLoading(false); }
@@ -574,20 +422,20 @@ export default function Admin() {
 
   const loadGateways = useCallback(async () => {
     setLoading(true);
-    try { setGateways((await adminFetch("/mwaramuriuki-login/gateways", password) as { gateways: GatewaySetting[] }).gateways); } catch { setGateways([]); }
+    try { setGateways((await adminFetch("/admin/gateways", password) as { gateways: GatewaySetting[] }).gateways); } catch { setGateways([]); }
     finally { setLoading(false); }
   }, [password]);
 
   const loadPayments = useCallback(async () => {
     setLoading(true);
-    try { setPayments((await adminFetch("/mwaramuriuki-login/payments", password) as { payments: Payment[] }).payments); } catch { setPayments([]); }
+    try { setPayments((await adminFetch("/admin/payments", password) as { payments: Payment[] }).payments); } catch { setPayments([]); }
     finally { setLoading(false); }
   }, [password]);
 
   const loadCredits = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/mwaramuriuki-login/credits", password) as {
+      const data = await adminFetch("/admin/credits", password) as {
         users: CreditUser[]; recentTransactions: CreditTransaction[];
         totals: typeof creditTotals;
       };
@@ -598,24 +446,9 @@ export default function Admin() {
 
   const loadRevenue = useCallback(async () => {
     setLoading(true);
-    try { setRevenue(await adminFetch("/mwaramuriuki-login/revenue", password) as RevenueData); } catch { setRevenue(null); }
+    try { setRevenue(await adminFetch("/admin/revenue", password) as RevenueData); } catch { setRevenue(null); }
     finally { setLoading(false); }
   }, [password]);
-
-  const handleAdminExport = async (fmt: string, doc: AdminDocument) => {
-    const key = `${doc.id}-${fmt}`;
-    setAdminExportingKey(key);
-    const slug = doc.title.replace(/[^a-zA-Z0-9-_ ]/g, "_").replace(/\s+/g, "_").slice(0, 60).trim();
-    const content = doc.content ?? "";
-    try {
-      if (fmt === "copy") await copyText(content);
-      else if (fmt === "docx") await exportAsDocx(content, slug, doc.title);
-      else if (fmt === "pdf") exportAsPDF(wrapDocHtml(doc.title, richToHtml(content)));
-      else if (fmt === "txt") exportAsTxt(content, slug);
-    } finally {
-      setAdminExportingKey(null);
-    }
-  };
 
   const loadDocuments = useCallback(async () => {
     setLoading(true);
@@ -624,7 +457,7 @@ export default function Admin() {
       if (docTypeFilter && docTypeFilter !== "all") params.set("type", docTypeFilter);
       if (docSearch && docSearch.trim()) params.set("search", docSearch.trim());
       const qs = params.toString() ? `?${params.toString()}` : "";
-      const data = await adminFetch(`/mwaramuriuki-login/documents${qs}`, password) as { documents: AdminDocument[]; total: number };
+      const data = await adminFetch(`/admin/documents${qs}`, password) as { documents: AdminDocument[]; total: number };
       setDocuments(data.documents);
       setDocTotal(data.total);
     } catch { setDocuments([]); setDocTotal(0); }
@@ -634,7 +467,7 @@ export default function Admin() {
   const loadSubscriptions = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/mwaramuriuki-login/subscriptions", password) as { subscriptions: Subscription[]; counts: Record<string, number> };
+      const data = await adminFetch("/admin/subscriptions", password) as { subscriptions: Subscription[]; counts: Record<string, number> };
       setSubscriptions(data.subscriptions); setSubCounts(data.counts);
     } catch { setSubscriptions([]); }
     finally { setLoading(false); }
@@ -642,31 +475,24 @@ export default function Admin() {
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
-    try { setSettings((await adminFetch("/mwaramuriuki-login/settings", password) as { settings: SystemSettings }).settings); } catch {}
+    try { setSettings((await adminFetch("/admin/settings", password) as { settings: SystemSettings }).settings); } catch {}
     finally { setLoading(false); }
   }, [password]);
 
   const loadTraffic = useCallback(async () => {
     setLoading(true);
-    try { setTraffic(await adminFetch("/mwaramuriuki-login/traffic", password) as TrafficData); } catch { setTraffic(null); }
+    try { setTraffic(await adminFetch("/admin/traffic", password) as TrafficData); } catch { setTraffic(null); }
     finally { setLoading(false); }
   }, [password]);
 
   const loadPwaStats = useCallback(async () => {
-    try { setPwaStats(await adminFetch("/mwaramuriuki-login/pwa/stats", password) as typeof pwaStats); } catch { setPwaStats(null); }
-  }, [password]);
-
-  const loadIntelligence = useCallback(async () => {
-    setIntelligenceLoading(true);
-    try { setIntelligenceData(await adminFetch("/mwaramuriuki-login/intelligence", password) as typeof intelligenceData); }
-    catch { setIntelligenceData(null); }
-    finally { setIntelligenceLoading(false); }
+    try { setPwaStats(await adminFetch("/admin/pwa/stats", password) as typeof pwaStats); } catch { setPwaStats(null); }
   }, [password]);
 
   const loadLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch(`/mwaramuriuki-login/logs?filter=${logFilter}`, password) as {
+      const data = await adminFetch(`/admin/logs?filter=${logFilter}`, password) as {
         logs: LogEntry[]; errors: LogEntry[]; summary: LogSummary;
       };
       setRequestLogs(data.logs); setErrorLogs(data.errors); setLogSummary(data.summary);
@@ -677,24 +503,15 @@ export default function Admin() {
   const loadAnnouncements = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/mwaramuriuki-login/announcements", password) as { announcements: Announcement[] };
+      const data = await adminFetch("/admin/announcements", password) as { announcements: Announcement[] };
       setAnnouncements(data.announcements);
     } catch { setAnnouncements([]); }
     finally { setLoading(false); }
   }, [password]);
 
-  const loadMessages = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await adminFetch("/mwaramuriuki-login/messages", password) as { messages: ContactMessage[] };
-      setContactMessages(data.messages);
-    } catch { setContactMessages([]); }
-    finally { setLoading(false); }
-  }, [password]);
-
   const loadFeedback = useCallback(async () => {
     try {
-      const data = await adminFetch("/mwaramuriuki-login/feedback", password) as { feedback: FeedbackStat[] };
+      const data = await adminFetch("/admin/feedback", password) as { feedback: FeedbackStat[] };
       setFeedbackStats(data.feedback);
     } catch { setFeedbackStats([]); }
   }, [password]);
@@ -702,23 +519,16 @@ export default function Admin() {
   const loadReferrals = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetch("/mwaramuriuki-login/referrals", password) as typeof referralData;
+      const data = await adminFetch("/admin/referrals", password) as typeof referralData;
       setReferralData(data);
     } catch { setReferralData(null); }
-    finally { setLoading(false); }
-  }, [password]);
-
-  const loadEbooks = useCallback(async () => {
-    setLoading(true);
-    try { setEbookData(await adminFetch("/mwaramuriuki-login/ebooks", password) as typeof ebookData); }
-    catch { setEbookData(null); }
     finally { setLoading(false); }
   }, [password]);
 
   async function wakeBeforeLogin() {
     setPreLoginWaking(true);
     setPreLoginStatus("idle");
-    const HEALTH_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "") + "/api/health";
+    const HEALTH_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "") + "/api/healthz";
     let ok = false;
     try {
       const res = await fetch(HEALTH_URL, {
@@ -737,7 +547,7 @@ export default function Admin() {
   async function wakeBackend() {
     setWaking(true); setWakeResult(null);
     try {
-      const data = await adminFetch("/mwaramuriuki-login/ping", password) as { ok: boolean; uptimeSeconds: number };
+      const data = await adminFetch("/admin/ping", password) as { ok: boolean; uptimeSeconds: number };
       setWakeResult(data);
     } catch { setWakeResult({ ok: false }); }
     finally { setWaking(false); }
@@ -750,13 +560,8 @@ export default function Admin() {
 
   useEffect(() => {
     if (!isAuthed) return;
-    loadMessages();
-  }, [isAuthed]);
-
-  useEffect(() => {
-    if (!isAuthed) return;
     if (activeTab === "overview") loadStats();
-    if (activeTab === "tools") { loadTools(); loadEbooks(); }
+    if (activeTab === "tools") loadTools();
     if (activeTab === "documents") loadDocuments();
     if (activeTab === "users") { loadUsers(); loadSubscriptions(); }
     if (activeTab === "gateways") loadGateways();
@@ -765,13 +570,9 @@ export default function Admin() {
     if (activeTab === "finance") loadRevenue();
     if (activeTab === "settings") loadSettings();
     if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); loadPwaStats(); }
-    if (activeTab === "intelligence") loadIntelligence();
     if (activeTab === "logs") loadLogs();
     if (activeTab === "announcements") loadAnnouncements();
     if (activeTab === "referrals") loadReferrals();
-    if (activeTab === "ebooks") loadEbooks();
-    if (activeTab === "messages") loadMessages();
-    if (activeTab === "admin-management") loadSectorAdmins();
   }, [isAuthed, activeTab]);
 
   useEffect(() => {
@@ -785,7 +586,7 @@ export default function Admin() {
   async function toggleGateway(gateway: string, paused: boolean) {
     setTogglingGateway(gateway);
     try {
-      await adminFetch(`/mwaramuriuki-login/gateways/${gateway}`, password, { method: "PATCH", body: JSON.stringify({ paused }) });
+      await adminFetch(`/admin/gateways/${gateway}`, password, { method: "PATCH", body: JSON.stringify({ paused }) });
       setGateways((prev) => prev.map((g) => g.gateway === gateway ? { ...g, paused } : g));
     } catch {} finally { setTogglingGateway(null); }
   }
@@ -794,7 +595,7 @@ export default function Admin() {
     setDeleteError("");
     setDeleteTarget(userId);
     try {
-      await adminFetch(`/mwaramuriuki-login/users/${userId}`, password, { method: "DELETE" });
+      await adminFetch(`/admin/users/${userId}`, password, { method: "DELETE" });
       setUsers((prev) => prev.filter((u) => u.id !== userId));
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : "Failed to delete");
@@ -804,7 +605,7 @@ export default function Admin() {
   async function toggleBan(user: AdminUser) {
     setBanTogglingId(user.id);
     try {
-      await adminFetch(`/mwaramuriuki-login/users/${user.id}/ban`, password, {
+      await adminFetch(`/admin/users/${user.id}/ban`, password, {
         method: "PATCH",
         body: JSON.stringify({ banned: !user.banned, reason: "Admin action" }),
       });
@@ -818,7 +619,7 @@ export default function Admin() {
     try {
       const amt = parseInt(creditAdjustAmt, 10);
       if (isNaN(amt) || amt === 0) return;
-      await adminFetch(`/mwaramuriuki-login/users/${creditAdjustUser.id}/credits`, password, {
+      await adminFetch(`/admin/users/${creditAdjustUser.id}/credits`, password, {
         method: "POST",
         body: JSON.stringify({ amountCents: amt, reason: creditAdjustNote || "Admin adjustment" }),
       });
@@ -835,38 +636,20 @@ export default function Admin() {
     if (!planEditUser) return;
     setPlanEditing(true);
     try {
-      const body: Record<string, unknown> = {
-        plan: planEditValue,
-        billing: planEditValue === "pro" ? planEditBilling : planEditValue === "starter" ? "monthly" : null,
-      };
-      if (planEditValue === "institution") {
-        body.seats = Number(planEditSeats) || 5;
-        body.durationDays = Number(planEditDuration) || 365;
-        body.billing = null;
-      }
-      await adminFetch(`/mwaramuriuki-login/users/${planEditUser.id}/plan`, password, {
+      await adminFetch(`/admin/users/${planEditUser.id}/plan`, password, {
         method: "PATCH",
-        body: JSON.stringify(body),
+        body: JSON.stringify({ plan: planEditValue }),
       });
-      setUsers((prev) => prev.map((u) => u.id === planEditUser.id ? { ...u, plan: planEditValue, billing: body.billing as string | null } : u));
+      setUsers((prev) => prev.map((u) => u.id === planEditUser.id ? { ...u, plan: planEditValue } : u));
       setPlanEditUser(null);
     } catch {} finally { setPlanEditing(false); }
-  }
-
-  async function loadUserCreditTransactions(userId: string) {
-    setUserCreditTxLoading(true);
-    try {
-      const data = await adminFetch(`/mwaramuriuki-login/users/${userId}/credit-transactions`, password);
-      setUserCreditTx(data.transactions ?? []);
-    } catch { setUserCreditTx([]); }
-    finally { setUserCreditTxLoading(false); }
   }
 
   async function saveSettings() {
     if (!settings) return;
     setSettingsSaving(true);
     try {
-      await adminFetch("/mwaramuriuki-login/settings", password, {
+      await adminFetch("/admin/settings", password, {
         method: "POST",
         body: JSON.stringify({ settings }),
       });
@@ -876,10 +659,7 @@ export default function Admin() {
 
   function signOut() {
     sessionStorage.removeItem("admin_token");
-    sessionStorage.removeItem("admin_role");
-    sessionStorage.removeItem("admin_email");
     setPassword("");
-    setAdminRole(null);
   }
 
   function refreshTab() {
@@ -893,81 +673,14 @@ export default function Admin() {
     else if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); loadPwaStats(); }
     else if (activeTab === "logs") loadLogs();
     else if (activeTab === "announcements") loadAnnouncements();
-    else if (activeTab === "ebooks") loadEbooks();
-    else if (activeTab === "admin-management") loadSectorAdmins();
     else loadStats();
-  }
-
-  const loadSectorAdmins = useCallback(async () => {
-    setSectorAdminLoading(true);
-    try {
-      const data = await adminFetch("/mwaramuriuki-login/admin-users", password) as { adminUsers: SectorAdminUser[] };
-      setSectorAdminUsers(data.adminUsers);
-    } catch { setSectorAdminUsers([]); }
-    finally { setSectorAdminLoading(false); }
-  }, [password]);
-
-  async function createSectorAdmin(e: React.FormEvent) {
-    e.preventDefault();
-    setCreateAdminError("");
-    if (!newAdminName.trim() || !newAdminEmail.trim() || !newAdminPassword || newAdminSectors.length === 0) {
-      setCreateAdminError("All fields are required and at least one sector must be selected.");
-      return;
-    }
-    setCreatingAdmin(true);
-    try {
-      await adminFetch("/mwaramuriuki-login/admin-users", password, {
-        method: "POST",
-        body: JSON.stringify({ name: newAdminName.trim(), email: newAdminEmail.trim(), password: newAdminPassword, sectors: newAdminSectors }),
-      });
-      setNewAdminName(""); setNewAdminEmail(""); setNewAdminPassword(""); setNewAdminSectors([]);
-      await loadSectorAdmins();
-    } catch (err) {
-      setCreateAdminError(err instanceof Error ? err.message : "Failed to create admin");
-    } finally { setCreatingAdmin(false); }
-  }
-
-  async function toggleSectorAdminActive(admin: SectorAdminUser) {
-    try {
-      await adminFetch(`/mwaramuriuki-login/admin-users/${admin.id}`, password, {
-        method: "PATCH", body: JSON.stringify({ active: !admin.active }),
-      });
-      setSectorAdminUsers((prev) => prev.map((a) => a.id === admin.id ? { ...a, active: !a.active } : a));
-    } catch { /* ignore */ }
-  }
-
-  async function saveSectorAdminEdit() {
-    if (!editingSectorAdmin) return;
-    setSavingSectorAdmin(true);
-    try {
-      const body: Record<string, unknown> = {
-        name: editingSectorAdmin.name,
-        sectors: editingSectorAdmin.sectors,
-      };
-      if (editSectorAdminPassword) body.password = editSectorAdminPassword;
-      await adminFetch(`/mwaramuriuki-login/admin-users/${editingSectorAdmin.id}`, password, {
-        method: "PATCH", body: JSON.stringify(body),
-      });
-      setSectorAdminUsers((prev) => prev.map((a) => a.id === editingSectorAdmin.id ? { ...editingSectorAdmin } : a));
-      setEditingSectorAdmin(null); setEditSectorAdminPassword("");
-    } catch { /* ignore */ }
-    finally { setSavingSectorAdmin(false); }
-  }
-
-  async function deleteSectorAdmin(id: number) {
-    setDeletingSectorAdminId(id);
-    try {
-      await adminFetch(`/mwaramuriuki-login/admin-users/${id}`, password, { method: "DELETE" });
-      setSectorAdminUsers((prev) => prev.filter((a) => a.id !== id));
-    } catch { /* ignore */ }
-    finally { setDeletingSectorAdminId(null); }
   }
 
   async function createAnnouncement() {
     if (!newAnnouncement.message.trim()) { setAnnouncementError("Message is required"); return; }
     setAnnouncementSaving(true); setAnnouncementError("");
     try {
-      await adminFetch("/mwaramuriuki-login/announcements", password, {
+      await adminFetch("/admin/announcements", password, {
         method: "POST", body: JSON.stringify(newAnnouncement),
       });
       setNewAnnouncement({ title: "", message: "", link: "", link_text: "Learn more", color: "blue" });
@@ -978,7 +691,7 @@ export default function Admin() {
 
   async function toggleAnnouncement(id: number, is_active: boolean) {
     try {
-      await adminFetch(`/mwaramuriuki-login/announcements/${id}`, password, {
+      await adminFetch(`/admin/announcements/${id}`, password, {
         method: "PATCH", body: JSON.stringify({ is_active }),
       });
       setAnnouncements((prev) => prev.map((a) => a.id === id ? { ...a, is_active } : a));
@@ -987,7 +700,7 @@ export default function Admin() {
 
   async function deleteAnnouncement(id: number) {
     try {
-      await adminFetch(`/mwaramuriuki-login/announcements/${id}`, password, { method: "DELETE" });
+      await adminFetch(`/admin/announcements/${id}`, password, { method: "DELETE" });
       setAnnouncements((prev) => prev.filter((a) => a.id !== id));
     } catch {}
   }
@@ -996,7 +709,7 @@ export default function Admin() {
     if (!editingAnnouncement) return;
     setAnnouncementSaving(true);
     try {
-      await adminFetch(`/mwaramuriuki-login/announcements/${editingAnnouncement.id}`, password, {
+      await adminFetch(`/admin/announcements/${editingAnnouncement.id}`, password, {
         method: "PATCH", body: JSON.stringify(editingAnnouncement),
       });
       setAnnouncements((prev) => prev.map((a) => a.id === editingAnnouncement.id ? editingAnnouncement : a));
@@ -1026,22 +739,13 @@ export default function Admin() {
             <div className="p-8">
               <form onSubmit={handleAdminLogin} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-white/50 uppercase tracking-wide mb-2">Sector Admin Email <span className="text-white/25 normal-case font-normal">(leave blank for super admin)</span></label>
-                  <input
-                    type="email" value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="sector.admin@example.com"
-                    className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-red-500/40 focus:bg-white/[0.07] transition-all"
-                  />
-                </div>
-                <div>
                   <label className="block text-xs font-medium text-white/50 uppercase tracking-wide mb-2">Password</label>
                   <div className="relative">
                     <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25" />
                     <input
                       type="password" value={inputPassword}
                       onChange={(e) => setInputPassword(e.target.value)}
-                      placeholder="Enter admin password" required autoFocus={!loginEmail}
+                      placeholder="Enter admin password" required autoFocus
                       className="w-full pl-10 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-red-500/40 focus:bg-white/[0.07] transition-all"
                     />
                   </div>
@@ -1097,26 +801,21 @@ export default function Admin() {
   }
 
   // ── Dashboard ───────────────────────────────────────────────────────────────
-  const allTabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "overview",          label: "Overview",       icon: Activity },
-    { id: "users",             label: "Users",          icon: Users },
-    { id: "tools",             label: "Tools",          icon: Wrench },
-    { id: "documents",         label: "Documents",      icon: FileText },
-    { id: "ebooks",            label: "Ebooks",         icon: BookOpen },
-    { id: "analytics",         label: "Analytics",      icon: TrendingUp },
-    { id: "logs",              label: "Logs",           icon: Radio },
-    { id: "gateways",          label: "Gateways",       icon: Globe },
-    { id: "payments",          label: "Payments",       icon: CreditCard },
-    { id: "credits",           label: "Credits",        icon: Coins },
-    { id: "finance",           label: "Finance",        icon: BarChart3 },
-    { id: "announcements",     label: "Announcements",  icon: Megaphone },
-    { id: "referrals",         label: "Referrals",      icon: Share2 },
-    { id: "messages",          label: "Messages",       icon: Inbox },
-    { id: "settings",          label: "Settings",       icon: Settings },
-    { id: "intelligence",      label: "Intelligence",   icon: Brain },
-    { id: "admin-management",  label: "Admins",         icon: Shield },
+  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
+    { id: "overview",       label: "Overview",       icon: Activity },
+    { id: "users",          label: "Users",          icon: Users },
+    { id: "tools",          label: "Tools",          icon: Wrench },
+    { id: "documents",      label: "Documents",      icon: FileText },
+    { id: "analytics",      label: "Analytics",      icon: TrendingUp },
+    { id: "logs",           label: "Logs",           icon: Radio },
+    { id: "gateways",       label: "Gateways",       icon: Globe },
+    { id: "payments",       label: "Payments",       icon: CreditCard },
+    { id: "credits",        label: "Credits",        icon: Coins },
+    { id: "finance",        label: "Finance",        icon: BarChart3 },
+    { id: "announcements",  label: "Announcements",  icon: Megaphone },
+    { id: "referrals",      label: "Referrals",      icon: Share2 },
+    { id: "settings",       label: "Settings",       icon: Settings },
   ];
-  const tabs = allTabs.filter((t) => allowedTabs.has(t.id));
 
   const filteredUsers = userSearch
     ? users.filter((u) => (u.email ?? u.id).toLowerCase().includes(userSearch.toLowerCase()))
@@ -1136,33 +835,20 @@ export default function Admin() {
             <Logo size={24} textSize="text-xs" className="opacity-80" />
             <div className="mt-2 flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-              <span className="text-[10px] text-white/35 font-medium uppercase tracking-widest">
-                {adminRole?.role === "sector" ? "Sector Admin" : "Super Admin"}
-              </span>
+              <span className="text-[10px] text-white/35 font-medium uppercase tracking-widest">Admin</span>
             </div>
-            {adminRole?.name && adminRole.role === "sector" && (
-              <p className="mt-1 text-[10px] text-white/25 truncate">{adminRole.name}</p>
-            )}
           </div>
           <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
-            {tabs.map((t) => {
-              const unreadMsgCount = t.id === "messages" ? contactMessages.filter((m) => !m.read && !m.replied).length : 0;
-              return (
-                <button key={t.id} onClick={() => { setActiveTab(t.id); setMobileNav(false); }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    activeTab === t.id ? "bg-white/8 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"
-                  }`}
-                >
-                  <t.icon size={14} className={activeTab === t.id ? "text-red-400" : ""} />
-                  {t.label}
-                  {unreadMsgCount > 0 && (
-                    <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-blue-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
-                      {unreadMsgCount > 9 ? "9+" : unreadMsgCount}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            {tabs.map((t) => (
+              <button key={t.id} onClick={() => { setActiveTab(t.id); setMobileNav(false); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === t.id ? "bg-white/8 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                }`}
+              >
+                <t.icon size={14} className={activeTab === t.id ? "text-red-400" : ""} />
+                {t.label}
+              </button>
+            ))}
           </nav>
           <div className="px-3 py-4 border-t border-white/8">
             <button onClick={signOut} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white/35 hover:text-white/60 hover:bg-white/5 transition-all">
@@ -1237,7 +923,7 @@ export default function Admin() {
                       <div className="bg-gradient-to-br from-violet-600/10 to-violet-500/5 border border-violet-500/12 rounded-xl p-4">
                         <p className="text-xs text-white/40 mb-2 font-medium">Plan Distribution</p>
                         <div className="space-y-1.5">
-                          {[["starter", "text-blue-400"], ["pro", "text-amber-400"], ["institution", "text-emerald-400"]].map(([plan, color]) => (
+                          {[["starter", "text-blue-400"], ["pro", "text-amber-400"], ["campus", "text-emerald-400"]].map(([plan, color]) => (
                             <div key={plan} className="flex items-center justify-between">
                               <span className={`text-[11px] font-semibold capitalize ${color}`}>{plan}</span>
                               <span className="text-xs text-white/60 tabular-nums">{(stats.planDistribution[plan] ?? 0).toLocaleString()}</span>
@@ -1313,7 +999,6 @@ export default function Admin() {
                           { id: "users",         label: "Users",          sub: "Accounts & bans",           icon: Users,        color: "text-blue-400",    bg: "bg-blue-500/8",    border: "border-blue-500/12" },
                           { id: "tools",         label: "Tools",          sub: "Enable, monitor & stats",   icon: Wrench,       color: "text-rose-400",    bg: "bg-rose-500/8",    border: "border-rose-500/12" },
                           { id: "documents",     label: "Documents",      sub: "All generated content",     icon: FileText,     color: "text-indigo-400",  bg: "bg-indigo-500/8",  border: "border-indigo-500/12" },
-                          { id: "ebooks",        label: "Ebooks",         sub: "Ebook subs & library",      icon: BookOpen,     color: "text-purple-400",  bg: "bg-purple-500/8",  border: "border-purple-500/12" },
                           { id: "analytics",     label: "Analytics",      sub: "Traffic & usage",           icon: TrendingUp,   color: "text-violet-400",  bg: "bg-violet-500/8",  border: "border-violet-500/12" },
                           { id: "logs",          label: "Logs",           sub: "API request logs",          icon: Radio,        color: "text-cyan-400",    bg: "bg-cyan-500/8",    border: "border-cyan-500/12" },
                           { id: "gateways",      label: "Gateways",       sub: "Payment gateway config",    icon: Globe,        color: "text-teal-400",    bg: "bg-teal-500/8",    border: "border-teal-500/12" },
@@ -1393,7 +1078,7 @@ export default function Admin() {
                           className="p-1.5 rounded-md text-white/20 hover:text-amber-400 hover:bg-amber-500/10 transition-all">
                           <Coins size={11} />
                         </button>
-                        <button onClick={() => { setPlanEditUser(user); const pv = user.plan === "pro" ? (user.billing === "annual" ? "pro_annual" : "pro") : user.plan; setPlanEditValue(pv); setPlanEditBilling(user.billing ?? "monthly"); }} title="Edit plan"
+                        <button onClick={() => { setPlanEditUser(user); setPlanEditValue(user.plan); }} title="Edit plan"
                           className="p-1.5 rounded-md text-white/20 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
                           <Edit2 size={11} />
                         </button>
@@ -1441,7 +1126,6 @@ export default function Admin() {
                         plagiarism: <Shield size={16} className="text-cyan-400" />,
                         stem:       <FlaskConical size={16} className="text-amber-400" />,
                         study:      <GraduationCap size={16} className="text-emerald-400" />,
-                        ebook:      <BookOpen size={16} className="text-purple-400" />,
                       };
                       const toolColors: Record<string, string> = {
                         write:      "from-blue-600/10 to-blue-500/5 border-blue-500/12",
@@ -1451,7 +1135,6 @@ export default function Admin() {
                         plagiarism: "from-cyan-600/10 to-cyan-500/5 border-cyan-500/12",
                         stem:       "from-amber-600/10 to-amber-500/5 border-amber-500/12",
                         study:      "from-emerald-600/10 to-emerald-500/5 border-emerald-500/12",
-                        ebook:      "from-purple-600/10 to-purple-500/5 border-purple-500/12",
                       };
                       const rate7d = tool.totalRequests7d > 0 ? tool.errorRate7d : null;
                       const rate30d = tool.totalRequests > 0 ? tool.errorRate : null;
@@ -1566,113 +1249,6 @@ export default function Admin() {
                 {!loading && adminTools.length === 0 && (
                   <Empty text="No tool data — push to Render to seed system settings" />
                 )}
-
-                {/* ── SEO Engine ───────────────────────────────────────── */}
-                <div className="border-t border-white/6 pt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Search size={15} className="text-emerald-400" />
-                      <p className="text-sm font-semibold text-white/80">SEO Engine</p>
-                      <span className="text-[11px] text-white/25 font-normal">· programmatic page generation, sitemap & budget</span>
-                    </div>
-                  </div>
-                  <Link href="/mwaramuriuki-login/seo">
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/8 border border-emerald-500/15 hover:bg-emerald-500/12 transition-colors cursor-pointer group">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
-                        <Search size={15} className="text-emerald-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Open SEO Admin Dashboard</p>
-                        <p className="text-[11px] text-white/35 mt-0.5">Generate pages, monitor LLM budget, manage sitemap, view performance</p>
-                      </div>
-                      <ChevronRight size={14} className="text-white/25 group-hover:text-emerald-400 transition-colors flex-shrink-0" />
-                    </div>
-                  </Link>
-                </div>
-
-                {/* ── Ebook Management ──────────────────────────────────── */}
-                <div className="border-t border-white/6 pt-6 space-y-5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <BookOpen size={15} className="text-purple-400" />
-                      <p className="text-sm font-semibold text-white/80">Ebook Subscriptions</p>
-                      <span className="text-[11px] text-white/25 font-normal">· add-on plan management</span>
-                    </div>
-                    <button onClick={loadEbooks} disabled={loading}
-                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40">
-                      <RefreshCw size={11} className={loading ? "animate-spin" : ""} /> Refresh
-                    </button>
-                  </div>
-
-                  {/* Stat cards */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                      { label: "All time",   value: ebookData?.total      ?? 0, color: "text-purple-400", bg: "bg-purple-500/8 border-purple-500/12" },
-                      { label: "This month", value: ebookData?.thisMonth  ?? 0, color: "text-indigo-400", bg: "bg-indigo-500/8 border-indigo-500/12" },
-                      { label: "This week",  value: ebookData?.thisWeek   ?? 0, color: "text-blue-400",   bg: "bg-blue-500/8 border-blue-500/12" },
-                      { label: "Avg words",  value: ebookData?.avgWords   ?? 0, color: "text-emerald-400", bg: "bg-emerald-500/8 border-emerald-500/12" },
-                    ].map(({ label, value, color, bg }) => (
-                      <div key={label} className={`${bg} border rounded-xl px-4 py-4`}>
-                        <p className={`text-2xl font-bold ${color} tabular-nums`}>{value.toLocaleString()}</p>
-                        <p className="text-xs text-white/35 mt-1">{label}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Active subscribers */}
-                  <div>
-                    <h3 className="text-xs font-semibold text-white/50 mb-3 uppercase tracking-wide">
-                      Active Subscribers
-                      <span className="ml-2 font-normal normal-case text-white/25">
-                        ({(ebookData?.subscriptions ?? []).filter(s => s.status === "active").length} active)
-                      </span>
-                    </h3>
-                    {!ebookData || ebookData.subscriptions.length === 0 ? (
-                      <Empty text="No ebook subscriptions yet" />
-                    ) : (
-                      <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                        <div className="grid grid-cols-[1fr_80px_90px_100px_120px] gap-2 px-4 py-2.5 border-b border-white/6">
-                          {["User ID", "Status", "Gateway", "Billing", "Subscribed"].map(h => (
-                            <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
-                          ))}
-                        </div>
-                        {ebookData.subscriptions.map((sub, i) => (
-                          <div key={sub.user_id} className={`grid grid-cols-[1fr_80px_90px_100px_120px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < ebookData.subscriptions.length - 1 ? "border-b border-white/6" : ""}`}>
-                            <span className="text-[11px] text-white/50 font-mono truncate">{sub.user_id.slice(0, 12)}…</span>
-                            <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize ${sub.status === "active" ? "bg-green-500/12 text-green-400 border-green-500/20" : "bg-white/8 text-white/40 border-white/10"}`}>{sub.status}</span>
-                            <span className="text-xs text-white/50 capitalize">{sub.gateway ?? "—"}</span>
-                            <span className="text-xs text-white/50 capitalize">{sub.billing ?? "—"}</span>
-                            <span className="text-xs text-white/30">{new Date(sub.created_at).toLocaleDateString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Recent ebooks */}
-                  <div>
-                    <h3 className="text-xs font-semibold text-white/50 mb-3 uppercase tracking-wide">Recently Generated</h3>
-                    {!ebookData || ebookData.recent.length === 0 ? (
-                      <Empty text="No ebooks generated yet" />
-                    ) : (
-                      <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                        <div className="grid grid-cols-[1fr_90px_120px_110px] gap-2 px-4 py-2.5 border-b border-white/6">
-                          {["Title", "Words", "User", "Generated"].map(h => (
-                            <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
-                          ))}
-                        </div>
-                        {ebookData.recent.map((eb, i) => (
-                          <div key={eb.id} className={`grid grid-cols-[1fr_90px_120px_110px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < ebookData.recent.length - 1 ? "border-b border-white/6" : ""}`}>
-                            <p className="text-sm text-white/75 font-medium truncate" title={eb.title}>{eb.title}</p>
-                            <span className="text-xs text-white/35 tabular-nums">{eb.word_count.toLocaleString()}w</span>
-                            <span className="text-[11px] text-white/30 font-mono truncate">{eb.user_id ? eb.user_id.slice(0, 10) + "…" : "anon"}</span>
-                            <span className="text-xs text-white/30">{new Date(eb.created_at).toLocaleDateString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
             )}
 
@@ -1693,15 +1269,15 @@ export default function Admin() {
                   </div>
                 </div>
                 <div className="flex gap-1.5 flex-wrap">
-                  {(["all", "paper", "revision", "humanizer", "stem", "study", "plagiarism", "outline", "ebook"] as const).map((t) => (
+                  {(["all", "paper", "revision", "humanizer", "stem", "study", "plagiarism", "outline"] as const).map((t) => (
                     <button key={t} onClick={() => setDocTypeFilter(t)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize ${docTypeFilter === t ? "bg-white/10 text-white" : "text-white/35 hover:text-white/60"}`}
                     >{t === "all" ? "All Types" : t}</button>
                   ))}
                 </div>
                 <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                  <div className="grid grid-cols-[1fr_100px_80px_120px_80px_120px] gap-2 px-4 py-2.5 border-b border-white/6">
-                    {["Title", "Type", "Words", "User", "Updated", "Download"].map((h) => (
+                  <div className="grid grid-cols-[1fr_100px_80px_140px_100px] gap-2 px-4 py-2.5 border-b border-white/6">
+                    {["Title", "Type", "Words", "User", "Updated"].map((h) => (
                       <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
                     ))}
                   </div>
@@ -1715,120 +1291,16 @@ export default function Admin() {
                         });
                         if (filtered.length === 0) return <Empty text="No documents found" />;
                         return filtered.map((doc, i) => (
-                          <div key={doc.id} className={`grid grid-cols-[1fr_100px_80px_120px_80px_120px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < filtered.length - 1 ? "border-b border-white/6" : ""}`}>
+                          <div key={doc.id} className={`grid grid-cols-[1fr_100px_80px_140px_100px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < filtered.length - 1 ? "border-b border-white/6" : ""}`}>
                             <p className="text-sm text-white/75 font-medium truncate" title={doc.title}>{doc.title}</p>
                             <TypeBadge type={doc.type} />
                             <span className="text-xs text-white/35 tabular-nums">{doc.wordCount.toLocaleString()}w</span>
                             <span className="text-[11px] text-white/30 font-mono truncate" title={doc.userId ?? ""}>{doc.userId ? doc.userId.slice(0, 10) + "…" : "anon"}</span>
                             <span className="text-xs text-white/30">{new Date(doc.updatedAt).toLocaleDateString()}</span>
-                            {doc.content ? (
-                              <div className="flex items-center gap-0.5">
-                                {([
-                                  { fmt: "copy", icon: <Copy size={11} />, title: "Copy" },
-                                  { fmt: "docx", icon: <FileDown size={11} />, title: "Word" },
-                                  { fmt: "pdf",  icon: <Printer size={11} />, title: "PDF" },
-                                  { fmt: "txt",  icon: <FileTextIcon size={11} />, title: ".txt" },
-                                ] as const).map(({ fmt, icon, title }) => {
-                                  const isLoading = adminExportingKey === `${doc.id}-${fmt}`;
-                                  return (
-                                    <button
-                                      key={fmt}
-                                      onClick={() => handleAdminExport(fmt, doc)}
-                                      disabled={!!adminExportingKey}
-                                      title={title}
-                                      className="p-1 rounded text-white/25 hover:text-white/70 hover:bg-white/8 transition-colors disabled:opacity-30"
-                                    >
-                                      {isLoading ? <Loader2Icon size={11} className="animate-spin" /> : icon}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-white/15">—</span>
-                            )}
                           </div>
                         ));
                       })()
                   }
-                </div>
-              </div>
-            )}
-
-            {/* ── Ebooks ────────────────────────────────────────────────── */}
-            {activeTab === "ebooks" && (
-              <div className="space-y-6 max-w-5xl">
-                <div className="flex items-start justify-between flex-wrap gap-3">
-                  <SectionHeader title="Ebooks" sub="Business add-on · subscriptions & generated library" />
-                  <button onClick={loadEbooks} disabled={loading}
-                    className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40">
-                    <RefreshCw size={11} className={loading ? "animate-spin" : ""} /> Refresh
-                  </button>
-                </div>
-
-                {/* Stat cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[
-                    { label: "All time", value: ebookData?.total ?? 0, color: "text-purple-400", bg: "bg-purple-500/8 border-purple-500/12" },
-                    { label: "This month", value: ebookData?.thisMonth ?? 0, color: "text-indigo-400", bg: "bg-indigo-500/8 border-indigo-500/12" },
-                    { label: "This week", value: ebookData?.thisWeek ?? 0, color: "text-blue-400", bg: "bg-blue-500/8 border-blue-500/12" },
-                    { label: "Avg words", value: ebookData?.avgWords ?? 0, color: "text-emerald-400", bg: "bg-emerald-500/8 border-emerald-500/12" },
-                  ].map(({ label, value, color, bg }) => (
-                    <div key={label} className={`${bg} border rounded-xl px-4 py-4`}>
-                      <p className={`text-2xl font-bold ${color} tabular-nums`}>{value.toLocaleString()}</p>
-                      <p className="text-xs text-white/35 mt-1">{label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Subscriptions */}
-                <div>
-                  <h3 className="text-sm font-semibold text-white/70 mb-3">Active Subscriptions
-                    <span className="ml-2 text-[11px] font-normal text-white/30">({(ebookData?.subscriptions ?? []).filter(s => s.status === "active").length} active)</span>
-                  </h3>
-                  {loading && !ebookData ? <Spinner /> : !ebookData || ebookData.subscriptions.length === 0 ? (
-                    <Empty text="No ebook subscriptions yet" />
-                  ) : (
-                    <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                      <div className="grid grid-cols-[1fr_80px_90px_100px_120px] gap-2 px-4 py-2.5 border-b border-white/6">
-                        {["User ID", "Status", "Gateway", "Billing", "Subscribed"].map(h => (
-                          <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
-                        ))}
-                      </div>
-                      {ebookData.subscriptions.map((sub, i) => (
-                        <div key={sub.user_id} className={`grid grid-cols-[1fr_80px_90px_100px_120px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < ebookData.subscriptions.length - 1 ? "border-b border-white/6" : ""}`}>
-                          <span className="text-[11px] text-white/50 font-mono truncate">{sub.user_id.slice(0, 12)}…</span>
-                          <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize ${sub.status === "active" ? "bg-green-500/12 text-green-400 border-green-500/20" : "bg-white/8 text-white/40 border-white/10"}`}>{sub.status}</span>
-                          <span className="text-xs text-white/50 capitalize">{sub.gateway ?? "—"}</span>
-                          <span className="text-xs text-white/50 capitalize">{sub.billing ?? "—"}</span>
-                          <span className="text-xs text-white/30">{new Date(sub.created_at).toLocaleDateString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Recent ebooks */}
-                <div>
-                  <h3 className="text-sm font-semibold text-white/70 mb-3">Recently Generated</h3>
-                  {loading && !ebookData ? <Spinner /> : !ebookData || ebookData.recent.length === 0 ? (
-                    <Empty text="No ebooks generated yet" />
-                  ) : (
-                    <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                      <div className="grid grid-cols-[1fr_90px_120px_110px] gap-2 px-4 py-2.5 border-b border-white/6">
-                        {["Title", "Words", "User", "Generated"].map(h => (
-                          <span key={h} className="text-[10px] font-semibold text-white/25 uppercase tracking-wide">{h}</span>
-                        ))}
-                      </div>
-                      {ebookData.recent.map((eb, i) => (
-                        <div key={eb.id} className={`grid grid-cols-[1fr_90px_120px_110px] gap-2 items-center px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < ebookData.recent.length - 1 ? "border-b border-white/6" : ""}`}>
-                          <p className="text-sm text-white/75 font-medium truncate" title={eb.title}>{eb.title}</p>
-                          <span className="text-xs text-white/35 tabular-nums">{eb.word_count.toLocaleString()}w</span>
-                          <span className="text-[11px] text-white/30 font-mono truncate">{eb.user_id ? eb.user_id.slice(0, 10) + "…" : "anon"}</span>
-                          <span className="text-xs text-white/30">{new Date(eb.created_at).toLocaleDateString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -1951,16 +1423,12 @@ export default function Admin() {
                         <div key={u.user_id} className={`flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors ${i < Math.min(creditUsers.length, 15) - 1 ? "border-b border-white/6" : ""}`}>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-white/50 font-mono truncate">{u.user_id.slice(0, 16)}…</p>
-                            <p className="text-[10px] text-white/25 mt-0.5">Spent: {u.lifetime_spent_cents.toLocaleString()} cr · Earned: {u.lifetime_earned_cents.toLocaleString()} cr</p>
+                            <p className="text-[10px] text-white/25 mt-0.5">Spent: {u.lifetime_spent_cents.toLocaleString()} cr</p>
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-bold text-amber-400 tabular-nums">{u.balance_cents.toLocaleString()} cr</p>
                             <p className="text-[10px] text-white/30">≈ ${(u.balance_cents / 100).toFixed(2)}</p>
                           </div>
-                          <button onClick={() => { setSelectedCreditUserId(u.user_id); loadUserCreditTransactions(u.user_id); }}
-                            className="p-1.5 rounded-md text-white/20 hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="View transaction history">
-                            <Eye size={11} />
-                          </button>
                           <button onClick={() => { const usr = users.find((x) => x.id === u.user_id); if (usr) { setCreditAdjustUser(usr); setCreditAdjustAmt(""); setCreditAdjustNote(""); } else { setCreditAdjustUser({ id: u.user_id, email: null, createdAt: null, lastSignIn: null, documentCount: 0, sessionCount: 0, plan: "starter", billing: null, creditBalance: u.balance_cents, lifetimeEarned: u.lifetime_earned_cents, lifetimeSpent: u.lifetime_spent_cents, banned: false, banReason: null }); setCreditAdjustAmt(""); setCreditAdjustNote(""); } }}
                             className="p-1.5 rounded-md text-white/20 hover:text-amber-400 hover:bg-amber-500/10 transition-all" title="Adjust credits">
                             <Edit2 size={11} />
@@ -2092,7 +1560,6 @@ export default function Admin() {
                     </div>
                   </>
                 ) : <Empty text="No revenue data yet" />}
-
               </div>
             )}
 
@@ -2631,7 +2098,7 @@ export default function Admin() {
                                         onClick={async () => {
                                           setApplyingDiscountId(d.id);
                                           try {
-                                            await adminFetch(`/mwaramuriuki-login/referrals/discount/${d.id}/apply`, password, { method: "POST" });
+                                            await adminFetch(`/admin/referrals/discount/${d.id}/apply`, password, { method: "POST" });
                                             await loadReferrals();
                                           } catch { /* ignore */ }
                                           finally { setApplyingDiscountId(null); }
@@ -2661,91 +2128,6 @@ export default function Admin() {
               </div>
             )}
 
-            {/* ── Messages ─────────────────────────────────────────────── */}
-            {activeTab === "messages" && (
-              <div className="space-y-5 max-w-4xl">
-                <div className="flex items-center justify-between">
-                  <SectionHeader title="Institution Messages" sub="Inquiries submitted via the Institution contact form" />
-                  <button onClick={loadMessages} disabled={loading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-all disabled:opacity-40">
-                    <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Refresh
-                  </button>
-                </div>
-                {loading && !contactMessages.length ? <Spinner /> : contactMessages.length === 0 ? (
-                  <Empty text="No institution messages yet" />
-                ) : (
-                  <div className="space-y-3">
-                    {contactMessages.map((msg) => (
-                      <div key={msg.id} className={`bg-white/[0.02] border rounded-xl overflow-hidden transition-all ${msg.replied ? "border-green-500/20" : msg.read ? "border-white/8" : "border-blue-500/30"}`}>
-                        <div className="px-5 py-4">
-                          <div className="flex items-start justify-between gap-3 mb-3">
-                            <div className="flex items-center gap-2.5 flex-wrap">
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-7 h-7 rounded-full bg-white/8 flex items-center justify-center text-xs font-bold text-white/60">
-                                  {msg.name.charAt(0).toUpperCase()}
-                                </div>
-                                <span className="text-sm font-semibold text-white">{msg.name}</span>
-                              </div>
-                              <span className="text-[11px] text-white/35">·</span>
-                              <a href={`mailto:${msg.email}`} className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors font-mono">{msg.email}</a>
-                              {msg.institution && (
-                                <>
-                                  <span className="text-[11px] text-white/35">·</span>
-                                  <span className="flex items-center gap-1 text-[11px] text-white/50"><Building2 size={10} />{msg.institution}</span>
-                                </>
-                              )}
-                              {msg.seats && (
-                                <>
-                                  <span className="text-[11px] text-white/35">·</span>
-                                  <span className="text-[11px] text-white/50">{msg.seats} seats</span>
-                                </>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {msg.replied
-                                ? <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 border rounded-full bg-green-500/12 text-green-400 border-green-500/20"><MailCheck size={9} /> Replied</span>
-                                : msg.read
-                                ? <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 border rounded-full bg-white/8 text-white/35 border-white/10"><MailOpen size={9} /> Read</span>
-                                : <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 border rounded-full bg-blue-500/12 text-blue-400 border-blue-500/20">New</span>
-                              }
-                            </div>
-                          </div>
-                          <p className="text-sm text-white/65 leading-relaxed whitespace-pre-wrap">{msg.message}</p>
-                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/6">
-                            <span className="text-[11px] text-white/25">{new Date(msg.created_at).toLocaleString()}</span>
-                            <div className="flex items-center gap-2">
-                              {!msg.read && (
-                                <button
-                                  onClick={async () => {
-                                    await adminFetch(`/mwaramuriuki-login/messages/${msg.id}/mark-read`, password, { method: "PATCH" });
-                                    setContactMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, read: true } : m));
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 border border-white/8 transition-all"
-                                >
-                                  Mark read
-                                </button>
-                              )}
-                              <a
-                                href={`mailto:${msg.email}?subject=Re: Your LightSpeed Ghost Institution Inquiry`}
-                                onClick={async () => {
-                                  if (!msg.replied) {
-                                    await adminFetch(`/mwaramuriuki-login/messages/${msg.id}/mark-replied`, password, { method: "PATCH" });
-                                    setContactMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, read: true, replied: true } : m));
-                                  }
-                                }}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-500/20 transition-all"
-                              >
-                                Reply via email
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* ── Settings ──────────────────────────────────────────────── */}
             {activeTab === "settings" && (
               <div className="space-y-6 max-w-2xl">
@@ -2770,18 +2152,18 @@ export default function Admin() {
                     {/* Starter limits */}
                     <SettingsCard title="Starter Plan Monthly Limits">
                       <div className="grid grid-cols-2 gap-3">
-                        {([
-                          { key: "starter_paper",      label: "Papers" },
-                          { key: "starter_revision",   label: "Revisions" },
-                          { key: "starter_humanizer",  label: "Humanizer" },
-                          { key: "starter_stem",       label: "STEM Solves" },
-                          { key: "starter_study",      label: "Study Sessions" },
-                          { key: "starter_plagiarism", label: "Plagiarism" },
-                          { key: "starter_outline",    label: "Outlines" },
-                        ] as { key: string; label: string }[]).map(({ key, label }) => (
+                        {[
+                          { key: "starter_paper" as const,      label: "Papers" },
+                          { key: "starter_revision" as const,   label: "Revisions" },
+                          { key: "starter_humanizer" as const,  label: "Humanizer" },
+                          { key: "starter_stem" as const,       label: "STEM Solves" },
+                          { key: "starter_study" as const,      label: "Study Sessions" },
+                          { key: "starter_plagiarism" as const, label: "Plagiarism" },
+                          { key: "starter_outline" as const,    label: "Outlines" },
+                        ].map(({ key, label }) => (
                           <div key={key}>
                             <label className="block text-xs text-white/40 mb-1.5">{label} / month</label>
-                            <input type="number" min="0" value={settings[key] ?? ""}
+                            <input type="number" min="0" value={settings[key]}
                               onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
                               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
                             />
@@ -2789,542 +2171,13 @@ export default function Admin() {
                         ))}
                       </div>
                     </SettingsCard>
-
-                    {/* Pro limits */}
-                    <SettingsCard title="Pro Plan Monthly Limits">
-                      <div className="grid grid-cols-2 gap-3">
-                        {([
-                          { key: "pro_paper",      label: "Papers" },
-                          { key: "pro_revision",   label: "Revisions" },
-                          { key: "pro_humanizer",  label: "Humanizer" },
-                          { key: "pro_stem",       label: "STEM Solves" },
-                          { key: "pro_study",      label: "Study Sessions" },
-                          { key: "pro_plagiarism", label: "Plagiarism" },
-                          { key: "pro_outline",    label: "Outlines" },
-                        ] as { key: string; label: string }[]).map(({ key, label }) => (
-                          <div key={key}>
-                            <label className="block text-xs text-white/40 mb-1.5">{label} / month</label>
-                            <input type="number" min="0" value={settings[key] ?? ""}
-                              onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
-                              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </SettingsCard>
-
                   </div>
                 ) : <Empty text="Settings unavailable" />}
               </div>
             )}
-
-            {/* ── Intelligence ──────────────────────────────────────────── */}
-            {activeTab === "intelligence" && (
-              <div className="space-y-6 max-w-5xl">
-                <div className="flex items-center justify-between">
-                  <SectionHeader title="AI Intelligence Dashboard" sub="Quality signals, source learning, and user feedback — how the system improves over time" />
-                  <button onClick={loadIntelligence} disabled={intelligenceLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-all disabled:opacity-40">
-                    <RefreshCw size={12} className={intelligenceLoading ? "animate-spin" : ""} /> Refresh
-                  </button>
-                </div>
-                {intelligenceLoading && !intelligenceData ? <Spinner /> : !intelligenceData ? (
-                  <div className="bg-white/[0.02] border border-white/8 rounded-xl px-5 py-8 text-center">
-                    <Brain size={22} className="text-white/20 mx-auto mb-2" />
-                    <p className="text-sm text-white/30">No intelligence data yet — data appears after users run papers, STEM solves, and study sessions.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-
-                    {/* ── Feedback summary ── */}
-                    <div>
-                      <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">User Feedback (Thumbs Up / Down)</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="bg-gradient-to-br from-emerald-600/15 to-emerald-500/5 border border-emerald-500/15 rounded-xl p-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <ThumbsUp size={14} className="text-emerald-400" />
-                            <span className="text-xs text-white/40">Total Positive</span>
-                          </div>
-                          <p className="text-2xl font-bold text-white tabular-nums">{intelligenceData.feedbackStats.totalUp}</p>
-                        </div>
-                        <div className="bg-gradient-to-br from-rose-600/15 to-rose-500/5 border border-rose-500/15 rounded-xl p-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <ThumbsDown size={14} className="text-rose-400" />
-                            <span className="text-xs text-white/40">Total Negative</span>
-                          </div>
-                          <p className="text-2xl font-bold text-white tabular-nums">{intelligenceData.feedbackStats.totalDown}</p>
-                        </div>
-                        {(["paper", "stem", "study"] as const).map((type) => {
-                          const fb = intelligenceData.feedbackStats.byType[type];
-                          const total = (fb?.up ?? 0) + (fb?.down ?? 0);
-                          const pct = total > 0 ? Math.round(((fb?.up ?? 0) / total) * 100) : null;
-                          return (
-                            <div key={type} className="bg-white/[0.03] border border-white/8 rounded-xl p-4">
-                              <p className="text-xs text-white/40 capitalize mb-1">{type} satisfaction</p>
-                              <p className="text-2xl font-bold text-white tabular-nums">{pct !== null ? `${pct}%` : "—"}</p>
-                              <p className="text-[10px] text-white/25 mt-0.5">{fb?.up ?? 0} up · {fb?.down ?? 0} down</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* ── Quality averages ── */}
-                    <div>
-                      <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">Output Quality Scores (from AI-Detection &amp; Plagiarism checks)</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {[
-                          { label: "All Time", data: intelligenceData.qualityAverages.allTime },
-                          { label: "Last 30 Days", data: intelligenceData.qualityAverages.last30Days },
-                        ].map(({ label, data }) => (
-                          <div key={label} className="bg-white/[0.02] border border-white/8 rounded-xl p-4 space-y-3">
-                            <p className="text-xs font-semibold text-white/50">{label} · {data.totalSignals} signals</p>
-                            <div className="grid grid-cols-3 gap-3">
-                              <div>
-                                <p className="text-[10px] text-white/30 mb-1">AI Detection %</p>
-                                <p className={`text-xl font-bold tabular-nums ${data.avgAiDetection !== null && data.avgAiDetection < 10 ? "text-emerald-400" : data.avgAiDetection !== null && data.avgAiDetection < 25 ? "text-amber-400" : "text-rose-400"}`}>
-                                  {data.avgAiDetection !== null ? `${data.avgAiDetection}%` : "—"}
-                                </p>
-                                <p className="text-[9px] text-white/20 mt-0.5">lower = better</p>
-                              </div>
-                              <div>
-                                <p className="text-[10px] text-white/30 mb-1">Plagiarism %</p>
-                                <p className={`text-xl font-bold tabular-nums ${data.avgPlagiarism !== null && data.avgPlagiarism < 10 ? "text-emerald-400" : data.avgPlagiarism !== null && data.avgPlagiarism < 20 ? "text-amber-400" : "text-rose-400"}`}>
-                                  {data.avgPlagiarism !== null ? `${data.avgPlagiarism}%` : "—"}
-                                </p>
-                                <p className="text-[9px] text-white/20 mt-0.5">lower = better</p>
-                              </div>
-                              <div>
-                                <p className="text-[10px] text-white/30 mb-1">Grade Score</p>
-                                <p className={`text-xl font-bold tabular-nums ${data.avgGrade !== null && data.avgGrade >= 85 ? "text-emerald-400" : data.avgGrade !== null && data.avgGrade >= 70 ? "text-amber-400" : "text-rose-400"}`}>
-                                  {data.avgGrade !== null ? `${data.avgGrade}` : "—"}
-                                </p>
-                                <p className="text-[9px] text-white/20 mt-0.5">higher = better</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* ── 8-week weekly trends ── */}
-                    {intelligenceData.weeklyTrends.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">8-Week Quality Trend</p>
-                        <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="border-b border-white/6">
-                                <th className="text-left px-4 py-2.5 text-white/30 font-medium">Week</th>
-                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">AI Detection %</th>
-                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Plagiarism %</th>
-                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Grade Score</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/[0.04]">
-                              {intelligenceData.weeklyTrends.map((row) => (
-                                <tr key={row.week} className="hover:bg-white/[0.02] transition-colors">
-                                  <td className="px-4 py-2.5 text-white/50 font-mono">{row.week}</td>
-                                  <td className={`px-4 py-2.5 text-right font-semibold tabular-nums ${row.avgAiDetection !== null && row.avgAiDetection < 10 ? "text-emerald-400" : "text-amber-400"}`}>
-                                    {row.avgAiDetection !== null ? `${row.avgAiDetection}%` : "—"}
-                                  </td>
-                                  <td className={`px-4 py-2.5 text-right font-semibold tabular-nums ${row.avgPlagiarism !== null && row.avgPlagiarism < 10 ? "text-emerald-400" : "text-amber-400"}`}>
-                                    {row.avgPlagiarism !== null ? `${row.avgPlagiarism}%` : "—"}
-                                  </td>
-                                  <td className={`px-4 py-2.5 text-right font-semibold tabular-nums ${row.avgGrade !== null && row.avgGrade >= 85 ? "text-emerald-400" : "text-white/50"}`}>
-                                    {row.avgGrade !== null ? row.avgGrade : "—"}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ── Database Registry ── */}
-                    <div>
-                      <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
-                        <span className="flex items-center gap-1.5"><Database size={12} className="text-sky-400" /> Verified Source Registry — 25+ Live Academic Databases (1.5B+ Papers)</span>
-                      </p>
-                      <div className="bg-white/[0.02] border border-white/8 rounded-xl p-4">
-                        <p className="text-[10px] text-white/30 mb-3">Every source below is queried live via free public APIs. No Wikipedia, no news, no unverified sources. All results carry a DOI or institutional URL.</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                          {[
-                            { name: "OpenAlex",           count: "250M+ papers",   cat: "Core",        note: "All disciplines, 50,000+ publishers" },
-                            { name: "CrossRef",           count: "145M+ DOIs",     cat: "Core",        note: "Citation backbone of academic publishing" },
-                            { name: "Semantic Scholar",   count: "200M+ papers",   cat: "Core",        note: "AI-enhanced citation intelligence" },
-                            { name: "BASE",               count: "340M+ docs",     cat: "Core",        note: "10,000+ institutional repositories" },
-                            { name: "CORE",               count: "200M+ papers",   cat: "Core",        note: "10,000+ OA data providers" },
-                            { name: "PubMed NCBI",        count: "36M+ papers",    cat: "Biomedical",  note: "NIH gold standard for medicine" },
-                            { name: "PubMed Central",     count: "8M+ full-text",  cat: "Biomedical",  note: "NIH-funded open access full text" },
-                            { name: "Europe PMC",         count: "40M+ papers",    cat: "Biomedical",  note: "MEDLINE + life sciences" },
-                            { name: "bioRxiv",            count: "210K+ preprints",cat: "Biomedical",  note: "Biology preprints (Cold Spring Harbor)" },
-                            { name: "medRxiv",            count: "55K+ preprints", cat: "Biomedical",  note: "Medical preprints (CSH + Yale/BMJ)" },
-                            { name: "ClinicalTrials.gov", count: "450K+ trials",   cat: "Biomedical",  note: "NIH/FDA — 220+ countries" },
-                            { name: "arXiv",              count: "2.4M+ preprints",cat: "STEM",        note: "STEM, CS, econ, stats, quantitative bio" },
-                            { name: "NASA ADS",           count: "16M+ papers",    cat: "STEM",        note: "Astronomy & astrophysics (key req.)" },
-                            { name: "Zenodo (CERN)",      count: "3M+ records",    cat: "STEM",        note: "Datasets, preprints, theses" },
-                            { name: "DataCite",           count: "48M+ objects",   cat: "STEM",        note: "Research data & software DOIs" },
-                            { name: "Dryad",              count: "50K+ packages",  cat: "STEM",        note: "Peer-reviewed research data" },
-                            { name: "DOAJ",               count: "20K+ journals",  cat: "OA Journals", note: "Peer-reviewed open access only" },
-                            { name: "PLOS ONE",           count: "250K+ articles", cat: "OA Journals", note: "Biology, medicine, environment" },
-                            { name: "Figshare",           count: "9M+ outputs",    cat: "OA Journals", note: "Papers, datasets, posters, code" },
-                            { name: "ERIC (US Dept Ed)",  count: "2M+ papers",     cat: "Education",   note: "Education research & pedagogy" },
-                            { name: "HAL France",         count: "1.5M+ papers",   cat: "Humanities",  note: "French & European institutions" },
-                            { name: "OpenAIRE",           count: "100M+ outputs",  cat: "EU Research", note: "EU-funded research, CORDIS" },
-                            { name: "OSF Preprints",      count: "Multidisc.",     cat: "Social Sci",  note: "Psychology, social science, education" },
-                            { name: "NBER",               count: "35K+ papers",    cat: "Economics",   note: "Economics & public policy working papers" },
-                            { name: "Recent Layer",       count: "Last 90 days",   cat: "Current",     note: "arXiv + CrossRef + OpenAlex date-filtered" },
-                          ].map((src) => {
-                            const catColor: Record<string, string> = {
-                              Core:       "text-sky-400 bg-sky-400/10 border-sky-400/20",
-                              Biomedical: "text-rose-400 bg-rose-400/10 border-rose-400/20",
-                              STEM:       "text-violet-400 bg-violet-400/10 border-violet-400/20",
-                              "OA Journals": "text-amber-400 bg-amber-400/10 border-amber-400/20",
-                              Education:  "text-teal-400 bg-teal-400/10 border-teal-400/20",
-                              Humanities: "text-orange-400 bg-orange-400/10 border-orange-400/20",
-                              "EU Research": "text-blue-400 bg-blue-400/10 border-blue-400/20",
-                              "Social Sci": "text-pink-400 bg-pink-400/10 border-pink-400/20",
-                              Economics:  "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
-                              Current:    "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
-                            };
-                            const cls = catColor[src.cat] ?? "text-white/40 bg-white/5 border-white/10";
-                            return (
-                              <div key={src.name} className="flex items-start gap-2 p-2.5 bg-white/[0.02] rounded-lg border border-white/[0.04]">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-xs font-semibold text-white/80 truncate">{src.name}</span>
-                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium border ${cls}`}>{src.cat}</span>
-                                  </div>
-                                  <p className="text-[9px] text-white/35 mt-0.5 font-mono">{src.count}</p>
-                                  <p className="text-[9px] text-white/25 mt-0.5 leading-tight">{src.note}</p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <p className="text-[9px] text-white/20 mt-3">NASA ADS requires a free API key (NASA_ADS_API_KEY env var). All others are fully keyless. The Recent Layer auto-activates for current-events topics.</p>
-                      </div>
-                    </div>
-
-                    {/* ── Source performance ── */}
-                    <div>
-                      <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
-                        <span className="flex items-center gap-1.5"><Database size={12} className="text-violet-400" /> Adaptive Source Weighting — Learned Database Performance</span>
-                      </p>
-                      {intelligenceData.topSources.length === 0 ? (
-                        <div className="bg-white/[0.02] border border-white/8 rounded-xl px-5 py-6 text-center">
-                          <p className="text-xs text-white/30">No source data yet — runs automatically as users search for papers.</p>
-                        </div>
-                      ) : (
-                        <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="border-b border-white/6">
-                                <th className="text-left px-4 py-2.5 text-white/30 font-medium">Source</th>
-                                <th className="text-left px-4 py-2.5 text-white/30 font-medium">Subject</th>
-                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Queries</th>
-                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Avg Results</th>
-                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Success Rate</th>
-                                <th className="text-right px-4 py-2.5 text-white/30 font-medium">Weight</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/[0.04]">
-                              {intelligenceData.topSources.map((s, i) => {
-                                const weight = s.totalQueries >= 3 ? Math.max(0.5, Math.min(1.5, 0.5 + s.successRate)) : 1.0;
-                                const pct = Math.round(s.successRate * 100);
-                                return (
-                                  <tr key={i} className="hover:bg-white/[0.02] transition-colors">
-                                    <td className="px-4 py-2.5 text-white/70 font-medium">{s.source}</td>
-                                    <td className="px-4 py-2.5 text-white/40 capitalize">{s.subject}</td>
-                                    <td className="px-4 py-2.5 text-right text-white/50 tabular-nums">{s.totalQueries}</td>
-                                    <td className="px-4 py-2.5 text-right text-white/50 tabular-nums">{s.avgResults}</td>
-                                    <td className="px-4 py-2.5 text-right">
-                                      <span className={`font-semibold tabular-nums ${pct >= 70 ? "text-emerald-400" : pct >= 40 ? "text-amber-400" : "text-rose-400"}`}>{pct}%</span>
-                                    </td>
-                                    <td className="px-4 py-2.5 text-right">
-                                      <span className={`font-bold tabular-nums ${weight > 1.0 ? "text-emerald-400" : weight < 1.0 ? "text-rose-400" : "text-white/30"}`}>
-                                        {s.totalQueries >= 3 ? `×${weight.toFixed(2)}` : "—"}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                      <p className="text-[10px] text-white/20 mt-2">
-                        Weight formula: 0.5 + successRate (range ×0.50 – ×1.50). Sources with &lt;3 queries use neutral weight ×1.00.
-                        High-performing sources receive proportionally more search budget on each query.
-                      </p>
-                    </div>
-
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── Admin Management ──────────────────────────────────────────── */}
-            {activeTab === "admin-management" && (
-              <div className="space-y-6 max-w-4xl">
-                <div className="flex items-center justify-between">
-                  <SectionHeader title="Sector Admin Management" sub="Create and manage sector admins — each admin has access to specific dashboard sections" />
-                  <button onClick={loadSectorAdmins} disabled={sectorAdminLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-all disabled:opacity-40">
-                    <RefreshCw size={12} className={sectorAdminLoading ? "animate-spin" : ""} /> Refresh
-                  </button>
-                </div>
-
-                {/* Create new sector admin */}
-                <div className="bg-white/[0.02] border border-white/8 rounded-xl p-5">
-                  <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4">Create Sector Admin</p>
-                  <form onSubmit={createSectorAdmin} className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] text-white/30 uppercase tracking-wide mb-1.5">Name</label>
-                        <input
-                          type="text" value={newAdminName}
-                          onChange={(e) => setNewAdminName(e.target.value)}
-                          placeholder="e.g. Finance Team Lead"
-                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-red-500/30 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-white/30 uppercase tracking-wide mb-1.5">Email</label>
-                        <input
-                          type="email" value={newAdminEmail}
-                          onChange={(e) => setNewAdminEmail(e.target.value)}
-                          placeholder="admin@example.com" required
-                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-red-500/30 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-white/30 uppercase tracking-wide mb-1.5">Password</label>
-                        <input
-                          type="password" value={newAdminPassword}
-                          onChange={(e) => setNewAdminPassword(e.target.value)}
-                          placeholder="Min 8 characters" required
-                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-red-500/30 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-white/30 uppercase tracking-wide mb-1.5">Sectors (access)</label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {(["content","finance","analytics","support","technical"] as const).map((s) => (
-                            <button key={s} type="button"
-                              onClick={() => setNewAdminSectors((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s])}
-                              className={`px-2.5 py-1 rounded-lg text-[10px] font-medium border transition-all capitalize ${
-                                newAdminSectors.includes(s)
-                                  ? "bg-red-500/15 border-red-500/30 text-red-300"
-                                  : "bg-white/[0.03] border-white/10 text-white/30 hover:text-white/50"
-                              }`}
-                            >{s}</button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    {createAdminError && (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs">
-                        <AlertCircle size={12} className="shrink-0" />{createAdminError}
-                      </div>
-                    )}
-                    <button type="submit"
-                      disabled={creatingAdmin || !newAdminEmail || !newAdminPassword || newAdminSectors.length === 0}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-600/80 hover:bg-red-500/80 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-all"
-                    >
-                      {creatingAdmin ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-                      Create Admin
-                    </button>
-                  </form>
-                </div>
-
-                {/* Sector descriptions */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {(Object.entries(SECTOR_LABELS) as [string, string][]).map(([sector, label]) => (
-                    <div key={sector} className="bg-white/[0.02] border border-white/8 rounded-xl p-3">
-                      <p className="text-xs font-semibold text-white/60 mb-1">{label}</p>
-                      <p className="text-[10px] text-white/25 capitalize">
-                        {SECTOR_TABS[sector as keyof typeof SECTOR_TABS]?.join(", ")}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Existing sector admins table */}
-                <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                  <div className="px-4 py-3 border-b border-white/6">
-                    <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Existing Sector Admins ({sectorAdminUsers.length})</p>
-                  </div>
-                  {sectorAdminLoading ? (
-                    <div className="py-10 flex justify-center"><Spinner /></div>
-                  ) : sectorAdminUsers.length === 0 ? (
-                    <div className="py-10 text-center">
-                      <Shield size={22} className="text-white/15 mx-auto mb-2" />
-                      <p className="text-sm text-white/25">No sector admins yet</p>
-                    </div>
-                  ) : (
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-white/6">
-                          <th className="text-left px-4 py-2.5 text-white/30 font-medium">Name / Email</th>
-                          <th className="text-left px-4 py-2.5 text-white/30 font-medium">Sectors</th>
-                          <th className="text-right px-4 py-2.5 text-white/30 font-medium">Status</th>
-                          <th className="text-right px-4 py-2.5 text-white/30 font-medium">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/[0.04]">
-                        {sectorAdminUsers.map((admin) => (
-                          <tr key={admin.id} className="hover:bg-white/[0.02] transition-colors">
-                            <td className="px-4 py-3">
-                              {editingSectorAdmin?.id === admin.id ? (
-                                <div className="space-y-1.5">
-                                  <input
-                                    type="text" value={editingSectorAdmin.name ?? ""}
-                                    onChange={(e) => setEditingSectorAdmin((p) => p ? { ...p, name: e.target.value } : p)}
-                                    placeholder="Name"
-                                    className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:border-red-500/30"
-                                  />
-                                  <input
-                                    type="password" value={editSectorAdminPassword}
-                                    onChange={(e) => setEditSectorAdminPassword(e.target.value)}
-                                    placeholder="New password (leave blank to keep)"
-                                    className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:border-red-500/30"
-                                  />
-                                </div>
-                              ) : (
-                                <>
-                                  <p className="text-white/70 font-medium">{admin.name || "—"}</p>
-                                  <p className="text-white/30 font-mono mt-0.5">{admin.email}</p>
-                                </>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {editingSectorAdmin?.id === admin.id ? (
-                                <div className="flex flex-wrap gap-1">
-                                  {(["content","finance","analytics","support","technical"] as const).map((s) => (
-                                    <button key={s} type="button"
-                                      onClick={() => setEditingSectorAdmin((p) => p ? {
-                                        ...p,
-                                        sectors: p.sectors.includes(s) ? p.sectors.filter((x) => x !== s) : [...p.sectors, s]
-                                      } : p)}
-                                      className={`px-2 py-0.5 rounded text-[10px] font-medium border transition-all capitalize ${
-                                        editingSectorAdmin.sectors.includes(s)
-                                          ? "bg-red-500/15 border-red-500/30 text-red-300"
-                                          : "bg-white/[0.03] border-white/10 text-white/25 hover:text-white/50"
-                                      }`}
-                                    >{s}</button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="flex flex-wrap gap-1">
-                                  {admin.sectors.map((s) => (
-                                    <span key={s} className="px-1.5 py-0.5 bg-red-500/10 border border-red-500/15 text-red-300 rounded text-[10px] capitalize">{s}</span>
-                                  ))}
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <button
-                                onClick={() => toggleSectorAdminActive(admin)}
-                                className={`px-2.5 py-1 rounded-lg text-[10px] font-medium border transition-all ${
-                                  admin.active
-                                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400"
-                                    : "bg-white/[0.03] border-white/10 text-white/30 hover:bg-emerald-500/10 hover:border-emerald-500/20 hover:text-emerald-400"
-                                }`}
-                              >
-                                {admin.active ? "Active" : "Inactive"}
-                              </button>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              {editingSectorAdmin?.id === admin.id ? (
-                                <div className="flex items-center gap-1.5 justify-end">
-                                  <button onClick={saveSectorAdminEdit}
-                                    disabled={savingSectorAdmin}
-                                    className="px-2.5 py-1 bg-emerald-600/80 hover:bg-emerald-500/80 disabled:opacity-40 text-white text-[10px] font-semibold rounded-lg transition-all">
-                                    {savingSectorAdmin ? "Saving…" : "Save"}
-                                  </button>
-                                  <button onClick={() => { setEditingSectorAdmin(null); setEditSectorAdminPassword(""); }}
-                                    className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/40 text-[10px] font-semibold rounded-lg transition-all">
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 justify-end">
-                                  <button onClick={() => { setEditingSectorAdmin({ ...admin }); setEditSectorAdminPassword(""); }}
-                                    className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/70 text-[10px] rounded-lg transition-all">
-                                    Edit
-                                  </button>
-                                  <button onClick={() => deleteSectorAdmin(admin.id)}
-                                    disabled={deletingSectorAdminId === admin.id}
-                                    className="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 text-[10px] rounded-lg transition-all border border-red-500/15">
-                                    {deletingSectorAdminId === admin.id ? "…" : "Delete"}
-                                  </button>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </div>
-            )}
-
           </main>
         </div>
       </div>
-
-      {/* ── User Credit History Modal ────────────────────────────────────── */}
-      {selectedCreditUserId && (
-        <Modal title="Credit Transaction History" onClose={() => { setSelectedCreditUserId(null); setUserCreditTx([]); }}>
-          <p className="text-xs text-white/30 mb-3 font-mono">{selectedCreditUserId.slice(0, 20)}…</p>
-          {userCreditTxLoading ? (
-            <div className="py-8 flex justify-center"><Loader2 size={16} className="animate-spin text-white/30" /></div>
-          ) : userCreditTx.length === 0 ? (
-            <p className="text-xs text-white/30 text-center py-6">No transactions found</p>
-          ) : (
-            <div className="space-y-1 max-h-96 overflow-y-auto">
-              {userCreditTx.map((tx) => (
-                <div key={tx.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.03] transition-colors">
-                  <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${tx.amount_cents > 0 ? "bg-emerald-500/15" : "bg-red-500/15"}`}>
-                    {tx.amount_cents > 0 ? <ArrowUp size={10} className="text-emerald-400" /> : <ArrowDown size={10} className="text-red-400" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white/60 truncate">{tx.description}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[9px] text-white/20">{new Date(tx.created_at).toLocaleString()}</span>
-                      <span className={`text-[9px] px-1 py-0.5 rounded capitalize ${tx.type === "bonus" ? "bg-emerald-500/15 text-emerald-400" : tx.type === "spend" ? "bg-red-500/15 text-red-400" : "bg-white/8 text-white/30"}`}>{tx.type}</span>
-                    </div>
-                  </div>
-                  <span className={`text-xs font-bold tabular-nums shrink-0 ${tx.amount_cents > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {tx.amount_cents > 0 ? "+" : ""}{tx.amount_cents.toLocaleString()} cr
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="mt-4 pt-3 border-t border-white/8 flex gap-2">
-            <button
-              onClick={() => {
-                const u = creditUsers.find((x) => x.user_id === selectedCreditUserId);
-                setSelectedCreditUserId(null);
-                setUserCreditTx([]);
-                if (u) {
-                  const usr = users.find((x) => x.id === u.user_id);
-                  if (usr) { setCreditAdjustUser(usr); setCreditAdjustAmt(""); setCreditAdjustNote(""); }
-                  else { setCreditAdjustUser({ id: u.user_id, email: null, createdAt: null, lastSignIn: null, documentCount: 0, sessionCount: 0, plan: "starter", billing: null, creditBalance: u.balance_cents, lifetimeEarned: u.lifetime_earned_cents, lifetimeSpent: u.lifetime_spent_cents, banned: false, banReason: null }); setCreditAdjustAmt(""); setCreditAdjustNote(""); }
-                }
-              }}
-              className="flex-1 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-1.5"
-            >
-              <Coins size={11} /> Adjust Credits
-            </button>
-          </div>
-        </Modal>
-      )}
 
       {/* ── Credit Adjust Modal ──────────────────────────────────────────── */}
       {creditAdjustUser && (
@@ -3363,44 +2216,13 @@ export default function Admin() {
           <div className="space-y-3">
             <div>
               <label className="block text-xs text-white/40 mb-1.5">Plan</label>
-              <select value={planEditValue} onChange={(e) => { setPlanEditValue(e.target.value); if (e.target.value === "institution") { setPlanEditSeats("5"); setPlanEditDuration("365"); } if (e.target.value === "pro") { setPlanEditBilling("monthly"); } }}
+              <select value={planEditValue} onChange={(e) => setPlanEditValue(e.target.value)}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
-                <option value="starter">Starter — $9.99/mo</option>
-                <option value="pro">Pro (select billing below)</option>
-                <option value="institution">Institution (select seats &amp; duration below)</option>
+                <option value="starter">Starter (free)</option>
+                <option value="pro">Pro</option>
+                <option value="campus">Campus</option>
               </select>
             </div>
-            {planEditValue === "pro" && (
-              <div>
-                <label className="block text-xs text-white/40 mb-1.5">Billing Cycle</label>
-                <select value={planEditBilling} onChange={(e) => setPlanEditBilling(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
-                  <option value="monthly">Monthly — $29.99/mo</option>
-                  <option value="annual">Annual — $269/yr ($22.42/mo)</option>
-                </select>
-              </div>
-            )}
-            {planEditValue === "institution" && (
-              <>
-                <div>
-                  <label className="block text-xs text-white/40 mb-1.5">Number of Seats</label>
-                  <input type="number" min="1" value={planEditSeats} onChange={(e) => setPlanEditSeats(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all" />
-                  <p className="text-[10px] text-white/25 mt-1">Minimum 5 seats recommended</p>
-                </div>
-                <div>
-                  <label className="block text-xs text-white/40 mb-1.5">Access Duration</label>
-                  <select value={planEditDuration} onChange={(e) => setPlanEditDuration(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
-                    <option value="30">30 days (1 month)</option>
-                    <option value="90">90 days (3 months)</option>
-                    <option value="180">180 days (6 months)</option>
-                    <option value="365">365 days (1 year)</option>
-                    <option value="730">730 days (2 years)</option>
-                  </select>
-                </div>
-              </>
-            )}
             <div className="bg-amber-500/8 border border-amber-500/15 rounded-xl px-3 py-2.5 text-xs text-amber-400/80">
               ⚠️ This manually overrides the user's subscription. Make sure their payment has been verified before granting paid plans.
             </div>
@@ -3408,11 +2230,7 @@ export default function Admin() {
               className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground hover:opacity-90 font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {planEditing ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-              {planEditValue === "institution"
-                ? `Activate Institution (${planEditSeats} seats, ${planEditDuration}d)`
-                : planEditValue === "pro"
-                  ? `Set Pro — ${planEditBilling === "annual" ? "Annual ($269/yr)" : "Monthly ($29.99/mo)"}`
-                  : "Set Starter ($9.99/mo)"}
+              Update Plan
             </button>
           </div>
         </Modal>
@@ -3577,7 +2395,7 @@ function MiniCard({ icon, label, value, format }: { icon: React.ReactNode; label
 }
 
 function typeGradient(type: string) {
-  const map: Record<string, string> = { paper: "bg-blue-500/15", revision: "bg-indigo-500/15", stem: "bg-violet-500/15", study: "bg-cyan-500/15", ebook: "bg-purple-500/15" };
+  const map: Record<string, string> = { paper: "bg-blue-500/15", revision: "bg-indigo-500/15", stem: "bg-violet-500/15", study: "bg-cyan-500/15" };
   return map[type] ?? "bg-white/10";
 }
 
@@ -3587,7 +2405,6 @@ function TypeIcon({ type, size }: { type: string; size: number }) {
     revision: <Files size={size} className="text-indigo-400" />,
     stem: <FlaskConical size={size} className="text-violet-400" />,
     study: <GraduationCap size={size} className="text-cyan-400" />,
-    ebook: <BookOpen size={size} className="text-purple-400" />,
   };
   return <>{map[type] ?? <FileText size={size} className="text-white/40" />}</>;
 }
@@ -3598,7 +2415,6 @@ function TypeBadge({ type }: { type: string }) {
     revision: "bg-indigo-500/15 text-indigo-300 border-indigo-500/20",
     stem: "bg-violet-500/15 text-violet-300 border-violet-500/20",
     study: "bg-cyan-500/15 text-cyan-300 border-cyan-500/20",
-    ebook: "bg-purple-500/15 text-purple-300 border-purple-500/20",
   };
   return (
     <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize border ${styles[type] ?? "bg-white/10 text-white/40 border-white/10"}`}>

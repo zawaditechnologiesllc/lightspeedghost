@@ -7,10 +7,6 @@ import { BuyCreditsModal } from "@/components/BuyCreditsModal";
 import { useState } from "react";
 import type { PlanId } from "@/lib/pricing";
 
-const _starterPlan = SUBSCRIPTION_PLANS.find(p => p.id === "starter_monthly")!;
-const _proMonthly  = SUBSCRIPTION_PLANS.find(p => p.id === "pro_monthly")!;
-const _proAnnual   = SUBSCRIPTION_PLANS.find(p => p.id === "pro_annual")!;
-
 interface ManageFundsModalProps {
   open: boolean;
   onClose: () => void;
@@ -29,13 +25,13 @@ const TOOL_LABELS = [
 const PLAN_ICON: Record<string, React.ElementType> = {
   starter: Zap,
   pro:     Crown,
-  institution:  Users,
+  campus:  Users,
 };
 
 const PLAN_COLOR: Record<string, string> = {
   starter: "text-blue-400",
   pro:     "text-amber-400",
-  institution:  "text-emerald-400",
+  campus:  "text-emerald-400",
 };
 
 export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
@@ -49,7 +45,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
   const resolvedPlan = planLoading ? null : (plan ?? "starter");
   const PlanIcon = PLAN_ICON[resolvedPlan ?? "starter"] ?? Zap;
   const planColor = PLAN_COLOR[resolvedPlan ?? "starter"] ?? "text-blue-400";
-  const planName = resolvedPlan === "pro" ? "Pro" : resolvedPlan === "institution" ? "Institution" : resolvedPlan === null ? "…" : "Starter";
+  const planName = resolvedPlan === "pro" ? "Pro" : resolvedPlan === "campus" ? "Campus" : resolvedPlan === null ? "…" : "Starter";
 
   const creditDollars = (balanceCents / 100).toFixed(2);
 
@@ -108,7 +104,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                 </div>
                 {!planLoading && resolvedPlan === "starter" && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20 font-medium">
-                    {_starterPlan.displayPrice}
+                    $4.99/mo
                   </span>
                 )}
                 {!planLoading && resolvedPlan === "pro" && (
@@ -116,7 +112,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                     <Star size={9} /> Active
                   </span>
                 )}
-                {!planLoading && resolvedPlan === "institution" && (
+                {!planLoading && resolvedPlan === "campus" && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1">
                     <Star size={9} /> Active
                   </span>
@@ -131,7 +127,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                 {planLoading                  && "Fetching your plan…"}
                 {!planLoading && resolvedPlan === "starter" && "3 papers · 1 revision · 1 humanization per month included"}
                 {!planLoading && resolvedPlan === "pro"     && "15 papers · 20 revisions · 20 humanizations per month"}
-                {!planLoading && resolvedPlan === "institution"  && "5 papers · 8 revisions · 8 humanizations per month (seat)"}
+                {!planLoading && resolvedPlan === "campus"  && "5 papers · 8 revisions · 8 humanizations per month (seat)"}
               </p>
             </div>
 
@@ -172,20 +168,20 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                   <p className="text-sm font-semibold text-primary">Upgrade to Pro</p>
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-3">
-                  15 papers · 20 revisions · 20 humanizations · 40 STEM · 80 study sessions · 20 plagiarism checks · 20 outlines per month.
+                  Unlock 50 of every tool per month, priority LightSpeed AI, and unlimited Study &amp; Plagiarism checks.
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setCheckoutPlan("pro_monthly")}
                     className="flex-1 py-2 rounded-lg bg-muted border border-border text-foreground text-xs font-semibold hover:bg-muted/80 transition-colors flex items-center justify-center gap-1.5"
                   >
-                    {_proMonthly.displayPrice} <ChevronRight size={12} />
+                    $14.99/mo <ChevronRight size={12} />
                   </button>
                   <button
                     onClick={() => setCheckoutPlan("pro_annual")}
                     className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
                   >
-                    {_proAnnual.displayPrice} · Save 25% <ChevronRight size={12} />
+                    $139/yr · Save 23% <ChevronRight size={12} />
                   </button>
                 </div>
               </div>
@@ -194,7 +190,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
             {/* Plans list */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-foreground">All plans</p>
-              {SUBSCRIPTION_PLANS.filter((p) => p.id !== "institution_annual").map((p) => (
+              {SUBSCRIPTION_PLANS.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => setCheckoutPlan(p.id)}

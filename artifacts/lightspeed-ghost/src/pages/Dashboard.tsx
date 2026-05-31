@@ -3,23 +3,10 @@ import { useState, useEffect } from "react";
 import {
   PenLine, BookOpen, Files, ShieldCheck, FlaskConical,
   GraduationCap, TrendingUp, Clock, ArrowRight, Sparkles, Zap, Wand2,
-  Share2, Copy, Check, Gift, X, BookMarked,
+  Share2, Copy, Check, Gift,
 } from "lucide-react";
 import { useGetDocumentStats } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/apiFetch";
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { cn } from "@/lib/utils";
-
-const ACADEMIC_LEVELS = [
-  { value: "high_school",   label: "High School" },
-  { value: "undergrad_1_2", label: "UG Year 1–2" },
-  { value: "undergrad_3_4", label: "UG Year 3–4" },
-  { value: "honours",       label: "Honours" },
-  { value: "masters",       label: "Masters" },
-  { value: "phd",           label: "PhD" },
-];
-
-const NUDGE_DISMISSED_KEY = "lsg_level_nudge_dismissed";
 
 const quickActions = [
   {
@@ -78,14 +65,6 @@ const quickActions = [
     gradient: "from-violet-500 to-purple-600",
     glow: "group-hover:shadow-violet-500/20",
   },
-  {
-    path: "/ebooks",
-    label: "Ebooks",
-    desc: "Write & publish business ebooks",
-    icon: BookMarked,
-    gradient: "from-amber-500 to-orange-600",
-    glow: "group-hover:shadow-amber-500/20",
-  },
 ];
 
 interface ReferralInfo {
@@ -99,22 +78,6 @@ export default function Dashboard() {
   const { data: stats, isLoading } = useGetDocumentStats();
   const [referral, setReferral] = useState<ReferralInfo | null>(null);
   const [copied, setCopied] = useState(false);
-  const { academicLevel, profileLoaded, saveAcademicLevel } = useUserProfile();
-  const [nudgeDismissed, setNudgeDismissed] = useState(() => {
-    try { return localStorage.getItem(NUDGE_DISMISSED_KEY) === "1"; } catch { return false; }
-  });
-
-  function dismissNudge() {
-    try { localStorage.setItem(NUDGE_DISMISSED_KEY, "1"); } catch {}
-    setNudgeDismissed(true);
-  }
-
-  function pickLevel(value: string) {
-    saveAcademicLevel(value);
-    dismissNudge();
-  }
-
-  const showNudge = profileLoaded && !academicLevel && !nudgeDismissed;
 
   useEffect(() => {
     let cancelled = false;
@@ -172,41 +135,6 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
-
-      {/* Academic level nudge — first-time users only */}
-      {showNudge && (
-        <div className="relative border border-primary/30 bg-primary/5 rounded-2xl p-4 sm:p-5">
-          <button
-            onClick={dismissNudge}
-            className="absolute top-3 right-3 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            title="Dismiss"
-          >
-            <X size={14} />
-          </button>
-          <div className="flex items-center gap-2 mb-1">
-            <GraduationCap size={15} className="text-primary" />
-            <span className="text-xs font-semibold text-primary uppercase tracking-widest">One quick thing</span>
-          </div>
-          <p className="text-sm font-semibold text-foreground mb-0.5">What's your academic level?</p>
-          <p className="text-xs text-muted-foreground mb-3">
-            This helps every tool pitch its writing, explanations, and feedback at exactly the right depth — no need to set it again.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {ACADEMIC_LEVELS.map(lvl => (
-              <button
-                key={lvl.value}
-                onClick={() => pickLevel(lvl.value)}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
-                  "border-primary/40 text-foreground hover:border-primary hover:bg-primary/10"
-                )}
-              >
-                {lvl.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">

@@ -9,7 +9,7 @@ interface PaywallFlowProps {
   plan?: string | null;
   closePicker: () => void;
   closeCheckout: () => void;
-  chooseSubscription: (targetPlan?: string) => void;
+  chooseSubscription: () => void;
   choosePayg: (tool: PaygTool, tier?: DocumentTier) => void;
 }
 
@@ -41,7 +41,7 @@ export function PaywallFlow({
           open={checkoutState.open}
           onClose={closeCheckout}
           mode={checkoutState.mode}
-          plan={checkoutState.mode === "subscription" ? checkoutState.plan : undefined}
+          plan={checkoutState.mode === "subscription" ? "pro_monthly" : undefined}
           tool={checkoutState.mode === "payg" ? checkoutState.tool : undefined}
           tier={checkoutState.mode === "payg" ? checkoutState.tier : undefined}
         />

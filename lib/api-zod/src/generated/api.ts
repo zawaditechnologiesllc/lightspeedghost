@@ -20,10 +20,8 @@ export const HealthCheckResponse = zod.object({
 export const listDocumentsQueryLimitDefault = 20;
 export const listDocumentsQueryOffsetDefault = 0;
 
-export const ALL_DOC_TYPES = ["paper", "revision", "stem", "study", "ebook", "outline", "humanizer", "plagiarism"] as const;
-
 export const ListDocumentsQueryParams = zod.object({
-  type: zod.enum(ALL_DOC_TYPES).optional(),
+  type: zod.enum(["paper", "revision", "stem", "study"]).optional(),
   limit: zod.coerce.number().default(listDocumentsQueryLimitDefault),
   offset: zod.coerce.number().default(listDocumentsQueryOffsetDefault),
 });
@@ -34,7 +32,7 @@ export const ListDocumentsResponse = zod.object({
       id: zod.number(),
       title: zod.string(),
       content: zod.string(),
-      type: zod.enum(ALL_DOC_TYPES),
+      type: zod.enum(["paper", "revision", "stem", "study"]),
       subject: zod.string().optional(),
       wordCount: zod.number().optional(),
       createdAt: zod.coerce.date(),
@@ -42,7 +40,6 @@ export const ListDocumentsResponse = zod.object({
     }),
   ),
   total: zod.number(),
-  retentionDays: zod.number().nullable().optional(),
 });
 
 /**
@@ -51,7 +48,7 @@ export const ListDocumentsResponse = zod.object({
 export const CreateDocumentBody = zod.object({
   title: zod.string(),
   content: zod.string(),
-  type: zod.enum(["paper", "revision", "stem", "study", "ebook", "humanizer", "plagiarism", "outline"]),
+  type: zod.enum(["paper", "revision", "stem", "study"]),
   subject: zod.string().optional(),
 });
 
@@ -302,9 +299,6 @@ export const SolveStemBody = zod.object({
     .enum(["text", "latex", "json", "csv"])
     .default(solveStemBodyExportFormatDefault),
   datasetText: zod.string().optional(),
-  academicLevel: zod.string().optional(),
-  financialStatements: zod.string().optional(),
-  financialStatementType: zod.string().optional(),
 });
 
 export const SolveStemResponse = zod.object({
@@ -361,9 +355,6 @@ export const AskStudyAssistantBody = zod.object({
     .enum(["tutor", "explain", "quiz", "summarize"])
     .default(askStudyAssistantBodyModeDefault),
   subject: zod.string().optional(),
-  academicLevel: zod.string().optional(),
-  financialStatements: zod.string().optional(),
-  financialStatementType: zod.string().optional(),
 });
 
 export const AskStudyAssistantResponse = zod.object({

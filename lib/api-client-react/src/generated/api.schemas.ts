@@ -32,7 +32,6 @@ export interface Document {
 export interface DocumentList {
   documents: Document[];
   total: number;
-  retentionDays?: number | null;
 }
 
 export type CreateDocumentBodyType =
@@ -399,5 +398,4 @@ export const ListDocumentsType = {
   plagiarism: "plagiarism",
   stem:       "stem",
   study:      "study",
-  ebook:      "ebook",
 } as const;

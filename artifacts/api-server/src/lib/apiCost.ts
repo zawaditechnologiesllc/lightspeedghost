@@ -20,24 +20,8 @@ const PRICING: Record<string, { input: number; output: number }> = {
   "gpt-4o-mini": { input: 0.15, output: 0.6 },
 };
 
-// ── Multi-instance note ───────────────────────────────────────────────────────
-// These are in-process counters. In a single-instance deployment (Render Starter,
-// Docker single container) they are accurate. When running 2+ horizontal instances
-// (Render Standard+, Kubernetes, etc.) each instance has its own counter — the
-// admin /api-costs endpoint shows that instance's spend only.
-//
-// For accurate cross-instance tracking at 10M+ users/month, replace these with
-// Redis INCRBYFLOAT calls (e.g. Upstash Redis free tier handles ~10K writes/day):
-//   const redis = new Redis(process.env.REDIS_URL);
-//   await redis.incrbyfloat("lsg:cost:session", cost);
-//   await redis.lpush("lsg:cost:log", JSON.stringify(record));
-//
-// Set REDIS_URL env var to enable; fall back to in-memory otherwise.
-
 let sessionCostUsd = 0;
 const usageLog: UsageRecord[] = [];
-// Cap in-memory log at 10,000 records to prevent unbounded RAM growth on long uptime
-const MAX_LOG_SIZE = 10_000;
 
 const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD ?? "5");
 const WARN_THRESHOLD = 0.8;
@@ -64,8 +48,6 @@ export function recordUsage(
   const cost = calculateCost(model, inputTokens, outputTokens);
   sessionCostUsd += cost;
 
-  // Evict oldest record when cap is reached (LRU-style, prevents unbounded RAM growth)
-  if (usageLog.length >= MAX_LOG_SIZE) usageLog.shift();
   usageLog.push({ model, inputTokens, outputTokens, costUsd: cost, operation, timestamp: new Date() });
 
   const percentUsed = sessionCostUsd / DAILY_BUDGET_USD;

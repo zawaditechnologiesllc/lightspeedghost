@@ -38,7 +38,7 @@ export default function RefundPolicy() {
               If you cancel your subscription, you will retain access to your paid features until the end of the current billing period. Your subscription will not renew after that date and no further charges will be made.
             </p>
 
-            <h3 className="text-white font-semibold mb-2 mt-5">2.2 Annual Plans (Pro Annual, Institution Annual)</h3>
+            <h3 className="text-white font-semibold mb-2 mt-5">2.2 Annual Plans (Pro Annual, Campus Annual)</h3>
             <p>
               Annual plans may be eligible for a prorated refund if a refund request is submitted within <strong className="text-white">14 days</strong> of the initial purchase date, provided that no more than one (1) document generation has been completed using the subscription. After 14 days, or after meaningful use of the service, annual plans are non-refundable.
             </p>
@@ -74,7 +74,7 @@ export default function RefundPolicy() {
           <section>
             <h2 className="text-white text-xl font-semibold mb-4">5. Starter Plan</h2>
             <p>
-              The Starter plan is a paid monthly plan at $9.99/month and is subject to the same refund terms as other paid plans in Section 2. If you upgrade from Starter to Pro or Institution, the higher-tier plan terms in Section 2 apply from the date of upgrade.
+              The Starter plan is a paid monthly plan at $4.99/month and is subject to the same refund terms as other paid plans in Section 2. If you upgrade from Starter to Pro or Campus, the higher-tier plan terms in Section 2 apply from the date of upgrade.
             </p>
           </section>
 

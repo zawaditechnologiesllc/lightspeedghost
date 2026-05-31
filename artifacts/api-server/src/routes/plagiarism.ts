@@ -11,7 +11,6 @@ import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection";
 import { searchAllAcademicSources } from "../lib/academicSources";
 import { runOpenSourcePlagiarismCheck } from "../lib/openSourceSearch";
-import { analyseCodeSimilarity, containsCode, type CodeLanguage } from "../lib/codeAnalysis.js";
 
 const router = Router();
 
@@ -64,7 +63,7 @@ function computeCosineSimilarity(text1: string, text2: string): number {
 
 /**
  * Extract the most distinctive / content-rich phrases from the text.
- * Used to build multi-angle queries so all 25+ databases are searched
+ * Used to build multi-angle queries so all 13 databases are searched
  * against representative samples from beginning, middle, and key concepts.
  */
 function extractQueryPhrases(text: string): string[] {
@@ -90,16 +89,12 @@ function extractQueryPhrases(text: string): string[] {
 }
 
 /**
- * Query all 25+ live academic databases with multiple representative phrases
+ * Query all 13 live academic databases with multiple representative phrases
  * extracted from the submitted text, then compute REAL cosine similarity
  * between the submitted text and each returned paper abstract.
  *
  * This is the same corpus the AI Paper Writer reads from — so if a paper was
  * used as a source for writing, it will appear here as a match.
- * Sources: OpenAlex, CrossRef, Semantic Scholar, PubMed, PubMed Central,
- * Europe PMC, arXiv, CORE, DOAJ, ERIC, PLOS ONE, Zenodo, BASE, DataCite,
- * OpenAIRE, bioRxiv, medRxiv, HAL France, Figshare, NASA ADS,
- * ClinicalTrials.gov, Dryad, OSF Preprints, NBER + recency layer.
  */
 async function fetchLiveAcademicMatches(
   text: string,
@@ -217,9 +212,7 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       .map((sentence) => {
         const startIndex = text.indexOf(sentence);
         const wordCount = sentence.split(/\s+/).length;
-        // Score reflects actual suspicion level: longer sentences and more overall AI signals
-        // raise the score, but a single keyword match alone is not high-confidence.
-        const sentenceScore = Math.min(30 + (wordCount > 20 ? 15 : 0) + Math.min(aiIndicators.length * 6, 30), 85);
+        const sentenceScore = Math.min(60 + (wordCount > 20 ? 15 : 0) + aiIndicators.length * 5, 95);
         return { text: sentence, score: sentenceScore, startIndex, endIndex: startIndex + sentence.length };
       });
 
@@ -302,12 +295,6 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
 
     send("step", { id: "report", message: "Full diagnostic report ready", status: "done" });
 
-    // Code plagiarism analysis — AST-inspired structural fingerprinting (Advanced-Code-Plagiarism-Detection-Tool pattern)
-    const codeDetected = containsCode(text);
-    const codeAnalysisResult = codeDetected
-      ? analyseCodeSimilarity(text, text.slice(0, Math.floor(text.length / 2)))
-      : null;
-
     send("done", {
       aiScore: effectiveAiScore !== null ? effectiveAiScore : 0,
       aiDetectionAvailable: effectiveAiScore !== null,
@@ -332,12 +319,6 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       aiFlags: aiIndicators,
       readability,
       detectionModel: "gpt-4o-mini + burstiness",
-      codeAnalysis: codeDetected ? {
-        detected: true,
-        language: codeAnalysisResult?.language ?? "unknown",
-        verdict: codeAnalysisResult?.verdictLabel ?? "",
-        structuralSimilarity: codeAnalysisResult?.structuralSimilarity ?? 0,
-      } : { detected: false },
       sourcesScanned: [
         "OpenAlex (250M+ papers)", "Semantic Scholar (200M+ papers)", "CrossRef (145M+ DOIs)",
         "Open Library (20M+ books)", "Wikipedia", "Google Books", "Internet Archive",
@@ -460,38 +441,20 @@ router.post("/plagiarism/code", requireAuth, async (req, res) => {
 
     const result = compareDocuments(doc1, doc2, kgramSize, windowSize);
     const overallSimilarity = Math.round((result.similarity1 + result.similarity2) / 2);
-
-    // AST-inspired structural code analysis — layer on top of Winnowing (Advanced-Code-Plagiarism-Detection-Tool pattern)
-    const structuralResult = (containsCode(doc1) || containsCode(doc2))
-      ? analyseCodeSimilarity(doc1, doc2, typeof language === "string" ? language as CodeLanguage : undefined)
-      : null;
-
-    const combinedSimilarity = structuralResult
-      ? Math.round(overallSimilarity * 0.5 + structuralResult.similarity * 0.5)
-      : overallSimilarity;
-
     const riskLevel: "low" | "medium" | "high" =
-      combinedSimilarity >= 40 ? "high" : combinedSimilarity >= 20 ? "medium" : "low";
+      overallSimilarity >= 40 ? "high" : overallSimilarity >= 20 ? "medium" : "low";
 
     res.json({
       similarity1: Math.round(result.similarity1),
       similarity2: Math.round(result.similarity2),
-      overallSimilarity: combinedSimilarity,
+      overallSimilarity,
       tokenOverlap: result.tokenOverlap,
       slices1: result.slices1,
       slices2: result.slices2,
       highlightedDoc1: result.highlightedDoc1,
       highlightedDoc2: result.highlightedDoc2,
       riskLevel,
-      algorithm: structuralResult ? "Winnowing (MOSS) + AST Structural Analysis" : "Winnowing (MOSS)",
-      structuralAnalysis: structuralResult ? {
-        language: structuralResult.language,
-        structuralSimilarity: structuralResult.structuralSimilarity,
-        tokenSimilarity: structuralResult.tokenSimilarity,
-        apiCallSimilarity: structuralResult.apiCallSimilarity,
-        verdict: structuralResult.verdictLabel,
-        sharedPatterns: structuralResult.sharedPatterns.slice(0, 5),
-      } : null,
+      algorithm: "Winnowing (MOSS)",
       kgramSize,
       windowSize,
     });

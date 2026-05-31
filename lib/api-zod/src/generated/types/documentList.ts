@@ -10,5 +10,4 @@ import type { Document } from "./document";
 export interface DocumentList {
   documents: Document[];
   total: number;
-  retentionDays?: number | null;
 }

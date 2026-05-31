@@ -20,7 +20,6 @@ import StudyAssistant from "@/pages/StudyAssistant";
 import Documents from "@/pages/Documents";
 import Billing from "@/pages/Billing";
 import ResetPassword from "@/pages/ResetPassword";
-import AuthCallback from "@/pages/AuthCallback";
 import ConfirmEmail from "@/pages/ConfirmEmail";
 import Invite from "@/pages/Invite";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -36,9 +35,6 @@ import RefundPolicy from "@/pages/RefundPolicy";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import NotFound from "@/pages/not-found";
 import FloatingAssistant from "@/pages/FloatingAssistant";
-import Ebooks from "@/pages/Ebooks";
-import SeoPage from "@/pages/SeoPage";
-import SeoAdmin from "@/pages/SeoAdmin";
 import { Loader2, Wrench } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { Logo } from "@/components/Logo";
@@ -117,7 +113,7 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { check(); }, [check]);
 
-  if (path.startsWith("/mwaramuriuki-login")) return <>{children}</>;
+  if (path.startsWith("/admin")) return <>{children}</>;
 
   if (status === "loading") {
     return (
@@ -173,7 +169,6 @@ function AppRoutes() {
               <Route path="/plagiarism" component={Plagiarism} />
               <Route path="/stem" component={StemSolver} />
               <Route path="/study" component={StudyAssistant} />
-              <Route path="/ebooks" component={Ebooks} />
               <Route path="/documents" component={Documents} />
               <Route path="/billing" component={Billing} />
               <Route component={NotFound} />
@@ -207,8 +202,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/auth" component={Auth} />
-      <Route path="/auth/callback" component={AuthCallback} />
-      <Route path="/mwaramuriuki-login" component={Admin} />
+      <Route path="/admin" component={Admin} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/confirm-email" component={ConfirmEmail} />
       <Route path="/invite" component={Invite} />
@@ -224,8 +218,6 @@ function Router() {
       <Route path="/blog/:slug" component={BlogPost} />
       <Route path="/blog" component={Blog} />
       <Route path="/payment/success" component={PaymentSuccess} />
-      <Route path="/seo/:slug" component={SeoPage} />
-      <Route path="/mwaramuriuki-login/seo" component={SeoAdmin} />
       <Route component={AppRoutes} />
     </Switch>
   );

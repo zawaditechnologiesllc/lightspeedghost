@@ -7,7 +7,6 @@ import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { recordQualitySignal } from "../lib/learningEngine";
-import { wordsToTokens } from "../lib/tokenBudget.js";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { computeBurstiness, sampleTextSections, analyseTextPlagiarism } from "../lib/textAnalysis.js";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
@@ -20,22 +19,26 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
+function tokenBudgetFromWords(words: number, extra = 0): number {
+  return Math.max(1200, Math.ceil(words * 2.2) + extra);
+}
+
 async function enforceRevisionWordCount(
   revisedText: string,
   targetWords: number,
 ): Promise<string> {
-  const minTarget = Math.floor(targetWords * 0.95);
-  const maxTarget = Math.ceil(targetWords * 1.05);
+  const minTarget = targetWords;
+  const maxTarget = targetWords;
   let current = revisedText;
 
   for (let pass = 1; pass <= 3; pass++) {
     const currentWords = countWords(current);
-    if (currentWords >= minTarget && currentWords <= maxTarget) return current;
+    if (currentWords === targetWords) return current;
 
     const expand = currentWords < minTarget;
     const adjusted = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: wordsToTokens(Math.max(targetWords, Math.abs(targetWords - currentWords)), 1800),
+      max_tokens: tokenBudgetFromWords(Math.max(targetWords, Math.abs(targetWords - currentWords)), 1600),
       system: `${WRITER_SOUL}
 
 You are the LightSpeed Revision Word Count Controller.
@@ -51,7 +54,7 @@ Rules:
       messages: [
         {
           role: "user",
-          content: `${expand ? "Expand" : "Trim"} this revised paper so total words land in ${minTarget}-${maxTarget} (target ${targetWords}):\n\n${current}`,
+          content: `${expand ? "Expand" : "Trim"} this revised paper so total words are exactly ${targetWords}:\n\n${current}`,
         },
       ],
     });
@@ -65,6 +68,10 @@ Rules:
     current = adjusted.content[0].type === "text" ? adjusted.content[0].text : current;
   }
 
+  if (countWords(current) > targetWords) {
+    const words = current.split(/\s+/).filter(Boolean);
+    current = words.slice(0, targetWords).join(" ");
+  }
   return current;
 }
 
@@ -362,7 +369,7 @@ Return ONLY valid JSON:
 
     const revisionResp = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: wordsToTokens(wordCount, 2500),
+      max_tokens: tokenBudgetFromWords(wordCount, 2200),
       system: revisionSystemPrompt,
       messages: [
         {
@@ -493,7 +500,7 @@ ${effectiveGradingCriteria}`,
 
         const improvResp = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
-          max_tokens: wordsToTokens(wordCount, 1500),
+          max_tokens: tokenBudgetFromWords(wordCount, 1800),
           system: `${WRITER_SOUL}
 
 You are the LightSpeed Grade Optimizer for a revised paper. Strengthen the paper to reach at least 92%.
@@ -507,7 +514,7 @@ ${gv.gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}
 RULES:
 - Keep all existing citations, facts, and arguments
 - Add evidence, analysis, or depth where criteria are missing
-- Maintain the same approximate word count (±5%)
+- Keep final word count equal to the original word count
 - Preserve all markdown formatting
 - Return ONLY the improved paper`,
           messages: [{
@@ -540,7 +547,7 @@ RULES:
     // ── Plagiarism gate (runs on final text after grade improvement) ──────────
     send("step", {
       id: "word-count-lock",
-      message: "Locking revised paper to requested word-count range (95-105%)…",
+      message: "Locking revised paper to exact requested word count…",
       status: "running",
     });
     try {
@@ -568,8 +575,6 @@ RULES:
       plagScore = plagResult.plagiarismScore;
 
       if (plagScore > 8) {
-        const rephraseQuota = await enforceLimit(req.userId!, "humanizer");
-        if (rephraseQuota.allowed) {
         send("step", {
           id: "plag-gate",
           message: `Similarity ${plagScore}% — above 8% threshold. Running targeted rephrasing…`,
@@ -578,13 +583,13 @@ RULES:
 
         const rephrasedResp = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
-          max_tokens: wordsToTokens(wordCount, 1500),
+          max_tokens: tokenBudgetFromWords(wordCount, 1800),
           system: `${WRITER_SOUL}
 
 You are the LightSpeed Originality Engine. Rephrase flagged sections of this academic paper to reduce textual similarity below 8% while preserving:
 • All facts, arguments, conclusions, and in-text citations EXACTLY
 • The same academic level and tone
-• The same word count (±5%)
+• Keep final word count equal to the original word count
 • All LaTeX equations and markdown formatting
 
 Rephrase by:
@@ -605,7 +610,6 @@ Return ONLY the rephrased paper content.`,
         const recheck = analyseTextPlagiarism(rephrased);
         revisedText = rephrased;
         plagScore = recheck.plagiarismScore;
-        } // close humanizer credit check
       }
 
       send("step", {
@@ -678,20 +682,6 @@ Return ONLY the rephrased paper content.`,
       }
     } catch {
       send("step", { id: "ai-gate", message: "AI detection check complete.", status: "done" });
-    }
-
-    // ── Re-enforce word count if plagiarism/AI humanization passes drifted it ─
-    // enforceRevisionWordCount ran before the quality gates; those rewrites can
-    // freely change length. Re-run only when measurably outside ±5%.
-    const postGateRevWords = countWords(revisedText);
-    const postGateRevMin = Math.floor(wordCount * 0.95);
-    const postGateRevMax = Math.ceil(wordCount * 1.05);
-    if (postGateRevWords < postGateRevMin || postGateRevWords > postGateRevMax) {
-      try {
-        revisedText = await enforceRevisionWordCount(revisedText, wordCount);
-      } catch {
-        // non-fatal — continue with current text
-      }
     }
 
     const aiScore = realAiScore;

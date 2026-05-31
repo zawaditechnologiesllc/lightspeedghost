@@ -8,9 +8,7 @@ import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
 import { createRemoteJWKSet, jwtVerify, decodeProtectedHeader, decodeJwt } from "jose";
 import router from "./routes";
-import seoPublicRouter from "./routes/seo-public";
 import { authMiddleware } from "./middlewares/auth";
-import { resolveAdminAuth } from "./middlewares/adminAuth";
 import { requestLoggerMiddleware } from "./lib/requestLogger";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
@@ -33,21 +31,10 @@ app.get("/api/health", (_req: Request, res: Response) => {
 app.head("/api/health", (_req: Request, res: Response) => {
   res.status(200).end();
 });
-// Alias — some older frontend builds used /api/healthz
-app.get("/api/healthz", (_req: Request, res: Response) => {
-  res.json({ status: "ok" });
-});
-app.head("/api/healthz", (_req: Request, res: Response) => {
-  res.status(200).end();
-});
 
-// ── Diagnostic config — DISABLED in production to avoid env-var disclosure ───
-// Only available in development. In production, returns 404.
-app.get("/api/health/config", (req: Request, res: Response) => {
-  if (process.env.NODE_ENV === "production") {
-    res.status(404).json({ error: "Not found" });
-    return;
-  }
+// ── Diagnostic config — before CORS so direct browser access works ─────────
+// Shows which env vars are present (as booleans) — no secret values exposed.
+app.get("/api/health/config", (_req: Request, res: Response) => {
   const check = (key: string) => !!process.env[key];
   res.json({
     production: process.env.NODE_ENV === "production",
@@ -175,38 +162,37 @@ app.use(
 );
 
 // ── CORS — strict allowlist, never open wildcard ───────────────────────────────
-// Production domains are hardcoded here. Additional origins can be added via
-// the ALLOWED_ORIGINS env var (comma-separated). Both www and non-www variants
-// are added automatically for every listed domain.
-const PRODUCTION_ORIGINS = new Set<string>([
-  "https://lightspeedghost.com",
-  "https://www.lightspeedghost.com",
-]);
-
+// Build the origin set from ALLOWED_ORIGINS and automatically include
+// both the www and non-www variant of every listed domain so the user
+// only needs to set one form (e.g. https://example.com is enough to
+// also allow https://www.example.com and vice-versa).
 const ENV_ORIGINS = new Set<string>();
-const allStaticOrigins = [
-  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : []),
-];
-for (const raw of allStaticOrigins) {
-  const o = raw.trim();
-  if (!o) continue;
-  ENV_ORIGINS.add(o);
-  try {
-    const url = new URL(o);
-    const host = url.hostname;
-    const alt = host.startsWith("www.") ? host.slice(4) : `www.${host}`;
-    ENV_ORIGINS.add(`${url.protocol}//${alt}${url.port ? `:${url.port}` : ""}`);
-  } catch { /* ignore malformed entries */ }
+if (process.env.ALLOWED_ORIGINS) {
+  for (const raw of process.env.ALLOWED_ORIGINS.split(",")) {
+    const o = raw.trim();
+    if (!o) continue;
+    ENV_ORIGINS.add(o);
+    try {
+      const url = new URL(o);
+      const host = url.hostname;
+      const alt = host.startsWith("www.") ? host.slice(4) : `www.${host}`;
+      ENV_ORIGINS.add(`${url.protocol}//${alt}${url.port ? `:${url.port}` : ""}`);
+    } catch { /* ignore malformed entries */ }
+  }
 }
 
-// Preview / dev patterns — Vercel previews and local dev.
-const KNOWN_DEV_ORIGINS = [
-  /^https?:\/\/localhost(:\d+)?$/,
-  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
-  /\.replit\.dev$/,
-  /\.repl\.co$/,
-  /\.vercel\.app$/,
-];
+// Dev / preview patterns — only applied in non-production to avoid letting
+// arbitrary third-party Vercel deployments call the production API.
+const KNOWN_DEV_ORIGINS =
+  process.env.NODE_ENV !== "production"
+    ? [
+        /^https?:\/\/localhost(:\d+)?$/,
+        /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+        /\.replit\.dev$/,
+        /\.repl\.co$/,
+        /\.vercel\.app$/,
+      ]
+    : [];
 
 app.use(
   cors({
@@ -216,17 +202,15 @@ app.use(
         if (process.env.NODE_ENV !== "production") return cb(null, true);
         return cb(new Error("CORS: origin required in production"), false);
       }
-      // Hardcoded production domains always allowed
-      if (PRODUCTION_ORIGINS.has(origin)) return cb(null, true);
-      // Explicit allowlist from ALLOWED_ORIGINS env var
+      // Explicit allowlist from env var always wins (includes auto-added www variant)
       if (ENV_ORIGINS.has(origin)) return cb(null, true);
-      // Dev / Vercel preview pattern match
+      // Dev/Replit/Vercel preview pattern match
       if (KNOWN_DEV_ORIGINS.some((pat) => pat.test(origin))) return cb(null, true);
       cb(new Error(`CORS: origin '${origin}' is not allowed`), false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-admin-password", "x-admin-email"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-admin-password"],
   }),
 );
 
@@ -257,21 +241,7 @@ app.use(
   }),
 );
 
-// ── Rate limiters ──────────────────────────────────────────────────────────────
-// NOTE FOR 10M+ USERS / HORIZONTAL SCALING:
-// express-rate-limit uses an in-memory store by default. In a single-instance
-// deployment this is accurate. When running 2+ instances (Render Standard+,
-// autoscaling), each instance counts independently — a user can hit all instances
-// and effectively multiply the limit by the instance count.
-//
-// To enforce shared limits across instances, set REDIS_URL and switch the store:
-//   import { RedisStore } from "rate-limit-redis";
-//   import { createClient } from "redis";
-//   const redisClient = createClient({ url: process.env.REDIS_URL });
-//   store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) })
-//
-// Upstash Redis (free tier: 10K cmd/day) is the easiest option for Render.
-
+// ── Global rate limiter — 120 requests/min per IP ─────────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 120,
@@ -319,20 +289,8 @@ app.use(
   aiLimiter,
 );
 
-// ── Admin brute-force protection — covers ALL admin routes, not just /verify ──
-// Every admin route checks the x-admin-password header, so every route is a
-// potential brute-force target. /verify gets the strict 10/15-min limit.
-// All other admin routes share a 300/15-min cap to cover lateral brute-forcing.
-const adminBroadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many admin requests from this IP. Try again later." },
-  skipSuccessfulRequests: false,
-});
-app.use("/api/mwaramuriuki-login", adminBroadLimiter);
-app.use("/api/mwaramuriuki-login/verify", adminLoginLimiter);
+// ── Admin login brute-force protection ────────────────────────────────────────
+app.use("/api/admin/verify", adminLoginLimiter);
 
 // ── Body parsers — strict size limits ─────────────────────────────────────────
 // Webhook routes need raw body for signature verification
@@ -354,8 +312,6 @@ app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 // ── Auth — resolve userId from session or Bearer JWT ─────────────────────────
 app.use(authMiddleware);
-// Resolve admin identity for every request — allows seo.ts and other non-admin routers to check req.adminAuth
-app.use(resolveAdminAuth);
 
 // ── /api/me — returns the authenticated user's id/email (auth debug helper) ───
 // Visit https://your-render-url.onrender.com/api/me in the browser with a valid
@@ -382,11 +338,11 @@ app.get("/api/status", async (_req: Request, res: Response) => {
 
 // ── Maintenance mode middleware ────────────────────────────────────────────────
 // When maintenance_mode is 'true' in system_settings, block all routes except:
-//   /api/health, /api/status, /api/mwaramuriuki-login/*, /api/payments/webhook/*
+//   /api/health, /api/status, /api/admin/*, /api/payments/webhook/*
 const MAINTENANCE_EXEMPT = [
   /^\/api\/health/,
   /^\/api\/status/,
-  /^\/api\/mwaramuriuki-login\//,
+  /^\/api\/admin\//,
   /^\/api\/payments\/webhook\//,
 ];
 
@@ -413,8 +369,6 @@ app.use(requestLoggerMiddleware);
 // ── Suppress noisy X-Powered-By header ───────────────────────────────────────
 app.disable("x-powered-by");
 
-// SEO public routes — must be before /api to serve at root paths (/robots.txt, /sitemap.xml, /seo/:slug)
-app.use(seoPublicRouter);
 app.use("/api", router);
 
 // ── Global error handler ──────────────────────────────────────────────────────

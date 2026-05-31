@@ -5,18 +5,15 @@ import {
 } from "lucide-react";
 import {
   formatAmount, getPaygPrice, DOCUMENT_TIERS, TIER_LABELS, TIER_WORD_RANGES,
-  SUBSCRIPTION_PLANS,
   type PaygTool, type DocumentTier,
 } from "@/lib/pricing";
-
-const _proMonthly = SUBSCRIPTION_PLANS.find(p => p.id === "pro_monthly")!;
 
 interface PaywallPickerProps {
   open: boolean;
   onClose: () => void;
   tool: PaygTool;
   tier?: DocumentTier;
-  onChooseSubscription: (plan?: string) => void;
+  onChooseSubscription: () => void;
   onChoosePayg: (tier?: DocumentTier) => void;
   currentPlan?: string | null;
   mode?: "paywall" | "buy";
@@ -45,13 +42,13 @@ const TOOL_VERB: Record<PaygTool, string> = {
 const TIER_TOOLS: PaygTool[] = ["paper", "revision", "humanizer"];
 
 const PRO_PERKS: Record<PaygTool, string[]> = {
-  paper:      ["15 papers/month", "All paper types", "Verified citations", "Priority queue"],
-  revision:   ["20 revisions/month", "Full AI+plagiarism analysis", "Grade targeting"],
-  humanizer:  ["20 humanizations/month", "Ghost Writer mode", "Style presets"],
-  stem:       ["40 STEM solves/month", "All subjects", "Step-by-step + graphs"],
-  study:      ["80 study sessions/month", "Flashcards + quizzes", "Multi-file upload"],
-  plagiarism: ["20 plagiarism checks/month", "AI detection", "Code compare"],
-  outline:    ["20 outlines/month", "Auto-detect paper type", "Reference integration"],
+  paper:      ["50 papers/month", "All paper types", "Verified citations", "Priority queue"],
+  revision:   ["50 revisions/month", "Full AI+plagiarism analysis", "Grade targeting"],
+  humanizer:  ["50 humanizations/month", "Ghost Writer mode", "Style presets"],
+  stem:       ["60 STEM solves/month", "All subjects", "Step-by-step + graphs"],
+  study:      ["Unlimited study sessions", "Flashcards + quizzes", "Multi-file upload"],
+  plagiarism: ["Unlimited plagiarism checks", "AI detection", "Code compare"],
+  outline:    ["Unlimited outlines", "Auto-detect paper type", "Reference integration"],
 };
 
 export function PaywallPicker({
@@ -72,7 +69,7 @@ export function PaywallPicker({
 
   if (!open) return null;
 
-  const isPro = currentPlan === "pro" || currentPlan === "institution";
+  const isPro = currentPlan === "pro" || currentPlan === "campus";
   const perks = PRO_PERKS[tool];
 
   return (
@@ -110,7 +107,7 @@ export function PaywallPicker({
           {/* ── Option A: Subscribe ── */}
           {!isPro && (
             <button
-              onClick={() => onChooseSubscription()}
+              onClick={onChooseSubscription}
               className="w-full group text-left p-4 rounded-xl bg-gradient-to-br from-blue-900/30 to-blue-800/20 border border-blue-500/25 hover:border-blue-400/40 hover:from-blue-900/40 transition-all"
             >
               <div className="flex items-start justify-between gap-3 mb-3">
@@ -120,7 +117,7 @@ export function PaywallPicker({
                     <span className="text-sm font-bold text-white">Pro Plan</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-semibold">BEST VALUE</span>
                   </div>
-                  <div className="text-xs text-white/40">{_proMonthly.displayPrice} · cancel anytime</div>
+                  <div className="text-xs text-white/40">$14.99/month · cancel anytime</div>
                 </div>
                 <ArrowRight size={14} className="text-blue-400/70 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all mt-0.5 shrink-0" />
               </div>

@@ -2,22 +2,9 @@ import { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { documentsTable, studySessionsTable } from "@workspace/db";
 import { desc, sql, eq, ilike, and } from "drizzle-orm";
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response } from "express";
 import { invalidateSettingsCache } from "../lib/systemSettings";
-import { getUsageLog, checkBudget } from "../lib/apiCost";
 import crypto from "node:crypto";
-import bcrypt from "bcryptjs";
-
-// ── Extend Express Request to carry resolved admin context ────────────────────
-declare module "express-serve-static-core" {
-  interface Request {
-    adminAuth?: {
-      authorized: boolean;
-      isSuperAdmin: boolean;
-      sectorAdmin?: { id: number; name: string; email: string; sectors: string[] };
-    };
-  }
-}
 
 const router = Router();
 
@@ -34,54 +21,11 @@ function timingSafeCompare(a: string, b: string): boolean {
   return crypto.timingSafeEqual(aPadded, bPadded) && aBuf.length === bBuf.length;
 }
 
-// ── Router-level middleware: resolve admin identity once per request ───────────
-// Resolves BEFORE every /mwaramuriuki-login/* route handler.
-// Super admin: x-admin-password matches ADMIN_PASSWORD env var (fast, sync).
-// Sector admin: x-admin-email + x-admin-password → DB lookup + bcrypt compare.
-router.use(async (req: Request, _res: Response, next: NextFunction) => {
-  const token = req.headers["x-admin-password"] as string | undefined;
-  if (!token) {
-    req.adminAuth = { authorized: false, isSuperAdmin: false };
-    return next();
-  }
-
-  // 1. Super admin — env var check (constant-time, no DB)
-  if (ADMIN_PASSWORD && timingSafeCompare(token, ADMIN_PASSWORD)) {
-    req.adminAuth = { authorized: true, isSuperAdmin: true };
-    return next();
-  }
-
-  // 2. Sector admin — DB lookup by email + bcrypt compare
-  const adminEmail = (req.headers["x-admin-email"] as string | undefined)?.trim().toLowerCase();
-  if (adminEmail) {
-    try {
-      const { rows } = await pool.query<{
-        id: number; name: string; email: string; sectors: string[]; password_hash: string;
-      }>(
-        "SELECT id, name, email, sectors, password_hash FROM admin_users WHERE email = $1 AND active = true LIMIT 1",
-        [adminEmail],
-      );
-      if (rows.length > 0 && await bcrypt.compare(token, rows[0].password_hash)) {
-        const { password_hash: _h, ...admin } = rows[0];
-        void _h;
-        req.adminAuth = { authorized: true, isSuperAdmin: false, sectorAdmin: admin };
-        return next();
-      }
-    } catch { /* DB error — fall through to unauthorized */ }
-  }
-
-  req.adminAuth = { authorized: false, isSuperAdmin: false };
-  next();
-});
-
-// Keep backward-compat helper used by all existing route guards
 function verifyAdminToken(req: Request): boolean {
-  return req.adminAuth?.authorized ?? false;
-}
-
-// Super-admin-only guard — used for sensitive config and admin-user CRUD
-function requireSuperAdmin(req: Request): boolean {
-  return req.adminAuth?.isSuperAdmin ?? false;
+  if (!ADMIN_PASSWORD) return false;
+  const token = req.headers["x-admin-password"] as string | undefined;
+  if (!token) return false;
+  return timingSafeCompare(token, ADMIN_PASSWORD);
 }
 
 // ── Bootstrap admin tables ───────────────────────────────────────────────────
@@ -118,37 +62,6 @@ async function initAdminTables() {
       comment TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-    CREATE TABLE IF NOT EXISTS contact_messages (
-      id BIGSERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL,
-      institution TEXT,
-      message TEXT NOT NULL,
-      seats INTEGER,
-      read BOOLEAN NOT NULL DEFAULT false,
-      replied BOOLEAN NOT NULL DEFAULT false,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-    CREATE TABLE IF NOT EXISTS admin_users (
-      id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      sectors TEXT[] NOT NULL DEFAULT '{}',
-      active BOOLEAN NOT NULL DEFAULT true,
-      created_by TEXT NOT NULL DEFAULT 'super',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-    CREATE TABLE IF NOT EXISTS gateway_settings (
-      gateway TEXT PRIMARY KEY,
-      paused BOOLEAN NOT NULL DEFAULT FALSE,
-      notes TEXT,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-    INSERT INTO gateway_settings (gateway) VALUES
-      ('stripe'),('paddle'),('lemon_squeezy'),('paystack'),('intasend')
-    ON CONFLICT (gateway) DO NOTHING;
     INSERT INTO system_settings (key, value) VALUES
       ('maintenance_mode',        'false'),
       ('allow_signups',           'true'),
@@ -166,22 +79,7 @@ async function initAdminTables() {
       ('tool_humanizer_enabled',  'true'),
       ('tool_plagiarism_enabled', 'true'),
       ('tool_stem_enabled',       'true'),
-      ('tool_study_enabled',      'true'),
-      ('tool_ebooks_enabled',     'true'),
-      ('pro_paper',               '15'),
-      ('pro_revision',            '20'),
-      ('pro_humanizer',           '20'),
-      ('pro_stem',                '60'),
-      ('pro_study',               '150'),
-      ('pro_plagiarism',          '20'),
-      ('pro_outline',             '20'),
-      ('institution_paper',            '5'),
-      ('institution_revision',         '8'),
-      ('institution_humanizer',        '8'),
-      ('institution_stem',             '30'),
-      ('institution_study',            '75'),
-      ('institution_plagiarism',       '10'),
-      ('institution_outline',          '10')
+      ('tool_study_enabled',      'true')
     ON CONFLICT (key) DO NOTHING;
   `);
 }
@@ -200,47 +98,23 @@ async function getSettings(): Promise<Record<string, string>> {
 }
 
 // ── POST /admin/verify ────────────────────────────────────────────────────────
-// Returns: { ok, role: 'super'|'sector', sectors, name, email?, adminId? }
-// Sector admin login requires { email, password }; super admin uses { password } only.
 
-router.post("/mwaramuriuki-login/verify", async (req: Request, res: Response) => {
-  const { password, email } = req.body as { password?: string; email?: string };
-  const pwd = password ?? "";
-  const emailVal = (email ?? "").trim().toLowerCase();
-
-  // ── Sector admin login (email provided) ─────────────────────────────────────
-  if (emailVal) {
-    try {
-      const { rows } = await pool.query<{
-        id: number; name: string; email: string; sectors: string[]; password_hash: string;
-      }>(
-        "SELECT id, name, email, sectors, password_hash FROM admin_users WHERE email = $1 AND active = true LIMIT 1",
-        [emailVal],
-      );
-      if (rows.length > 0 && await bcrypt.compare(pwd, rows[0].password_hash)) {
-        res.json({ ok: true, role: "sector", sectors: rows[0].sectors, name: rows[0].name, email: rows[0].email, adminId: rows[0].id });
-        return;
-      }
-    } catch { /* DB error — fall through to reject */ }
-    res.status(401).json({ ok: false, error: "Invalid email or password" });
-    return;
-  }
-
-  // ── Super admin login (no email — env var only) ───────────────────────────
+router.post("/admin/verify", (req, res) => {
+  const { password } = req.body as { password?: string };
   if (!ADMIN_PASSWORD) {
     res.status(503).json({ error: "Admin not configured. Set ADMIN_PASSWORD environment variable." });
     return;
   }
-  if (timingSafeCompare(pwd, ADMIN_PASSWORD)) {
-    res.json({ ok: true, role: "super", sectors: ["all"], name: "Super Admin" });
-    return;
+  if (timingSafeCompare(password ?? "", ADMIN_PASSWORD)) {
+    res.json({ ok: true });
+  } else {
+    res.status(401).json({ ok: false, error: "Invalid admin password" });
   }
-  res.status(401).json({ ok: false, error: "Invalid admin password" });
 });
 
 // ── GET /admin/stats ──────────────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/stats", async (req: Request, res: Response) => {
+router.get("/admin/stats", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const q = <T>(sql: string, fallback: T) =>
@@ -322,10 +196,9 @@ const TOOL_DEFS = [
   { key: "plagiarism", label: "Plagiarism Check",  settingKey: "tool_plagiarism_enabled", docType: "plagiarism", path: "/plagiarism/" },
   { key: "stem",       label: "STEM Solver",       settingKey: "tool_stem_enabled",       docType: "stem",       path: "/stem/" },
   { key: "study",      label: "Study Assistant",   settingKey: "tool_study_enabled",      docType: null,         path: "/study/" },
-  { key: "ebook",      label: "Ebook Generator",   settingKey: "tool_ebooks_enabled",     docType: "ebook",      path: "/ebooks/" },
 ];
 
-router.get("/mwaramuriuki-login/tools", async (req: Request, res: Response) => {
+router.get("/admin/tools", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const settings = await getSettings();
@@ -357,7 +230,6 @@ router.get("/mwaramuriuki-login/tools", async (req: Request, res: Response) => {
             WHEN path LIKE '%/plagiarism/%'        THEN 'plagiarism'
             WHEN path LIKE '%/stem/%'              THEN 'stem'
             WHEN path LIKE '%/study/%'             THEN 'study'
-            WHEN path LIKE '%/ebooks/%'            THEN 'ebook'
           END AS path_group,
           COUNT(*)                                                          AS total,
           COUNT(*) FILTER (WHERE status >= 500)                            AS errors,
@@ -367,8 +239,7 @@ router.get("/mwaramuriuki-login/tools", async (req: Request, res: Response) => {
           MAX(created_at)                                                   AS last_used
         FROM request_logs
         WHERE (path LIKE '%/writing/%' OR path LIKE '%/revision/%' OR path LIKE '%/humanizer/%'
-            OR path LIKE '%/plagiarism/%' OR path LIKE '%/stem/%' OR path LIKE '%/study/%'
-            OR path LIKE '%/ebooks/%')
+            OR path LIKE '%/plagiarism/%' OR path LIKE '%/stem/%' OR path LIKE '%/study/%')
           AND created_at > NOW() - INTERVAL '30 days'
         GROUP BY 1
       `).catch(() => ({ rows: [] })),
@@ -412,7 +283,7 @@ router.get("/mwaramuriuki-login/tools", async (req: Request, res: Response) => {
 
 // ── PATCH /admin/tools/:key/toggle ───────────────────────────────────────────
 
-router.patch("/mwaramuriuki-login/tools/:key/toggle", async (req: Request, res: Response) => {
+router.patch("/admin/tools/:key/toggle", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { key } = req.params;
   const tool = TOOL_DEFS.find((t) => t.key === key);
@@ -431,7 +302,7 @@ router.patch("/mwaramuriuki-login/tools/:key/toggle", async (req: Request, res: 
 
 // ── GET /admin/users ──────────────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/users", async (req: Request, res: Response) => {
+router.get("/admin/users", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [docUsers, sessionUsers, creditRows, subRows, banRows, logUserRows] = await Promise.all([
@@ -560,52 +431,21 @@ router.get("/mwaramuriuki-login/users", async (req: Request, res: Response) => {
 
 // ── DELETE /admin/users/:id ───────────────────────────────────────────────────
 
-router.delete("/mwaramuriuki-login/users/:id", async (req: Request, res: Response) => {
+router.delete("/admin/users/:id", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   try {
-    // 1. Remove all local activity data from public tables
+    // Remove user's activity data from public tables
     await Promise.allSettled([
       pool.query("DELETE FROM documents WHERE user_id = $1", [id]),
       pool.query("DELETE FROM study_sessions WHERE user_id = $1", [id]),
       pool.query("DELETE FROM user_usage WHERE user_id = $1", [id]),
       pool.query("DELETE FROM user_subscriptions WHERE user_id = $1", [id]),
       pool.query("DELETE FROM user_bans WHERE user_id = $1", [id]),
-      pool.query("DELETE FROM user_credits WHERE user_id = $1", [id]),
-      pool.query("DELETE FROM credit_transactions WHERE user_id = $1", [id]),
-      pool.query("DELETE FROM request_logs WHERE user_id = $1", [id]),
-      pool.query("DELETE FROM referral_codes WHERE user_id = $1", [id]),
-      pool.query("DELETE FROM referral_signups WHERE referred_user_id = $1", [id]),
-      pool.query("DELETE FROM student_profiles WHERE user_id = $1", [id]),
-      pool.query("DELETE FROM user_ebook_subscriptions WHERE user_id = $1", [id]),
     ]);
-
-    // 2. Hard-delete the Supabase auth user via Admin API
-    // Direct SQL against auth.users is blocked by Supabase's connection pooler —
-    // the Admin REST API is the correct path.
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    let authDeleteError: string | null = null;
-
-    if (supabaseUrl && serviceRoleKey) {
-      const delResp = await fetch(`${supabaseUrl}/auth/v1/admin/users/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${serviceRoleKey}`,
-          apikey: serviceRoleKey,
-        },
-      });
-      if (!delResp.ok) {
-        const errText = await delResp.text().catch(() => delResp.statusText);
-        authDeleteError = `Supabase auth delete failed (${delResp.status}): ${errText}`;
-        logger.warn({ id, authDeleteError }, "[admin] Could not delete Supabase auth user");
-      }
-    } else {
-      authDeleteError = "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set — Supabase auth user was NOT deleted";
-      logger.warn({ id }, "[admin] Supabase env vars missing — skipped auth user deletion");
-    }
-
-    res.json({ ok: true, authDeleteError });
+    // Attempt hard delete from auth.users (works with direct DB connection; no-op if pooler restricts it)
+    await pool.query("DELETE FROM auth.users WHERE id = $1::uuid", [id]).catch(() => {});
+    res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -613,7 +453,7 @@ router.delete("/mwaramuriuki-login/users/:id", async (req: Request, res: Respons
 
 // ── PATCH /admin/users/:id/ban ────────────────────────────────────────────────
 
-router.patch("/mwaramuriuki-login/users/:id/ban", async (req: Request, res: Response) => {
+router.patch("/admin/users/:id/ban", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   const { banned, reason } = req.body as { banned: boolean; reason?: string };
@@ -634,31 +474,16 @@ router.patch("/mwaramuriuki-login/users/:id/ban", async (req: Request, res: Resp
 
 // ── PATCH /admin/users/:id/plan ───────────────────────────────────────────────
 
-router.patch("/mwaramuriuki-login/users/:id/plan", async (req: Request, res: Response) => {
+router.patch("/admin/users/:id/plan", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
-  const { plan, billing, seats, durationDays } = req.body as { plan: string; billing?: string; seats?: number; durationDays?: number };
-  if (!plan || !["starter", "pro", "institution", "ebooks_monthly"].includes(plan)) {
-    res.status(400).json({ error: "Invalid plan value" }); return;
-  }
-  if (billing !== undefined && billing !== null && !["monthly", "annual"].includes(billing)) {
-    res.status(400).json({ error: "Invalid billing value" }); return;
-  }
-  if (seats !== undefined && (typeof seats !== "number" || seats < 1 || seats > 10000)) {
-    res.status(400).json({ error: "Invalid seats value" }); return;
-  }
-  if (durationDays !== undefined && (typeof durationDays !== "number" || durationDays < 1 || durationDays > 1825)) {
-    res.status(400).json({ error: "Invalid durationDays value" }); return;
-  }
+  const { plan, billing } = req.body as { plan: string; billing?: string };
   try {
-    // When admin sets a plan manually, use durationDays if provided; institution defaults to 365 days
-    const days = durationDays ?? (plan === "institution" ? 365 : 30);
-    const periodEnd = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
     await pool.query(`
-      INSERT INTO user_subscriptions (user_id, plan, billing, gateway, status, current_period_end, seats)
-      VALUES ($1, $2, $3, 'manual', 'active', $4, $5)
-      ON CONFLICT (user_id) DO UPDATE SET plan = $2, billing = $3, gateway = 'manual', status = 'active', current_period_end = $4, seats = $5, updated_at = NOW()
-    `, [id, plan, billing ?? null, periodEnd, seats ?? null]);
+      INSERT INTO user_subscriptions (user_id, plan, billing, gateway)
+      VALUES ($1, $2, $3, 'manual')
+      ON CONFLICT (user_id) DO UPDATE SET plan = $2, billing = $3
+    `, [id, plan, billing ?? null]);
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Failed to update plan" });
@@ -667,18 +492,12 @@ router.patch("/mwaramuriuki-login/users/:id/plan", async (req: Request, res: Res
 
 // ── POST /admin/users/:id/credits ─────────────────────────────────────────────
 
-router.post("/mwaramuriuki-login/users/:id/credits", async (req: Request, res: Response) => {
+router.post("/admin/users/:id/credits", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   const { amountCents, reason } = req.body as { amountCents: number; reason?: string };
   if (!amountCents || amountCents === 0) {
     res.status(400).json({ error: "amountCents must be non-zero" }); return;
-  }
-  if (typeof amountCents !== "number" || !Number.isInteger(amountCents) || Math.abs(amountCents) > 10_000_000) {
-    res.status(400).json({ error: "amountCents must be an integer and cannot exceed ±$100,000" }); return;
-  }
-  if (reason !== undefined && (typeof reason !== "string" || reason.length > 300)) {
-    res.status(400).json({ error: "reason must be a string under 300 characters" }); return;
   }
   const client = await pool.connect();
   try {
@@ -711,7 +530,7 @@ router.post("/mwaramuriuki-login/users/:id/credits", async (req: Request, res: R
 
 // ── GET /admin/credits ────────────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/credits", async (req: Request, res: Response) => {
+router.get("/admin/credits", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [creditsRows, recentTx] = await Promise.all([
@@ -735,34 +554,9 @@ router.get("/mwaramuriuki-login/credits", async (req: Request, res: Response) =>
   }
 });
 
-// ── GET /admin/users/:id/credit-transactions ─────────────────────────────────
-
-router.get("/mwaramuriuki-login/users/:id/credit-transactions", async (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { id } = req.params;
-  try {
-    const [txRows, balanceRow] = await Promise.all([
-      pool.query<{ id: number; amount_cents: number; type: string; description: string; created_at: string }>(
-        "SELECT id, amount_cents, type, description, created_at::text FROM credit_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100",
-        [id]
-      ),
-      pool.query<{ balance_cents: number; lifetime_earned_cents: number; lifetime_spent_cents: number }>(
-        "SELECT balance_cents, lifetime_earned_cents, lifetime_spent_cents FROM user_credits WHERE user_id = $1",
-        [id]
-      ),
-    ]);
-    res.json({
-      transactions: txRows.rows,
-      balance: balanceRow.rows[0] ?? { balance_cents: 0, lifetime_earned_cents: 0, lifetime_spent_cents: 0 },
-    });
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 // ── GET /admin/revenue ────────────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/revenue", async (req: Request, res: Response) => {
+router.get("/admin/revenue", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [byGateway, byMonth, byType, topUsers, summary] = await Promise.all([
@@ -801,7 +595,7 @@ router.get("/mwaramuriuki-login/revenue", async (req: Request, res: Response) =>
 
 // ── GET /admin/subscriptions ──────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/subscriptions", async (req: Request, res: Response) => {
+router.get("/admin/subscriptions", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const rows = await pool.query<{ user_id: string; plan: string; billing: string | null; gateway: string | null; created_at: string }>(
@@ -821,7 +615,7 @@ router.get("/mwaramuriuki-login/subscriptions", async (req: Request, res: Respon
 
 // ── GET /admin/settings ───────────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/settings", async (req: Request, res: Response) => {
+router.get("/admin/settings", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const settings = await getSettings();
@@ -833,7 +627,7 @@ router.get("/mwaramuriuki-login/settings", async (req: Request, res: Response) =
 
 // ── POST /admin/settings ──────────────────────────────────────────────────────
 
-router.post("/mwaramuriuki-login/settings", async (req: Request, res: Response) => {
+router.post("/admin/settings", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { settings } = req.body as { settings: Record<string, string> };
   if (!settings || typeof settings !== "object") {
@@ -862,14 +656,14 @@ router.post("/mwaramuriuki-login/settings", async (req: Request, res: Response) 
 
 // ── GET /admin/ping ───────────────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/ping", (req: Request, res: Response) => {
+router.get("/admin/ping", (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   res.json({ ok: true, timestamp: new Date().toISOString(), uptimeSeconds: Math.floor(process.uptime()) });
 });
 
 // ── GET /admin/traffic ────────────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/traffic", async (req: Request, res: Response) => {
+router.get("/admin/traffic", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [activeAll, activeToday, activeLive, byCountry, byHour] = await Promise.all([
@@ -923,7 +717,7 @@ router.get("/mwaramuriuki-login/traffic", async (req: Request, res: Response) =>
 
 // ── GET /admin/documents ──────────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/documents", async (req: Request, res: Response) => {
+router.get("/admin/documents", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { type, search } = req.query as { type?: string; search?: string };
   try {
@@ -936,7 +730,6 @@ router.get("/mwaramuriuki-login/documents", async (req: Request, res: Response) 
         id: documentsTable.id,
         userId: documentsTable.userId,
         title: documentsTable.title,
-        content: documentsTable.content,
         type: documentsTable.type,
         subject: documentsTable.subject,
         wordCount: documentsTable.wordCount,
@@ -960,11 +753,11 @@ router.get("/mwaramuriuki-login/documents", async (req: Request, res: Response) 
 
 // ── GET /admin/logs ───────────────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/logs", async (req: Request, res: Response) => {
+router.get("/admin/logs", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const filter = (req.query.filter as string) ?? "all";
   try {
-    let where = `WHERE path NOT IN ('/api/healthz') AND path NOT LIKE '%/mwaramuriuki-login/%'`;
+    let where = `WHERE path NOT IN ('/api/healthz') AND path NOT LIKE '%/admin/%'`;
     if (filter === "success") where += " AND status < 400";
     else if (filter === "errors") where += " AND status >= 400";
 
@@ -1016,7 +809,7 @@ router.get("/announcements", async (_req: Request, res: Response) => {
 
 // ── GET /admin/announcements ─────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/announcements", async (req: Request, res: Response) => {
+router.get("/admin/announcements", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const rows = await pool.query(
@@ -1032,7 +825,7 @@ router.get("/mwaramuriuki-login/announcements", async (req: Request, res: Respon
 
 // ── POST /admin/announcements ─────────────────────────────────────────────────
 
-router.post("/mwaramuriuki-login/announcements", async (req: Request, res: Response) => {
+router.post("/admin/announcements", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { title, message, link, link_text, color } = req.body as {
     title?: string; message: string; link?: string; link_text?: string; color?: string;
@@ -1054,7 +847,7 @@ router.post("/mwaramuriuki-login/announcements", async (req: Request, res: Respo
 
 // ── PATCH /admin/announcements/:id ───────────────────────────────────────────
 
-router.patch("/mwaramuriuki-login/announcements/:id", async (req: Request, res: Response) => {
+router.patch("/admin/announcements/:id", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   const { title, message, link, link_text, color, is_active } = req.body as {
@@ -1081,7 +874,7 @@ router.patch("/mwaramuriuki-login/announcements/:id", async (req: Request, res: 
 
 // ── DELETE /admin/announcements/:id ──────────────────────────────────────────
 
-router.delete("/mwaramuriuki-login/announcements/:id", async (req: Request, res: Response) => {
+router.delete("/admin/announcements/:id", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { id } = req.params;
   try {
@@ -1111,54 +904,9 @@ router.post("/feedback", async (req: Request, res: Response) => {
   }
 });
 
-// ── GET /admin/ebooks ─────────────────────────────────────────────────────────
-
-router.get("/mwaramuriuki-login/ebooks", async (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
-  try {
-    const [statsRows, recentRows, subRows] = await Promise.all([
-      pool.query<{ total: string; this_month: string; this_week: string; avg_words: string }>(`
-        SELECT
-          COUNT(*)                                                          AS total,
-          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') AS this_month,
-          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')  AS this_week,
-          ROUND(AVG(word_count))::TEXT                                     AS avg_words
-        FROM documents WHERE type = 'ebook'
-      `).catch(() => ({ rows: [] })),
-      pool.query<{ id: number; user_id: string | null; title: string; word_count: number; created_at: string }>(`
-        SELECT id, user_id, title, word_count, created_at
-        FROM documents WHERE type = 'ebook'
-        ORDER BY created_at DESC LIMIT 50
-      `).catch(() => ({ rows: [] })),
-      pool.query<{ user_id: string; status: string; billing: string | null; gateway: string | null; created_at: string }>(`
-        SELECT user_id, status, billing, gateway, created_at
-        FROM user_ebook_subscriptions
-        ORDER BY created_at DESC LIMIT 100
-      `).catch(() => ({ rows: [] })),
-    ]);
-    const s = statsRows.rows[0];
-    res.json({
-      total:      Number(s?.total      ?? 0),
-      thisMonth:  Number(s?.this_month ?? 0),
-      thisWeek:   Number(s?.this_week  ?? 0),
-      avgWords:   Math.round(Number(s?.avg_words ?? 0)),
-      recent: recentRows.rows.map((r) => ({
-        ...r,
-        created_at: r.created_at instanceof Date ? (r.created_at as unknown as Date).toISOString() : String(r.created_at),
-      })),
-      subscriptions: subRows.rows.map((r) => ({
-        ...r,
-        created_at: r.created_at instanceof Date ? (r.created_at as unknown as Date).toISOString() : String(r.created_at),
-      })),
-    });
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 // ── GET /admin/feedback ───────────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/feedback", async (req: Request, res: Response) => {
+router.get("/admin/feedback", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const rows = await pool.query<{ tool: string; positive: string; negative: string; total: string; score: string }>(
@@ -1178,7 +926,7 @@ router.get("/mwaramuriuki-login/feedback", async (req: Request, res: Response) =
 
 // ── GET /admin/pwa/stats ──────────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/pwa/stats", async (req: Request, res: Response) => {
+router.get("/admin/pwa/stats", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [totals, byPlatform, byDay] = await Promise.all([
@@ -1231,387 +979,6 @@ router.get("/mwaramuriuki-login/pwa/stats", async (req: Request, res: Response) 
       byPlatform: byPlatform.rows,
       byDay: byDay.rows,
     });
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// ── POST /admin/contact (no auth — public form submission) ───────────────────
-router.post("/contact", async (req: Request, res: Response) => {
-  try {
-    const { name, email, institution, message, seats } = req.body as {
-      name?: string; email?: string; institution?: string; message?: string; seats?: number;
-    };
-    if (!name?.trim() || !email?.trim() || !message?.trim()) {
-      return res.status(400).json({ error: "name, email, and message are required" });
-    }
-    if (name.trim().length > 200 || email.trim().length > 320 || message.trim().length > 5000) {
-      return res.status(400).json({ error: "Input too long" });
-    }
-    if (institution && institution.trim().length > 300) {
-      return res.status(400).json({ error: "Institution name too long" });
-    }
-    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRe.test(email.trim())) {
-      return res.status(400).json({ error: "Invalid email address" });
-    }
-    await pool.query(
-      `INSERT INTO contact_messages (name, email, institution, message, seats) VALUES ($1,$2,$3,$4,$5)`,
-      [name.trim(), email.trim(), institution?.trim() ?? null, message.trim(), seats ?? null]
-    );
-    return res.json({ ok: true });
-  } catch {
-    return res.status(500).json({ error: "Failed to submit message" });
-  }
-});
-
-// ── GET /admin/messages ──────────────────────────────────────────────────────
-router.get("/mwaramuriuki-login/messages", async (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
-  try {
-    const { rows } = await pool.query<{
-      id: string; name: string; email: string; institution: string | null;
-      message: string; seats: string | null; read: boolean; replied: boolean; created_at: string;
-    }>(`SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 200`);
-    return res.json({ messages: rows });
-  } catch {
-    return res.status(500).json({ error: "Failed to load messages" });
-  }
-});
-
-// ── PATCH /admin/messages/:id/mark-read ─────────────────────────────────────
-router.patch("/mwaramuriuki-login/messages/:id/mark-read", async (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
-  try {
-    await pool.query(`UPDATE contact_messages SET read = true WHERE id = $1`, [req.params.id]);
-    return res.json({ ok: true });
-  } catch {
-    return res.status(500).json({ error: "Failed to update" });
-  }
-});
-
-// ── PATCH /admin/messages/:id/mark-replied ───────────────────────────────────
-router.patch("/mwaramuriuki-login/messages/:id/mark-replied", async (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
-  try {
-    await pool.query(`UPDATE contact_messages SET read = true, replied = true WHERE id = $1`, [req.params.id]);
-    return res.json({ ok: true });
-  } catch {
-    return res.status(500).json({ error: "Failed to update" });
-  }
-});
-
-// ── GET /admin/documents/all ─────────────────────────────────────────────────
-router.get("/mwaramuriuki-login/documents/all", async (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) return res.status(401).json({ error: "Unauthorized" });
-  try {
-    const limit = Math.min(parseInt((req.query.limit as string) || "50", 10) || 50, 200);
-    const offset = parseInt((req.query.offset as string) || "0", 10) || 0;
-    const typeFilter = req.query.type as string | undefined;
-    const userFilter = req.query.userId as string | undefined;
-
-    const conditions: string[] = [];
-    const values: unknown[] = [limit, offset];
-
-    if (typeFilter) { values.push(typeFilter); conditions.push(`d.type = $${values.length}`); }
-    if (userFilter) { values.push(userFilter); conditions.push(`d.user_id = $${values.length}`); }
-
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-
-    const { rows } = await pool.query(
-      `SELECT d.id, d.user_id, d.title, d.type, d.word_count, d.subject, d.doc_number,
-              d.created_at, d.updated_at
-       FROM documents d
-       ${where}
-       ORDER BY d.created_at DESC
-       LIMIT $1 OFFSET $2`,
-      values,
-    );
-
-    const countVals = conditions.length > 0 ? values.slice(2) : [];
-    const { rows: countRows } = await pool.query(
-      `SELECT COUNT(*) AS count FROM documents d ${where}`,
-      countVals,
-    );
-
-    return res.json({
-      documents: rows.map((d: Record<string, unknown>) => ({
-        id: d.id,
-        userId: d.user_id,
-        title: d.title,
-        type: d.type,
-        wordCount: d.word_count,
-        subject: d.subject,
-        docNumber: d.doc_number,
-        createdAt: d.created_at,
-        updatedAt: d.updated_at,
-      })),
-      total: parseInt((countRows[0] as Record<string, string>)?.count ?? "0", 10),
-      limit,
-      offset,
-    });
-  } catch (err) {
-    console.error("[admin] Failed to fetch all documents:", err);
-    return res.status(500).json({ error: "Failed to fetch documents" });
-  }
-});
-
-// ── GET /admin/api-costs — Claude Code Usage Monitor pattern ──────────────────
-// Exposes the in-process API cost log so admins can see exactly which operations
-// are burning budget. Groups usage by model and operation for easy diagnosis.
-// Technique: Claude Code Usage Monitor (github.com/Macawls/claude-code-usage-monitor)
-// applied server-side — track token spend per task type in real time.
-
-router.get("/mwaramuriuki-login/api-costs", (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const log   = getUsageLog();
-  const budget = checkBudget();
-
-  // Aggregate by operation
-  const byOperation: Record<string, { calls: number; inputTokens: number; outputTokens: number; costUsd: number; model: string }> = {};
-  const byModel:     Record<string, { calls: number; inputTokens: number; outputTokens: number; costUsd: number }> = {};
-
-  for (const r of log) {
-    // By operation
-    if (!byOperation[r.operation]) {
-      byOperation[r.operation] = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, model: r.model };
-    }
-    byOperation[r.operation].calls++;
-    byOperation[r.operation].inputTokens  += r.inputTokens;
-    byOperation[r.operation].outputTokens += r.outputTokens;
-    byOperation[r.operation].costUsd      += r.costUsd;
-
-    // By model
-    if (!byModel[r.model]) {
-      byModel[r.model] = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0 };
-    }
-    byModel[r.model].calls++;
-    byModel[r.model].inputTokens  += r.inputTokens;
-    byModel[r.model].outputTokens += r.outputTokens;
-    byModel[r.model].costUsd      += r.costUsd;
-  }
-
-  // Sort operations by cost descending (highest burning first)
-  const topOperations = Object.entries(byOperation)
-    .sort(([, a], [, b]) => b.costUsd - a.costUsd)
-    .map(([operation, data]) => ({
-      operation,
-      ...data,
-      costUsd: parseFloat(data.costUsd.toFixed(6)),
-    }));
-
-  const modelSummary = Object.entries(byModel)
-    .sort(([, a], [, b]) => b.costUsd - a.costUsd)
-    .map(([model, data]) => ({
-      model,
-      ...data,
-      costUsd: parseFloat(data.costUsd.toFixed(6)),
-    }));
-
-  return res.json({
-    budget: {
-      sessionCostUsd:  parseFloat(budget.sessionCost.toFixed(6)),
-      dailyBudgetUsd:  budget.dailyBudget,
-      percentUsed:     parseFloat(budget.percentUsed.toFixed(2)),
-      warning:         budget.warning,
-      ok:              budget.ok,
-    },
-    totalCalls:   log.length,
-    topOperations,
-    byModel:      modelSummary,
-    recentLog:    log.slice(-50).reverse().map(r => ({
-      ...r,
-      costUsd:   parseFloat(r.costUsd.toFixed(6)),
-      timestamp: r.timestamp.toISOString(),
-    })),
-  });
-});
-
-// ── GET /admin/intelligence ────────────────────────────────────────────────────
-// Returns quality signals, source performance stats, and user feedback data
-// so the admin can see how the AI system is learning and improving over time.
-
-router.get("/mwaramuriuki-login/intelligence", async (req: Request, res: Response) => {
-  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
-
-  type QRow = { signal_type: string; avg: string; cnt: string };
-  type WRow = { week: Date; signal_type: string; avg: string; cnt: string };
-  type SRow = { source: string; subject: string; total_queries: number; total_results: number; success_count: number };
-  type FTotalRow = { rating: string; cnt: string };
-  type FTypeRow  = { type: string; rating: string; cnt: string };
-
-  try {
-    const [allTimeRes, last30Res, weeklyRes, sourceRes, fbTotalRes, fbTypeRes] = await Promise.all([
-      pool.query<QRow>(`SELECT signal_type, ROUND(AVG(score)::numeric, 1)::text AS avg, COUNT(*)::text AS cnt FROM quality_signals GROUP BY signal_type`),
-      pool.query<QRow>(`SELECT signal_type, ROUND(AVG(score)::numeric, 1)::text AS avg, COUNT(*)::text AS cnt FROM quality_signals WHERE recorded_at > NOW() - INTERVAL '30 days' GROUP BY signal_type`),
-      pool.query<WRow>(`
-        SELECT date_trunc('week', recorded_at) AS week, signal_type,
-               ROUND(AVG(score)::numeric, 1)::text AS avg, COUNT(*)::text AS cnt
-        FROM quality_signals WHERE recorded_at > NOW() - INTERVAL '8 weeks'
-        GROUP BY week, signal_type ORDER BY week ASC
-      `),
-      pool.query<SRow>(`SELECT source, subject, total_queries, total_results, success_count FROM source_learning_stats ORDER BY total_results DESC LIMIT 20`),
-      pool.query<FTotalRow>(`SELECT rating, COUNT(*)::text AS cnt FROM output_feedback GROUP BY rating`).catch(() => ({ rows: [] as FTotalRow[] })),
-      pool.query<FTypeRow>(`SELECT type, rating, COUNT(*)::text AS cnt FROM output_feedback GROUP BY type, rating ORDER BY type, rating`).catch(() => ({ rows: [] as FTypeRow[] })),
-    ]);
-
-    const buildQuality = (rows: QRow[]) => {
-      const m: Record<string, { avg: number; count: number }> = {};
-      for (const r of rows) m[r.signal_type] = { avg: parseFloat(r.avg), count: Number(r.cnt) };
-      return {
-        avgAiDetection: m["ai_detection"]?.avg ?? null,
-        avgPlagiarism:  m["plagiarism"]?.avg  ?? null,
-        avgGrade:       m["grade_verify"]?.avg ?? null,
-        totalSignals:   Object.values(m).reduce((s, v) => s + v.count, 0),
-      };
-    };
-
-    const weekMap: Record<string, Record<string, number>> = {};
-    for (const r of weeklyRes.rows) {
-      const wk = r.week.toISOString().slice(0, 10);
-      if (!weekMap[wk]) weekMap[wk] = {};
-      weekMap[wk][r.signal_type] = parseFloat(r.avg);
-    }
-    const weeklyTrends = Object.entries(weekMap).map(([week, m]) => ({
-      week,
-      avgAiDetection: m["ai_detection"] ?? null,
-      avgPlagiarism:  m["plagiarism"]   ?? null,
-      avgGrade:       m["grade_verify"] ?? null,
-    }));
-
-    const topSources = sourceRes.rows.map((r) => ({
-      source:      r.source,
-      subject:     r.subject,
-      totalQueries: Number(r.total_queries),
-      totalResults: Number(r.total_results),
-      successRate: r.total_queries > 0 ? parseFloat((r.success_count / r.total_queries).toFixed(3)) : 0,
-      avgResults:  r.total_queries > 0 ? parseFloat((r.total_results / r.total_queries).toFixed(1)) : 0,
-    }));
-
-    const fbTotal: Record<string, number> = {};
-    for (const r of fbTotalRes.rows) fbTotal[r.rating] = Number(r.cnt);
-    const fbByType: Record<string, { up: number; down: number }> = {};
-    for (const r of fbTypeRes.rows) {
-      if (!fbByType[r.type]) fbByType[r.type] = { up: 0, down: 0 };
-      if (r.rating === "up" || r.rating === "down") fbByType[r.type][r.rating] = Number(r.cnt);
-    }
-
-    res.json({
-      qualityAverages: { allTime: buildQuality(allTimeRes.rows), last30Days: buildQuality(last30Res.rows) },
-      weeklyTrends,
-      topSources,
-      feedbackStats: { totalUp: fbTotal["up"] ?? 0, totalDown: fbTotal["down"] ?? 0, byType: fbByType },
-    });
-  } catch (err) {
-    console.error("[admin] intelligence fetch failed:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// ── GET /admin/admin-users ────────────────────────────────────────────────────
-// Lists all sector admins. Super admin only.
-
-router.get("/mwaramuriuki-login/admin-users", async (req: Request, res: Response) => {
-  if (!requireSuperAdmin(req)) { res.status(401).json({ error: "Unauthorized — super admin only" }); return; }
-  try {
-    const { rows } = await pool.query<{
-      id: number; name: string; email: string; sectors: string[];
-      active: boolean; created_by: string; created_at: string; updated_at: string;
-    }>(
-      "SELECT id, name, email, sectors, active, created_by, created_at, updated_at FROM admin_users ORDER BY created_at DESC"
-    );
-    res.json({ adminUsers: rows });
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-router.post("/mwaramuriuki-login/admin-users", async (req: Request, res: Response) => {
-  if (!requireSuperAdmin(req)) { res.status(401).json({ error: "Unauthorized — super admin only" }); return; }
-  const { name, email, password, sectors } = req.body as {
-    name?: string; email?: string; password?: string; sectors?: string[];
-  };
-  if (!name || !name.trim()) { res.status(400).json({ error: "name is required" }); return; }
-  if (!email || !email.trim()) { res.status(400).json({ error: "email is required" }); return; }
-  if (!password || password.length < 8) { res.status(400).json({ error: "password must be at least 8 characters" }); return; }
-  if (!Array.isArray(sectors) || sectors.length === 0) { res.status(400).json({ error: "at least one sector is required" }); return; }
-  const VALID_SECTORS = ["content", "finance", "analytics", "support", "technical", "all"];
-  const invalidSectors = sectors.filter((s) => !VALID_SECTORS.includes(s));
-  if (invalidSectors.length > 0) { res.status(400).json({ error: `Invalid sectors: ${invalidSectors.join(", ")}` }); return; }
-  try {
-    const passwordHash = await bcrypt.hash(password, 12);
-    const { rows } = await pool.query<{ id: number }>(
-      "INSERT INTO admin_users (name, email, password_hash, sectors, created_by) VALUES ($1, $2, $3, $4, 'super') RETURNING id",
-      [name.trim(), email.trim().toLowerCase(), passwordHash, sectors],
-    );
-    res.status(201).json({ ok: true, id: rows[0].id });
-  } catch (err: unknown) {
-    const pgErr = err as { code?: string };
-    if (pgErr.code === "23505") { res.status(409).json({ error: "Email already exists" }); return; }
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// ── PATCH /admin/admin-users/:id ─────────────────────────────────────────────
-// Updates name, sectors, active status, or resets password. Super admin only.
-
-router.patch("/mwaramuriuki-login/admin-users/:id", async (req: Request, res: Response) => {
-  if (!requireSuperAdmin(req)) { res.status(401).json({ error: "Unauthorized — super admin only" }); return; }
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const { name, sectors, active, password } = req.body as {
-    name?: string; sectors?: string[]; active?: boolean; password?: string;
-  };
-
-  const updates: string[] = [];
-  const values: unknown[] = [];
-  let idx = 1;
-
-  if (name !== undefined) { updates.push(`name = $${idx++}`); values.push(name.trim()); }
-  if (sectors !== undefined) {
-    const VALID_SECTORS = ["content", "finance", "analytics", "support", "technical", "all"];
-    const bad = sectors.filter((s) => !VALID_SECTORS.includes(s));
-    if (bad.length > 0) { res.status(400).json({ error: `Invalid sectors: ${bad.join(", ")}` }); return; }
-    updates.push(`sectors = $${idx++}`); values.push(sectors);
-  }
-  if (active !== undefined) { updates.push(`active = $${idx++}`); values.push(active); }
-  if (password !== undefined) {
-    if (password.length < 8) { res.status(400).json({ error: "password must be at least 8 characters" }); return; }
-    const hash = await bcrypt.hash(password, 12);
-    updates.push(`password_hash = $${idx++}`); values.push(hash);
-  }
-
-  if (updates.length === 0) { res.status(400).json({ error: "No fields to update" }); return; }
-  updates.push(`updated_at = NOW()`);
-  values.push(id);
-
-  try {
-    const result = await pool.query(
-      `UPDATE admin_users SET ${updates.join(", ")} WHERE id = $${idx} RETURNING id`,
-      values,
-    );
-    if (result.rowCount === 0) { res.status(404).json({ error: "Admin user not found" }); return; }
-    res.json({ ok: true });
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// ── DELETE /admin/admin-users/:id ─────────────────────────────────────────────
-// Permanently deletes a sector admin. Super admin only.
-
-router.delete("/mwaramuriuki-login/admin-users/:id", async (req: Request, res: Response) => {
-  if (!requireSuperAdmin(req)) { res.status(401).json({ error: "Unauthorized — super admin only" }); return; }
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-  try {
-    const result = await pool.query("DELETE FROM admin_users WHERE id = $1 RETURNING id", [id]);
-    if (result.rowCount === 0) { res.status(404).json({ error: "Admin user not found" }); return; }
-    res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Internal server error" });
   }

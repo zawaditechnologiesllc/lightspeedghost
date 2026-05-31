@@ -1,60 +1,34 @@
 /**
  * Academic Source Network — Multi-database search with real abstracts.
- * Aggregates from verified peer-reviewed sources via free public APIs only.
- * No Wikipedia, no blogs, no news sites — only DOI-verifiable academic content.
+ * Aggregates from 50,000+ peer-reviewed sources via free public APIs.
+ * No Wikipedia, no blogs — only DOI-verifiable academic content.
  *
- * Sources (25+ live API integrations, 1.5B+ papers):
+ * Sources (13 databases, 1B+ papers):
+ *  • OpenAlex     — 250M+ papers from 50,000+ publishers (openalex.org)
+ *  • CrossRef     — 145M+ DOI records (crossref.org)
+ *  • Europe PMC   — 40M+ biomedical papers with full abstracts (europepmc.org)
+ *  • CORE         — 200M+ open access outputs (humanities, social sciences, STEM)
+ *  • DOAJ         — 20,000+ peer-reviewed open access journals
+ *  • arXiv        — 2.4M+ STEM and CS preprints
+ *  • Semantic Scholar — 200M+ papers with citation intelligence
+ *  • PubMed NCBI  — 36M+ biomedical papers (gold standard for medicine)
+ *  • ERIC         — 2M+ education research papers
+ *  • Zenodo       — 3M+ CERN open research records
+ *  • BASE         — 340M+ documents from 10,000+ repositories (broad coverage)
+ *  • DataCite     — 48M+ research objects with DOIs (datasets, preprints, papers)
+ *  • OpenAIRE     — 100M+ EU-funded research outputs (European academic coverage)
  *
- *  ── MEGA AGGREGATORS (cover virtually all publishers) ──────────────────────
- *  • OpenAlex          — 250M+ works from 50,000+ publishers (openalex.org)
- *  • CrossRef          — 145M+ DOI records (citation backbone of publishing)
- *  • BASE              — 340M+ docs from 10,000+ institutional repositories
- *  • CORE              — 200M+ OA outputs from 10,000+ data providers
- *  • Semantic Scholar  — 200M+ papers, AI-enhanced citation intelligence
+ * These APIs together cover virtually every major academic publisher:
+ * Elsevier, Springer, Wiley, Nature, Science, IEEE, ACM, JSTOR, PubMed,
+ * and thousands of open-access repositories worldwide.
  *
- *  ── BIOMEDICAL & CLINICAL ──────────────────────────────────────────────────
- *  • PubMed NCBI       — 36M+ biomedical papers (NIH gold standard)
- *  • PubMed Central    — 8M+ full-text biomedical papers (NIH-funded)
- *  • Europe PMC        — 40M+ biomedical papers with full abstracts
- *  • BioRxiv           — Biology preprints (Cold Spring Harbor Lab)
- *  • MedRxiv           — Medical/health preprints (CSH + Yale/BMJ)
- *  • ClinicalTrials.gov — 450,000+ trial registrations from 220+ countries
- *
- *  ── STEM & PHYSICS ─────────────────────────────────────────────────────────
- *  • arXiv             — 2.4M+ STEM, CS, econ, stats preprints
- *  • NASA ADS          — 16M+ astronomy & astrophysics papers
- *  • Zenodo (CERN)     — 3M+ open research records (datasets, preprints)
- *  • DataCite          — 48M+ research objects with DOIs
- *
- *  ── OPEN ACCESS JOURNALS ───────────────────────────────────────────────────
- *  • DOAJ              — 20,000+ peer-reviewed OA journals
- *  • PLOS ONE          — 250,000+ OA articles (biology, medicine, science)
- *  • Figshare          — 9M+ research outputs with DOIs
- *  • Dryad             — 50,000+ peer-reviewed data packages
- *
- *  ── EDUCATION, SOCIAL & HUMANITIES ────────────────────────────────────────
- *  • ERIC (US Dept Ed) — 2M+ education research papers
- *  • HAL (France)      — 1.5M+ OA papers from French institutions
- *  • OpenAIRE          — 100M+ EU-funded research outputs
- *
- *  ── ECONOMICS & INTERDISCIPLINARY ─────────────────────────────────────────
- *  • NBER              — National Bureau of Economic Research working papers
- *  • OSF Preprints     — Multidisciplinary preprints (psychology, social science)
- *
- *  ── RECENT EVENTS LAYER ────────────────────────────────────────────────────
- *  • Current Literature — arXiv + CrossRef + OpenAlex with 90-day recency filter
- *    for topics requiring up-to-date research (auto-detected)
- *
- * VERIFIABILITY GUARANTEE:
- *  Every source returned has a DOI or institutional URL — nothing from
- *  Wikipedia, news sites, or unreviewed grey literature reaches the AI.
- *  For events after the AI knowledge cutoff, the system flags uncertainty
- *  and routes to recent preprints from the last 90 days.
+ * The abstracts are injected as RAG (Retrieval-Augmented Generation) context
+ * into AI prompts, grounding responses in real peer-reviewed content and
+ * preventing hallucination.
  */
 
 import { withCache } from "./cache.js";
 import { ssRateLimit } from "./ssRateLimit.js";
-import { getSourceStats, type SourceStats } from "./learningEngine.js";
 
 export interface AcademicPaper {
   title: string;
@@ -1081,717 +1055,12 @@ async function searchOpenAIRE(
   }
 }
 
-// ── PLOS ONE ──────────────────────────────────────────────────────────────────
-// 250,000+ open-access peer-reviewed articles. No API key required.
-// Covers biology, medicine, environment, social sciences, computer science.
-
-async function searchPLOS(query: string, limit: number): Promise<AcademicPaper[]> {
-  try {
-    const params = new URLSearchParams({
-      q: `everything:"${query}"`,
-      fl: "id,title_display,author_display,abstract,publication_date,journal",
-      rows: String(Math.min(limit, 10)),
-      fq: "doc_type:full",
-      wt: "json",
-    });
-    const res = await fetch(`https://api.plos.org/search?${params}`, {
-      headers: { "User-Agent": "LightSpeedGhost/1.0 (mailto:research@lightspeedghost.com)" },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      response?: { docs?: Array<{
-        title_display?: string;
-        author_display?: string[];
-        abstract?: string[];
-        publication_date?: string;
-        id?: string;
-        journal?: string;
-      }> };
-    };
-    return (data.response?.docs ?? [])
-      .map((item): AcademicPaper | null => {
-        const abstract = (item.abstract ?? [])[0]?.trim() ?? "";
-        if (abstract.length < 50) return null;
-        const doi = item.id?.replace(/^info:doi\//, "");
-        return {
-          title: item.title_display ?? "Unknown Title",
-          authors: (item.author_display ?? []).slice(0, 3).join(", ") || "Unknown Authors",
-          year: parseInt(item.publication_date?.slice(0, 4) ?? String(new Date().getFullYear())),
-          abstract: abstract.slice(0, 700),
-          doi,
-          url: doi ? `https://doi.org/${doi}` : `https://journals.plos.org/search?q=${encodeURIComponent(query)}`,
-          source: "PLOS ONE (250K+ OA articles)",
-          journal: item.journal,
-        };
-      })
-      .filter((p): p is AcademicPaper => p !== null);
-  } catch { return []; }
-}
-
-// ── Figshare ──────────────────────────────────────────────────────────────────
-// 9M+ research outputs (papers, datasets, posters, code). All DOI-assigned.
-// Free API, no key required.
-
-async function searchFigshare(query: string, limit: number): Promise<AcademicPaper[]> {
-  try {
-    const res = await fetch("https://api.figshare.com/v2/articles/search", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "LightSpeedGhost/1.0 (mailto:research@lightspeedghost.com)",
-      },
-      body: JSON.stringify({ search_for: query, page_size: Math.min(limit, 10), item_type: 2 }),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as Array<{
-      title?: string;
-      authors?: Array<{ full_name?: string }>;
-      published_date?: string;
-      description?: string;
-      doi?: string;
-      url_public_html?: string;
-      tags?: string[];
-    }>;
-    return (data ?? [])
-      .map((item): AcademicPaper | null => {
-        const abstract = (item.description ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-        if (abstract.length < 40) return null;
-        const year = parseInt(item.published_date?.slice(0, 4) ?? String(new Date().getFullYear()));
-        const doi = item.doi?.replace("https://doi.org/", "").replace("doi:", "").trim() || undefined;
-        return {
-          title: item.title ?? "Unknown Title",
-          authors: (item.authors ?? []).slice(0, 3).map((a) => a.full_name ?? "").filter(Boolean).join(", ") || "Unknown Authors",
-          year,
-          abstract: abstract.slice(0, 700),
-          doi,
-          url: doi ? `https://doi.org/${doi}` : item.url_public_html ?? "",
-          source: "Figshare (9M+ research outputs)",
-        };
-      })
-      .filter((p): p is AcademicPaper => p !== null && p.url !== "");
-  } catch { return []; }
-}
-
-// ── HAL (France) Open Archive ──────────────────────────────────────────────────
-// 1.5M+ peer-reviewed publications from French and European research institutions.
-// Excellent for humanities, social sciences, European STEM. Free API.
-
-async function searchHAL(query: string, limit: number): Promise<AcademicPaper[]> {
-  try {
-    const params = new URLSearchParams({
-      q: query,
-      fl: "title_s,authFullName_s,publicationDateY_i,abstract_s,doiId_s,uri_s,journalTitle_s",
-      wt: "json",
-      rows: String(Math.min(limit, 10)),
-      sort: "relevance_s desc",
-    });
-    const res = await fetch(`https://api.archives-ouvertes.fr/search/?${params}`, {
-      headers: { "User-Agent": "LightSpeedGhost/1.0" },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      response?: { docs?: Array<{
-        title_s?: string[];
-        authFullName_s?: string[];
-        publicationDateY_i?: number;
-        abstract_s?: string[];
-        doiId_s?: string;
-        uri_s?: string;
-        journalTitle_s?: string;
-      }> };
-    };
-    return (data.response?.docs ?? [])
-      .map((item): AcademicPaper | null => {
-        const abstract = (item.abstract_s ?? [])[0]?.trim() ?? "";
-        if (abstract.length < 50) return null;
-        const doi = item.doiId_s || undefined;
-        return {
-          title: (item.title_s ?? ["Unknown Title"])[0],
-          authors: (item.authFullName_s ?? []).slice(0, 3).join(", ") || "Unknown Authors",
-          year: item.publicationDateY_i ?? new Date().getFullYear(),
-          abstract: abstract.slice(0, 700),
-          doi,
-          url: doi ? `https://doi.org/${doi}` : item.uri_s ?? "",
-          source: "HAL France (1.5M+ OA papers)",
-          journal: item.journalTitle_s,
-        };
-      })
-      .filter((p): p is AcademicPaper => p !== null && p.url !== "");
-  } catch { return []; }
-}
-
-// ── NASA ADS (Astrophysics Data System) ───────────────────────────────────────
-// 16M+ astronomy, astrophysics, and physics papers from NASA/Harvard.
-// Free API key required → set NASA_ADS_API_KEY env var (ads.harvard.edu).
-// Gracefully skipped if key not set.
-
-async function searchNASAADS(query: string, limit: number): Promise<AcademicPaper[]> {
-  const key = process.env.NASA_ADS_API_KEY;
-  if (!key) return [];
-  try {
-    const params = new URLSearchParams({
-      q: query,
-      rows: String(Math.min(limit, 10)),
-      fl: "title,author,year,abstract,identifier,bibcode",
-      sort: "relevance desc",
-    });
-    const res = await fetch(`https://api.adsabs.harvard.edu/v1/search/query?${params}`, {
-      headers: { Authorization: `Bearer ${key}`, "User-Agent": "LightSpeedGhost/1.0" },
-      signal: AbortSignal.timeout(9000),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      response?: { docs?: Array<{
-        title?: string[];
-        author?: string[];
-        year?: string;
-        abstract?: string;
-        identifier?: string[];
-        bibcode?: string;
-      }> };
-    };
-    return (data.response?.docs ?? [])
-      .map((item): AcademicPaper | null => {
-        const abstract = (item.abstract ?? "").trim();
-        if (abstract.length < 50) return null;
-        const doi = item.identifier?.find((id) => id.startsWith("10."))?.replace("doi:", "");
-        const bibcode = item.bibcode;
-        return {
-          title: (item.title ?? ["Unknown Title"])[0],
-          authors: (item.author ?? []).slice(0, 3).join(", ") || "Unknown Authors",
-          year: parseInt(item.year ?? String(new Date().getFullYear())),
-          abstract: abstract.slice(0, 700),
-          doi,
-          url: doi ? `https://doi.org/${doi}` : bibcode ? `https://ui.adsabs.harvard.edu/abs/${bibcode}` : "",
-          source: "NASA ADS (16M+ astro papers)",
-        };
-      })
-      .filter((p): p is AcademicPaper => p !== null && p.url !== "");
-  } catch { return []; }
-}
-
-// ── ClinicalTrials.gov ────────────────────────────────────────────────────────
-// 450,000+ clinical trial registrations from 220+ countries (NIH/FDA-operated).
-// Essential for medical, pharmacological, and public health research.
-// Free API, no key required.
-
-async function searchClinicalTrials(query: string, limit: number): Promise<AcademicPaper[]> {
-  try {
-    const params = new URLSearchParams({
-      "query.term": query,
-      pageSize: String(Math.min(limit, 10)),
-      format: "json",
-      fields: "NCTId,BriefTitle,BriefSummary,Condition,LeadSponsorName,StartDate,StudyType,Phase,OverallStatus",
-    });
-    const res = await fetch(`https://clinicaltrials.gov/api/v2/studies?${params}`, {
-      headers: { "User-Agent": "LightSpeedGhost/1.0" },
-      signal: AbortSignal.timeout(9000),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      studies?: Array<{
-        protocolSection?: {
-          identificationModule?: { nctId?: string; briefTitle?: string };
-          descriptionModule?: { briefSummary?: string };
-          conditionsModule?: { conditions?: string[] };
-          sponsorCollaboratorsModule?: { leadSponsor?: { name?: string } };
-          statusModule?: { startDateStruct?: { date?: string }; overallStatus?: string };
-          designModule?: { studyType?: string; phases?: string[] };
-        };
-      }>;
-    };
-    return (data.studies ?? [])
-      .map((item): AcademicPaper | null => {
-        const proto = item.protocolSection;
-        const abstract = (proto?.descriptionModule?.briefSummary ?? "").trim();
-        if (abstract.length < 40) return null;
-        const nctId = proto?.identificationModule?.nctId;
-        if (!nctId) return null;
-        const conditions = (proto?.conditionsModule?.conditions ?? []).slice(0, 2).join(", ");
-        const phase = (proto?.designModule?.phases ?? []).join("/") || "N/A";
-        const sponsor = proto?.sponsorCollaboratorsModule?.leadSponsor?.name ?? "";
-        const startYear = parseInt(proto?.statusModule?.startDateStruct?.date?.slice(0, 4) ?? "0");
-        return {
-          title: proto?.identificationModule?.briefTitle ?? "Unknown Trial",
-          authors: sponsor || "Unknown Sponsor",
-          year: startYear > 2000 ? startYear : new Date().getFullYear(),
-          abstract: `[Clinical Trial${conditions ? " — " + conditions : ""}${phase !== "N/A" ? " Phase " + phase : ""}] ${abstract}`.slice(0, 700),
-          url: `https://clinicaltrials.gov/study/${nctId}`,
-          source: "ClinicalTrials.gov (450K+ trials)",
-        };
-      })
-      .filter((p): p is AcademicPaper => p !== null);
-  } catch { return []; }
-}
-
-// ── Dryad Digital Repository ──────────────────────────────────────────────────
-// 50,000+ peer-reviewed research data packages with DOIs.
-// Free API, no key required. Best for data-intensive and empirical research.
-
-async function searchDryad(query: string, limit: number): Promise<AcademicPaper[]> {
-  try {
-    const params = new URLSearchParams({ q: query, per_page: String(Math.min(limit, 10)) });
-    const res = await fetch(`https://datadryad.org/api/v2/search?${params}`, {
-      headers: {
-        "User-Agent": "LightSpeedGhost/1.0 (mailto:research@lightspeedghost.com)",
-        "Accept": "application/json",
-      },
-      signal: AbortSignal.timeout(9000),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      data?: Array<{
-        type?: string;
-        attributes?: {
-          title?: string;
-          authors?: Array<{ lastName?: string; firstName?: string }>;
-          publicationDate?: string;
-          abstract?: string;
-          doi?: string;
-          publicationName?: string;
-        };
-      }>;
-    };
-    return (data.data ?? [])
-      .map((item): AcademicPaper | null => {
-        const attr = item.attributes;
-        if (!attr) return null;
-        const abstract = (attr.abstract ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-        if (abstract.length < 40) return null;
-        const doi = attr.doi?.replace("https://doi.org/", "").replace("doi:", "").trim() || undefined;
-        return {
-          title: attr.title ?? "Unknown Title",
-          authors: (attr.authors ?? []).slice(0, 3)
-            .map((a) => [a.lastName, a.firstName?.charAt(0)].filter(Boolean).join(", "))
-            .filter(Boolean).join("; ") || "Unknown Authors",
-          year: parseInt(attr.publicationDate?.slice(0, 4) ?? String(new Date().getFullYear())),
-          abstract: `[Research Data Package] ${abstract}`.slice(0, 700),
-          doi,
-          url: doi ? `https://doi.org/${doi}` : "",
-          source: "Dryad (50K+ research data packages)",
-          journal: attr.publicationName,
-        };
-      })
-      .filter((p): p is AcademicPaper => p !== null && p.url !== "");
-  } catch { return []; }
-}
-
-// ── PubMed Central (PMC) ──────────────────────────────────────────────────────
-// 8M+ full-text open-access biomedical papers from NIH-funded research.
-// Distinct from PubMed — provides full-text access, not just abstracts.
-
-async function searchPMC(query: string, limit: number): Promise<AcademicPaper[]> {
-  try {
-    const searchParams = new URLSearchParams({
-      db: "pmc",
-      term: query,
-      retmax: String(Math.min(limit, 6)),
-      retmode: "json",
-      sort: "relevance",
-    });
-    const searchRes = await fetch(
-      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?${searchParams}`,
-      { headers: { "User-Agent": "LightSpeedGhost/1.0" }, signal: AbortSignal.timeout(8000) }
-    );
-    if (!searchRes.ok) return [];
-    const searchData = (await searchRes.json()) as { esearchresult?: { idlist?: string[] } };
-    const ids = searchData.esearchresult?.idlist ?? [];
-    if (ids.length === 0) return [];
-
-    const fetchParams = new URLSearchParams({
-      db: "pmc",
-      id: ids.join(","),
-      rettype: "abstract",
-      retmode: "text",
-    });
-    const fetchRes = await fetch(
-      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?${fetchParams}`,
-      { headers: { "User-Agent": "LightSpeedGhost/1.0" }, signal: AbortSignal.timeout(10000) }
-    );
-    if (!fetchRes.ok) return [];
-    const rawText = await fetchRes.text();
-    const records = rawText.split(/\n\n\n+/).filter((r) => r.trim().length > 0);
-    return records
-      .map((record): AcademicPaper | null => {
-        const lines = record.split("\n").map((l) => l.trim()).filter(Boolean);
-        if (lines.length < 2) return null;
-        const title = lines[0].replace(/^\d+\.\s*/, "").trim().replace(/\.$/, "") || "Unknown Title";
-        const authors = lines[1]?.replace(/\.$/, "") ?? "Unknown Authors";
-        const yearMatch = record.match(/\b(19|20)\d{2}\b/);
-        const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
-        const doiMatch = record.match(/doi:\s*([^\s\n]+)/i);
-        const doi = doiMatch ? doiMatch[1].replace(/[.,]$/, "") : undefined;
-        const pmcMatch = record.match(/PMC\d+/);
-        const pmcId = pmcMatch ? pmcMatch[0] : null;
-        const absIdx = record.search(/\bAbstract\b/i);
-        let abstract = "";
-        if (absIdx !== -1) {
-          abstract = record.slice(absIdx + 8).split(/\n\nPMID:/)[0].trim().replace(/\s+/g, " ");
-        }
-        if (abstract.length < 40) return null;
-        const url = doi ? `https://doi.org/${doi}` : pmcId ? `https://www.ncbi.nlm.nih.gov/pmc/articles/${pmcId}/` : null;
-        if (!url) return null;
-        return { title, authors, year, abstract: abstract.slice(0, 700), doi, url, source: "PubMed Central (8M+ full-text)" };
-      })
-      .filter((p): p is AcademicPaper => p !== null);
-  } catch { return []; }
-}
-
-// ── BioRxiv Preprints ─────────────────────────────────────────────────────────
-// Biology preprints from Cold Spring Harbor Laboratory. Free via CrossRef filter.
-// Use for latest biology research before formal peer review.
-
-async function searchBioRxiv(query: string, limit: number): Promise<AcademicPaper[]> {
-  try {
-    const params = new URLSearchParams({
-      query,
-      rows: String(Math.min(limit, 8)),
-      select: "title,author,published,abstract,DOI,URL",
-      filter: "type:posted-content,member:246,has-abstract:true",
-      sort: "relevance",
-    });
-    const res = await fetch(`https://api.crossref.org/works?${params}`, {
-      headers: { "User-Agent": "LightSpeedGhost/1.0 (mailto:research@lightspeedghost.com)" },
-      signal: AbortSignal.timeout(9000),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      message?: { items?: Array<{
-        title?: string[];
-        author?: Array<{ family?: string; given?: string }>;
-        published?: { "date-parts"?: number[][] };
-        abstract?: string;
-        DOI?: string; URL?: string;
-      }> };
-    };
-    return (data.message?.items ?? [])
-      .map((item): AcademicPaper | null => {
-        const abstract = stripJats(item.abstract ?? "");
-        if (abstract.length < 50) return null;
-        const authors = (item.author ?? []).slice(0, 3)
-          .map((a) => `${a.family ?? ""}${a.given ? ", " + a.given.charAt(0) + "." : ""}`)
-          .filter((s) => s.trim() !== ",").join("; ");
-        return {
-          title: (item.title ?? ["Unknown Title"])[0],
-          authors: authors || "Unknown Authors",
-          year: item.published?.["date-parts"]?.[0]?.[0] ?? new Date().getFullYear(),
-          abstract: abstract.slice(0, 700),
-          doi: item.DOI,
-          url: item.DOI ? `https://doi.org/${item.DOI}` : item.URL ?? "",
-          source: "bioRxiv (biology preprints)",
-        };
-      })
-      .filter((p): p is AcademicPaper => p !== null && p.url !== "");
-  } catch { return []; }
-}
-
-// ── MedRxiv Preprints ─────────────────────────────────────────────────────────
-// Medical and health sciences preprints (Cold Spring Harbor + Yale/BMJ).
-// Use for latest clinical and epidemiological research before formal review.
-
-async function searchMedRxiv(query: string, limit: number): Promise<AcademicPaper[]> {
-  try {
-    const params = new URLSearchParams({
-      query,
-      rows: String(Math.min(limit, 8)),
-      select: "title,author,published,abstract,DOI,URL",
-      filter: "type:posted-content,member:25763,has-abstract:true",
-      sort: "relevance",
-    });
-    const res = await fetch(`https://api.crossref.org/works?${params}`, {
-      headers: { "User-Agent": "LightSpeedGhost/1.0 (mailto:research@lightspeedghost.com)" },
-      signal: AbortSignal.timeout(9000),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      message?: { items?: Array<{
-        title?: string[];
-        author?: Array<{ family?: string; given?: string }>;
-        published?: { "date-parts"?: number[][] };
-        abstract?: string;
-        DOI?: string; URL?: string;
-      }> };
-    };
-    return (data.message?.items ?? [])
-      .map((item): AcademicPaper | null => {
-        const abstract = stripJats(item.abstract ?? "");
-        if (abstract.length < 50) return null;
-        const authors = (item.author ?? []).slice(0, 3)
-          .map((a) => `${a.family ?? ""}${a.given ? ", " + a.given.charAt(0) + "." : ""}`)
-          .filter((s) => s.trim() !== ",").join("; ");
-        return {
-          title: (item.title ?? ["Unknown Title"])[0],
-          authors: authors || "Unknown Authors",
-          year: item.published?.["date-parts"]?.[0]?.[0] ?? new Date().getFullYear(),
-          abstract: abstract.slice(0, 700),
-          doi: item.DOI,
-          url: item.DOI ? `https://doi.org/${item.DOI}` : item.URL ?? "",
-          source: "medRxiv (medical preprints)",
-        };
-      })
-      .filter((p): p is AcademicPaper => p !== null && p.url !== "");
-  } catch { return []; }
-}
-
-// ── OSF Preprints ─────────────────────────────────────────────────────────────
-// Open Science Framework multidisciplinary preprints (psychology, social science,
-// education, interdisciplinary). Hosted at osf.io. Free API.
-
-async function searchOSFPreprints(query: string, limit: number): Promise<AcademicPaper[]> {
-  try {
-    const params = new URLSearchParams({
-      "filter[is_published]": "true",
-      "filter[reviews_state]": "accepted",
-      "page[size]": String(Math.min(limit, 10)),
-      "embed": "contributors",
-    });
-    const res = await fetch(
-      `https://api.osf.io/v2/preprints/?${params}&q=${encodeURIComponent(query)}`,
-      {
-        headers: {
-          "User-Agent": "LightSpeedGhost/1.0",
-          "Accept": "application/vnd.api+json",
-        },
-        signal: AbortSignal.timeout(9000),
-      }
-    );
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      data?: Array<{
-        attributes?: {
-          title?: string;
-          description?: string;
-          doi?: string;
-          date_published?: string;
-        };
-        id?: string;
-        relationships?: { contributors?: { data?: Array<{ id?: string }> } };
-      }>;
-    };
-    return (data.data ?? [])
-      .map((item): AcademicPaper | null => {
-        const attr = item.attributes;
-        if (!attr) return null;
-        const abstract = (attr.description ?? "").trim();
-        if (abstract.length < 40) return null;
-        const doi = attr.doi?.replace("https://doi.org/", "") || undefined;
-        const year = parseInt(attr.date_published?.slice(0, 4) ?? String(new Date().getFullYear()));
-        return {
-          title: attr.title ?? "Unknown Title",
-          authors: "See OSF for authors",
-          year,
-          abstract: abstract.slice(0, 700),
-          doi,
-          url: doi ? `https://doi.org/${doi}` : `https://osf.io/${item.id}`,
-          source: "OSF Preprints (multidisciplinary)",
-        };
-      })
-      .filter((p): p is AcademicPaper => p !== null);
-  } catch { return []; }
-}
-
-// ── NBER (National Bureau of Economic Research) ───────────────────────────────
-// 35,000+ working papers on economics, finance, public policy from leading economists.
-// Free API (basic), no key required for search.
-
-async function searchNBER(query: string, limit: number): Promise<AcademicPaper[]> {
-  try {
-    const params = new URLSearchParams({
-      searchterm: query,
-      perPage: String(Math.min(limit, 10)),
-      sortBy: "relevant",
-    });
-    const res = await fetch(`https://api.nber.org/workingpapers/search?${params}`, {
-      headers: { "User-Agent": "LightSpeedGhost/1.0" },
-      signal: AbortSignal.timeout(9000),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      papers?: Array<{
-        title?: string;
-        authors?: Array<{ name?: string }>;
-        year?: number;
-        abstract?: string;
-        paperNumber?: string;
-        doi?: string;
-      }>;
-    };
-    return (data.papers ?? [])
-      .map((item): AcademicPaper | null => {
-        const abstract = (item.abstract ?? "").trim();
-        if (abstract.length < 40) return null;
-        const doi = item.doi?.replace("https://doi.org/", "").trim() || undefined;
-        const nb = item.paperNumber;
-        return {
-          title: item.title ?? "Unknown Title",
-          authors: (item.authors ?? []).slice(0, 3).map((a) => a.name ?? "").filter(Boolean).join(", ") || "Unknown Authors",
-          year: item.year ?? new Date().getFullYear(),
-          abstract: `[NBER Working Paper${nb ? " #" + nb : ""}] ${abstract}`.slice(0, 700),
-          doi,
-          url: doi ? `https://doi.org/${doi}` : nb ? `https://www.nber.org/papers/${nb}` : "",
-          source: "NBER Working Papers (35K+ economics)",
-        };
-      })
-      .filter((p): p is AcademicPaper => p !== null && p.url !== "");
-  } catch { return []; }
-}
-
-// ── Recent Academic Literature (Current Events Layer) ─────────────────────────
-// For topics involving recent or current events, supplements the main databases
-// with papers published in the last 90 days from arXiv, CrossRef, and OpenAlex.
-// Auto-triggered when the topic contains recent-event keywords.
-
-export function isCurrentEventsTopic(query: string): boolean {
-  return /\b(2024|2025|2026|recent|latest|current|ongoing|new study|breaking|emerging|this year|last year|covid|pandemic|election|war|conflict|climate crisis|ai model|chatgpt|gpt-4|llm|large language)\b/i.test(query);
-}
-
-async function searchRecentAcademic(query: string, limit: number): Promise<AcademicPaper[]> {
-  const now = new Date();
-  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-  const fromDate = ninetyDaysAgo.toISOString().slice(0, 10);
-
-  const [recentArXiv, recentCrossRef, recentOA] = await Promise.allSettled([
-    // arXiv: search with date filter (last 90 days)
-    (async () => {
-      const params = new URLSearchParams({
-        search_query: `all:${query} AND submittedDate:[${fromDate.replace(/-/g, "")}0000 TO *]`,
-        start: "0",
-        max_results: String(Math.min(Math.ceil(limit * 0.4), 5)),
-        sortBy: "submittedDate",
-        sortOrder: "descending",
-      });
-      const res = await fetch(`https://export.arxiv.org/api/query?${params}`, {
-        headers: { "User-Agent": "LightSpeedGhost/1.0" },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (!res.ok) return [] as AcademicPaper[];
-      const xml = await res.text();
-      const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)];
-      return entries.map((match): AcademicPaper | null => {
-        const entry = match[1];
-        const title = entry.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.trim().replace(/\s+/g, " ") ?? "";
-        const abstract = entry.match(/<summary>([\s\S]*?)<\/summary>/)?.[1]?.trim().replace(/\s+/g, " ") ?? "";
-        const id = entry.match(/<id>(https?:\/\/arxiv\.org\/abs\/[^\s<]+)<\/id>/)?.[1] ?? "";
-        const year = parseInt(entry.match(/<published>(\d{4})/)?.[1] ?? String(new Date().getFullYear()));
-        const doi = entry.match(/<arxiv:doi[^>]*>([\s\S]*?)<\/arxiv:doi>/)?.[1]?.trim() ?? undefined;
-        const authorMatches = [...entry.matchAll(/<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/g)];
-        const authors = authorMatches.map((m) => m[1].trim()).join(", ") || "Unknown Authors";
-        if (abstract.length < 50 || !title) return null;
-        return { title, authors, year, abstract: abstract.slice(0, 700), doi, url: doi ? `https://doi.org/${doi}` : id, source: "arXiv (recent — last 90 days)" };
-      }).filter((p): p is AcademicPaper => p !== null);
-    })(),
-
-    // CrossRef: recent publications
-    (async () => {
-      const params = new URLSearchParams({
-        query,
-        rows: String(Math.min(Math.ceil(limit * 0.4), 5)),
-        select: "title,author,published,abstract,DOI,URL",
-        filter: `has-abstract:true,from-pub-date:${fromDate}`,
-        sort: "published",
-        order: "desc",
-      });
-      const res = await fetch(`https://api.crossref.org/works?${params}`, {
-        headers: { "User-Agent": "LightSpeedGhost/1.0 (mailto:research@lightspeedghost.com)" },
-        signal: AbortSignal.timeout(9000),
-      });
-      if (!res.ok) return [] as AcademicPaper[];
-      const data = (await res.json()) as {
-        message?: { items?: Array<{
-          title?: string[];
-          author?: Array<{ family?: string; given?: string }>;
-          published?: { "date-parts"?: number[][] };
-          abstract?: string;
-          DOI?: string; URL?: string;
-        }> };
-      };
-      return (data.message?.items ?? []).map((item): AcademicPaper | null => {
-        const abstract = stripJats(item.abstract ?? "");
-        if (abstract.length < 50) return null;
-        const authors = (item.author ?? []).slice(0, 3)
-          .map((a) => `${a.family ?? ""}${a.given ? ", " + a.given.charAt(0) + "." : ""}`)
-          .filter((s) => s.trim() !== ",").join("; ");
-        return {
-          title: (item.title ?? ["Unknown Title"])[0],
-          authors: authors || "Unknown Authors",
-          year: item.published?.["date-parts"]?.[0]?.[0] ?? new Date().getFullYear(),
-          abstract: abstract.slice(0, 700),
-          doi: item.DOI,
-          url: item.DOI ? `https://doi.org/${item.DOI}` : item.URL ?? "",
-          source: "CrossRef (recent — last 90 days)",
-        };
-      }).filter((p): p is AcademicPaper => p !== null && p.url !== "");
-    })(),
-
-    // OpenAlex: recent papers with date filter
-    (async () => {
-      const params = new URLSearchParams({
-        search: query,
-        per_page: String(Math.min(Math.ceil(limit * 0.3), 4)),
-        select: "id,title,authorships,publication_year,abstract_inverted_index,primary_location,doi,cited_by_count",
-        filter: `has_abstract:true,from_publication_date:${fromDate}`,
-        sort: "publication_date:desc",
-      });
-      const res = await fetch(`https://api.openalex.org/works?${params}`, {
-        headers: { "User-Agent": "LightSpeedGhost/1.0 (mailto:research@lightspeedghost.com)" },
-        signal: AbortSignal.timeout(9000),
-      });
-      if (!res.ok) return [] as AcademicPaper[];
-      const data = (await res.json()) as {
-        results?: Array<{
-          title?: string;
-          authorships?: Array<{ author?: { display_name?: string } }>;
-          publication_year?: number;
-          abstract_inverted_index?: Record<string, number[]>;
-          primary_location?: { source?: { display_name?: string }; doi?: string };
-          doi?: string; cited_by_count?: number; id?: string;
-        }>;
-      };
-      return (data.results ?? []).map((paper): AcademicPaper | null => {
-        const abstract = reconstructAbstract(paper.abstract_inverted_index);
-        if (abstract.length < 50) return null;
-        const authors = (paper.authorships ?? []).slice(0, 3).map((a) => a.author?.display_name ?? "").filter(Boolean).join(", ");
-        const rawDoi = paper.doi ?? paper.primary_location?.doi;
-        const doi = rawDoi?.replace("https://doi.org/", "");
-        return {
-          title: paper.title ?? "Unknown Title",
-          authors: authors || "Unknown Authors",
-          year: paper.publication_year ?? new Date().getFullYear(),
-          abstract: abstract.slice(0, 700),
-          doi,
-          url: doi ? `https://doi.org/${doi}` : paper.id ?? "",
-          source: "OpenAlex (recent — last 90 days)",
-          citationCount: paper.cited_by_count,
-        };
-      }).filter((p): p is AcademicPaper => p !== null);
-    })(),
-  ]);
-
-  const all: AcademicPaper[] = [
-    ...(recentArXiv.status === "fulfilled" ? recentArXiv.value : []),
-    ...(recentCrossRef.status === "fulfilled" ? recentCrossRef.value : []),
-    ...(recentOA.status === "fulfilled" ? recentOA.value : []),
-  ];
-
-  // Deduplicate
-  const seen = new Set<string>();
-  const deduped: AcademicPaper[] = [];
-  for (const p of all) {
-    const key = p.doi ? p.doi.toLowerCase() : p.title.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
-    if (!seen.has(key)) { seen.add(key); deduped.push(p); }
-  }
-  return deduped.slice(0, limit);
-}
-
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
  * Search all academic databases in parallel and return deduplicated results.
  *
- * Database coverage (25+ sources, 1.5B+ papers):
+ * Database coverage (13 sources, 1B+ papers):
  *  • OpenAlex          — 250M+ works, all disciplines (primary source, highest quality)
  *  • CrossRef          — 145M+ DOI records (citation backbone of academic publishing)
  *  • Europe PMC        — 40M+ biomedical papers (MEDLINE, PubMed Central, life sciences)
@@ -1834,63 +1103,23 @@ async function _fetchAllAcademicSources(
   const isFinanceBusiness =
     /financ|account|actuari|insurance|credit|banking|invest|econom|business|portfolio|risk\s*manage|audit|tax|ifrs|gaap|ebitda|valuation|derivative|hedge|underwriting|solvency|capital\s*market/i.test(combinedCtx);
 
-  // ── isAstronomy / isEconomics sub-topic detection ─────────────────────────
-  const isAstronomy =
-    /astronom|astrophy|cosmol|galaxy|galaxi|star|stellar|planet|solar|telescope|exoplanet|blackhole|dark matter|dark energy/i.test(combinedCtx);
-
-  const isEconomics =
-    /econom|macroec|microec|gdp|inflation|monetary|fiscal|labor market|trade policy|development economics|econometrics/i.test(combinedCtx);
-
-  const isSocialPsy =
-    /psychol|psychiatr|cognitiv|behavio|mental health|neuroscience|social science|anthropol/i.test(combinedCtx);
-
   // ── Budget allocation (over-request, then de-dup to `limit`) ─────────────────
   // Over-fetch per source so after deduplication we still hit the target limit.
-  const budget = Math.ceil(limit * 2.2);   // fetch ~120% more than needed across 25+ sources
+  const budget = Math.ceil(limit * 2.0);   // fetch ~100% more than needed across 13 sources
 
-  // ── Adaptive source weighting — learned from past performance ────────────────
-  // Each source gets a multiplier based on its observed successRate for this subject.
-  // Formula: multiplier = 0.5 + successRate  (range 0.5 – 1.5)
-  // Sources with <3 historical queries stay at neutral weight 1.0 (not enough data).
-  // This creates a self-improving loop: sources that consistently return results are
-  // allocated a larger share of the budget over time, while unreliable ones shrink.
-  const _learnedStats: SourceStats[] = await getSourceStats(subject ?? "general").catch(() => []);
-  const _weightMap: Record<string, number> = {};
-  for (const s of _learnedStats) {
-    _weightMap[s.source] = s.totalQueries >= 3
-      ? Math.max(0.5, Math.min(1.5, 0.5 + s.successRate))
-      : 1.0;
-  }
-  const w = (name: string) => _weightMap[name] ?? 1.0;
-
-  // ── Per-source request budgets (discipline-weighted) ────────────────────────
-  const openAlexLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.18 : 0.16) * w("OpenAlex"));
-  const crossRefLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.12 : 0.10) * w("CrossRef"));
-  const ssLimit          = Math.ceil(budget * (isFinanceBusiness ? 0.12 : 0.10) * w("Semantic Scholar"));
-  const europePMCLimit   = isBiomedical ? Math.ceil(budget * 0.10 * w("Europe PMC"))  : 0;
-  const pubmedLimit      = isBiomedical ? Math.ceil(budget * 0.08 * w("PubMed"))      : Math.ceil(budget * 0.03 * w("PubMed"));
-  const pmcLimit         = isBiomedical ? Math.ceil(budget * 0.06 * w("PubMed Central")) : 0;
-  const arxivLimit       = (isSTEM || isFinanceBusiness || isAstronomy) ? Math.ceil(budget * 0.10 * w("arXiv")) : Math.ceil(budget * 0.03 * w("arXiv"));
-  const ericLimit        = isEducation  ? Math.ceil(budget * 0.10 * w("ERIC"))        : Math.ceil(budget * 0.02 * w("ERIC"));
-  const coreLimit        = (isHumanities || isFinanceBusiness) ? Math.ceil(budget * 0.08 * w("CORE")) : Math.ceil(budget * 0.03 * w("CORE"));
-  const doajLimit        = (isHumanities || isFinanceBusiness) ? Math.ceil(budget * 0.06 * w("DOAJ")) : Math.ceil(budget * 0.02 * w("DOAJ"));
-  const zenodoLimit      = Math.ceil(budget * 0.03 * w("Zenodo"));
-  const baseLimit        = Math.ceil(budget * 0.06 * w("BASE"));
-  const dataCiteLimit    = Math.ceil(budget * 0.04 * w("DataCite"));
-  const openAIRELimit    = Math.ceil(budget * 0.05 * w("OpenAIRE"));
-  // New sources
-  const plosLimit        = isBiomedical                ? Math.ceil(budget * 0.06 * w("PLOS ONE"))         : Math.ceil(budget * 0.02 * w("PLOS ONE"));
-  const figshareLimit    = Math.ceil(budget * 0.03 * w("Figshare"));
-  const halLimit         = isHumanities                ? Math.ceil(budget * 0.06 * w("HAL France"))        : Math.ceil(budget * 0.02 * w("HAL France"));
-  const nasaAdsLimit     = isAstronomy                 ? Math.ceil(budget * 0.10 * w("NASA ADS"))          : (isSTEM ? Math.ceil(budget * 0.03 * w("NASA ADS")) : 0);
-  const clinicalLimit    = isBiomedical                ? Math.ceil(budget * 0.05 * w("ClinicalTrials"))     : 0;
-  const dryadLimit       = (isBiomedical || isSTEM)    ? Math.ceil(budget * 0.03 * w("Dryad"))             : 0;
-  const bioRxivLimit     = isBiomedical                ? Math.ceil(budget * 0.05 * w("bioRxiv"))            : 0;
-  const medRxivLimit     = isBiomedical                ? Math.ceil(budget * 0.04 * w("medRxiv"))            : 0;
-  const osfLimit         = (isHumanities || isSocialPsy) ? Math.ceil(budget * 0.04 * w("OSF Preprints"))  : 0;
-  const nberLimit        = (isEconomics || isFinanceBusiness) ? Math.ceil(budget * 0.06 * w("NBER"))       : 0;
-  const isCurrentEvents  = isCurrentEventsTopic(query);
-  const recentLimit      = isCurrentEvents             ? Math.ceil(budget * 0.08)                           : 0;
+  const openAlexLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.22 : 0.20));
+  const crossRefLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.14 : 0.12));
+  const ssLimit          = Math.ceil(budget * (isFinanceBusiness ? 0.14 : 0.12));
+  const pmcLimit         = isBiomedical ? Math.ceil(budget * 0.12) : 0;
+  const pubmedLimit      = isBiomedical ? Math.ceil(budget * 0.10) : Math.ceil(budget * 0.04);
+  const arxivLimit       = (isSTEM || isFinanceBusiness) ? Math.ceil(budget * 0.12) : Math.ceil(budget * 0.03);
+  const ericLimit        = isEducation  ? Math.ceil(budget * 0.12) : Math.ceil(budget * 0.03);
+  const coreLimit        = (isHumanities || isFinanceBusiness) ? Math.ceil(budget * 0.10) : Math.ceil(budget * 0.04);
+  const doajLimit        = (isHumanities || isFinanceBusiness) ? Math.ceil(budget * 0.08) : Math.ceil(budget * 0.03);
+  const zenodoLimit      = Math.ceil(budget * 0.04);  // general supplement
+  const baseLimit        = Math.ceil(budget * 0.08);  // broad humanities/social science coverage
+  const dataCiteLimit    = Math.ceil(budget * 0.05);  // datasets and interdisciplinary research
+  const openAIRELimit    = Math.ceil(budget * 0.06);  // European academic coverage
 
   const [
     openAlexResults,
@@ -1898,7 +1127,6 @@ async function _fetchAllAcademicSources(
     ssResults,
     europePMCResults,
     pubmedResults,
-    pmcResults,
     arxivResults,
     ericResults,
     coreResults,
@@ -1907,43 +1135,20 @@ async function _fetchAllAcademicSources(
     baseResults,
     dataCiteResults,
     openAIREResults,
-    plosResults,
-    figshareResults,
-    halResults,
-    nasaAdsResults,
-    clinicalResults,
-    dryadResults,
-    bioRxivResults,
-    medRxivResults,
-    osfResults,
-    nberResults,
-    recentResults,
   ] = await Promise.all([
     searchOpenAlex(query, openAlexLimit),
     searchCrossRef(query, crossRefLimit),
     searchSemanticScholar(query, ssLimit),
-    europePMCLimit > 0  ? searchEuropePMC(query, europePMCLimit)   : Promise.resolve([] as AcademicPaper[]),
-    pubmedLimit > 0     ? searchPubMed(query, pubmedLimit)          : Promise.resolve([] as AcademicPaper[]),
-    pmcLimit > 0        ? searchPMC(query, pmcLimit)                : Promise.resolve([] as AcademicPaper[]),
-    arxivLimit > 0      ? searchArXiv(query, arxivLimit)            : Promise.resolve([] as AcademicPaper[]),
-    ericLimit > 0       ? searchERIC(query, ericLimit)              : Promise.resolve([] as AcademicPaper[]),
-    coreLimit > 0       ? searchCORE(query, coreLimit)              : Promise.resolve([] as AcademicPaper[]),
-    doajLimit > 0       ? searchDOAJ(query, doajLimit)              : Promise.resolve([] as AcademicPaper[]),
-    zenodoLimit > 0     ? searchZenodo(query, zenodoLimit)          : Promise.resolve([] as AcademicPaper[]),
-    baseLimit > 0       ? searchBASE(query, baseLimit)              : Promise.resolve([] as AcademicPaper[]),
-    dataCiteLimit > 0   ? searchDataCite(query, dataCiteLimit)      : Promise.resolve([] as AcademicPaper[]),
-    openAIRELimit > 0   ? searchOpenAIRE(query, openAIRELimit)      : Promise.resolve([] as AcademicPaper[]),
-    plosLimit > 0       ? searchPLOS(query, plosLimit)              : Promise.resolve([] as AcademicPaper[]),
-    figshareLimit > 0   ? searchFigshare(query, figshareLimit)      : Promise.resolve([] as AcademicPaper[]),
-    halLimit > 0        ? searchHAL(query, halLimit)                : Promise.resolve([] as AcademicPaper[]),
-    nasaAdsLimit > 0    ? searchNASAADS(query, nasaAdsLimit)        : Promise.resolve([] as AcademicPaper[]),
-    clinicalLimit > 0   ? searchClinicalTrials(query, clinicalLimit): Promise.resolve([] as AcademicPaper[]),
-    dryadLimit > 0      ? searchDryad(query, dryadLimit)            : Promise.resolve([] as AcademicPaper[]),
-    bioRxivLimit > 0    ? searchBioRxiv(query, bioRxivLimit)        : Promise.resolve([] as AcademicPaper[]),
-    medRxivLimit > 0    ? searchMedRxiv(query, medRxivLimit)        : Promise.resolve([] as AcademicPaper[]),
-    osfLimit > 0        ? searchOSFPreprints(query, osfLimit)       : Promise.resolve([] as AcademicPaper[]),
-    nberLimit > 0       ? searchNBER(query, nberLimit)              : Promise.resolve([] as AcademicPaper[]),
-    recentLimit > 0     ? searchRecentAcademic(query, recentLimit)  : Promise.resolve([] as AcademicPaper[]),
+    pmcLimit > 0    ? searchEuropePMC(query, pmcLimit)    : Promise.resolve([] as AcademicPaper[]),
+    pubmedLimit > 0 ? searchPubMed(query, pubmedLimit)    : Promise.resolve([] as AcademicPaper[]),
+    arxivLimit > 0  ? searchArXiv(query, arxivLimit)      : Promise.resolve([] as AcademicPaper[]),
+    ericLimit > 0   ? searchERIC(query, ericLimit)        : Promise.resolve([] as AcademicPaper[]),
+    coreLimit > 0   ? searchCORE(query, coreLimit)        : Promise.resolve([] as AcademicPaper[]),
+    doajLimit > 0   ? searchDOAJ(query, doajLimit)        : Promise.resolve([] as AcademicPaper[]),
+    zenodoLimit > 0 ? searchZenodo(query, zenodoLimit)    : Promise.resolve([] as AcademicPaper[]),
+    baseLimit > 0   ? searchBASE(query, baseLimit)        : Promise.resolve([] as AcademicPaper[]),
+    dataCiteLimit > 0 ? searchDataCite(query, dataCiteLimit) : Promise.resolve([] as AcademicPaper[]),
+    openAIRELimit > 0 ? searchOpenAIRE(query, openAIRELimit) : Promise.resolve([] as AcademicPaper[]),
   ]);
 
   // ── Deduplicate by DOI (primary), then normalised title prefix (fallback) ───
@@ -1956,7 +1161,6 @@ async function _fetchAllAcademicSources(
     ...ssResults,
     ...europePMCResults,
     ...pubmedResults,
-    ...pmcResults,
     ...arxivResults,
     ...ericResults,
     ...coreResults,
@@ -1965,17 +1169,6 @@ async function _fetchAllAcademicSources(
     ...baseResults,
     ...dataCiteResults,
     ...openAIREResults,
-    ...plosResults,
-    ...figshareResults,
-    ...halResults,
-    ...nasaAdsResults,
-    ...clinicalResults,
-    ...dryadResults,
-    ...bioRxivResults,
-    ...medRxivResults,
-    ...osfResults,
-    ...nberResults,
-    ...recentResults,      // recent-events layer last (lower citation count expected)
   ];
 
   for (const paper of allResults) {
@@ -2041,29 +1234,19 @@ APA Reference: ${p.authors} (${p.year}). ${p.title}.${journal} ${p.source}. ${p.
     })
     .join("\n\n" + "─".repeat(60) + "\n\n");
 
-  const hasRecentLayer = papers.some((p) => p.source.includes("recent"));
-  const recentNote = hasRecentLayer
-    ? "\nRECENT EVENTS NOTE: Sources marked '(recent — last 90 days)' are the latest available preprints/publications. For events after April 2024 not covered here, flag the gap explicitly: '[post-cutoff — recommend checking current news sources]'."
-    : "";
-
   return `════════════════════════════════════════════════════════════
 VERIFIED ACADEMIC KNOWLEDGE BASE — ${papers.length} PEER-REVIEWED SOURCES
-Retrieved from 25+ live academic databases (1.5B+ papers):
-  Core: OpenAlex, CrossRef, Semantic Scholar, BASE (340M+), CORE (200M+)
-  Biomedical: PubMed NCBI, PubMed Central, Europe PMC, bioRxiv, medRxiv, ClinicalTrials.gov
-  STEM/Physics: arXiv, NASA ADS, Zenodo, DataCite, Dryad
-  OA Journals: DOAJ, PLOS ONE, Figshare
-  Education/Humanities: ERIC, HAL France, OpenAIRE, OSF Preprints
-  Economics: NBER Working Papers${hasRecentLayer ? "\n  Recent: arXiv/CrossRef/OpenAlex recency-filtered (last 90 days)" : ""}
-Results ranked by citation count. Wikipedia, news sites, and unverified sources excluded.${recentNote}
+Retrieved from 13 live academic databases (1B+ papers): OpenAlex, CrossRef,
+Semantic Scholar, PubMed NCBI, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo,
+BASE (340M+ docs), DataCite (48M+ items), OpenAIRE (100M+ EU research outputs).
+Results ranked by citation count. Wikipedia and non-peer-reviewed sources excluded.
 
 GROUNDING RULES (non-negotiable):
-• Cite ONLY papers present in this knowledge base — every URL/DOI here is verifiable
+• Cite ONLY papers present in this knowledge base
 • Do NOT invent statistics, figures, or findings not supported by these abstracts
-• Do NOT cite Wikipedia, general websites, or any source not in this list
+• Do NOT cite Wikipedia, general websites, or sources not in this list
 • If a fact cannot be grounded here, state it as general academic consensus and mark [citation needed]
 • Prioritise higher-cited and more recent papers where both are available
-• For topics post-dating the knowledge base, acknowledge the limitation explicitly
 ════════════════════════════════════════════════════════════
 
 ${entries}

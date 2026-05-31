@@ -1,6 +1,6 @@
 import { pool } from "@workspace/db";
 
-export type ToolName = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline" | "assistant" | "ebook";
+export type ToolName = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline" | "assistant";
 
 const DAILY_TOOLS = new Set<ToolName>([]);
 
@@ -14,20 +14,18 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     plagiarism: 5,   // per month
     outline:    5,   // per month
     assistant:  30,  // per month — text modes only; image mode blocked at route level
-    ebook:      0,   // not included in starter
   },
   pro: {
     paper:      15,  // per month
     revision:   20,  // per month — paired with papers
     humanizer:  20,  // per month — paired with papers
-    stem:       40,  // per month
-    study:      80,  // per month
+    stem:       60,  // per month
+    study:      150, // per month
     plagiarism: 20,  // per month — ~1 check per paper + buffer
     outline:    20,  // per month — paired with papers
     assistant:  300, // per month — Haiku text; Sonnet image/doc (Pro only)
-    ebook:      0,   // separate ebook add-on required
   },
-  institution: {
+  campus: {
     paper:      5,   // per month per seat
     revision:   8,   // per month per seat
     humanizer:  8,   // per month per seat
@@ -36,71 +34,8 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     plagiarism: 10,  // per month per seat
     outline:    10,  // per month per seat
     assistant:  150, // per month per seat
-    ebook:      0,   // separate ebook add-on required
   },
 };
-
-// ── Dynamic plan limits (reads from system_settings, cached 60s) ─────────────
-
-let _settingsCache: Record<string, string> | null = null;
-let _settingsCacheTime = 0;
-const SETTINGS_CACHE_TTL_MS = 60_000;
-
-async function getCachedSettings(): Promise<Record<string, string>> {
-  if (_settingsCache && Date.now() - _settingsCacheTime < SETTINGS_CACHE_TTL_MS) {
-    return _settingsCache;
-  }
-  try {
-    const { rows } = await pool.query<{ key: string; value: string }>("SELECT key, value FROM system_settings");
-    _settingsCache = Object.fromEntries(rows.map((r) => [r.key, r.value]));
-    _settingsCacheTime = Date.now();
-    return _settingsCache;
-  } catch {
-    return _settingsCache ?? {};
-  }
-}
-
-function buildDynamicLimits(s: Record<string, string>): Record<string, Record<ToolName, number | null>> {
-  const n = (key: string, fallback: number | null) => {
-    const v = s[key];
-    return v !== undefined ? Number(v) : fallback;
-  };
-  return {
-    starter: {
-      paper:      n("starter_paper",      PLAN_LIMITS.starter.paper),
-      revision:   n("starter_revision",   PLAN_LIMITS.starter.revision),
-      humanizer:  n("starter_humanizer",  PLAN_LIMITS.starter.humanizer),
-      stem:       n("starter_stem",       PLAN_LIMITS.starter.stem),
-      study:      n("starter_study",      PLAN_LIMITS.starter.study),
-      plagiarism: n("starter_plagiarism", PLAN_LIMITS.starter.plagiarism),
-      outline:    n("starter_outline",    PLAN_LIMITS.starter.outline),
-      assistant:  PLAN_LIMITS.starter.assistant,
-      ebook:      PLAN_LIMITS.starter.ebook,
-    },
-    pro: {
-      paper:      n("pro_paper",      PLAN_LIMITS.pro.paper),
-      revision:   n("pro_revision",   PLAN_LIMITS.pro.revision),
-      humanizer:  n("pro_humanizer",  PLAN_LIMITS.pro.humanizer),
-      stem:       n("pro_stem",       PLAN_LIMITS.pro.stem),
-      study:      n("pro_study",      PLAN_LIMITS.pro.study),
-      plagiarism: n("pro_plagiarism", PLAN_LIMITS.pro.plagiarism),
-      outline:    n("pro_outline",    PLAN_LIMITS.pro.outline),
-      assistant:  PLAN_LIMITS.pro.assistant,
-      ebook:      PLAN_LIMITS.pro.ebook,
-    },
-    institution: {
-      paper:      n("institution_paper",      PLAN_LIMITS.institution.paper),
-      revision:   n("institution_revision",   PLAN_LIMITS.institution.revision),
-      humanizer:  n("institution_humanizer",  PLAN_LIMITS.institution.humanizer),
-      stem:       n("institution_stem",       PLAN_LIMITS.institution.stem),
-      study:      n("institution_study",      PLAN_LIMITS.institution.study),
-      plagiarism: n("institution_plagiarism", PLAN_LIMITS.institution.plagiarism),
-      outline:    n("institution_outline",    PLAN_LIMITS.institution.outline),
-      assistant:  PLAN_LIMITS.institution.assistant,
-      ebook:      PLAN_LIMITS.institution.ebook,
-    },
-  };
-}
 
 export async function ensureUsageTable(): Promise<void> {
   await pool.query(`
@@ -152,21 +87,12 @@ export async function getUsage(userId: string): Promise<Record<string, number>> 
 
 export async function getUserPlan(userId: string): Promise<string> {
   try {
-    const { rows } = await pool.query<{ plan: string; status: string; current_period_end: Date | null }>(
-      "SELECT plan, status, current_period_end FROM user_subscriptions WHERE user_id = $1",
+    const { rows } = await pool.query<{ plan: string; status: string }>(
+      "SELECT plan, status FROM user_subscriptions WHERE user_id = $1",
       [userId],
     );
     const sub = rows[0];
     if (!sub || sub.status !== "active") return "starter";
-    // Auto-expire: if the subscription period has passed, treat as starter
-    if (sub.current_period_end && new Date(sub.current_period_end) < new Date()) {
-      // Mark as expired in the background (fire-and-forget)
-      pool.query(
-        "UPDATE user_subscriptions SET status='expired', updated_at=NOW() WHERE user_id=$1 AND status='active'",
-        [userId],
-      ).catch(() => {});
-      return "starter";
-    }
     return sub.plan ?? "starter";
   } catch {
     return "starter";
@@ -175,8 +101,7 @@ export async function getUserPlan(userId: string): Promise<string> {
 
 export async function isAtLimit(userId: string, tool: ToolName): Promise<boolean> {
   const plan = await getUserPlan(userId);
-  const dynLimits = buildDynamicLimits(await getCachedSettings());
-  const limits = dynLimits[plan] ?? PLAN_LIMITS[plan];
+  const limits = PLAN_LIMITS[plan];
   if (!limits) return false;
   const limit = limits[tool];
   if (limit === null || limit === undefined) return false;
@@ -190,8 +115,7 @@ export async function enforceLimit(
   incrementBy = 1,
 ): Promise<{ allowed: boolean; plan: string; used: number; limit: number | null }> {
   const plan = await getUserPlan(userId);
-  const dynLimits = buildDynamicLimits(await getCachedSettings());
-  const limits = dynLimits[plan] ?? PLAN_LIMITS[plan];
+  const limits = PLAN_LIMITS[plan];
   const limit = limits?.[tool] ?? null;
 
   if (limit === null || limit === undefined) {

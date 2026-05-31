@@ -166,9 +166,7 @@ async function createStripeSession(params: {
   let session: Stripe.Checkout.Session;
 
   if (params.type === "subscription" && params.plan) {
-    // Check canonical name (STRIPE_PRICE_EBOOKS_MONTHLY) then legacy name (STRIPE_PRICE_EBOOK_MONTHLY)
-    const priceId = process.env[`STRIPE_PRICE_${params.plan.toUpperCase()}`]
-      ?? (params.plan === "ebooks_monthly" ? process.env.STRIPE_PRICE_EBOOK_MONTHLY : undefined);
+    const priceId = process.env[`STRIPE_PRICE_${params.plan.toUpperCase()}`];
     if (!priceId) throw new Error(`Stripe price ID not configured for plan: ${params.plan}`);
     session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -622,7 +620,7 @@ router.post("/payments/create", async (req: Request, res: Response) => {
         return;
       }
       amountCents = SUBSCRIPTION_PLANS[plan].amountCents;
-      if (plan === "institution_annual") {
+      if (plan === "campus_annual") {
         const numSeats = Math.max(5, seats ?? 5);
         amountCents = amountCents * numSeats * 12;
       }
@@ -811,33 +809,20 @@ router.get("/payments/verify", async (req: Request, res: Response) => {
 
       if (payment?.type === "subscription" && payment.plan) {
         const billing = payment.plan.endsWith("annual") ? "annual" : "monthly";
-        const isEbooks = payment.plan.startsWith("ebooks");
-        const planName = payment.plan.startsWith("institution") ? "institution" : payment.plan.startsWith("starter") ? "starter" : isEbooks ? "ebooks" : "pro";
+        const planName = payment.plan.startsWith("campus") ? "campus" : payment.plan.startsWith("starter") ? "starter" : "pro";
         const periodEnd = billing === "annual"
           ? new Date(Date.now() + 365 * 86400000)
           : new Date(Date.now() + 31 * 86400000);
 
-        if (isEbooks) {
-          await pool.query(
-            `INSERT INTO user_ebook_subscriptions (user_id, status, billing, gateway, gateway_subscription_id, current_period_end)
-             VALUES ($1,'active',$2,$3,$4,$5)
-             ON CONFLICT (user_id) DO UPDATE SET
-               status='active', billing=EXCLUDED.billing, gateway=EXCLUDED.gateway,
-               gateway_subscription_id=EXCLUDED.gateway_subscription_id,
-               current_period_end=EXCLUDED.current_period_end, updated_at=NOW()`,
-            [userId, billing, gateway, ref, periodEnd]
-          );
-        } else {
-          await pool.query(
-            `INSERT INTO user_subscriptions (user_id, plan, billing, gateway, gateway_subscription_id, status, current_period_end)
-             VALUES ($1,$2,$3,$4,$5,'active',$6)
-             ON CONFLICT (user_id) DO UPDATE SET
-               plan=EXCLUDED.plan, billing=EXCLUDED.billing, gateway=EXCLUDED.gateway,
-               gateway_subscription_id=EXCLUDED.gateway_subscription_id,
-               status='active', current_period_end=EXCLUDED.current_period_end, updated_at=NOW()`,
-            [userId, planName, billing, gateway, ref, periodEnd]
-          );
-        }
+        await pool.query(
+          `INSERT INTO user_subscriptions (user_id, plan, billing, gateway, gateway_subscription_id, status, current_period_end)
+           VALUES ($1,$2,$3,$4,$5,'active',$6)
+           ON CONFLICT (user_id) DO UPDATE SET
+             plan=EXCLUDED.plan, billing=EXCLUDED.billing, gateway=EXCLUDED.gateway,
+             gateway_subscription_id=EXCLUDED.gateway_subscription_id,
+             status='active', current_period_end=EXCLUDED.current_period_end, updated_at=NOW()`,
+          [userId, planName, billing, gateway, ref, periodEnd]
+        );
         await markFirstPendingDiscountApplied(userId);
       }
     }
@@ -924,91 +909,25 @@ router.post("/payments/webhook/stripe", async (req: Request, res: Response) => {
   }
 
   try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.metadata?.userId;
-        if (userId && session.payment_status === "paid") {
-          await pool.query(
-            `UPDATE payments SET status='completed', completed_at=NOW()
-             WHERE gateway_session_id=$1`,
-            [session.id]
-          );
-          await maybeRecordReferralCommission(userId, session.amount_total ?? 0);
-          await markFirstPendingDiscountApplied(userId);
-        }
-        break;
-      }
-
-      case "invoice.payment_succeeded": {
-        // Stripe fires this on every successful renewal. Extend the period end.
-        const invoice = event.data.object as Stripe.Invoice & { subscription?: string; customer?: string };
-        const stripeSubId = invoice.subscription;
-        if (stripeSubId && typeof stripeSubId === "string") {
-          // Retrieve the subscription to get the authoritative period end
-          try {
-            const stripeSub = await (getStripe() as Stripe).subscriptions.retrieve(stripeSubId);
-            const periodEnd = new Date(stripeSub.current_period_end * 1000);
-            await pool.query(
-              `UPDATE user_subscriptions
-               SET status='active', current_period_end=$1, updated_at=NOW()
-               WHERE gateway_subscription_id=$2`,
-              [periodEnd, stripeSubId]
-            );
-            logger.info({ stripeSubId, periodEnd }, "[stripe] Subscription renewed");
-          } catch (subErr) {
-            logger.error({ subErr }, "[stripe] Failed to retrieve subscription after renewal");
-          }
-        }
-        break;
-      }
-
-      case "invoice.payment_failed": {
-        // Mark subscription as past_due; access continues until current_period_end
-        const invoice = event.data.object as Stripe.Invoice & { subscription?: string };
-        const stripeSubId = invoice.subscription;
-        if (stripeSubId && typeof stripeSubId === "string") {
-          await pool.query(
-            `UPDATE user_subscriptions SET status='past_due', updated_at=NOW()
-             WHERE gateway_subscription_id=$1`,
-            [stripeSubId]
-          );
-          logger.warn({ stripeSubId }, "[stripe] Subscription payment failed — marked past_due");
-        }
-        break;
-      }
-
-      case "customer.subscription.updated": {
-        // Sync plan/status changes (upgrades, downgrades, cancellation at period end)
-        const stripeSub = event.data.object as Stripe.Subscription;
-        const periodEnd = new Date(stripeSub.current_period_end * 1000);
-        const status = stripeSub.status === "active" ? "active"
-          : stripeSub.status === "past_due" ? "past_due"
-          : stripeSub.status === "canceled" ? "cancelled"
-          : stripeSub.status;
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const userId = session.metadata?.userId;
+      if (userId && session.payment_status === "paid") {
         await pool.query(
-          `UPDATE user_subscriptions
-           SET status=$1, current_period_end=$2, updated_at=NOW()
-           WHERE gateway_subscription_id=$3`,
-          [status, periodEnd, stripeSub.id]
+          `UPDATE payments SET status='completed', completed_at=NOW()
+           WHERE gateway_session_id=$1`,
+          [session.id]
         );
-        break;
+        await maybeRecordReferralCommission(userId, session.amount_total ?? 0);
+        await markFirstPendingDiscountApplied(userId);
       }
-
-      case "customer.subscription.deleted": {
-        const sub = event.data.object as Stripe.Subscription;
-        await pool.query(
-          `UPDATE user_subscriptions SET status='cancelled', updated_at=NOW()
-           WHERE gateway_subscription_id=$1`,
-          [sub.id]
-        );
-        logger.info({ subId: sub.id }, "[stripe] Subscription cancelled");
-        break;
-      }
-
-      default:
-        // Unhandled event type — ignore silently
-        break;
+    } else if (event.type === "customer.subscription.deleted") {
+      const sub = event.data.object as Stripe.Subscription;
+      await pool.query(
+        `UPDATE user_subscriptions SET status='cancelled', updated_at=NOW()
+         WHERE gateway_subscription_id=$1`,
+        [sub.id]
+      );
     }
   } catch (err) {
     logger.error({ err }, "Stripe webhook processing error");
@@ -1037,16 +956,13 @@ router.post("/payments/webhook/paystack", async (req: Request, res: Response) =>
     };
 
     if (event.event === "charge.success" && event.data?.reference) {
-      const pRes = await pool.query<{ user_id: string; amount_cents: number }>(
+      const pRes = await pool.query<{ user_id: string }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id, amount_cents`,
+         WHERE gateway_session_id=$1 RETURNING user_id`,
         [event.data.reference]
       );
       const uid = pRes.rows[0]?.user_id;
-      if (uid) {
-        await maybeRecordReferralCommission(uid, pRes.rows[0].amount_cents ?? 0);
-        await markFirstPendingDiscountApplied(uid);
-      }
+      if (uid) await markFirstPendingDiscountApplied(uid);
     }
   } catch (err) {
     logger.error({ err }, "Paystack webhook error");
@@ -1058,13 +974,9 @@ router.post("/payments/webhook/paystack", async (req: Request, res: Response) =>
 // ── Webhook: IntaSend ─────────────────────────────────────────────────────────
 
 router.post("/payments/webhook/intasend", async (req: Request, res: Response) => {
+  // Optional HMAC signature check — activate by setting INTASEND_WEBHOOK_SECRET on Render.
+  // IntaSend sends the signature in the x-intasend-signature header.
   const intasendSecret = process.env.INTASEND_WEBHOOK_SECRET ?? "";
-  // Require signature in production — if secret not configured, reject to prevent spoofed events.
-  if (!intasendSecret && process.env.NODE_ENV === "production") {
-    logger.warn("[intasend] Webhook rejected — INTASEND_WEBHOOK_SECRET not set in production.");
-    res.status(500).json({ error: "Webhook not configured" });
-    return;
-  }
   if (intasendSecret) {
     const sig = req.headers["x-intasend-signature"] as string ?? "";
     const body = req.body as Buffer;
@@ -1078,16 +990,13 @@ router.post("/payments/webhook/intasend", async (req: Request, res: Response) =>
     const raw = req.body as Buffer | Record<string, unknown>;
     const payload = (Buffer.isBuffer(raw) ? JSON.parse(raw.toString()) : raw) as { invoice_id?: string; state?: string };
     if (payload.state === "COMPLETE" && payload.invoice_id) {
-      const pRes = await pool.query<{ user_id: string; amount_cents: number }>(
+      const pRes = await pool.query<{ user_id: string }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id, amount_cents`,
+         WHERE gateway_session_id=$1 RETURNING user_id`,
         [payload.invoice_id]
       );
       const uid = pRes.rows[0]?.user_id;
-      if (uid) {
-        await maybeRecordReferralCommission(uid, pRes.rows[0].amount_cents ?? 0);
-        await markFirstPendingDiscountApplied(uid);
-      }
+      if (uid) await markFirstPendingDiscountApplied(uid);
     }
   } catch (err) {
     logger.error({ err }, "IntaSend webhook error");
@@ -1101,12 +1010,6 @@ router.post("/payments/webhook/paddle", async (req: Request, res: Response) => {
   const secret = process.env.PADDLE_WEBHOOK_SECRET ?? "";
   const sig = req.headers["paddle-signature"] as string ?? "";
   const body = req.body as Buffer;
-
-  if (!secret && process.env.NODE_ENV === "production") {
-    logger.warn("[paddle] Webhook rejected — PADDLE_WEBHOOK_SECRET not set in production.");
-    res.status(500).json({ error: "Webhook not configured" });
-    return;
-  }
 
   if (secret) {
     const parts = sig.split(";").reduce<Record<string, string>>((acc, part) => {
@@ -1130,16 +1033,13 @@ router.post("/payments/webhook/paddle", async (req: Request, res: Response) => {
     };
 
     if (event.event_type === "transaction.completed" && event.data?.id) {
-      const pRes = await pool.query<{ user_id: string; amount_cents: number }>(
+      const pRes = await pool.query<{ user_id: string }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id, amount_cents`,
+         WHERE gateway_session_id=$1 RETURNING user_id`,
         [event.data.id]
       );
       const uid = pRes.rows[0]?.user_id;
-      if (uid) {
-        await maybeRecordReferralCommission(uid, pRes.rows[0].amount_cents ?? 0);
-        await markFirstPendingDiscountApplied(uid);
-      }
+      if (uid) await markFirstPendingDiscountApplied(uid);
     }
   } catch (err) {
     logger.error({ err }, "Paddle webhook error");
@@ -1154,12 +1054,6 @@ router.post("/payments/webhook/lemon-squeezy", async (req: Request, res: Respons
   const secret = process.env.LEMONSQUEEZY_WEBHOOK_SECRET ?? "";
   const sig = req.headers["x-signature"] as string ?? "";
   const body = req.body as Buffer;
-
-  if (!secret && process.env.NODE_ENV === "production") {
-    logger.warn("[lemon-squeezy] Webhook rejected — LEMONSQUEEZY_WEBHOOK_SECRET not set in production.");
-    res.status(500).json({ error: "Webhook not configured" });
-    return;
-  }
 
   if (secret) {
     const hash = crypto.createHmac("sha256", secret).update(body).digest("hex");
@@ -1178,16 +1072,13 @@ router.post("/payments/webhook/lemon-squeezy", async (req: Request, res: Respons
     const evName = event.meta?.event_name ?? "";
     if ((evName === "order_created" || evName === "subscription_created") && event.data?.id) {
       const lsUserId = event.meta?.custom_data?.userId;
-      const pRes = await pool.query<{ user_id: string; amount_cents: number }>(
+      const pRes = await pool.query<{ user_id: string }>(
         `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id, amount_cents`,
+         WHERE gateway_session_id=$1 RETURNING user_id`,
         [event.data.id]
       );
       const uid = lsUserId ?? pRes.rows[0]?.user_id;
-      if (uid) {
-        await maybeRecordReferralCommission(uid, pRes.rows[0]?.amount_cents ?? 0);
-        await markFirstPendingDiscountApplied(uid);
-      }
+      if (uid) await markFirstPendingDiscountApplied(uid);
     }
   } catch (err) {
     logger.error({ err }, "Lemon Squeezy webhook error");
@@ -1198,7 +1089,7 @@ router.post("/payments/webhook/lemon-squeezy", async (req: Request, res: Respons
 
 // ── Admin: gateway management ─────────────────────────────────────────────────
 
-router.get("/mwaramuriuki-login/gateways", async (req: Request, res: Response) => {
+router.get("/admin/gateways", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -1240,7 +1131,7 @@ function isGatewayConfigured(g: GatewayName): boolean {
   }
 }
 
-router.patch("/mwaramuriuki-login/gateways/:name", async (req: Request, res: Response) => {
+router.patch("/admin/gateways/:name", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -1265,7 +1156,7 @@ router.patch("/mwaramuriuki-login/gateways/:name", async (req: Request, res: Res
   }
 });
 
-router.get("/mwaramuriuki-login/payments", async (req: Request, res: Response) => {
+router.get("/admin/payments", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -1302,7 +1193,7 @@ router.get("/mwaramuriuki-login/payments", async (req: Request, res: Response) =
   }
 });
 
-router.get("/mwaramuriuki-login/subscriptions-list", async (req: Request, res: Response) => {
+router.get("/admin/subscriptions", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -1319,7 +1210,7 @@ router.get("/mwaramuriuki-login/subscriptions-list", async (req: Request, res: R
   }
 });
 
-router.patch("/mwaramuriuki-login/user-risk/:userId", async (req: Request, res: Response) => {
+router.patch("/admin/user-risk/:userId", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;

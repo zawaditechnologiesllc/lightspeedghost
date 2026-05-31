@@ -301,12 +301,7 @@ export function exportAsWord(html: string, filename: string): void {
 
 function markdownToDocxParagraphs(text: string): Paragraph[] {
   const paragraphs: Paragraph[] = [];
-
-  // Join multi-line block math ($$...\n...\n$$) into single tokens so they
-  // are not split across loop iterations and lost.
-  const normalized = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, inner) => `$$${inner.replace(/\n/g, " ")}$$`);
-
-  const lines = normalized.split("\n");
+  const lines = text.split("\n");
   let inList = false;
 
   for (const line of lines) {
@@ -362,8 +357,7 @@ function markdownToDocxParagraphs(text: string): Paragraph[] {
 
 function parseInlineRuns(text: string): TextRun[] {
   const runs: TextRun[] = [];
-  // Groups: 1=bold+italic, 2=bold, 3=italic, 4=code, 5=block-math $$, 6=inline-math $, 7=plain
-  const pattern = /\*\*\*(.*?)\*\*\*|\*\*(.*?)\*\*|\*(.*?)\*|`([^`]+)`|\$\$([^$]+)\$\$|\$([^$\n]+)\$|([^*`$]+)/g;
+  const pattern = /\*\*\*(.*?)\*\*\*|\*\*(.*?)\*\*|\*(.*?)\*|`([^`]+)`|([^*`]+)/g;
   let m: RegExpExecArray | null;
   while ((m = pattern.exec(text)) !== null) {
     if (m[1] !== undefined) {
@@ -375,11 +369,7 @@ function parseInlineRuns(text: string): TextRun[] {
     } else if (m[4] !== undefined) {
       runs.push(new TextRun({ text: m[4], font: "Courier New", size: 20 }));
     } else if (m[5] !== undefined) {
-      runs.push(new TextRun({ text: m[5].trim(), font: "Courier New", size: 20, italics: true }));
-    } else if (m[6] !== undefined) {
-      runs.push(new TextRun({ text: m[6].trim(), font: "Courier New", size: 20, italics: true }));
-    } else if (m[7] !== undefined) {
-      runs.push(new TextRun({ text: m[7], font: "Inter" }));
+      runs.push(new TextRun({ text: m[5], font: "Inter" }));
     }
   }
   return runs.length > 0 ? runs : [new TextRun({ text, font: "Inter" })];
@@ -474,11 +464,10 @@ const LSG_TYPE_CODES: Record<string, string> = {
   plagiarism: "AP",
   stem:       "SS",
   study:      "ASA",
-  ebook:      "EB",
 };
 
 export function makeLsgFilename(
-  type: "paper" | "outline" | "revision" | "humanizer" | "plagiarism" | "stem" | "study" | "ebook",
+  type: "paper" | "outline" | "revision" | "humanizer" | "plagiarism" | "stem" | "study",
   label?: string
 ): string {
   const code = LSG_TYPE_CODES[type] ?? type.toUpperCase();

@@ -8,7 +8,7 @@ import {
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, ChevronUp, Sparkles, Upload, BarChart3,
   Users, Award, Clock, Quote, MapPin, Mail, Twitter, Linkedin, Wand2,
-  Lock, Building2, Share, BotMessageSquare, Info,
+  Lock, Building2, Share, BotMessageSquare,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
@@ -27,7 +27,7 @@ const tools = [
   {
     icon: PenLine,
     name: "AI Paper Writer",
-    desc: "Papers grounded in 15 live academic databases (1B+ papers: OpenAlex, CrossRef, PubMed, Semantic Scholar, arXiv, Europe PMC, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE, Sci-Net, Unpaywall). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
+    desc: "Papers grounded in 10 live academic databases (1B+ papers). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
     badge: "Most used",
     href: "/auth",
     color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -35,7 +35,7 @@ const tools = [
   {
     icon: BookOpen,
     name: "Outline Builder",
-    desc: "Structure your argument before writing a single sentence. Upload your assignment brief and get a complete hierarchical outline built for your topic in seconds. Every section is graded-rubric-aware when you upload one.",
+    desc: "Structure your argument before writing a single sentence. Upload your assignment brief and get a complete hierarchical outline built for your topic in seconds.",
     badge: null,
     href: "/auth",
     color: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
@@ -49,17 +49,9 @@ const tools = [
     color: "bg-violet-500/10 text-violet-400 border-violet-500/20",
   },
   {
-    icon: Sparkles,
-    name: "LightSpeed Humanizer",
-    desc: "Runs a real detect → rewrite → re-detect loop using an actual AI detection model between each pass — not self-reporting. Up to five passes until the AI score drops below 5%. Each pass targets the specific patterns the detector flagged. Sounds like you on a good day.",
-    badge: "Bypass detection",
-    href: "/auth",
-    color: "bg-pink-500/10 text-pink-400 border-pink-500/20",
-  },
-  {
     icon: ShieldCheck,
     name: "AI & Plagiarism Check",
-    desc: "Detect AI patterns and similarity before your professor does. One click humanizes flagged sections while keeping your argument intact. Code submissions get structural fingerprint analysis that catches reformatted or reshuffled plagiarism.",
+    desc: "Detect AI patterns and similarity before your professor does. One click humanizes flagged sections while keeping your argument intact.",
     badge: null,
     href: "/auth",
     color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
@@ -67,7 +59,7 @@ const tools = [
   {
     icon: FlaskConical,
     name: "STEM Solver",
-    desc: "Photograph your problem set or upload a dataset. Get full step-by-step solutions with equations, graphs, and linked research papers — Math, Physics, Chemistry, CS, Biology, Engineering, and more. Drop in lab data and it analyses it for you.",
+    desc: "Photograph your problem set or upload a dataset. Get full step-by-step solutions with equations, graphs, and linked research papers — Math, Physics, Chemistry, CS, and more. Drop in lab data and it analyses it for you.",
     badge: "Photo upload",
     href: "/auth",
     color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
@@ -75,7 +67,7 @@ const tools = [
   {
     icon: GraduationCap,
     name: "AI Study Assistant",
-    desc: "Ask anything, upload lecture notes, paste a YouTube link, or drop in a URL. Generate flashcards, quizzes, summaries, study guides, and slides from any material. LightSpeed AI builds a personal memory of everything you've studied — recalling past struggles and topics to tutor you better every session.",
+    desc: "Ask anything, upload lecture notes, or drop in a dataset. LightSpeed AI builds a personal memory of everything you've studied — recalling past struggles, past topics, and past sessions to tutor you better every time.",
     badge: "Long-term memory",
     href: "/auth",
     color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
@@ -130,7 +122,7 @@ const faqs = [
   },
   {
     q: "How is the paper quality? I've tried AI writers before and they're terrible.",
-    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 15 live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, arXiv, CORE, DOAJ, ERIC, Zenodo, Europe PMC, BASE, DataCite, OpenAIRE, Sci-Net, and Unpaywall — pulling over a billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop — up to five passes — until the AI score is below 5%. That is the pipeline on every single output.",
+    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 10 live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, and Europe PMC — pulling over a billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop until the AI score is below 5%. That is the pipeline on every single output.",
   },
   {
     q: "Does file upload work with PDFs from my university portal?",
@@ -141,63 +133,54 @@ const faqs = [
     a: "ChatGPT is a general-purpose chatbot. Light Speed Ghost is purpose-built for academic work: real, verifiable citations, specific citation formats, plagiarism checking, grade-targeted revision, and a STEM solver with step-by-step verification — all in one platform with a student-focused interface.",
   },
   {
-    q: "What document types are included in Starter and Pro plans?",
-    a: "Both Starter and Pro plans include paper generation for discussion posts, essays, and research papers (up to approximately 3,500 words). Research proposals and reports (3,500–6,000 words) and dissertations or theses (6,000–15,000 words) are not included in any plan — they are available on Pay-As-You-Go only, priced at $24.99 and $59.99 respectively. This is because longer documents require significantly more compute time and API cost per job. All other tools — revision, humanizer, plagiarism checks, STEM solver, outlines, and study sessions — work with any document length on a plan.",
-  },
-  {
-    q: "Is the Ebook tool included in my Starter or Pro plan?",
-    a: "No. Ebooks are a completely separate add-on subscription at $29.99/month. They are designed for business users publishing on Amazon KDP, Apple Books, and other platforms — not for academic work. Your academic plan (Starter or Pro) is entirely unaffected by the ebooks add-on. You can subscribe to one, both, or neither independently. The ebook monthly quota (15 ebooks/month) and the academic plan quotas are tracked separately.",
-  },
-  {
     q: "What's the cheapest plan?",
-    a: "The Starter plan is $9.99/month — competitive pricing for a full academic writing suite. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves per month, 20 study sessions per month, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
+    a: "The Starter plan is $4.99/month — the cheapest academic writing platform you'll find anywhere. It includes 3 paper generations per month, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves per month, 20 study sessions per month, and 1 revision. No tricks, just a minimal charge to keep the lights on.",
   },
   {
     q: "What's the difference between Pro monthly and annual?",
-    a: "Same features, different price. Monthly is $29.99/month. Annual is $269/year — that works out to $22.42/month, saving you 25%. Most students buy annual at the start of a semester. You can cancel anytime and keep access until the billing period ends.",
+    a: "Same features, different price. Monthly is $14.99/month. Annual is $139/year — that works out to $11.58/month, saving you 23%. Most students buy annual at the start of a semester. You can cancel anytime and keep access until the billing period ends.",
   },
   {
     q: "How does Pay-As-You-Go work?",
-    a: "No subscription needed. You pay per job at the time of use. Paper generation is priced by document type — from $3.99 for a short discussion post up to $59.99 for a full dissertation. Plagiarism checks are $1.99 per submission (Scribbr charges $19.95 for the same thing). Credits never expire. If you write even one research paper a month on PAYG ($14.99), Pro quickly becomes the smarter deal.",
+    a: "No subscription needed. You pay per job at the time of use. Paper generation is priced by document type — from $3.99 for a short discussion post up to $59.99 for a full dissertation. Plagiarism checks are $1.99 per submission (Scribbr charges $19.95 for the same thing). Credits never expire. If you write even one research paper a month on PAYG ($14.99), Pro at the same price becomes the smarter deal.",
   },
 ];
 
 const pricingPlans = [
   {
     name: "Starter",
-    priceMonthly: "$9.99",
-    priceAnnual: "$9.99",
+    priceMonthly: "$4.99",
+    priceAnnual: "$4.99",
     perMonthly: "/ month",
     perAnnual: "/ month",
     desc: "All core tools. Low commitment. No hidden gotchas.",
     features: [
-      "3 paper generations / month (discussion, essay & research)",
-      "1 humanizer job / month",
-      "1 revision / month",
+      "3 paper generations / month (any type)",
       "5 plagiarism + AI detection checks / month",
       "15 STEM solver queries / month",
-      "20 study sessions / month",
+      "20 study messages / month",
+      "1 revision / month",
       "5 outline generations / month",
       "7-day document history",
     ],
-    locked: ["Priority AI processing", "Citation export (BibTeX / RIS)"],
-    cta: "Start for $9.99",
+    locked: ["LightSpeed Humanizer", "Priority AI processing", "Citation export (BibTeX / RIS)"],
+    cta: "Start for $4.99",
     ctaLink: "/auth",
     highlight: false,
     badge: null,
   },
   {
     name: "Pro",
-    priceMonthly: "$29.99",
-    priceAnnual: "$22.42",
+    priceMonthly: "$14.99",
+    priceAnnual: "$11.58",
     perMonthly: "/ month",
-    perAnnual: "/ month  ·  billed $269 / year",
+    perAnnual: "/ month  ·  billed $139 / year",
     desc: "Every cap lifted. Every tool unlocked. One flat price.",
     features: [
-      "15 papers / month (discussion, essay & research)",
+      "15 papers / month (all types)",
       "20 revisions / month",
-      "40 STEM solver problems / month",
-      "80 study messages / month",
+      "60 STEM solver problems / month",
+      "150 study messages / month",
       "20 plagiarism + AI detection checks / month",
       "LightSpeed Humanizer — 20 jobs / month",
       "20 outline generations / month",
@@ -211,25 +194,27 @@ const pricingPlans = [
     badge: "Most popular",
   },
   {
-    name: "Institution",
+    name: "Campus",
     priceMonthly: null,
-    priceAnnual: "Custom",
+    priceAnnual: "$9",
     perMonthly: "",
-    perAnnual: "pricing for your institution",
-    desc: "For universities, tutoring centers, and research departments. Custom seat pricing, single invoice.",
+    perAnnual: "/ seat / month  ·  min 5 seats  ·  annual",
+    desc: "For study groups, tutoring centers, and institutions. Annual billing only.",
     features: [
-      "Unlimited seats — custom pricing",
-      "All Pro features per seat",
+      "5 papers / seat / month",
+      "8 revisions / seat / month",
+      "8 humanizer jobs / seat / month",
+      "30 STEM problems / seat / month",
+      "75 study messages / seat / month",
+      "Minimum 5 seats — single invoice",
       "Shared document library + admin dashboard",
       "Academic integrity reporting + SLA support",
-      "Dedicated onboarding & account manager",
-      "Custom API access available",
     ],
     locked: [],
     cta: "Contact Us",
     ctaLink: "/contact",
     highlight: false,
-    badge: "Custom pricing",
+    badge: "Annual only",
   },
 ];
 
@@ -323,15 +308,6 @@ export default function Landing() {
   const { state: installState } = useInstallPrompt();
   const [showIOSModal, setShowIOSModal] = useState(false);
   const [showAndroidModal, setShowAndroidModal] = useState(false);
-  const [showInstitutionModal, setShowInstitutionModal] = useState(false);
-  const [instName, setInstName] = useState("");
-  const [instEmail, setInstEmail] = useState("");
-  const [instOrg, setInstOrg] = useState("");
-  const [instSeats, setInstSeats] = useState("");
-  const [instMessage, setInstMessage] = useState("");
-  const [instSubmitting, setInstSubmitting] = useState(false);
-  const [instSent, setInstSent] = useState(false);
-  const [instError, setInstError] = useState("");
 
   function handleIOSInstall() { setShowIOSModal(true); }
   function handleAndroidInstall() {
@@ -347,36 +323,6 @@ export default function Landing() {
     setPaygCheckout({ tool, tier });
   }
 
-  async function handleInstitutionSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setInstError("");
-    if (!instName.trim() || !instEmail.trim() || !instMessage.trim()) {
-      setInstError("Please fill in your name, email, and message.");
-      return;
-    }
-    setInstSubmitting(true);
-    try {
-      const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
-      const res = await fetch(`${API_BASE}/contact`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: instName.trim(),
-          email: instEmail.trim(),
-          institution: instOrg.trim() || undefined,
-          message: instMessage.trim(),
-          seats: instSeats ? Number(instSeats) : undefined,
-        }),
-      });
-      if (!res.ok) throw new Error("Submission failed");
-      setInstSent(true);
-    } catch {
-      setInstError("Failed to send — please try emailing us directly at info@lightspeedghost.com");
-    } finally {
-      setInstSubmitting(false);
-    }
-  }
-
   useEffect(() => {
     const id = setInterval(() => {
       setFading(true);
@@ -390,7 +336,6 @@ export default function Landing() {
 
   const navLinks = [
     { label: "Tools", href: "#tools" },
-    { label: "Ebooks", href: "#ebooks" },
     { label: "How it Works", href: "#howitworks" },
     { label: "Pricing", href: "#pricing" },
     { label: "FAQ", href: "#faq" },
@@ -547,7 +492,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Link href="/auth">
               <span className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-100 text-sm sm:text-base">
-                Try for $9.99 / month
+                Try for $4.99 / month
                 <ArrowRight size={16} />
               </span>
             </Link>
@@ -557,7 +502,7 @@ export default function Landing() {
             </a>
           </div>
 
-          <p className="mt-4 text-xs text-white/30">Starter at $9.99/mo · Or pay per use · No expiry on PAYG charges</p>
+          <p className="mt-4 text-xs text-white/30">Starter at $4.99/mo · Or pay per use · No expiry on PAYG charges</p>
 
           {/* ── App Store Badges ── */}
           <div className="mt-8 flex flex-col items-center gap-3">
@@ -894,9 +839,9 @@ export default function Landing() {
                 border: "border-violet-500/20 bg-violet-500/5",
               },
               {
-                value: "15",
+                value: "10",
                 label: "Live academic databases",
-                sub: "1B+ papers · OpenAlex · PubMed · CrossRef · Semantic Scholar · ERIC · Zenodo · arXiv · BASE · DataCite · OpenAIRE · Sci-Net · Unpaywall + more",
+                sub: "1B+ papers · OpenAlex · PubMed · CrossRef · Semantic Scholar · ERIC · Zenodo · arXiv + 3 more",
                 color: "text-amber-400",
                 border: "border-amber-500/20 bg-amber-500/5",
               },
@@ -945,70 +890,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ─── EBOOKS ─── */}
-      <section id="ebooks" className="py-14 sm:py-20 md:py-28 px-4 sm:px-6 bg-gradient-to-br from-[#07050f] to-[#0a0518] border-y border-purple-500/10">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-10 sm:gap-16 items-center">
-            {/* Left: copy */}
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium mb-5">
-                <BookOpen size={11} className="text-purple-400" />
-                Business Add-On · $29.99 / month · Separate from academic plans
-              </div>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-5">
-                Publish ebooks on{" "}
-                <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  Amazon &amp; every platform.
-                </span>
-              </h2>
-              <p className="text-white/55 text-base sm:text-lg leading-relaxed mb-6">
-                Write professional, publish-ready ebooks grounded in verified academic and industry research. Expert quotes from Drucker, Buffett, Sinek, and more — chosen to match your topic. Every ebook arrives with a complete Amazon KDP listing guide.
-              </p>
-              <ul className="space-y-3 mb-8">
-                {[
-                  { icon: "📦", text: "Amazon KDP, Apple Books, Google Play, Kobo, B&N Press" },
-                  { icon: "📚", text: "Sources from Harvard Business Review, MIT Sloan, McKinsey, Semantic Scholar + 10 more" },
-                  { icon: "💬", text: "Industry expert quotes matched to your topic" },
-                  { icon: "🌍", text: "15 languages · sector/industry targeting · custom tone" },
-                  { icon: "📄", text: "15 ebooks per month · separate from academic plans" },
-                ].map(item => (
-                  <li key={item.text} className="flex items-start gap-3">
-                    <span className="text-lg leading-none shrink-0 mt-0.5">{item.icon}</span>
-                    <span className="text-sm text-white/60 leading-relaxed">{item.text}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/auth">
-                <span className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-purple-600/25 hover:scale-[1.02] active:scale-100 text-sm">
-                  <Sparkles size={15} />
-                  Start Writing Ebooks
-                  <ArrowRight size={15} />
-                </span>
-              </Link>
-              <p className="text-white/25 text-xs mt-3">$29.99/month · Cancel anytime · Completely separate from Starter &amp; Pro academic plans · Not included in any academic subscription</p>
-            </div>
-
-            {/* Right: feature cards */}
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { icon: "🎯", title: "Topic & Audience", desc: "Set your exact niche, target reader profile, and unique angle" },
-                { icon: "🌐", title: "15 Languages", desc: "Write and publish in English, Spanish, French, German, and 11 more" },
-                { icon: "🏭", title: "20+ Industries", desc: "Business, tech, health, finance, marketing, leadership, and more" },
-                { icon: "✍️", title: "6 Writing Tones", desc: "Authoritative, conversational, inspirational, practical, academic, storytelling" },
-                { icon: "📊", title: "Publishing Guide", desc: "Ready-to-paste Amazon KDP title, description, keywords, and category paths" },
-                { icon: "⚡", title: "3 Length Options", desc: "Short (~8k words), Standard (~15k), or Extended (~25k words)" },
-              ].map(card => (
-                <div key={card.title} className="p-4 rounded-xl bg-white/[0.03] border border-purple-500/10 hover:border-purple-500/20 hover:bg-white/[0.05] transition-all">
-                  <div className="text-xl mb-2">{card.icon}</div>
-                  <h3 className="font-semibold text-white text-xs mb-1">{card.title}</h3>
-                  <p className="text-[11px] text-white/40 leading-relaxed">{card.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ─── AI CAPABILITIES ─── */}
       <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-y border-white/5 bg-gradient-to-b from-[#04080f] to-[#060d1a]">
         <div className="max-w-6xl mx-auto">
@@ -1038,8 +919,8 @@ export default function Landing() {
               },
               {
                 icon: "📚",
-                title: "15-Database Knowledge Base",
-                desc: "Every paper simultaneously queries 15 live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, arXiv, CORE, DOAJ, ERIC, Zenodo, Europe PMC, BASE, DataCite, OpenAIRE, Sci-Net, and Unpaywall. Over 1 billion papers worth of real verified abstracts fed as grounding context. No Wikipedia, no hallucinated citations.",
+                title: "50,000+ Database Knowledge Base",
+                desc: "Every paper searches OpenAlex (250M+ papers), CrossRef (145M+ DOIs), Semantic Scholar, arXiv, and Europe PMC in parallel. Real abstracts are fed as grounding context — so the AI answers from verified peer-reviewed content, not guesswork. No Wikipedia.",
                 color: "border-violet-500/20 bg-violet-500/5",
                 tag: "Paper Writer · Study Assistant",
               },
@@ -1129,12 +1010,12 @@ export default function Landing() {
                 </div>
                 <div>
                   <p className="text-white font-semibold text-sm">Subscribe</p>
-                  <p className="text-blue-400/70 text-[11px]">From $9.99 / month</p>
+                  <p className="text-blue-400/70 text-[11px]">From $4.99 / month</p>
                 </div>
               </div>
               <div className="space-y-6">
                 {[
-                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter ($9.99/mo) or Pro ($29.99/mo). Plans cover discussion posts, essays, and research papers. Proposals, reports, and dissertations are available per-job below. Cancel any time." },
+                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter plan at $4.99/month or Pro at $14.99/month. Cancel any time." },
                   { num: "02", title: "Upload your brief or describe your task", body: "Drag in your assignment PDF, paste the rubric, or just type what you need. The platform detects citation style, length, and subject automatically." },
                   { num: "03", title: "Generate, revise, humanize, and submit", body: "Run any tool in sequence — paper → plagiarism check → LightSpeed Humanizer → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
                 ].map(({ num, title, body }) => (
@@ -1149,7 +1030,7 @@ export default function Landing() {
               </div>
               <Link href="/auth">
                 <span className="mt-7 block text-center py-2.5 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer">
-                  Start for $9.99 / month
+                  Start for $4.99 / month
                 </span>
               </Link>
             </div>
@@ -1200,11 +1081,11 @@ export default function Landing() {
               <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-4 sm:mb-5">Paper Writer</p>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4 sm:mb-5 leading-tight">A draft you can actually submit. Not cringe at.</h2>
               <p className="text-white/55 leading-relaxed mb-6 sm:mb-8 text-sm sm:text-base">
-                Upload your rubric and we extract the A-grade criteria first — before writing a single word. The paper is then grounded in 15 live academic databases (1B+ papers), plagiarism-gated below 8%, and cross-checked against your rubric before delivery.
+                Upload your rubric and we extract the A-grade criteria first — before writing a single word. The paper is then grounded in 50,000+ peer-reviewed databases, plagiarism-gated below 8%, and cross-checked against your rubric before delivery.
               </p>
               <ul className="space-y-3">
                 {[
-                  "15 live academic databases searched per paper (1B+ papers)",
+                  "50,000+ peer-reviewed databases searched per paper",
                   "A-grade rubric extraction + cross-check on every output",
                   "Plagiarism enforced below 8% — not estimated, measured",
                   "STEM mode: equations mapped to the right section (Methods, Results, etc.)",
@@ -1338,7 +1219,7 @@ export default function Landing() {
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Honest pricing. No dark patterns.</h2>
             <p className="text-white/45 text-sm sm:text-base max-w-xl mx-auto">
-              Starter at $9.99/mo. Pro for weekly deadlines. Plans cover essays &amp; research papers — proposals and dissertations are PAYG. Ebooks are a separate add-on.
+              Starter at $4.99/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
             </p>
             <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
               <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-white" : "text-white/35"}`}>Monthly</span>
@@ -1349,7 +1230,7 @@ export default function Landing() {
                 <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200 ${billingAnnual ? "left-6" : "left-1"}`} />
               </button>
               <span className={`text-sm font-medium transition-colors ${billingAnnual ? "text-white" : "text-white/35"}`}>Annual</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-semibold">Save 25%</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-semibold">Save 23%</span>
             </div>
           </div>
 
@@ -1359,7 +1240,7 @@ export default function Landing() {
               const showAnnual = billingAnnual || priceMonthly === null;
               const price = showAnnual ? priceAnnual : priceMonthly;
               const per   = showAnnual ? perAnnual   : perMonthly;
-              const isInstitution = name === "Institution";
+              const isCampus = name === "Campus";
               return (
                 <div key={name} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col ${highlight ? "bg-blue-600/10 border-blue-500/40 shadow-xl shadow-blue-900/20" : "bg-white/[0.02] border-white/8"}`}>
                   {badge && (
@@ -1391,13 +1272,8 @@ export default function Landing() {
                     ))}
                   </ul>
 
-                  {name !== "Institution" && (
-                    <p className="text-[10px] text-white/28 leading-relaxed border-t border-white/5 pt-3 mb-3">
-                      Proposals, reports &amp; dissertations are PAYG only (see below). Ebooks ($29.99/mo) are a separate add-on — not included.
-                    </p>
-                  )}
-                  {name === "Institution" && (
-                    <p className="text-[10px] text-white/30 italic mb-3">Custom pricing — we'll get back to you within 1 business day.</p>
+                  {isCampus && !billingAnnual && (
+                    <p className="text-[10px] text-white/30 italic mb-3">Campus plan requires annual billing. Toggle above.</p>
                   )}
 
                   {name === "Pro" ? (
@@ -1407,12 +1283,12 @@ export default function Landing() {
                     >
                       {cta}
                     </button>
-                  ) : name === "Institution" ? (
+                  ) : name === "Campus" ? (
                     <button
-                      onClick={() => { setShowInstitutionModal(true); setInstSent(false); setInstError(""); }}
-                      className="w-full block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5"
+                      onClick={() => billingAnnual ? setCheckoutPlan("campus_annual") : setBillingAnnual(true)}
+                      className={`w-full block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5`}
                     >
-                      Contact Us
+                      {billingAnnual ? "Get Campus" : "Switch to Annual"}
                     </button>
                   ) : (
                     <Link href={ctaLink}>
@@ -1424,16 +1300,6 @@ export default function Landing() {
                 </div>
               );
             })}
-          </div>
-
-          {/* ── Plan vs PAYG transparency callout ── */}
-          <div className="flex items-start gap-3 px-4 sm:px-5 py-4 rounded-2xl bg-orange-500/6 border border-orange-500/15 mb-12 sm:mb-16">
-            <Info size={14} className="text-orange-400/70 shrink-0 mt-0.5" />
-            <div className="text-xs text-white/50 leading-relaxed space-y-1">
-              <p><span className="text-white/70 font-semibold">What subscription plans cover:</span> Discussion posts, essays, and research papers (up to ~3,500 words). All other tools (STEM, revision, humanizer, plagiarism checks, outlines, study) work with any length.</p>
-              <p><span className="text-orange-300/80 font-semibold">PAYG only — not in any plan:</span> Research proposals / reports (3,500–6,000 words) and dissertations / theses (6,000–15,000 words). These are charged per job below because of their significantly higher compute cost.</p>
-              <p><span className="text-purple-300/70 font-semibold">Ebooks ($29.99/mo)</span> are a completely separate business add-on. They are not connected to your academic plan in any way — you can subscribe to either, both, or neither independently.</p>
-            </div>
           </div>
 
           {/* ── Pay-As-You-Go ── */}
@@ -1545,12 +1411,12 @@ export default function Landing() {
             Stop staring at midnight.<br />Start with a draft.
           </h2>
           <p className="text-white/50 mb-8 sm:mb-10 text-base sm:text-lg">
-            Subscribe from $9.99/month — or pay once per task. No lock-in.
+            Subscribe from $4.99/month — or pay once per task. No lock-in.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link href="/auth">
               <span className="inline-flex items-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:scale-[1.02] active:scale-100 text-base sm:text-lg">
-                Subscribe — from $9.99/mo
+                Subscribe — from $4.99/mo
                 <ArrowRight size={18} />
               </span>
             </Link>
@@ -1811,9 +1677,7 @@ export default function Landing() {
 
           <div className="border-t border-white/5 pt-6 sm:pt-7 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-white/25 text-xs">© {new Date().getFullYear()} Light Speed Ghost. All rights reserved.</p>
-            <p className="text-white/20 text-xs text-center sm:text-right max-w-md">
-              Subscription plans (Starter &amp; Pro) cover discussion posts, essays &amp; research papers only. Proposals, reports &amp; dissertations are PAYG. Ebooks are a separate add-on — not included in academic plans.
-            </p>
+            <p className="text-white/20 text-xs text-center sm:text-right">Built for students who have too much to do and too little time.</p>
           </div>
         </div>
       </footer>
@@ -1826,92 +1690,6 @@ export default function Landing() {
           plan={checkoutPlan}
           onSuccess={() => { setCheckoutPlan(null); setLocation("/app"); }}
         />
-      )}
-
-      {/* ── Institution Contact Modal ── */}
-      {showInstitutionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setShowInstitutionModal(false); }}>
-          <div className="w-full max-w-lg bg-[#0a1020] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/8">
-              <div>
-                <h2 className="text-base font-bold text-white">Institution Inquiry</h2>
-                <p className="text-xs text-white/40 mt-0.5">We'll get back to you within 1 business day</p>
-              </div>
-              <button onClick={() => setShowInstitutionModal(false)} className="text-white/30 hover:text-white/70 transition-colors text-xl leading-none">&times;</button>
-            </div>
-
-            {instSent ? (
-              <div className="px-6 py-10 text-center">
-                <div className="w-14 h-14 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle size={24} className="text-green-400" />
-                </div>
-                <h3 className="text-base font-semibold text-white mb-2">Message sent!</h3>
-                <p className="text-sm text-white/45">We'll review your inquiry and reach out to <span className="text-white/70">{instEmail}</span> shortly.</p>
-                <button onClick={() => setShowInstitutionModal(false)} className="mt-6 px-6 py-2.5 rounded-xl bg-white/8 hover:bg-white/12 text-white/70 text-sm font-medium transition-colors">
-                  Close
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleInstitutionSubmit} className="px-6 py-5 space-y-4">
-                {instError && (
-                  <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">{instError}</div>
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-white/50 mb-1.5">Your name *</label>
-                    <input
-                      type="text" value={instName} onChange={e => setInstName(e.target.value)}
-                      placeholder="Jane Smith"
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-white/50 mb-1.5">Work email *</label>
-                    <input
-                      type="email" value={instEmail} onChange={e => setInstEmail(e.target.value)}
-                      placeholder="jane@university.edu"
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/50"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-white/50 mb-1.5">Institution / Organization</label>
-                    <input
-                      type="text" value={instOrg} onChange={e => setInstOrg(e.target.value)}
-                      placeholder="State University"
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-white/50 mb-1.5">Approx. seats needed</label>
-                    <input
-                      type="number" min="1" value={instSeats} onChange={e => setInstSeats(e.target.value)}
-                      placeholder="e.g. 200"
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/50"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-white/50 mb-1.5">Message *</label>
-                  <textarea
-                    value={instMessage} onChange={e => setInstMessage(e.target.value)}
-                    rows={4}
-                    placeholder="Tell us about your use case, timeline, and any questions you have…"
-                    className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/50 resize-none"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={instSubmitting}
-                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold text-sm transition-colors"
-                >
-                  {instSubmitting ? "Sending…" : "Send Inquiry"}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
       )}
     </div>
   );

@@ -5,7 +5,6 @@ import { z } from "zod/v4";
 export const studentProfilesTable = pgTable("student_profiles", {
   id: serial("id").primaryKey(),
   userId: text("user_id"),
-  academicLevel: text("academic_level").notNull().default(""),
   sessionCount: integer("session_count").notNull().default(0),
   strengths: text("strengths").notNull().default("[]"),
   struggles: text("struggles").notNull().default("[]"),

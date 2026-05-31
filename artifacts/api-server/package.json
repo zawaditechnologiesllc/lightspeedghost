@@ -13,7 +13,6 @@
     "@anthropic-ai/sdk": "^0.82.0",
     "@citation-js/core": "^0.7.21",
     "@citation-js/plugin-csl": "^0.7.22",
-    "@google/generative-ai": "^0.24.1",
     "@memvid/sdk": "^2.0.159",
     "@types/uuid": "^11.0.0",
     "@upstash/redis": "^1.37.0",

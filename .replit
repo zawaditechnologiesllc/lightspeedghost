@@ -55,7 +55,7 @@ waitForPort = 18522
 outputType = "webview"
 
 [agent]
-stack = "BEST_EFFORT_FALLBACK"
+stack = "PNPM_WORKSPACE"
 expertMode = true
 integrations = ["javascript_database:1.0.0"]
 
@@ -71,9 +71,7 @@ channel = "stable-25_05"
 [userenv.shared]
 VITE_SUPABASE_URL = "https://mfobinrxhxbntblqjpdr.supabase.co"
 VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mb2JpbnJ4aHhibnRibHFqcGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTk2MDAsImV4cCI6MjA5MDgzNTYwMH0.ar0mQks9gvlJwQqewEzPzAtyTVN7hismpz89o1d6EaQ"
-SUPABASE_URL = "https://mfobinrxhxbntblqjpdr.supabase.co"
-VITE_API_URL = ""
-NODE_ENV = "development"
+VITE_API_URL = "https://lightspeedghost-5szz.onrender.com"
 
 [userenv.development]
 

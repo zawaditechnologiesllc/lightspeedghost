@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import {
   ListTree, ChevronRight, PenLine, ChevronDown,
-  BookOpen, FileText, Zap, CheckCircle, AlertTriangle, RotateCcw, GraduationCap,
+  BookOpen, FileText, Zap, CheckCircle, AlertTriangle, RotateCcw,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,6 @@ import { detectPaperType, extractTopic, extractSubject } from "@/lib/autofill";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import { SubjectSelect } from "@/components/SubjectSelect";
-import { useUserProfile } from "@/hooks/useUserProfile";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -35,15 +34,6 @@ interface OutlineResult {
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-
-const ACADEMIC_LEVELS = [
-  { value: "high_school",   label: "High School" },
-  { value: "undergrad_1_2", label: "UG Year 1–2" },
-  { value: "undergrad_3_4", label: "UG Year 3–4" },
-  { value: "honours",       label: "Honours" },
-  { value: "masters",       label: "Masters" },
-  { value: "phd",           label: "PhD" },
-];
 
 const PAPER_TYPES: { value: PaperType; label: string }[] = [
   { value: "research",               label: "Research Paper" },
@@ -107,8 +97,6 @@ export default function Outline() {
   useAuth();
   const [, navigate] = useLocation();
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
-
-  const { academicLevel, saveAcademicLevel } = useUserProfile();
 
   const [topic, setTopic] = useState("");
   const [subject, setSubject] = useState("");
@@ -208,7 +196,6 @@ export default function Outline() {
           subject: subject.trim(),
           paperType,
           wordCount,
-          academicLevel: academicLevel || undefined,
           instructionsText: instructionsText || undefined,
           referenceText: referenceText || undefined,
         }),
@@ -501,31 +488,6 @@ export default function Outline() {
               <p className="text-[10px] text-muted-foreground mt-1.5">
                 Outline word targets will be distributed across sections based on <strong>{wordCount.toLocaleString()}</strong> words total.
               </p>
-            </div>
-
-            {/* Academic level */}
-            <div>
-              <label className="text-sm font-medium mb-2 flex items-center gap-1.5 block">
-                <GraduationCap size={14} />
-                Academic Level
-              </label>
-              <div className="flex gap-2 flex-wrap">
-                {ACADEMIC_LEVELS.map(lvl => (
-                  <button
-                    key={lvl.value}
-                    type="button"
-                    onClick={() => saveAcademicLevel(lvl.value)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
-                      academicLevel === lvl.value
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                    )}
-                  >
-                    {lvl.label}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* Quality badge */}

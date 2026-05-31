@@ -10,14 +10,13 @@ import {
   AlertTriangle, XCircle, Copy, CheckCheck,
   Download, Loader2, RotateCcw, Camera, FileText, Zap,
   BookOpen, Atom, Calculator, Cpu, BarChart2, Layers,
-  Database, GraduationCap, TrendingUp,
+  Database,
 } from "lucide-react";
 import type { StemSolution } from "@workspace/api-client-react";
 import StemImageOcr from "@/components/StemImageOcr";
 import MathRenderer from "@/components/MathRenderer";
 import { ExportButtons } from "@/components/ExportButtons";
 import { buildStemExportHtml, makeLsgFilename } from "@/lib/exportUtils";
-import { FeedbackWidget } from "@/components/FeedbackWidget";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -26,8 +25,6 @@ import { cn } from "@/lib/utils";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import { useWakeLock } from "@/hooks/useWakeLock";
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { useAuth } from "@/contexts/AuthContext";
 
 const schema = z.object({
   problem: z.string().min(5, "Please describe your problem"),
@@ -143,36 +140,14 @@ const API = import.meta.env.VITE_API_URL ?? "";
 
 interface SolveStep { id: string; message: string; status: "running" | "done" | "pending" }
 
-const ACADEMIC_LEVELS = [
-  { value: "high_school",   label: "High School" },
-  { value: "undergrad_1_2", label: "UG Year 1–2" },
-  { value: "undergrad_3_4", label: "UG Year 3–4" },
-  { value: "honours",       label: "Honours" },
-  { value: "masters",       label: "Masters" },
-  { value: "phd",           label: "PhD" },
-];
-
 export default function StemSolver() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const datasetInputRef = useRef<HTMLInputElement>(null);
-  const fsInputRef = useRef<HTMLInputElement>(null);
-  const { academicLevel, saveAcademicLevel } = useUserProfile();
   const [isFileExtracting, setIsFileExtracting] = useState(false);
   const [fileExtractError, setFileExtractError] = useState<string | null>(null);
   const [datasetText, setDatasetText] = useState("");
   const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
   const [showDataset, setShowDataset] = useState(false);
-  const [financialStatements, setFinancialStatements] = useState("");
-  const [financialStatementType, setFinancialStatementType] = useState("all");
-  const [showFinancials, setShowFinancials] = useState(false);
-  const [isFsExtracting, setIsFsExtracting] = useState(false);
-
-  const STEM_FINANCIAL_STATEMENT_TYPES = [
-    { value: "income_statement", label: "Income Statement" },
-    { value: "balance_sheet",    label: "Balance Sheet" },
-    { value: "cash_flow",        label: "Cash Flow" },
-    { value: "all",              label: "Full Statements" },
-  ];
   const [result, setResult] = useState<StemSolution | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [papersLoading, setPapersLoading] = useState(false);
@@ -204,7 +179,6 @@ export default function StemSolver() {
   const thinkingRef = useRef<HTMLDivElement>(null);
   const { data: subjects } = useGetStemSubjects();
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
-  const { user } = useAuth();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -212,7 +186,6 @@ export default function StemSolver() {
   });
 
   const selectedSubject = form.watch("subject");
-  const isFinanceSubjectForStem = ["finance", "accounting", "economics", "actuarial_science"].includes(selectedSubject);
   const resources = stemResourcesBySubject[selectedSubject] ?? [];
   const showBioModels = selectedSubject === "biology" || selectedSubject === "chemistry";
   const showMolecule = selectedSubject === "chemistry";
@@ -277,28 +250,6 @@ export default function StemSolver() {
     }
   };
 
-  const handleFinancialStatementFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    setIsFsExtracting(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch(`${API}/api/files/extract`, { method: "POST", body: formData });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error ?? `Server error ${res.status}`);
-      }
-      const data = await res.json() as { text?: string; isImage?: boolean };
-      if (data.isImage) return;
-      setFinancialStatements((data.text ?? "").slice(0, 50000));
-      setShowFinancials(true);
-    } catch { /* silent — user can retry */ } finally {
-      setIsFsExtracting(false);
-    }
-  };
-
   const onSubmit = async (data: FormData) => {
     if (isAtLimit("stem")) { guard("stem", () => {}); return; }
     setPapers([]);
@@ -322,13 +273,7 @@ export default function StemSolver() {
       const resp = await apiFetch(`/stem/solve-stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          datasetText: datasetText.trim() || undefined,
-          academicLevel: academicLevel || undefined,
-          financialStatements: financialStatements.trim() || undefined,
-          financialStatementType: financialStatements.trim() ? financialStatementType : undefined,
-        }),
+        body: JSON.stringify({ ...data, datasetText: datasetText.trim() || undefined }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -576,7 +521,6 @@ export default function StemSolver() {
           <StemImageOcr onExtracted={handleStemImageOcr} compact />
           <input ref={fileInputRef} type="file" accept=".txt,.pdf,.docx,.doc,.md" className="sr-only" onChange={handleStemFileExtracted} />
           <input ref={datasetInputRef} type="file" accept=".csv,.tsv,.txt" className="sr-only" onChange={handleDatasetFile} />
-          <input ref={fsInputRef} type="file" accept=".pdf,.docx,.doc,.txt,.md" className="sr-only" onChange={handleFinancialStatementFile} />
           <button
             type="button"
             disabled={isFileExtracting}
@@ -600,21 +544,6 @@ export default function StemSolver() {
             <Database size={12} />
             {datasetText ? "Dataset loaded" : "Add dataset"}
           </button>
-          {!!user && isFinanceSubjectForStem && (
-            <button
-              type="button"
-              onClick={() => setShowFinancials(v => !v)}
-              className={cn(
-                "flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all",
-                showFinancials || financialStatements
-                  ? "border-amber-400/60 text-amber-600 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-900/20"
-                  : "border-border text-muted-foreground hover:text-foreground hover:border-amber-400/40 bg-card"
-              )}
-            >
-              <TrendingUp size={12} />
-              {financialStatements ? "Statements loaded" : "Financial statements"}
-            </button>
-          )}
           {fileExtractError && (
             <span className="text-xs text-destructive">{fileExtractError}</span>
           )}
@@ -667,50 +596,6 @@ export default function StemSolver() {
             )}
           </div>
         )}
-        {/* ── Financial Statements panel ── */}
-        {!!user && isFinanceSubjectForStem && showFinancials && (
-          <div className="mx-4 mt-2 rounded-xl border border-amber-400/30 bg-amber-50/20 dark:bg-amber-900/10 p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-                Financial Statements <span className="font-normal text-muted-foreground">(AI computes all ratios — profitability, liquidity, solvency, efficiency)</span>
-              </p>
-              <button type="button" onClick={() => { setFinancialStatements(""); }}
-                className="text-[10px] text-muted-foreground hover:text-destructive transition-colors">Clear</button>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {STEM_FINANCIAL_STATEMENT_TYPES.map(st => (
-                <button key={st.value} type="button" onClick={() => setFinancialStatementType(st.value)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md border text-[10px] font-medium transition-all",
-                    financialStatementType === st.value
-                      ? "border-amber-500/60 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400"
-                      : "border-border text-muted-foreground hover:border-amber-400/40"
-                  )}>{st.label}</button>
-              ))}
-            </div>
-            <button
-              type="button"
-              disabled={isFsExtracting}
-              onClick={() => fsInputRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-amber-300 dark:border-amber-700 rounded-lg py-2 transition-colors hover:border-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isFsExtracting ? <Loader2 size={12} className="animate-spin" /> : <TrendingUp size={12} />}
-              {isFsExtracting ? "Extracting…" : "Upload PDF, Word or text file"}
-            </button>
-            <textarea
-              value={financialStatements}
-              onChange={e => setFinancialStatements(e.target.value)}
-              rows={4}
-              placeholder={"Or paste statements directly…\n\nSingle year:\n  Revenue:   $2,450,000\n  Net Income: $416,500\n\nMulti-year (auto YoY + CAGR):\n  FY2023\n  Revenue:   $2,450,000\n  FY2022\n  Revenue:   $2,100,000"}
-              className="w-full px-2.5 py-1.5 font-mono text-xs rounded-lg border border-amber-200 dark:border-amber-800 bg-background focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
-            />
-            {financialStatements.trim() && (
-              <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                <CheckCircle size={10} /> Statements loaded — AI will compute all key ratios automatically
-              </p>
-            )}
-          </div>
-        )}
         {/* Textarea */}
         <textarea
           {...form.register("problem")}
@@ -723,29 +608,6 @@ export default function StemSolver() {
         )}
         {/* Bottom action row */}
         <div className="px-4 py-3 border-t border-border bg-muted/20">
-          {/* Academic level */}
-          <div className="mb-3">
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
-              <GraduationCap size={12} /> Academic Level
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {ACADEMIC_LEVELS.map(lvl => (
-                <button
-                  key={lvl.value}
-                  type="button"
-                  onClick={() => saveAcademicLevel(lvl.value)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md border text-[11px] font-medium transition-all",
-                    academicLevel === lvl.value
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                  )}
-                >
-                  {lvl.label}
-                </button>
-              ))}
-            </div>
-          </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-1.5 cursor-pointer">
@@ -972,8 +834,6 @@ export default function StemSolver() {
                     <CheckCircle size={16} className="text-green-500 shrink-0" />
                     <span className="text-sm font-bold text-green-800 dark:text-green-200">Answer</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FeedbackWidget type="stem" subject={result.subject} />
                   <ExportButtons
                     getHtml={() => buildStemExportHtml({
                       problem: solvedProblem,
@@ -989,7 +849,6 @@ export default function StemSolver() {
                     filename={makeLsgFilename("stem", result.subject + "-SOLUTION")}
                     formats={["docx", "pdf", "txt", "copy"]}
                   />
-                  </div>
                 </div>
                 <div className="px-5 py-5">
                   {result.graphData ? (

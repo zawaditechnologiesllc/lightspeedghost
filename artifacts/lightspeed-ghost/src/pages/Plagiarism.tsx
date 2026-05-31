@@ -23,20 +23,6 @@ import { useWakeLock } from "@/hooks/useWakeLock";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type PlagiarismPageResult = PlagiarismResult & {
-  sourcesScanned?: string[];
-  matchedSentences?: Array<{
-    sentence: string;
-    matchScore: number;
-    sources: Array<{ url: string; title: string; sourceType: string }>;
-  }>;
-  matchedWords?: Array<{
-    word: string;
-    matchScore: number;
-    sources: Array<{ url: string; title: string; sourceType: string }>;
-  }>;
-};
-
 type PageTab = "text" | "code";
 type TextPhase = "idle" | "checking" | "results";
 type CodePhase = "idle" | "comparing" | "results";
@@ -581,7 +567,7 @@ export default function PlagiarismChecker() {
   const [textPhase, setTextPhase] = useState<TextPhase>("idle");
   useWakeLock(textPhase === "checking");
   const [checkError, setCheckError] = useState<string | null>(null);
-  const [result, setResult] = useState<PlagiarismPageResult | null>(null);
+  const [result, setResult] = useState<PlagiarismResult | null>(null);
   const [humanizedText, setHumanizedText] = useState<string | null>(null);
   const [intensityValue, setIntensityValue] = useState(50);
   const [copied, setCopied] = useState(false);
@@ -1100,9 +1086,9 @@ export default function PlagiarismChecker() {
                     <div className="bg-card border border-border rounded-xl p-4">
                       <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-2.5">Words Matched in Academic Corpus</h3>
                       <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-                        {result.matchedWords.slice(0, 60).map((item) => (
-                          <span key={item.word} className="text-[11px] px-2 py-0.5 bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 rounded font-medium">
-                            {item.word}
+                        {result.matchedWords.slice(0, 60).map((word: string) => (
+                          <span key={word} className="text-[11px] px-2 py-0.5 bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 rounded font-medium">
+                            {word}
                           </span>
                         ))}
                         {result.matchedWords.length > 60 && (
@@ -1208,140 +1194,140 @@ export default function PlagiarismChecker() {
               stepInterval={900}
             />
           ) : (
-            <div className="flex-1 overflow-y-auto">
-              <div className="max-w-6xl mx-auto px-6 py-6 space-y-5">
-                <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div>
-                      <h2 className="font-semibold text-sm">Code Similarity Detection</h2>
-                      <p className="text-xs text-muted-foreground mt-0.5">Powered by the Winnowing algorithm (Stanford MOSS) — the same engine used for academic code plagiarism detection</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs text-muted-foreground whitespace-nowrap">Language</label>
-                      <select
-                        value={language}
-                        onChange={e => setLanguage(e.target.value)}
-                        className="text-xs px-2 py-1.5 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                      >
-                        {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground block mb-1.5">Submission A</label>
-                      <textarea
-                        value={doc1}
-                        onChange={e => setDoc1(e.target.value)}
-                        rows={14}
-                        placeholder="Paste code submission A here…"
-                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none leading-relaxed"
-                        spellCheck={false}
-                      />
-                      <p className="text-[10px] text-muted-foreground mt-1">{doc1.split("\n").length} lines · {doc1.length} chars</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground block mb-1.5">Submission B</label>
-                      <textarea
-                        value={doc2}
-                        onChange={e => setDoc2(e.target.value)}
-                        rows={14}
-                        placeholder="Paste code submission B here…"
-                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none leading-relaxed"
-                        spellCheck={false}
-                      />
-                      <p className="text-[10px] text-muted-foreground mt-1">{doc2.split("\n").length} lines · {doc2.length} chars</p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleCodeCompare}
-                      disabled={!doc1.trim() || !doc2.trim()}
-                      className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-all disabled:opacity-50"
-                    >
-                      <Code2 size={15} /> Compare Code
-                    </button>
-                  </div>
+          <div className="flex-1 overflow-y-auto">
+          <div className="max-w-6xl mx-auto px-6 py-6 space-y-5">
+            <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h2 className="font-semibold text-sm">Code Similarity Detection</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">Powered by the Winnowing algorithm (Stanford MOSS) — the same engine used for academic code plagiarism detection</p>
                 </div>
-
-              {codePhase === "results" && codeResult && (
-                <div className="space-y-4">
-                  <div className={cn(
-                    "flex items-center justify-between gap-3 px-4 py-3 rounded-xl border",
-                    codeResult.riskLevel === "high" ? "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
-                    : codeResult.riskLevel === "medium" ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
-                    : "border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400"
-                  )}>
-                    <div className="flex items-center gap-2">
-                      {codeResult.riskLevel === "high" ? <ShieldAlert size={16} /> : codeResult.riskLevel === "medium" ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
-                      <span className="font-semibold capitalize">Similarity Risk: {codeResult.riskLevel}</span>
-                      <span className="font-bold">({codeResult.overallSimilarity}%)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs opacity-75">Algorithm: {codeResult.algorithm}</span>
-                      <ExportButtons
-                        getHtml={() => buildCodeReportHtml(codeResult)}
-                        getText={() => `Code Similarity Report\nAlgorithm: ${codeResult.algorithm}\nSubmission A matched: ${codeResult.similarity1}%\nSubmission B matched: ${codeResult.similarity2}%\nOverall Similarity: ${codeResult.overallSimilarity}%\nRisk: ${codeResult.riskLevel.toUpperCase()}`}
-                        filename={makeLsgFilename("plagiarism", "CODE-SIMILARITY-REPORT")}
-                        formats={["pdf", "docx", "copy"]}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-card border border-border rounded-xl p-4 text-center">
-                      <div className="text-2xl font-bold text-primary">{codeResult.similarity1}%</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">of Submission A matched</div>
-                    </div>
-                    <div className="bg-card border border-border rounded-xl p-4 text-center">
-                      <div className="text-2xl font-bold text-foreground">{codeResult.overallSimilarity}%</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">overall similarity</div>
-                      <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={cn("h-full rounded-full", codeResult.overallSimilarity >= 40 ? "bg-red-500" : codeResult.overallSimilarity >= 20 ? "bg-yellow-500" : "bg-green-500")}
-                          style={{ width: `${codeResult.overallSimilarity}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="bg-card border border-border rounded-xl p-4 text-center">
-                      <div className="text-2xl font-bold text-primary">{codeResult.similarity2}%</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">of Submission B matched</div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <HighlightedCode label="Submission A — Highlighted Matches" raw={codeResult.highlightedDoc1} matchCount={codeResult.slices1.length} />
-                    <HighlightedCode label="Submission B — Highlighted Matches" raw={codeResult.highlightedDoc2} matchCount={codeResult.slices2.length} />
-                  </div>
-
-                  <div className="flex items-center justify-between bg-muted/40 border border-border rounded-lg px-4 py-2.5">
-                    <p className="text-[11px] text-muted-foreground">
-                      Detection via <strong>Winnowing (k={codeResult.kgramSize}, w={codeResult.windowSize})</strong> · Algorithm from{" "}
-                      <a href="https://theory.stanford.edu/~aiken/publications/papers/sigmod03.pdf" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-0.5">
-                        Aiken et al. SIGMOD 2003 <ExternalLink size={9} />
-                      </a>
-                    </p>
-                    <button
-                      onClick={() => { setCodePhase("idle"); setCodeResult(null); }}
-                      className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"
-                    >
-                      <RefreshCcw size={10} /> Reset
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">Language</label>
+                  <select
+                    value={language}
+                    onChange={e => setLanguage(e.target.value)}
+                    className="text-xs px-2 py-1.5 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                  </select>
                 </div>
-              )}
+              </div>
 
-              {codePhase === "idle" && (
-                  <div className="bg-card border border-dashed border-border rounded-xl p-10 flex flex-col items-center justify-center text-center gap-2 text-muted-foreground">
-                    <Code2 size={36} className="opacity-30 mb-1" />
-                    <p className="text-sm font-medium">Paste two code submissions and click Compare Code</p>
-                    <p className="text-xs max-w-sm">The Winnowing algorithm fingerprints both documents and highlights structurally similar sections, even if variable names or formatting were changed</p>
-                  </div>
-              )}
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">Submission A</label>
+                  <textarea
+                    value={doc1}
+                    onChange={e => setDoc1(e.target.value)}
+                    rows={14}
+                    placeholder="Paste code submission A here…"
+                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none leading-relaxed"
+                    spellCheck={false}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">{doc1.split("\n").length} lines · {doc1.length} chars</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">Submission B</label>
+                  <textarea
+                    value={doc2}
+                    onChange={e => setDoc2(e.target.value)}
+                    rows={14}
+                    placeholder="Paste code submission B here…"
+                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none leading-relaxed"
+                    spellCheck={false}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">{doc2.split("\n").length} lines · {doc2.length} chars</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={handleCodeCompare}
+                  disabled={!doc1.trim() || !doc2.trim()}
+                  className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-all disabled:opacity-50"
+                >
+                  <Code2 size={15} /> Compare Code
+                </button>
               </div>
             </div>
+
+            {codePhase === "results" && codeResult && (
+              <div className="space-y-4">
+                <div className={cn(
+                  "flex items-center justify-between gap-3 px-4 py-3 rounded-xl border",
+                  codeResult.riskLevel === "high" ? "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
+                  : codeResult.riskLevel === "medium" ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+                  : "border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400"
+                )}>
+                  <div className="flex items-center gap-2">
+                    {codeResult.riskLevel === "high" ? <ShieldAlert size={16} /> : codeResult.riskLevel === "medium" ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
+                    <span className="font-semibold capitalize">Similarity Risk: {codeResult.riskLevel}</span>
+                    <span className="font-bold">({codeResult.overallSimilarity}%)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs opacity-75">Algorithm: {codeResult.algorithm}</span>
+                    <ExportButtons
+                      getHtml={() => buildCodeReportHtml(codeResult)}
+                      getText={() => `Code Similarity Report\nAlgorithm: ${codeResult.algorithm}\nSubmission A matched: ${codeResult.similarity1}%\nSubmission B matched: ${codeResult.similarity2}%\nOverall Similarity: ${codeResult.overallSimilarity}%\nRisk: ${codeResult.riskLevel.toUpperCase()}`}
+                      filename={makeLsgFilename("plagiarism", "CODE-SIMILARITY-REPORT")}
+                      formats={["pdf", "docx", "copy"]}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-primary">{codeResult.similarity1}%</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">of Submission A matched</div>
+                  </div>
+                  <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-foreground">{codeResult.overallSimilarity}%</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">overall similarity</div>
+                    <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full", codeResult.overallSimilarity >= 40 ? "bg-red-500" : codeResult.overallSimilarity >= 20 ? "bg-yellow-500" : "bg-green-500")}
+                        style={{ width: `${codeResult.overallSimilarity}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-primary">{codeResult.similarity2}%</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">of Submission B matched</div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <HighlightedCode label="Submission A — Highlighted Matches" raw={codeResult.highlightedDoc1} matchCount={codeResult.slices1.length} />
+                  <HighlightedCode label="Submission B — Highlighted Matches" raw={codeResult.highlightedDoc2} matchCount={codeResult.slices2.length} />
+                </div>
+
+                <div className="flex items-center justify-between bg-muted/40 border border-border rounded-lg px-4 py-2.5">
+                  <p className="text-[11px] text-muted-foreground">
+                    Detection via <strong>Winnowing (k={codeResult.kgramSize}, w={codeResult.windowSize})</strong> · Algorithm from{" "}
+                    <a href="https://theory.stanford.edu/~aiken/publications/papers/sigmod03.pdf" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-0.5">
+                      Aiken et al. SIGMOD 2003 <ExternalLink size={9} />
+                    </a>
+                  </p>
+                  <button
+                    onClick={() => { setCodePhase("idle"); setCodeResult(null); }}
+                    className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    <RefreshCcw size={10} /> Reset
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {codePhase === "idle" && (
+              <div className="bg-card border border-dashed border-border rounded-xl p-10 flex flex-col items-center justify-center text-center gap-2 text-muted-foreground">
+                <Code2 size={36} className="opacity-30 mb-1" />
+                <p className="text-sm font-medium">Paste two code submissions and click Compare Code</p>
+                <p className="text-xs max-w-sm">The Winnowing algorithm fingerprints both documents and highlights structurally similar sections, even if variable names or formatting were changed</p>
+              </div>
+            )}
+          </div>
+          </div>
           )
         )}
       </div>

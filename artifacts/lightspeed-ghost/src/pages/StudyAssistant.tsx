@@ -6,21 +6,18 @@ import {
   Presentation, ChevronDown, ChevronUp,
   Star, Target, BookMarked, FlipHorizontal2,
   Image as ImageIcon, Plus, Sparkles, Database, CheckCircle,
-  Brain, X, TrendingUp, Link, Youtube,
+  Brain, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
 import { ExportButtons } from "@/components/ExportButtons";
 import { wrapDocHtml, mdToBodyHtml, makeLsgFilename } from "@/lib/exportUtils";
-import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { renderInlineMd } from "@/lib/renderInline";
 import { ALL_SUBJECTS } from "@/lib/subjects";
 import { apiFetch } from "@/lib/apiFetch";
 import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import { useWakeLock } from "@/hooks/useWakeLock";
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { useAuth } from "@/contexts/AuthContext";
 
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -72,15 +69,6 @@ const OUTPUT_TYPES: { key: OutputType; label: string; icon: React.ReactNode; des
 ];
 
 const SUBJECTS = ALL_SUBJECTS as readonly string[];
-
-const ACADEMIC_LEVELS = [
-  { value: "high_school",   label: "High School",  short: "HS"  },
-  { value: "undergrad_1_2", label: "UG Year 1–2",  short: "UG1" },
-  { value: "undergrad_3_4", label: "UG Year 3–4",  short: "UG3" },
-  { value: "masters",       label: "Master's",     short: "MSc" },
-  { value: "phd",           label: "PhD",          short: "PhD" },
-  { value: "professional",  label: "Professional", short: "Pro" },
-];
 
 const MODE_DESCRIPTIONS: Record<string, string> = {
   flashcards: "Converts your material into interactive flip cards to help memorise key terms and concepts",
@@ -150,20 +138,11 @@ async function callGenerate(
   images: { base64: string; mimeType: string }[],
   weakTopics?: string[],
   datasetText?: string,
-  academicLevel?: string,
-  financialStatements?: string,
-  financialStatementType?: string,
 ) {
   const res = await apiFetch(`/study/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      content, type, subject, weakTopics, images,
-      datasetText: datasetText?.trim() || undefined,
-      academicLevel,
-      financialStatements: financialStatements?.trim() || undefined,
-      financialStatementType: financialStatements?.trim() ? financialStatementType : undefined,
-    }),
+    body: JSON.stringify({ content, type, subject, weakTopics, images, datasetText: datasetText?.trim() || undefined }),
   });
   if (!res.ok) {
     const errBody = await res.json().catch(() => null);
@@ -178,10 +157,7 @@ export default function StudyAssistant() {
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const imageInputRef   = useRef<HTMLInputElement>(null);
   const datasetInputRef = useRef<HTMLInputElement>(null);
-  const fsInputRef      = useRef<HTMLInputElement>(null);
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
-  const { user } = useAuth();
-  const { academicLevel, saveAcademicLevel } = useUserProfile();
   const subjectInputRef = useRef<HTMLInputElement>(null);
 
   // Input state
@@ -195,28 +171,10 @@ export default function StudyAssistant() {
   const [sources,   setSources]   = useState<StudySource[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  // YouTube / URL input
-  const [showUrlInput, setShowUrlInput] = useState(false);
-  const [urlInput,     setUrlInput]     = useState("");
-
   // Dataset (CSV / TSV)
   const [datasetText,    setDatasetText]    = useState("");
   const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
   const [showDataset,    setShowDataset]    = useState(false);
-
-  // Financial Statements
-  const [financialStatements,    setFinancialStatements]    = useState("");
-  const [financialStatementType, setFinancialStatementType] = useState("all");
-  const [showFinancials,         setShowFinancials]         = useState(false);
-  const [isFsExtracting,         setIsFsExtracting]         = useState(false);
-
-  const STUDY_FINANCIAL_STATEMENT_TYPES = [
-    { value: "income_statement", label: "Income Statement" },
-    { value: "balance_sheet",    label: "Balance Sheet" },
-    { value: "cash_flow",        label: "Cash Flow" },
-    { value: "all",              label: "Full Statements" },
-  ];
-  const isFinanceSubjectForStudy = /finance|accounting|economics|banking|investment|insurance|actuarial|business\s*studies|credit\s*anal/i.test(selectedSubject);
 
   // Generation state
   const [isGenerating,  setIsGenerating]  = useState(false);
@@ -324,25 +282,6 @@ export default function StudyAssistant() {
     reader.readAsText(file);
   }, []);
 
-  const handleFsFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    setIsFsExtracting(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await apiFetch("/files/extract", { method: "POST", body: fd });
-      if (!res.ok) throw new Error("Extract failed");
-      const data = await res.json() as { text?: string; isImage?: boolean };
-      if (data.isImage) return;
-      setFinancialStatements((data.text ?? "").slice(0, 50000));
-      setShowFinancials(true);
-    } catch { /* silent */ } finally {
-      setIsFsExtracting(false);
-    }
-  }, []);
-
   const handleDatasetPaste = useCallback((raw: string) => {
     setDatasetText(raw);
     const lines = raw.trim().split("\n").filter(Boolean);
@@ -376,9 +315,6 @@ export default function StudyAssistant() {
         images,
         type === "weakpoints" ? wrongTopics : undefined,
         datasetText,
-        academicLevel,
-        financialStatements,
-        financialStatementType,
       );
       if (type === "flashcards") { setFlashcards(r.data?.flashcards ?? []); setCardIdx(0); setCardFlipped(false); setMasteredCards(new Set()); }
       if (type === "quiz")       { setQuiz(r.data?.questions ?? []); setQuizAnswers([]); setQuizSubmitted(false); setCurrentQ(0); }
@@ -391,7 +327,7 @@ export default function StudyAssistant() {
       setGenerateError(e instanceof Error ? e.message : "Generation failed. Please try again.");
       setActiveView(null);
     } finally { setIsGenerating(false); }
-  }, [topic, sources, selectedType, selectedSubject, wrongTopics, datasetText, academicLevel, financialStatements, financialStatementType]);
+  }, [topic, sources, selectedType, selectedSubject, wrongTopics, datasetText]);
 
   // ── Quiz helpers ──────────────────────────────────────────────────────
 
@@ -529,43 +465,31 @@ export default function StudyAssistant() {
             <input ref={datasetInputRef} type="file" className="sr-only"
               accept=".csv,.tsv,.txt" onChange={handleDatasetFile} />
 
-            {/* Upload row — 2-column grid on mobile, single row on sm+ */}
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+            {/* Upload row */}
+            <div className="flex gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="col-span-2 sm:flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-primary/40 hover:bg-muted/20 text-sm text-muted-foreground hover:text-foreground transition-all disabled:opacity-50"
+                className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-primary/40 hover:bg-muted/20 text-sm text-muted-foreground hover:text-foreground transition-all disabled:opacity-50"
               >
                 {uploading
                   ? <Loader2 size={14} className="animate-spin text-primary shrink-0" />
                   : <Upload size={14} className="shrink-0 text-muted-foreground/60" />}
                 <span className="text-xs">{uploading ? "Uploading…" : "Upload notes"}</span>
-                <span className="ml-auto text-[10px] text-muted-foreground/30 hidden sm:inline">PDF · DOCX · TXT</span>
+                <span className="ml-auto text-[10px] text-muted-foreground/30">PDF · DOCX · TXT</span>
               </button>
               <button
                 onClick={() => imageInputRef.current?.click()}
                 disabled={uploading}
-                className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-blue-400/40 hover:bg-blue-50/5 text-sm text-muted-foreground hover:text-blue-400 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-blue-400/40 hover:bg-blue-50/5 text-sm text-muted-foreground hover:text-blue-400 transition-all disabled:opacity-50"
               >
                 <ImageIcon size={14} className="shrink-0" />
                 <span className="text-xs">Screenshot</span>
               </button>
               <button
-                onClick={() => setShowUrlInput(v => !v)}
-                className={cn(
-                  "flex items-center justify-center sm:justify-start gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
-                  showUrlInput || (sources.some(s => s.name.startsWith("🔗")))
-                    ? "border-rose-400/60 text-rose-600 dark:text-rose-400 bg-rose-50/10 dark:bg-rose-900/20"
-                    : "border-border text-muted-foreground hover:border-rose-400/40 hover:text-rose-500"
-                )}
-              >
-                <Youtube size={14} className="shrink-0" />
-                <span className="text-xs">YouTube / URL</span>
-              </button>
-              <button
                 onClick={() => setShowDataset(v => !v)}
                 className={cn(
-                  "flex items-center justify-center sm:justify-start gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
+                  "flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
                   showDataset || datasetText
                     ? "border-violet-400/60 text-violet-600 dark:text-violet-400 bg-violet-50/10 dark:bg-violet-900/20"
                     : "border-border text-muted-foreground hover:border-violet-400/40 hover:text-violet-500"
@@ -574,76 +498,7 @@ export default function StudyAssistant() {
                 <Database size={14} className="shrink-0" />
                 <span className="text-xs">{datasetText ? "Dataset ✓" : "Dataset"}</span>
               </button>
-              {!!user && isFinanceSubjectForStudy && (
-                <button
-                  onClick={() => setShowFinancials(v => !v)}
-                  className={cn(
-                    "col-span-2 sm:col-span-1 flex items-center justify-center sm:justify-start gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
-                    showFinancials || financialStatements
-                      ? "border-amber-400/60 text-amber-600 dark:text-amber-400 bg-amber-50/10 dark:bg-amber-900/20"
-                      : "border-border text-muted-foreground hover:border-amber-400/40 hover:text-amber-500"
-                  )}
-                >
-                  <TrendingUp size={14} className="shrink-0" />
-                  <span className="text-xs">{financialStatements ? "Statements ✓" : "Financials"}</span>
-                </button>
-              )}
             </div>
-
-            {/* YouTube / URL input panel */}
-            {showUrlInput && (
-              <div className="rounded-xl border border-rose-400/30 bg-rose-50/10 dark:bg-rose-900/10 p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
-                    <Youtube size={12} /> YouTube Video or Web URL
-                  </p>
-                  <button onClick={() => { setShowUrlInput(false); setUrlInput(""); }} className="text-muted-foreground/40 hover:text-muted-foreground">
-                    <X size={12} />
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    placeholder="https://youtube.com/watch?v=… or any web URL"
-                    className="flex-1 text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-rose-400/50"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && urlInput.trim()) {
-                        const url = urlInput.trim();
-                        const isYT = /youtube\.com|youtu\.be/.test(url);
-                        setSources(prev => [...prev, {
-                          id: uid(), name: `🔗 ${isYT ? "YouTube: " : ""}${url.slice(0, 60)}`,
-                          type: "text", content: `[URL reference — paste the transcript or key content below]\nURL: ${url}`, wordCount: 0,
-                        }]);
-                        setUrlInput("");
-                        setShowUrlInput(false);
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => {
-                      const url = urlInput.trim();
-                      if (!url) return;
-                      const isYT = /youtube\.com|youtu\.be/.test(url);
-                      setSources(prev => [...prev, {
-                        id: uid(), name: `🔗 ${isYT ? "YouTube: " : ""}${url.slice(0, 60)}`,
-                        type: "text", content: `[URL reference — paste the transcript or key content below]\nURL: ${url}`, wordCount: 0,
-                      }]);
-                      setUrlInput("");
-                      setShowUrlInput(false);
-                    }}
-                    disabled={!urlInput.trim()}
-                    className="px-3 py-2 rounded-lg bg-rose-500 text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
-                  >
-                    <Link size={13} />
-                  </button>
-                </div>
-                <p className="text-[10px] text-muted-foreground/50">
-                  Add a YouTube video or web URL as a reference. Paste the video transcript in the notes box above for best results.
-                </p>
-              </div>
-            )}
 
             {/* Dataset panel */}
             {showDataset && (
@@ -688,54 +543,6 @@ export default function StudyAssistant() {
                       </tbody>
                     </table>
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* ── Financial Statements panel ── */}
-            {!!user && isFinanceSubjectForStudy && showFinancials && (
-              <div className="rounded-xl border border-amber-400/30 bg-amber-50/10 dark:bg-amber-900/10 p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-                    Financial Statements <span className="font-normal text-muted-foreground ml-1">(AI computes all ratios — profitability, liquidity, solvency &amp; efficiency)</span>
-                  </p>
-                  {financialStatements && (
-                    <button onClick={() => setFinancialStatements("")}
-                      className="text-[10px] text-muted-foreground hover:text-destructive transition-colors">Clear</button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {STUDY_FINANCIAL_STATEMENT_TYPES.map(st => (
-                    <button key={st.value} onClick={() => setFinancialStatementType(st.value)}
-                      className={cn(
-                        "px-2.5 py-1 rounded-md border text-[10px] font-medium transition-all",
-                        financialStatementType === st.value
-                          ? "border-amber-500/60 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400"
-                          : "border-border text-muted-foreground hover:border-amber-400/40"
-                      )}>{st.label}</button>
-                  ))}
-                </div>
-                <input ref={fsInputRef} type="file" accept=".pdf,.docx,.doc,.txt,.md" className="sr-only" onChange={handleFsFile} />
-                <button
-                  type="button"
-                  disabled={isFsExtracting}
-                  onClick={() => fsInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-amber-300 dark:border-amber-700 rounded-lg py-2 transition-colors hover:border-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isFsExtracting ? <Loader2 size={12} className="animate-spin" /> : <TrendingUp size={14} className="shrink-0" />}
-                  {isFsExtracting ? "Extracting…" : "Upload PDF, Word or text file"}
-                </button>
-                <textarea
-                  value={financialStatements}
-                  onChange={e => setFinancialStatements(e.target.value)}
-                  rows={4}
-                  placeholder={"Or paste statements directly…\n\nSingle year:\n  Revenue:   $2,450,000\n  Net Income: $416,500\n\nMulti-year (auto YoY + CAGR):\n  FY2023\n  Revenue:   $2,450,000\n  FY2022\n  Revenue:   $2,100,000"}
-                  className="w-full px-2.5 py-1.5 font-mono text-xs rounded-lg border border-amber-200 dark:border-amber-800 bg-background focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
-                />
-                {financialStatements.trim() && (
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                    <CheckCircle size={10} /> Statements loaded — AI will compute &amp; integrate all key ratios into the study materials
-                  </p>
                 )}
               </div>
             )}
@@ -792,7 +599,7 @@ export default function StudyAssistant() {
           {/* ── 3. OUTPUT TYPE SELECTOR ───────────────────────────────── */}
           <div className="mt-6 space-y-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Generate</p>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 gap-2">
               {OUTPUT_TYPES.map(({ key, label, icon, desc }) => (
                 <button
                   key={key}
@@ -856,28 +663,7 @@ export default function StudyAssistant() {
             </div>
           </div>
 
-          {/* ── 5. ACADEMIC LEVEL ─────────────────────────────────────── */}
-          <div className="mt-5 space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Academic Level</p>
-            <div className="flex flex-wrap gap-1.5">
-              {ACADEMIC_LEVELS.map((lvl) => (
-                <button
-                  key={lvl.value}
-                  onClick={() => saveAcademicLevel(lvl.value)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-xl border text-xs font-medium transition-all",
-                    academicLevel === lvl.value
-                      ? "border-primary bg-primary/10 text-primary shadow-sm"
-                      : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-muted/30"
-                  )}
-                >
-                  {lvl.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── 6. GENERATE BUTTON ────────────────────────────────────── */}
+          {/* ── 5. GENERATE BUTTON ────────────────────────────────────── */}
           <div className="mt-6">
             <button
               onClick={() => generate()}
@@ -972,10 +758,9 @@ export default function StudyAssistant() {
                 )}
               </div>
 
-              {/* Export buttons and feedback for exportable views */}
+              {/* Export buttons for exportable views */}
               {activeView && activeView !== "weakpoints" && (
-                <div className="flex items-center justify-between -mt-1 flex-wrap gap-2">
-                  <FeedbackWidget type="study" />
+                <div className="flex justify-end -mt-1">
                   <ExportButtons
                     getHtml={() => {
                       if (activeView === "flashcards" && flashcards.length) {

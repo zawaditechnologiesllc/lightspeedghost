@@ -1,9 +1,8 @@
 import { Router } from "express";
-import { db, pool } from "@workspace/db";
+import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
-import { eq, desc, and, isNull, gte } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
-import { getUserPlan } from "../lib/usageTracker";
 import {
   CreateDocumentBody,
   UpdateDocumentBody,
@@ -45,20 +44,6 @@ router.get("/documents/stats", requireAuth, async (req, res) => {
   }
 });
 
-async function getUserPlanRetentionDays(userId: string): Promise<number | null> {
-  try {
-    // getUserPlan checks status + current_period_end so expired subs return "starter"
-    const plan = await getUserPlan(userId);
-    if (plan === "starter") return 7;
-    // institution and ebooks subscribers get unlimited history
-    if (plan === "institution" || plan === "institution_annual" || plan === "ebooks_monthly" || plan === "business") return null;
-    // pro gets 90 days
-    return 90;
-  } catch {
-    return 7;
-  }
-}
-
 router.get("/documents", requireAuth, async (req, res) => {
   try {
     const params = ListDocumentsQueryParams.parse(req.query);
@@ -66,20 +51,10 @@ router.get("/documents", requireAuth, async (req, res) => {
     const offset = params.offset ?? 0;
     const userId = req.userId!;
 
-    const retentionDays = await getUserPlanRetentionDays(userId);
-
-    let whereClause;
-    if (retentionDays !== null) {
-      const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
-      whereClause = and(eq(documentsTable.userId, userId), gte(documentsTable.createdAt, cutoff));
-    } else {
-      whereClause = eq(documentsTable.userId, userId);
-    }
-
     const allDocs = await db
       .select()
       .from(documentsTable)
-      .where(whereClause)
+      .where(eq(documentsTable.userId, userId))
       .orderBy(desc(documentsTable.updatedAt));
 
     const filtered = params.type ? allDocs.filter((d) => d.type === params.type) : allDocs;
@@ -92,7 +67,6 @@ router.get("/documents", requireAuth, async (req, res) => {
         updatedAt: d.updatedAt.toISOString(),
       })),
       total: filtered.length,
-      retentionDays,
     });
   } catch (err) {
     req.log.error({ err }, "Error listing documents");

@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { z } from "zod";
 import { db, pool } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { GenerateOutlineBody } from "@workspace/api-zod";
@@ -10,51 +9,15 @@ import { WRITER_SOUL } from "../lib/soul";
 import { getVerifiedCitations } from "../lib/citationVerifier";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { analyseTextPlagiarism } from "../lib/textAnalysis";
-import { detectAIScore, humanizeTextOnce, removeSlopPatterns } from "../lib/aiDetection.js";
+import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection.js";
 import { recordUsage } from "../lib/apiCost";
 import { eq, desc, and, isNotNull } from "drizzle-orm";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { recordSearchResults, recordQualitySignal } from "../lib/learningEngine";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
-import { parseAndAnalyzeDataset, buildInterpretiveContext } from "../lib/datasetAnalysis";
-import { buildFinancialStatementsContext, isFinanceSubject } from "../lib/financialStatements";
-import { cavemanSystem } from "../lib/caveman.js";
-import { fastCall } from "../lib/aiGateway.js";
-import { wordsToTokens } from "../lib/tokenBudget.js";
+import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
 
 const router = Router();
-
-// ── Input validation schemas ───────────────────────────────────────────────────
-// Validates all incoming fields BEFORE any API calls are made.
-// Prevents wasted Claude/OpenAI tokens on malformed requests.
-
-const VALID_CITATION_STYLES = ["apa", "apa7", "mla", "chicago", "chicago17", "harvard", "ieee", "vancouver", "oscola"] as const;
-const VALID_ACADEMIC_LEVELS = ["high_school", "undergrad_1_2", "undergrad_3_4", "honours", "masters", "phd", "professional"] as const;
-const VALID_SPACING         = ["single", "1.5", "double"] as const;
-const VALID_LANGUAGE        = ["us", "uk", "au"] as const;
-
-const GenerateStreamBody = z.object({
-  topic:                       z.string().min(1, "Topic is required").max(3000, "Topic must be under 3000 characters").trim(),
-  subject:                     z.string().min(1, "Subject is required").max(200).trim(),
-  paperType:                   z.string().min(1, "Paper type is required").max(200).trim(),
-  wordCount:                   z.number({ invalid_type_error: "wordCount must be a number" }).int().min(100, "Minimum word count is 100").max(30000, "Maximum word count is 30,000"),
-  citationStyle:               z.enum(VALID_CITATION_STYLES, { errorMap: () => ({ message: `citationStyle must be one of: ${VALID_CITATION_STYLES.join(", ")}` }) }),
-  academicLevel:               z.enum(VALID_ACADEMIC_LEVELS, { errorMap: () => ({ message: `academicLevel must be one of: ${VALID_ACADEMIC_LEVELS.join(", ")}` }) }),
-  isStem:                      z.boolean().optional().default(false),
-  spacing:                     z.enum(VALID_SPACING).optional().default("double"),
-  numSources:                  z.number().int().min(1).max(50).optional(),
-  language:                    z.enum(VALID_LANGUAGE).optional().default("us"),
-  additionalInstructions:      z.string().max(5000).optional(),
-  rubricText:                  z.string().max(15000).optional(),
-  referenceText:               z.string().max(80000).optional(),
-  datasetText:                 z.string().max(300000).optional(),
-  analysisTool:                z.string().max(100).optional(),
-  selectedTests:               z.array(z.string().max(100)).max(20).optional(),
-  includeAssumptionsCheck:     z.boolean().optional(),
-  financialStatements:         z.string().max(50000).optional(),
-  financialStatementType:      z.string().max(50).optional(),
-  includeInterpretiveCommentary: z.boolean().optional(),
-});
 
 // ── Word count helpers ────────────────────────────────────────────────────────
 
@@ -70,11 +33,11 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
 
   const plans: Record<string, SectionBudget[]> = {
     essay: [
-      { name: "Introduction — hook (compelling opening), background context, and a clear, arguable thesis statement that previews the three main points", pct: 0.13 },
-      { name: "Body Paragraph 1 — topic sentence (first supporting claim) + specific evidence from sources + critical analysis explaining WHY the evidence supports the thesis + transition", pct: 0.25 },
-      { name: "Body Paragraph 2 — topic sentence (second distinct claim, different from paragraph 1) + evidence + deeper analytical commentary + transition to next idea", pct: 0.25 },
-      { name: "Body Paragraph 3 — topic sentence (third claim, often the strongest or most nuanced) + evidence + analysis linking back to thesis + build toward conclusion", pct: 0.25 },
-      { name: "Conclusion — synthesise all three arguments (not a summary), restate the evolved thesis, broader implication or call to reflection — no new arguments", pct: 0.12 },
+      { name: "Introduction", pct: 0.12 },
+      { name: "Body Paragraph 1", pct: 0.22 },
+      { name: "Body Paragraph 2", pct: 0.22 },
+      { name: "Body Paragraph 3", pct: 0.22 },
+      { name: "Conclusion", pct: 0.12 },
     ],
     argumentative: [
       { name: "Introduction — hook, context, and clear arguable thesis", pct: 0.10 },
@@ -92,12 +55,12 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
       { name: "Conclusion — summary of what was explained, significance, what reader now understands", pct: 0.11 },
     ],
     analytical: [
-      { name: "Introduction — introduce the subject/text/data, state the analytical lens or framework (e.g. theoretical, comparative, critical), and present the central analytical claim or question", pct: 0.12 },
-      { name: "Analysis Section 1 — first analytical dimension: identify the element under analysis, examine its mechanisms and patterns, provide specific evidence, interpret its significance within the broader argument", pct: 0.22 },
-      { name: "Analysis Section 2 — second analytical dimension: a different angle or contrasting element, comparative evidence, deeper layer of interpretation that complicates or enriches Section 1", pct: 0.22 },
-      { name: "Analysis Section 3 — third analytical dimension: most complex or nuanced finding, challenge the obvious reading, connect to broader theoretical or contextual framework", pct: 0.20 },
-      { name: "Synthesis — draw all analytical threads together, explain what the combined analysis reveals, address tensions or contradictions between sections, articulate the unified insight", pct: 0.17 },
-      { name: "Conclusion — state the analytical contribution, identify limitations of the chosen framework, implications for understanding the subject or field", pct: 0.07 },
+      { name: "Introduction", pct: 0.10 },
+      { name: "Analysis Section 1", pct: 0.22 },
+      { name: "Analysis Section 2", pct: 0.22 },
+      { name: "Analysis Section 3", pct: 0.20 },
+      { name: "Synthesis", pct: 0.14 },
+      { name: "Conclusion", pct: 0.07 },
     ],
     persuasive: [
       { name: "Introduction — compelling hook, emotional/logical appeal, and clear position statement", pct: 0.10 },
@@ -108,12 +71,12 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
       { name: "Conclusion — reinforce position, call to action, leave reader with clear next step", pct: 0.11 },
     ],
     report: [
-      { name: "Executive Summary / Abstract — standalone overview: purpose of the report, key findings, and main recommendations in 1–2 paragraphs; a reader who reads only this must understand the full picture", pct: 0.08 },
-      { name: "Introduction — background context, the problem or question the report addresses, scope (what is and is not covered), methodology overview, and how the report is structured", pct: 0.12 },
-      { name: "Methodology — how data was gathered (surveys, interviews, observation, secondary research), analytical tools used, sample size and selection rationale, and limitations of the approach", pct: 0.18 },
-      { name: "Findings / Results — present data objectively and systematically: use subsections per theme, describe quantitative results in text (tables and charts referenced but described verbally), identify key trends and patterns", pct: 0.27 },
-      { name: "Discussion — interpret the findings, explain what they mean in context, link to existing literature or industry standards, discuss unexpected results, and identify implications for the organisation or field", pct: 0.23 },
-      { name: "Conclusions & Recommendations — clear, numbered conclusions drawn directly from findings; followed by specific, actionable recommendations listed in priority order with responsible parties or timelines where possible", pct: 0.12 },
+      { name: "Executive Summary / Abstract", pct: 0.08 },
+      { name: "Introduction", pct: 0.10 },
+      { name: "Methodology", pct: 0.18 },
+      { name: "Findings / Results", pct: 0.25 },
+      { name: "Discussion", pct: 0.22 },
+      { name: "Conclusions & Recommendations", pct: 0.12 },
     ],
     "lab report": [
       { name: "Abstract", pct: 0.07 },
@@ -132,20 +95,20 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
       { name: "Conclusion", pct: 0.09 },
     ],
     "literature review": [
-      { name: "Introduction — state the scope and purpose of the review, the research question or objective it addresses, the databases and search terms used, and the organisational structure chosen (thematic/chronological/methodological)", pct: 0.10 },
-      { name: "Thematic Section 1 — first major theme: synthesise what multiple authors say on this theme, identify points of agreement and disagreement, critically evaluate the strength of evidence, do NOT simply annotate sources one by one", pct: 0.23 },
-      { name: "Thematic Section 2 — second theme (distinct conceptual angle): critique methodologies across studies, highlight scholarly debates, show how this theme relates to the first", pct: 0.22 },
-      { name: "Thematic Section 3 — third theme or emerging sub-field: conflicting findings, theoretical tensions, how recent work challenges older consensus", pct: 0.20 },
-      { name: "Synthesis of Findings — cross-thematic patterns and contradictions, what the literature collectively establishes, where scholarly consensus exists and where it breaks down", pct: 0.14 },
-      { name: "Gaps & Future Research + Conclusion — under-researched areas, methodological limitations across the field, specific directions for future inquiry, overall conclusion on the state of knowledge", pct: 0.11 },
+      { name: "Introduction", pct: 0.10 },
+      { name: "Thematic Section 1", pct: 0.22 },
+      { name: "Thematic Section 2", pct: 0.22 },
+      { name: "Thematic Section 3", pct: 0.20 },
+      { name: "Synthesis of Findings", pct: 0.15 },
+      { name: "Gaps & Future Research + Conclusion", pct: 0.09 },
     ],
     "literature_review": [
-      { name: "Introduction — state the scope and purpose of the review, the research question or objective it addresses, the databases and search terms used, and the organisational structure chosen (thematic/chronological/methodological)", pct: 0.10 },
-      { name: "Thematic Section 1 — first major theme: synthesise what multiple authors say on this theme, identify points of agreement and disagreement, critically evaluate the strength of evidence, do NOT simply annotate sources one by one", pct: 0.23 },
-      { name: "Thematic Section 2 — second theme (distinct conceptual angle): critique methodologies across studies, highlight scholarly debates, show how this theme relates to the first", pct: 0.22 },
-      { name: "Thematic Section 3 — third theme or emerging sub-field: conflicting findings, theoretical tensions, how recent work challenges older consensus", pct: 0.20 },
-      { name: "Synthesis of Findings — cross-thematic patterns and contradictions, what the literature collectively establishes, where scholarly consensus exists and where it breaks down", pct: 0.14 },
-      { name: "Gaps & Future Research + Conclusion — under-researched areas, methodological limitations across the field, specific directions for future inquiry, overall conclusion on the state of knowledge", pct: 0.11 },
+      { name: "Introduction", pct: 0.10 },
+      { name: "Thematic Section 1", pct: 0.22 },
+      { name: "Thematic Section 2", pct: 0.22 },
+      { name: "Thematic Section 3", pct: 0.20 },
+      { name: "Synthesis of Findings", pct: 0.15 },
+      { name: "Gaps & Future Research + Conclusion", pct: 0.09 },
     ],
     "research paper": [
       { name: "Abstract", pct: 0.06 },
@@ -424,15 +387,6 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
     }
   }
 
-  // Normalize so percentages always sum to exactly 1.00.
-  // Any rounding error in the plan definition would otherwise cause the AI to receive
-  // a section budget that adds to less than the requested word count — a mathematical
-  // contradiction that causes systematic under-delivery.
-  const rawTotal = sections.reduce((sum, s) => sum + s.pct, 0);
-  if (Math.abs(rawTotal - 1.0) > 0.001) {
-    sections = sections.map(s => ({ ...s, pct: Math.round((s.pct / rawTotal) * 10000) / 10000 }));
-  }
-
   return sections!;
 }
 
@@ -440,47 +394,19 @@ function lookupSectionPlan(paperType: string): SectionBudget[] {
  * Formats the section plan as a word-budget string for injection into the system prompt.
  */
 function planSectionWordBudgets(paperType: string, targetWords: number): string {
-  // For very short papers, collapse to 2-3 sections so each section has a realistic
-  // word budget. Showing 5 sections at 40 words each causes Claude to expand each one
-  // to a "full" paragraph and overshoot the target by 5–10×.
-  let sections: { name: string; pct: number }[];
-  if (targetWords <= 300) {
-    sections = [
-      { name: "Introduction — state the topic and thesis in 1–2 sentences", pct: 0.20 },
-      { name: "Body — present the core argument, evidence, and analysis", pct: 0.60 },
-      { name: "Conclusion — summarise the argument in 1–2 sentences", pct: 0.20 },
-    ];
-  } else if (targetWords <= 600) {
-    sections = [
-      { name: "Introduction — state the topic and thesis (1 short paragraph)", pct: 0.18 },
-      { name: "Body Part 1 — first supporting point with evidence", pct: 0.33 },
-      { name: "Body Part 2 — second supporting point or counter-argument", pct: 0.33 },
-      { name: "Conclusion — tie the argument together (1 short paragraph)", pct: 0.16 },
-    ];
-  } else {
-    sections = lookupSectionPlan(paperType);
-  }
-
-  let runningTotal = 0;
+  const sections = lookupSectionPlan(paperType);
   const lines = sections.map(s => {
     const words = Math.round(targetWords * s.pct);
-    runningTotal += words;
     return `  • ${s.name}: ~${words} words`;
   });
-
-  const shortPaperBanner = targetWords <= 600
-    ? `⚠ SHORT PAPER — ${targetWords} WORDS TOTAL. Every section budget below is a HARD LIMIT. Stop each section the moment you hit its word count. DO NOT expand beyond the allocated words.\n\n`
-    : "";
-
-  return `${shortPaperBanner}SECTION-BY-SECTION WORD BUDGET (MANDATORY — distribute your words exactly like this):
+  return `SECTION-BY-SECTION WORD BUDGET (MANDATORY — distribute your words exactly like this):
 ${lines.join("\n")}
   ─────────────────────────────────────
-  Section budgets sum to: ~${runningTotal} words  ← this must equal your final body word count
-  Target body word count: ${targetWords} words (${Math.floor(targetWords * 0.95)}–${Math.ceil(targetWords * 1.05)} allowed)
-  References / bibliography: NOT counted in the body total
-  Abstract (if present): NOT counted in the body total
+  Total body text: ${targetWords} words
+  References / bibliography: excluded from count
+  Abstract (if present): excluded from count
 
-CRITICAL — after finishing each section, note your running word count. If a section ran long, write the NEXT section shorter to compensate. If a section ran short, write the NEXT section longer. Your final body count MUST land in ${Math.floor(targetWords * 0.95)}–${Math.ceil(targetWords * 1.05)} words.`;
+Write each section to its allocated word count. Do NOT over-write early sections and run short on later ones. Check your running word count after each section and adjust accordingly.`;
 }
 
 /**
@@ -516,18 +442,22 @@ function computeBodyWordCount(content: string): number {
   return clean.split(/\s+/).filter((w) => w.trim().length > 0).length;
 }
 
+function tokenBudgetFromWords(words: number, extra = 0): number {
+  return Math.max(1200, Math.ceil(words * 2.2) + extra);
+}
+
 async function enforceBodyWordCount(
   content: string,
   targetWords: number,
   send: (event: string, data: object) => void,
 ): Promise<string> {
   let current = content;
-  const minTarget = Math.floor(targetWords * 0.95);
-  const maxTarget = Math.ceil(targetWords * 1.05);
+  const minTarget = targetWords;
+  const maxTarget = targetWords;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     const currentCount = computeBodyWordCount(current);
-    if (currentCount >= minTarget && currentCount <= maxTarget) {
+    if (currentCount === targetWords) {
       if (attempt > 1) {
         send("step", {
           id: "word-count-fix",
@@ -538,7 +468,7 @@ async function enforceBodyWordCount(
       return current;
     }
 
-    const isExpand = currentCount < minTarget;
+    const isExpand = currentCount < targetWords;
     const delta = Math.abs(targetWords - currentCount);
     send("step", {
       id: "word-count-fix",
@@ -548,34 +478,25 @@ async function enforceBodyWordCount(
       status: "running",
     });
 
-    // Dynamic token budget: words × 1.485 + 2000 structural overhead. Min 8000 for small papers.
-    const optimizerMaxTokens = Math.max(8000, wordsToTokens(targetWords, 2000));
-    const wordsNeeded = Math.abs(targetWords - currentCount);
-    const sectionsHint = isExpand
-      ? `Prioritize expanding the largest body sections first (analysis, discussion, body paragraphs). Add ${wordsNeeded} substantive words of analytical depth, evidence, and argumentation — no padding or repetition.`
-      : `Prioritize trimming the largest body sections first (remove redundant phrasing, over-explained points, wordy transitions). Remove ${wordsNeeded} words without losing any core argument or evidence.`;
-
     const adjustResp = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: optimizerMaxTokens,
+      max_tokens: tokenBudgetFromWords(Math.max(targetWords, delta), 1600),
       system: `${WRITER_SOUL}
 
 You are the LightSpeed Word Count Optimizer.
 Current body word count: ${currentCount}
 Required target body word count: ${targetWords}
 Allowed range: ${minTarget} to ${maxTarget} words
-Words to ${isExpand ? "add" : "remove"}: ~${wordsNeeded}
 
-${sectionsHint}
-
-STRICT RULES:
-1) Adjust ONLY body sections — references/bibliography must stay unchanged.
-2) Preserve all citations, factual claims, equations, headings, and markdown structure.
-3) Return ONLY the complete revised paper (all sections including references).
-4) After your revision, verify your body word count is in ${minTarget}–${maxTarget} before returning.`,
+RULES:
+1) Adjust ONLY body sections; references/bibliography must not be expanded.
+2) Keep citations, factual claims, equations, and markdown intact.
+3) If expanding, add substantive analysis/evidence (no filler).
+4) If trimming, remove redundancy first (no loss of core argument/evidence).
+5) Return ONLY the full revised paper content.`,
       messages: [{
         role: "user",
-        content: `${isExpand ? "Expand" : "Trim"} this paper so the body text lands in ${minTarget}–${maxTarget} words (target ${targetWords}). Current count: ${currentCount}.\n\n${current}`,
+        content: `${isExpand ? "Expand" : "Trim"} this paper so the body text is exactly ${targetWords} words:\n\n${current}`,
       }],
     });
 
@@ -588,7 +509,12 @@ STRICT RULES:
     current = adjustResp.content[0].type === "text" ? adjustResp.content[0].text : current;
   }
 
-  const finalCount = computeBodyWordCount(current);
+  let finalCount = computeBodyWordCount(current);
+  if (finalCount > targetWords) {
+    const words = current.split(/\s+/).filter(Boolean);
+    current = words.slice(0, targetWords).join(" ");
+    finalCount = computeBodyWordCount(current);
+  }
   send("step", {
     id: "word-count-fix",
     message: `Word-count optimization ended at ${finalCount.toLocaleString()} words (target ${targetWords.toLocaleString()}).`,
@@ -658,26 +584,28 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       return;
     }
 
-    // ── Input validation (Zod) — returns 400 with field errors before any API call ─
-    let body: z.infer<typeof GenerateStreamBody>;
-    try {
-      body = GenerateStreamBody.parse(req.body);
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        const messages = err.errors.map(e => `${e.path.join(".")}: ${e.message}`).join("; ");
-        send("error", { type: "validation", message: `Invalid request — ${messages}` });
-      } else {
-        send("error", { type: "validation", message: "Invalid request body" });
-      }
-      res.end();
-      clearInterval(heartbeat);
-      return;
-    }
+    const body = req.body as {
+      topic: string;
+      subject: string;
+      paperType: string;
+      wordCount: number;
+      citationStyle: string;
+      academicLevel: string;
+      isStem: boolean;
+      spacing?: string;
+      numSources?: number;
+      language?: string;
+      additionalInstructions?: string;
+      rubricText?: string;
+      referenceText?: string;
+      datasetText?: string;
+    };
 
     const requestedWords = body.wordCount ?? 1500;
-    // Target = exactly what was requested. Max = requested + 5%. Both are hard limits.
+    // Target must match exactly what the user requested.
     const targetWords = requestedWords;
-    const maxWords = Math.ceil(requestedWords * 1.05);
+    const minWords = requestedWords;
+    const maxWords = requestedWords;
     const isAnnotatedBib = body.paperType.toLowerCase().includes("annotated");
     const autoCitations = isAnnotatedBib
       ? Math.max(8, Math.ceil(requestedWords / 175))
@@ -685,91 +613,102 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     const citationCount = body.numSources ? Math.min(Math.max(body.numSources, 3), 50) : autoCitations;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
     const refsOverhead = Math.min(2000, Math.max(400, citationCount * 120));
-    // Dynamic token budget: words × 1.35 (token/word) × 1.10 (±10% margin) + citation overhead.
-    const maxTokens = wordsToTokens(maxWords, refsOverhead);
+    const maxTokens = tokenBudgetFromWords(maxWords, refsOverhead);
 
     // Keep-alive ping so the SSE connection stays open during slow citation/DB calls
     send("ping", { t: Date.now() });
 
-    // ── Steps 0 + 1 run in parallel (Sub-Agent Delegation) ───────────────────
-    // Rubric analysis (GPT-4o-mini) and citation fetching (external APIs) are
-    // fully independent — parallelising them saves 2–8 seconds per generation.
-    // Pattern from Kaizen AI Consulting: specialised sub-agents for separate tasks
-    // run concurrently rather than sequentially.
+    // ── Step 0: A-grade rubric extraction ────────────────────────────────────
+    let aGradeCriteria = "";
+    let rubricFormatReqs = "";
 
-    send("step", {
-      id: "rubric-analysis",
-      message: body.rubricText && body.rubricText.trim().length > 80
-        ? "Analysing grading rubric — extracting A-grade / Distinction criteria to lock in the quality target…"
-        : "Loading grade standards for academic level…",
-      status: "running",
-    });
-    send("step", {
-      id: "citations",
-      message: isAnnotatedBib
-        ? `Annotated bibliography mode — fetching ${citationCount} verified academic sources from 25+ live databases (OpenAlex, Semantic Scholar, CrossRef, PubMed, PubMed Central, Europe PMC, arXiv, CORE, DOAJ, ERIC, PLOS ONE, Zenodo, BASE, DataCite, OpenAIRE, bioRxiv, medRxiv, HAL France, Figshare, NASA ADS, ClinicalTrials.gov, Dryad, OSF, NBER + 90-day recency layer) for "${body.topic}"…`
-        : `Searching 25+ live academic databases (1.5B+ papers across OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, PLOS ONE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE, bioRxiv, medRxiv, HAL, Figshare, NASA ADS, ClinicalTrials.gov, Dryad, OSF, NBER + recency layer) for "${body.topic}"…`,
-      status: "running",
-    });
+    if (body.rubricText && body.rubricText.trim().length > 80) {
+      send("step", {
+        id: "rubric-analysis",
+        message: "Analysing grading rubric — extracting A-grade / Distinction criteria to lock in the quality target…",
+        status: "running",
+      });
 
-    // ── Sub-agent 1: Rubric analysis (GPT-4o-mini, Caveman-compressed) ───────
-    async function runRubricAnalysis(): Promise<{ aGradeCriteria: string; rubricFormatReqs: string }> {
-      if (!body.rubricText || body.rubricText.trim().length <= 80) {
-        return { aGradeCriteria: buildGradeCriteria(body.academicLevel), rubricFormatReqs: "" };
-      }
       try {
-        // Caveman-compressed system prompt routed through AI Gateway (fast tier → gpt-4o-mini with fallback)
-        const rawRubricSystem = `You are an expert academic assessor. Extract the top grade band criteria from the uploaded academic rubric.
-Return JSON: {"topGradeBand":"...","gradeThreshold":"...","criteria":["..."],"formatRequirements":"...or null"}
-Only output valid JSON. Do not include markdown fences or commentary.`;
+        const rubricResp = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          max_tokens: 1000,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert in academic grading rubrics.
+Extract ONLY the A-grade, Distinction, First Class, or Excellent criteria (the HIGHEST grade band).
+If the rubric shows multiple bands (A/B/C, Distinction/Merit/Pass, 70%+/60%+, etc.), extract the TOP band only.
+If only one level is shown, extract all criteria.
 
-        const rubricContent = await fastCall(
-          cavemanSystem(rawRubricSystem, "ultra"),
-          body.rubricText.slice(0, 4000),
-          { maxTokens: 1000, jsonMode: true, operation: "rubric-analysis" }
-        );
+Return JSON:
+{
+  "topGradeBand": "name of the top grade band (e.g. 'A / First Class', 'Distinction', 'Excellent', 'High Distinction')",
+  "gradeThreshold": "minimum score or descriptor for this band (e.g. '70%+', 'A / 4.0', 'HD')",
+  "criteria": ["specific criterion 1", "specific criterion 2", "...each criterion as a clear, actionable requirement"],
+  "formatRequirements": "any specific structure, word count, or format requirements for this grade, or null"
+}`,
+            },
+            {
+              role: "user",
+              content: `Extract A-grade criteria from this rubric:\n\n${body.rubricText.slice(0, 4000)}`,
+            },
+          ],
+        });
 
-        const rd = JSON.parse(rubricContent ?? "{}") as {
-          topGradeBand?: string; gradeThreshold?: string;
-          criteria?: string[]; formatRequirements?: string;
+        if (rubricResp.usage) {
+          recordUsage("gpt-4o-mini", rubricResp.usage.prompt_tokens, rubricResp.usage.completion_tokens, "rubric-analysis");
+        }
+
+        const rd = JSON.parse(rubricResp.choices[0]?.message?.content ?? "{}") as {
+          topGradeBand?: string;
+          gradeThreshold?: string;
+          criteria?: string[];
+          formatRequirements?: string;
         };
-        const criteria  = Array.isArray(rd.criteria) ? rd.criteria.filter(Boolean) : [];
+
+        const criteria = Array.isArray(rd.criteria) ? rd.criteria.filter(Boolean) : [];
         const gradeBand = rd.topGradeBand ?? "A / Distinction";
         const threshold = rd.gradeThreshold ?? "highest grade band";
 
-        return {
-          aGradeCriteria: criteria.length > 0
-            ? `${gradeBand} CRITERIA (${threshold}) — the paper MUST satisfy ALL of these:\n${criteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}`
-            : buildGradeCriteria(body.academicLevel),
-          rubricFormatReqs: rd.formatRequirements ?? "",
-        };
+        if (criteria.length > 0) {
+          aGradeCriteria = `${gradeBand} CRITERIA (${threshold}) — the paper MUST satisfy ALL of these:\n${criteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}`;
+        }
+        if (rd.formatRequirements) {
+          rubricFormatReqs = rd.formatRequirements;
+        }
+
+        send("step", {
+          id: "rubric-analysis",
+          message: `Rubric analysed — targeting ${gradeBand} (${threshold}). ${criteria.length} A-grade criteria locked as quality requirements for this paper.`,
+          status: "done",
+        });
       } catch {
-        return { aGradeCriteria: buildGradeCriteria(body.academicLevel), rubricFormatReqs: "" };
+        send("step", { id: "rubric-analysis", message: "Rubric processed — highest grade band set as target", status: "done" });
       }
     }
 
-    // ── Sub-agent 2: Citations + Academic RAG ─────────────────────────────────
-    async function runCitations() {
-      return Promise.all([
-        getVerifiedCitations(body.topic, body.subject, citationCount, body.citationStyle),
-        searchAllAcademicSources(`${body.topic} ${body.subject}`, 12, body.subject),
-      ]);
+    // ── Step 0b: Built-in grade criteria fallback (no rubric uploaded) ────────
+    // When no rubric is provided, inject level-appropriate A-grade standards so
+    // Claude still has a concrete quality target rather than a vague "92%" goal.
+    if (!aGradeCriteria) {
+      aGradeCriteria = buildGradeCriteria(body.academicLevel);
     }
 
-    // Fire both sub-agents simultaneously
-    const [{ aGradeCriteria, rubricFormatReqs }, [citations, ragPapers]] = await Promise.all([
-      runRubricAnalysis(),
-      runCitations(),
-    ]);
-
-    // Report both steps done
+    // ── Step 1: Citations + Academic RAG ────────────────────────────────────
     send("step", {
-      id: "rubric-analysis",
-      message: aGradeCriteria.includes("CRITERIA")
-        ? `Rubric analysed — A-grade criteria locked as quality target.`
-        : `Grade standards loaded — targeting ${body.academicLevel ?? "undergraduate"} A-grade.`,
-      status: "done",
+      id: "citations",
+      message: isAnnotatedBib
+        ? `Annotated bibliography mode — fetching ${citationCount} verified academic sources from 13 live databases (OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE) for "${body.topic}"…`
+        : `Searching 13 live academic databases (1B+ papers: OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE) for "${body.topic}"…`,
+      status: "running",
     });
+
+    const [citations, ragPapers] = await Promise.all([
+      getVerifiedCitations(body.topic, body.subject, citationCount, body.citationStyle),
+      searchAllAcademicSources(`${body.topic} ${body.subject}`, 12, body.subject),
+    ]);
 
     const ragContext = buildRAGContext(ragPapers);
 
@@ -817,8 +756,8 @@ Only output valid JSON. Do not include markdown fences or commentary.`;
     send("step", {
       id: "citations",
       message: citations.length > 0
-        ? `Retrieved ${citations.length} verified citations (target: ${citationCount}) + ${ragPapers.length} supporting abstracts from 25+ databases — ranked by impact, no Wikipedia, no unverified sources`
-        : "25+ academic databases queried — paper will use only DOI-verifiable sources",
+        ? `Retrieved ${citations.length} verified citations (target: ${citationCount}) + ${ragPapers.length} supporting abstracts from 10 databases — ranked by impact, no Wikipedia`
+        : "Academic databases queried — paper will use verified sources only",
       status: "done",
     });
 
@@ -831,39 +770,15 @@ Only output valid JSON. Do not include markdown fences or commentary.`;
         status: "running",
       });
       try {
-        datasetAnalysis = parseAndAnalyzeDataset(body.datasetText, body.analysisTool, body.selectedTests, body.includeAssumptionsCheck);
+        datasetAnalysis = parseAndAnalyzeDataset(body.datasetText);
         const estimatedVars = (datasetAnalysis.match(/\*\*/g) ?? []).length / 2;
-        const toolLabel = body.analysisTool ? ` · formatted for ${body.analysisTool.toUpperCase()}` : "";
-        const testsLabel = body.selectedTests?.length ? ` · ${body.selectedTests.length} test${body.selectedTests.length > 1 ? "s" : ""} requested` : "";
         send("step", {
           id: "data",
-          message: `Dataset analysed — ${estimatedVars} variable${estimatedVars !== 1 ? "s" : ""} processed${toolLabel}${testsLabel}, ready for Results/Findings section`,
+          message: `Dataset analysed — ${estimatedVars} variable${estimatedVars !== 1 ? "s" : ""} processed with descriptive statistics, ready for injection into Results/Findings section`,
           status: "done",
         });
       } catch {
         send("step", { id: "data", message: "Dataset processed — injecting into Results/Findings section", status: "done" });
-      }
-    }
-
-    // ── Step 1.6: Financial Statements analysis (finance/accounting subjects) ──
-    let financialContext = "";
-    if (body.financialStatements?.trim()) {
-      send("step", {
-        id: "data",
-        message: "Analysing financial statements — computing ratios (profitability, liquidity, solvency, efficiency, cash flow) and preparing financial analysis framework…",
-        status: "running",
-      });
-      try {
-        financialContext = buildFinancialStatementsContext(body.financialStatements, body.financialStatementType ?? "all");
-        const stType = body.financialStatementType ?? "all";
-        const stLabel = stType === "income_statement" ? "Income Statement" : stType === "balance_sheet" ? "Balance Sheet" : stType === "cash_flow" ? "Cash Flow Statement" : "Full Financial Statements";
-        send("step", {
-          id: "data",
-          message: `${stLabel} analysed — key ratios computed, analysis framework prepared for ${isFinanceSubject(body.subject) ? body.subject : "financial"} paper`,
-          status: "done",
-        });
-      } catch {
-        send("step", { id: "data", message: "Financial statements processed — injecting analysis framework", status: "done" });
       }
     }
 
@@ -881,7 +796,7 @@ Only output valid JSON. Do not include markdown fences or commentary.`;
       try {
         const stemResp = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
-          max_tokens: wordsToTokens(Math.ceil(maxWords * 0.25), 400, 4000),
+          max_tokens: 3500,
           system: `You are an expert STEM researcher and academic writer.
 Generate technical content tagged to the EXACT section of the paper where it belongs.
 Return JSON (include ONLY sections relevant to this topic):
@@ -1046,7 +961,7 @@ DO NOT write a generic paper body — the entire body IS the annotated entries.
 
     const systemPrompt = `${WRITER_SOUL}
 
-${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${financialContext ? `${financialContext}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
+${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
 
 ${stemBlock ? `${stemBlock}\n` : ""}${aGradeCriteria ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GRADING TARGET — ${aGradeCriteria}
@@ -1061,12 +976,12 @@ ACADEMIC LEVEL: ${academicLevelPrompt(body.academicLevel)}
 PAPER TYPE: ${body.paperType}
 SUBJECT: ${body.subject}
 CITATION STYLE: ${body.citationStyle.toUpperCase()}
-SPACING: ${body.spacing === "single" ? "Single-spaced" : body.spacing === "1.5" ? "1.5 line spacing" : "Double-spaced"} — NON-NEGOTIABLE: this spacing must be reflected in all paragraph formatting, never deviated from
-LANGUAGE: ${body.language === "uk" ? "British English (use British spelling throughout: colour, analyse, organisation, behaviour, centre, programme, defence, recognise, prioritise, travelled — NON-NEGOTIABLE: every word must use British spelling, zero American variants)" : body.language === "au" ? "Australian English (use Australian spelling throughout: colour, analyse, organisation, behaviour, centre, but program for computing — NON-NEGOTIABLE: every word must use Australian spelling)" : "American English (use US spelling throughout: color, analyze, organization, behavior, center, program, defense, recognize, prioritize, traveled — NON-NEGOTIABLE: every word must use American spelling, zero British variants)"}
+SPACING: ${body.spacing === "single" ? "Single-spaced" : body.spacing === "1.5" ? "1.5 line spacing" : "Double-spaced"}
+LANGUAGE: ${body.language === "uk" ? "British English (use British spelling: colour, analyse, organisation, behaviour, centre, programme, defence)" : body.language === "au" ? "Australian English (use Australian spelling: colour, analyse, organisation, behaviour, centre, but program for computing)" : "American English (use US spelling: color, analyze, organization, behavior, center, program, defense)"}
 ${body.numSources ? `MINIMUM SOURCES: Use at least ${body.numSources} sources in the paper` : ""}
 WORD COUNT — ALL THREE RULES ARE MANDATORY:
-• Body content (introduction through conclusion): MINIMUM ${targetWords} words · MAXIMUM ${maxWords} words
-• Target exactly ${targetWords} words of body text. Do NOT exceed ${maxWords} words under any circumstances.
+• Body content (introduction through conclusion): MINIMUM ${minWords} words · MAXIMUM ${maxWords} words
+• Target ${targetWords} words of body text, with allowed tolerance ${minWords}-${maxWords}. Do NOT exceed ${maxWords} words under any circumstances.
 • Count your running word total after EVERY section. If you are behind budget, write more in the next section. If ahead, trim.
 • A complete, on-target ${targetWords}-word paper is the goal — neither padded nor truncated.
 • Word count EXCLUDES: reference list, in-text citation parentheses, headings, abstract, table of contents, figure/table captions
@@ -1082,28 +997,26 @@ SOURCE INTEGRITY (CRITICAL — violations mean the paper is useless):
 
 CITATION FORMAT: Use the chosen style (${body.citationStyle.toUpperCase()}) correctly for every in-text citation and the references section. References section lists ONLY the verified citations.
 
-STRUCTURE: ${targetWords <= 600 ? `This is a SHORT paper (${targetWords} words). Keep every section tightly within its allocated word budget — do NOT expand sections beyond their assigned words. Brevity and precision are the mark of quality here.` : `Follow the required structure for ${body.paperType} exactly — every section must be fully developed, not abbreviated or skipped.`}
+STRUCTURE: Follow the required structure for ${body.paperType} exactly — every section must be fully developed, not abbreviated or skipped.
 
 MARKDOWN: Write in full markdown — # Title, ## sections, ### subsections
 MATH: All equations in LaTeX: inline $...$ and block $$...$$
 ${includeToC ? "TABLE OF CONTENTS: Include a Table of Contents after the Abstract" : ""}
 
-HUMANIZATION — NON-NEGOTIABLE (0% AI detectability is the only acceptable outcome):
-• BURSTINESS: Sentence-length stdDev must exceed 10 words. Mix ≥3 sentences under 9 words with ≥3 over 32 words per 400 words written.
-• PERPLEXITY: Vary word predictability per paragraph — never use the first synonym, choose the 3rd or 4th most natural option.
-• N-GRAMS: No 5+ word sequence should match AI writing patterns — restructure clauses, invert order, split compound sentences.
-• STRUCTURE: ≥30% of paragraphs must NOT follow the standard claim→evidence→analysis→link pattern.
-• VOICE: Every 200 words: one em dash aside—like this—, one parenthetical, or one rhetorical question. ≥2 moments of genuine analytical doubt per section.
-• BANNED — ZERO TOLERANCE: "delve", "crucial", "pivotal", "underscore", "tapestry", "multifaceted", "shed light on", "it is worth noting", "it should be noted", "in today's world", "in the realm of", "nuanced approach", "robust", "leverage", "paradigm shift", "holistic", "seamless", "transformative", "groundbreaking", "cutting-edge", "Furthermore"/"Moreover"/"Additionally" as paragraph openers.
-• Write as a skilled, opinionated human scholar — a professor reading this must not suspect AI authorship.
+HUMANIZATION — MANDATORY (papers that read as AI-written are worthless to the student):
+• Vary sentence length aggressively throughout every section
+• Avoid ALL AI-detectable clichés: "delve", "crucial", "pivotal", "underscore", "tapestry", "multifaceted", "it is worth noting", "in today's world"
+• Use em dashes, parenthetical asides, rhetorical questions naturally
+• Include 2-3 moments of genuine analytical uncertainty per paper
+• No two consecutive paragraphs may open with the same grammatical structure
+• Write with 0% AI detectability — a professor must believe a skilled human student wrote this
 
 PLAGIARISM PREVENTION:
 • Every sentence must be original prose — synthesise and interpret sources, never copy
 • Paraphrase with genuine transformation, not surface synonym substitution
 • Run a mental originality check on every paragraph — would this pass Turnitin? If not, rewrite.
 
-GRADE TARGET: ${targetWords <= 600 ? `This short paper must demonstrate sharp, focused thinking within its tight word limit. Quality is shown through precision and concision — a 200-word paper that lands exactly on target and argues clearly scores higher than a 600-word paper that ignores the brief. Do NOT write more than ${maxWords} words.` : `This paper MUST score 92% or higher. Every section must demonstrate critical analysis, strong argumentation, precise evidence handling, and discipline-specific depth that earns distinction-level marks.`}
-${body.includeInterpretiveCommentary ? `\n${buildInterpretiveContext(true)}\n` : ""}
+GRADE TARGET: This paper MUST score 92% or higher. Every section must demonstrate critical analysis, strong argumentation, precise evidence handling, and discipline-specific depth that earns distinction-level marks.
 ${body.additionalInstructions ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STUDENT'S ADDITIONAL INSTRUCTIONS — MANDATORY COMPLIANCE
@@ -1141,7 +1054,7 @@ ${body.additionalInstructions}
       for (let secIdx = 0; secIdx < sectionPlan.length; secIdx++) {
         const section = sectionPlan[secIdx];
         const isFirst = secIdx === 0;
-        const sectionMaxTokens = wordsToTokens(section.targetWords, 800);
+        const sectionMaxTokens = tokenBudgetFromWords(section.targetWords, 800);
         const headingName = section.name.split("—")[0].trim();
 
         send("step", {
@@ -1173,45 +1086,6 @@ ${body.additionalInstructions}
         const secFinalMsg = await sectionStream.finalMessage();
         recordUsage("claude-sonnet-4-5", secFinalMsg.usage.input_tokens, secFinalMsg.usage.output_tokens, "paper-generation");
 
-        // ── Per-section word count check ───────────────────────────────────────
-        // If a section lands >20% off its target, do one targeted correction pass.
-        // This prevents shortfalls from compounding across sections in large papers.
-        const secRawWordCount = sectionContent.split(/\s+/).filter(Boolean).length;
-        const secDeviation = Math.abs(secRawWordCount - section.targetWords) / section.targetWords;
-        if (secDeviation > 0.20 && section.targetWords >= 200) {
-          const secIsExpand = secRawWordCount < section.targetWords;
-          const secWordsNeeded = Math.abs(section.targetWords - secRawWordCount);
-          send("step", {
-            id: "writing",
-            message: `Chapter ${secIdx + 1} (${headingName}): ${secRawWordCount} words — ${secWordsNeeded} ${secIsExpand ? "short" : "over"} target. Adjusting…`,
-            status: "running",
-          });
-
-          try {
-            const correctionResp = await anthropic.messages.create({
-              model: "claude-sonnet-4-5",
-              max_tokens: wordsToTokens(section.targetWords, 600),
-              system: systemPrompt,
-              messages: [{
-                role: "user",
-                content: `The "${headingName}" section you just wrote is ${secRawWordCount} words but must be exactly ${section.targetWords} words (±5%). ${secIsExpand ? `Expand it by adding ~${secWordsNeeded} more words of substantive content — deepen the analysis, add supporting evidence, develop the argument further.` : `Trim it by removing ~${secWordsNeeded} words — cut redundancy and over-explained points while keeping all core arguments and evidence.`}\n\nReturn ONLY the revised "${headingName}" section (start with ## ${headingName}). Do not add other sections.\n\nCurrent content:\n${sectionContent}`,
-              }],
-            });
-
-            recordUsage("claude-sonnet-4-5", correctionResp.usage.input_tokens, correctionResp.usage.output_tokens, "section-word-fix");
-
-            const corrected = correctionResp.content[0].type === "text" ? correctionResp.content[0].text : sectionContent;
-            // Replace the streamed section in the full content with the corrected version
-            content = content.slice(0, content.length - sectionContent.length) + corrected;
-            // Stream the correction delta to the client
-            const correctionDelta = corrected.slice(sectionContent.length);
-            if (correctionDelta.length > 0) send("token", { text: correctionDelta });
-            sectionContent = corrected;
-          } catch {
-            /* non-fatal — proceed with original section */
-          }
-        }
-
         previousContext += "\n\n" + sectionContent;
       }
 
@@ -1239,7 +1113,7 @@ ${body.additionalInstructions}
           role: "user",
           content: isAnnotatedBib
             ? `Write a complete annotated bibliography on: "${body.topic}"\n\nYou have ${citations.length} verified sources listed above. Write one annotated entry for EACH source — full citation then a 150-200 word annotation (Summary → Critical Evaluation → Relevance). Sort entries alphabetically by first author's surname. Include an Introduction and Conclusion. Total annotation content must reach at least ${targetWords} words.${body.additionalInstructions ? `\n\nADDITIONAL STUDENT INSTRUCTIONS (follow exactly): ${body.additionalInstructions}` : ""}`
-            : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Body word count (introduction through conclusion, excluding references and in-text citations): minimum ${targetWords} words, maximum ${maxWords} words. Stop writing body content once you reach ${maxWords} words, then add the references section.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
+            : `Write a complete, high-quality academic ${body.paperType} on: "${body.topic}"\n\nDeliver the full paper with all sections properly structured and referenced. Body word count (introduction through conclusion, excluding references and in-text citations): minimum ${minWords} words, maximum ${maxWords} words. Aim for ${targetWords} words. Stop writing body content once you reach ${maxWords} words, then add the references section.${body.additionalInstructions ? `\n\nRe-read and follow these student instructions for every section: ${body.additionalInstructions}` : ""}`,
         }],
       });
 
@@ -1324,7 +1198,7 @@ Return JSON:
 
           const improvResp = await anthropic.messages.create({
             model: "claude-sonnet-4-5",
-            max_tokens: wordsToTokens(maxWords, 1500),
+            max_tokens: 12000,
             system: `${WRITER_SOUL}
 
 You are the LightSpeed Grade Optimizer. A paper has been written but a cross-check found it does not fully meet the A-grade criteria.
@@ -1340,7 +1214,7 @@ ${gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}
 RULES:
 - Keep all existing citations, facts, and arguments — only strengthen weak sections
 - Add evidence, analysis, or depth where criteria are missing — do not waffle or pad
-- Maintain the same approximate word count (±5%)
+- Keep final body word count exactly at the requested target
 - Preserve all markdown formatting and LaTeX equations
 - Return ONLY the revised paper — no commentary, no preamble`,
             messages: [{
@@ -1378,7 +1252,7 @@ RULES:
     try {
       const bibResp = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_tokens: wordsToTokens(citations.length * 30, 0, 1200),
+        max_tokens: 1200,
         messages: [{
           role: "system",
           content: `Format these citations as a clean ${body.citationStyle.toUpperCase()} bibliography. Return ONLY the bibliography list, numbered.`,
@@ -1408,8 +1282,6 @@ RULES:
       plagiarismGateScore = plagCheckResult.plagiarismScore;
 
       if (plagiarismGateScore > 8) {
-        // Rephrase is a pipeline quality gate — never skipped, not tied to
-        // standalone humanizer credits. The company promise of <8% must hold.
         send("step", {
           id: "plagiarism-gate",
           message: `Initial similarity ${plagiarismGateScore}% — above threshold. Running targeted rephrasing to reduce overlap…`,
@@ -1418,13 +1290,13 @@ RULES:
 
         const rephrasedResp = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
-          max_tokens: wordsToTokens(maxWords, 1500),
+          max_tokens: 12000,
           system: `${WRITER_SOUL}
 
 You are the LightSpeed Originality Engine. Your task is to rephrase flagged sections of an academic paper to reduce textual similarity below 8% while preserving:
 • All facts, arguments, conclusions, and in-text citations EXACTLY
 • The same academic level and tone
-• The same word count (±5%)
+• Keep final body word count exactly at the requested target
 • All LaTeX equations and markdown formatting
 
 Rephrase by:
@@ -1472,25 +1344,17 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
     }
 
     // ── Step 5b: AI detection gate — verify paper passes AI detectors ─────────
-    // NON-NEGOTIABLE: This step ALWAYS runs and ALWAYS attempts humanisation if
-    // any AI signal is detected. It cannot be skipped or bypassed.
     send("step", {
       id: "ai-gate",
       message: "Running AI detection check — verifying paper reads as human-authored across Turnitin, GPTZero, and Originality.AI signal patterns…",
       status: "running",
     });
 
-    // Slopbuster pre-pass: remove surface-level AI phrases before scanning.
-    // Free, instant, no API call — focuses the LLM humaniser on deeper signals.
-    send("step", { id: "ai-gate-slop", message: "Slopbuster pre-pass: removing AI phrase patterns (no API call)…", status: "running" });
-    finalContent = removeSlopPatterns(finalContent);
-    send("step", { id: "ai-gate-slop", message: "Slopbuster pre-pass complete — AI vocabulary patterns cleaned.", status: "done" });
-
     let realAiScore = 0;
     const AI_PASS_THRESHOLD = 0;
     const AI_HUMANIZE_MAX_PASSES = 3;
     try {
-      send("step", { id: "ai-gate-scan", message: "Scanning paper for statistical AI fingerprints (burstiness, perplexity, n-gram patterns)…", status: "running" });
+      send("step", { id: "ai-gate-scan", message: "Scanning paper for AI-generated patterns…", status: "running" });
 
       const { score: detectedScore, indicators: aiIndicators } = await detectAIScore(
         finalContent,
@@ -1569,36 +1433,6 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
       });
     }
 
-    // ── Re-enforce word count if humanization/plagiarism passes drifted it ────
-    // enforceBodyWordCount ran before the quality gates; those rewrites can freely
-    // change the length. Re-run only when the body is measurably outside ±5%.
-    if (!isAnnotatedBib) {
-      const postGateBodyCount = computeBodyWordCount(finalContent);
-      const postGateMin = Math.floor(targetWords * 0.95);
-      const postGateMax = Math.ceil(targetWords * 1.05);
-      if (postGateBodyCount < postGateMin || postGateBodyCount > postGateMax) {
-        send("step", {
-          id: "word-count-relock",
-          message: `Body word count drifted to ${postGateBodyCount.toLocaleString()} after quality passes (target ${targetWords.toLocaleString()}). Re-locking…`,
-          status: "running",
-        });
-        try {
-          finalContent = await enforceBodyWordCount(finalContent, targetWords, send);
-        } catch {
-          send("step", { id: "word-count-relock", message: "Word count re-lock skipped due to adjustment error.", status: "done" });
-        }
-      }
-    }
-
-    // ── Promise enforcement clamps ────────────────────────────────────────────
-    // Preserve raw scores for quality signals (internal telemetry only), then
-    // clamp display values to the company promise thresholds so the output card
-    // can never contradict the advertised guarantees.
-    const qualityAiScore   = realAiScore;                            // real, for telemetry
-    const qualityPlagScore = plagiarismGateScore;                    // real, for telemetry
-    realAiScore            = 0;                                      // promise: 0% AI always
-    if (plagiarismGateScore > 8) plagiarismGateScore = 8;           // promise: ≤8% always
-
     // ── Step 6: Quality stats ─────────────────────────────────────────────────
     send("step", { id: "stats", message: "Assessing academic quality — estimating grade, AI detection score and confirmed plagiarism score…", status: "running" });
 
@@ -1657,8 +1491,8 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
     // quality trends (average grade, AI score, plagiarism by subject, etc.)
     const uid = req.userId ?? undefined;
     recordQualitySignal({ userId: uid, type: "grade_verify",  score: stats.grade,           subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
-    recordQualitySignal({ userId: uid, type: "ai_detection",  score: qualityAiScore,   subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
-    recordQualitySignal({ userId: uid, type: "plagiarism",    score: qualityPlagScore, subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
+    recordQualitySignal({ userId: uid, type: "ai_detection",  score: stats.aiScore,         subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
+    recordQualitySignal({ userId: uid, type: "plagiarism",    score: stats.plagiarismScore, subject: body.subject, paperWordCount: stats.bodyWordCount }).catch(() => {});
 
     // ── Send "done" to the client FIRST — the paper is ready regardless of DB ─
     // DB save is best-effort: if it fails the user still sees their paper.
@@ -1790,23 +1624,13 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
     send("step", { id: "analyse", message: "Scope analysis complete", status: "done" });
     send("step", { id: "structure", message: `Designing argument flow and section hierarchy for ${body.subject}…`, status: "running" });
 
-    const outlineWordCount = Number(rawBody.wordCount) > 0 ? Number(rawBody.wordCount) : 1000;
-
-    // Scale section/subsection guidance to paper size
-    const sectionGuide =
-      outlineWordCount < 800   ? "4–5 sections, 2–3 subsections each" :
-      outlineWordCount < 2000  ? "5–6 sections, 3–4 subsections each" :
-      outlineWordCount < 5000  ? "6–8 sections, 3–5 subsections each" :
-      outlineWordCount < 10000 ? "8–10 sections, 4–6 subsections each" :
-                                 "10–12 sections, 5–7 subsections each";
-
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: wordsToTokens(outlineWordCount, 600),
+      max_tokens: 2500,
       system: `${WRITER_SOUL}\n\n${qualityRules}\n\nGenerate a detailed academic paper outline. Return ONLY valid JSON: {"title": string, "sections": [{"heading": string, "subsections": string[]}]}`,
       messages: [{
         role: "user",
-        content: `Create a detailed outline for a ${body.paperType} on "${body.topic}" in ${body.subject}.\n\nTarget paper length: ${outlineWordCount.toLocaleString()} words. Use ${sectionGuide} — scale the depth and number of analytical points to suit a paper of this length.\n\nEach subsection should name a specific argument, finding, or analytical point — not just a topic label.${extraContext ? `\n\n${extraContext}` : ""}`,
+        content: `Create a detailed outline for a ${body.paperType} on "${body.topic}" in ${body.subject}. Include 6-8 sections with 3-5 subsections each. Each subsection should name a specific argument, finding, or analytical point — not just a topic label.${extraContext ? `\n\n${extraContext}` : ""}`,
       }],
     });
 
@@ -1931,7 +1755,13 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
     send("step", { id: "headings", message: "Section headings and sub-headings complete", status: "done" });
     send("step", { id: "finalise", message: "Adding evidence points and research angles per section…", status: "running" });
     send("step", { id: "finalise", message: "Outline finalised — ready to write", status: "done" });
-    send("done", { ...outline, sections: enrichedSections, totalWordTarget: targetWordCount });
+    send("done", {
+      ...outline,
+      sections: enrichedSections,
+      totalWordTarget: targetWordCount,
+      totalWordMin: targetWordCount,
+      totalWordMax: targetWordCount,
+    });
     res.end();
   } catch (err) {
     req.log.error({ err }, "Error generating outline");
