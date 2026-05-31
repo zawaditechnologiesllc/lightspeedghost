@@ -15,12 +15,20 @@ Allow: /
 User-agent: Google-Extended
 Allow: /
 
+# Google Gemini
+User-agent: Googlebot-Gemini
+Allow: /
+
 # ── Bing / Microsoft ──────────────────────────────────────────────────────────
 User-agent: Bingbot
 Allow: /
 Crawl-delay: 0
 
 User-agent: BingPreview
+Allow: /
+
+# Microsoft Copilot
+User-agent: MicrosoftCopilot
 Allow: /
 
 # ── OpenAI / ChatGPT ──────────────────────────────────────────────────────────
@@ -61,12 +69,27 @@ Allow: /
 User-agent: Applebot-Extended
 Allow: /
 
-# ── Common Crawl (feeds many AI models) ──────────────────────────────────────
-User-agent: CCBot
+# ── Grok / xAI ───────────────────────────────────────────────────────────────
+User-agent: Grok
+Allow: /
+
+User-agent: xAI-Grok
+Allow: /
+
+# ── Mistral / Le Chat ─────────────────────────────────────────────────────────
+User-agent: Mistral-AI
 Allow: /
 
 # ── Cohere ────────────────────────────────────────────────────────────────────
 User-agent: cohere-ai
+Allow: /
+
+# ── Amazon / Alexa ────────────────────────────────────────────────────────────
+User-agent: Amazonbot
+Allow: /
+
+# ── Common Crawl (feeds many AI models) ──────────────────────────────────────
+User-agent: CCBot
 Allow: /
 
 # ── ByteDance / TikTok ────────────────────────────────────────────────────────
@@ -75,6 +98,10 @@ Allow: /
 
 # ── DuckDuckGo ────────────────────────────────────────────────────────────────
 User-agent: DuckDuckBot
+Allow: /
+
+# ── You.com ───────────────────────────────────────────────────────────────────
+User-agent: YouBot
 Allow: /
 
 # ── SEO crawlers (Ahrefs, Semrush, Moz) ──────────────────────────────────────
