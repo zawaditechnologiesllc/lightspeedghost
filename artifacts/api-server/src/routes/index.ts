@@ -14,6 +14,7 @@ import paymentsRouter from "./payments";
 import pwaRouter from "./pwa";
 import referralRouter from "./referral";
 import assistantRouter from "./assistant";
+import ebooksRouter from "./ebooks";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(paymentsRouter);
 router.use(pwaRouter);
 router.use(referralRouter);
 router.use(assistantRouter);
+router.use(ebooksRouter);
 
 export default router;
