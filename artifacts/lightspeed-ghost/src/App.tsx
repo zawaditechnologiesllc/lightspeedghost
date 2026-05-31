@@ -114,7 +114,7 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { check(); }, [check]);
 
-  if (path.startsWith("/admin")) return <>{children}</>;
+  if (path.startsWith("/mwaramuriuki-login")) return <>{children}</>;
 
   if (status === "loading") {
     return (
@@ -204,8 +204,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/auth" component={Auth} />
-      <Route path="/admin" component={Admin} />
-      <Route path="/admin/:tab" component={Admin} />
+      <Route path="/mwaramuriuki-login" component={Admin} />
+      <Route path="/mwaramuriuki-login/:tab" component={Admin} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/confirm-email" component={ConfirmEmail} />
       <Route path="/invite" component={Invite} />

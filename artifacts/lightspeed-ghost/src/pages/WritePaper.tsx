@@ -301,6 +301,8 @@ export default function WritePaper() {
   const [referenceText, setReferenceText] = useState("");
   const [datasetText, setDatasetText] = useState("");
   const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
+  const [financialStatementText, setFinancialStatementText] = useState("");
+  const [financialStatementType, setFinancialStatementType] = useState("all");
 
   // ── citation confirmation
   const [detectedStyle, setDetectedStyle] = useState<string | null>(null);
@@ -429,6 +431,8 @@ export default function WritePaper() {
           rubricText: rubricText.trim() || undefined,
           referenceText: referenceText.trim() || undefined,
           datasetText: datasetText.trim() || undefined,
+          financialStatementText: financialStatementText.trim() || undefined,
+          financialStatementType: financialStatementText.trim() ? financialStatementType : undefined,
         }),
       });
 
@@ -1035,6 +1039,54 @@ export default function WritePaper() {
             {datasetText && (
               <p className="text-[10px] text-muted-foreground mt-1">
                 AI will compute means, medians, and standard deviations — your Results section will cite real numbers
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ── Financial Statements upload (finance subjects only) ── */}
+        {FINANCE_SUBJECTS.has(subject.toLowerCase()) && (
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 size={14} className="text-amber-400 shrink-0" />
+              <label className="text-xs font-semibold text-amber-300 uppercase tracking-wide">Financial Statements</label>
+              <span className="text-[10px] text-amber-400/60 ml-1">(optional — AI will cite your actual figures)</span>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Statement type</label>
+              <select
+                value={financialStatementType}
+                onChange={e => setFinancialStatementType(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="all">All statements (combined upload)</option>
+                <option value="income_statement">Income Statement (P&amp;L)</option>
+                <option value="balance_sheet">Balance Sheet</option>
+                <option value="cash_flow">Cash Flow Statement</option>
+                <option value="ratio_analysis">Ratio Analysis</option>
+              </select>
+            </div>
+
+            <FileUploadZone
+              onExtracted={f => setFinancialStatementText(prev => prev ? `${prev}\n\n---\n\n${f.text}` : f.text)}
+              accept=".pdf,.docx,.doc,.txt,.csv,.xlsx,.xls,.png,.jpg,.jpeg"
+              label="Upload financial statement(s)…"
+              hint="PDF, Word, Excel, image — balance sheet, income statement, cash flow"
+            />
+
+            <textarea
+              value={financialStatementText}
+              onChange={e => setFinancialStatementText(e.target.value)}
+              rows={3}
+              placeholder={"Or paste financial data directly…\ne.g.  Revenue: $4.2M  COGS: $1.8M  Net Income: $620K"}
+              className="w-full px-3 py-2 font-mono text-xs rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            />
+
+            {financialStatementText.trim() && (
+              <p className="text-[10px] text-amber-400/80 flex items-center gap-1.5">
+                <CheckCircle size={10} />
+                Financial data loaded — AI will extract specific figures and cite them in the analysis
               </p>
             )}
           </div>
