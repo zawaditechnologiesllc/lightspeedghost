@@ -60,7 +60,7 @@ publicRouter.get("/sitemap.xml", async (_req: Request, res: Response) => {
 
 // ── Public: serve rendered SEO page ──────────────────────────────────────────
 publicRouter.get("/seo/:slug", async (req: Request, res: Response) => {
-  const { slug } = req.params;
+  const slug = String(req.params.slug);
 
   try {
     const page = await getPublishedPage(slug);

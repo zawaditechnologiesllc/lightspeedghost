@@ -464,10 +464,11 @@ const LSG_TYPE_CODES: Record<string, string> = {
   plagiarism: "AP",
   stem:       "SS",
   study:      "ASA",
+  ebook:      "EB",
 };
 
 export function makeLsgFilename(
-  type: "paper" | "outline" | "revision" | "humanizer" | "plagiarism" | "stem" | "study",
+  type: "paper" | "outline" | "revision" | "humanizer" | "plagiarism" | "stem" | "study" | "ebook",
   label?: string
 ): string {
   const code = LSG_TYPE_CODES[type] ?? type.toUpperCase();

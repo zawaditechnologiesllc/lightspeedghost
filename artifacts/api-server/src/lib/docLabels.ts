@@ -12,6 +12,7 @@ const TOOL_CODE: Record<string, string> = {
   plagiarism: "AP",
   stem:       "SS",
   study:      "ASA",
+  ebook:      "EB",
 };
 
 // ── Document-type label tables ─────────────────────────────────────────────
@@ -84,12 +85,13 @@ function padNum(n: number): string {
 // ── Generate the full LSG document title ──────────────────────────────────
 
 export interface DocLabelOptions {
-  type: "paper" | "outline" | "revision" | "humanizer" | "plagiarism" | "stem" | "study";
+  type: "paper" | "outline" | "revision" | "humanizer" | "plagiarism" | "stem" | "study" | "ebook";
   docNumber: number;
   paperType?: string;        // for WP
   subject?: string;          // for SS and ASA
   studyType?: string;        // for ASA (flashcards, quiz, etc.)
   plagiarismMode?: "ai" | "plagiarism" | "both"; // for AP
+  ebookTitle?: string;       // for EB
 }
 
 export function formatDocTitle(opts: DocLabelOptions): string {
@@ -126,6 +128,10 @@ export function formatDocTitle(opts: DocLabelOptions): string {
       const raw = (opts.studyType ?? "").toLowerCase().trim();
       const label = (STUDY_LABELS[raw] ?? raw.toUpperCase()) || "STUDY MATERIAL";
       return `${prefix}-${label}`;
+    }
+    case "ebook": {
+      const title = (opts.ebookTitle ?? "").trim();
+      return title ? `${prefix}-${title.toUpperCase().slice(0, 40)}` : `${prefix}-EBOOK`;
     }
     default:
       return `${prefix}-DOCUMENT`;

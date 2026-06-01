@@ -120,7 +120,7 @@ router.post("/study/ask", requireAuth, async (req, res) => {
 
     // Record which sources returned results (fire-and-forget — learning engine)
     if (ragPapers.length > 0) {
-      const sourceCounts = ragPapers.reduce<Record<string, number>>((acc, p) => {
+      const sourceCounts = (ragPapers as Array<{ source: string }>).reduce((acc: Record<string, number>, p) => {
         acc[p.source] = (acc[p.source] ?? 0) + 1;
         return acc;
       }, {});

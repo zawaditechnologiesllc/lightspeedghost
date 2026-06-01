@@ -145,13 +145,13 @@ router.put("/seo/page/:slug", async (req: Request, res: Response) => {
 // ── Publish / unpublish ───────────────────────────────────────────────────────
 router.post("/seo/page/:slug/publish", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
-  const ok = await publishPage(req.params.slug);
+  const ok = await publishPage(String(req.params.slug));
   res.json({ ok });
 });
 
 router.post("/seo/page/:slug/unpublish", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
-  const ok = await unpublishPage(req.params.slug);
+  const ok = await unpublishPage(String(req.params.slug));
   res.json({ ok });
 });
 
@@ -207,7 +207,8 @@ router.get("/seo/catalog", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
     const { rows } = await pool.query(`SELECT slug, status, published, word_count, llm_used FROM seo_pages`);
-    const dbMap = new Map(rows.map((r: { slug: string }) => [r.slug, r]));
+    type CatalogRow = { slug: string; status: string; published: boolean; word_count: number | null; llm_used: string | null };
+    const dbMap = new Map<string, CatalogRow>(rows.map((r) => [r.slug as string, r as CatalogRow]));
 
     const catalog = PAGE_CATALOG.map((spec) => ({
       slug: spec.slug,

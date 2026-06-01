@@ -328,7 +328,7 @@ router.get("/admin/referrals", async (req: Request, res: Response) => {
 router.post("/admin/referrals/discount/:id/apply", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
 
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   try {

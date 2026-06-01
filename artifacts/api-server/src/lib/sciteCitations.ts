@@ -196,9 +196,7 @@ export async function getSmartCitationQuality(
   doi?: string,
   knownCitationCount?: number
 ): Promise<CitationQuality> {
-  const cacheKey = `scite:${paperId}:${doi ?? ""}`;
-
-  return withCache(cacheKey, async () => {
+  return withCache("citations", async () => {
     let citationCount = knownCitationCount ?? 0;
     let supporting = 0;
     let contrasting = 0;
@@ -255,7 +253,7 @@ export async function getSmartCitationQuality(
       confidence,
       source: dataSource,
     };
-  }, 86_400_000); // 24-hour cache
+  }, paperId, doi ?? ""); // cache key: paperId + doi
 }
 
 /**

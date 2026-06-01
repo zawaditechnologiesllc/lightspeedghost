@@ -1,3 +1,7 @@
 - [Plan structure overhaul](plan-structure.md) — Free + campus plans removed; only starter, pro, institution remain. Legacy "campus" values normalized at runtime.
 - [useSubscription PlanTier type](plan-structure.md) — Must include "institution" | "campus" or TypeScript errors appear in ManageFundsModal and paywall guards.
 - [Institution plan limits](plan-structure.md) — Institution has null (unlimited) limits in both backend usageTracker.ts and frontend useSubscription.ts PLAN_LIMITS.
+- [Express 5 param types](express5-param-types.md) — Express 5 types req.params values as string|string[]; always wrap with String() before passing to functions expecting string.
+- [withCache keyParts pattern](withcache-keyparts.md) — withCache(op: TtlKey, compute, ...keyParts: string[]); pass cache discriminators as keyParts after op, never pass a TTL number as the 3rd arg.
+- [recordUsage arg order](recordusage-arg-order.md) — recordUsage(model, inputTokens, outputTokens, operation) — 4 args, no userId; userId must not be included.
+- [DocLabelOptions ebook type](doclabel-ebook.md) — "ebook" must be in DocLabelOptions.type union and TOOL_CODE map or formatDocTitle calls with type:"ebook" fail TS.

@@ -599,6 +599,8 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       rubricText?: string;
       referenceText?: string;
       datasetText?: string;
+      financialStatementText?: string;
+      financialStatementType?: string;
     };
 
     const requestedWords = body.wordCount ?? 1500;
@@ -1580,7 +1582,7 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
 
 router.put("/writing/save/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const { content } = req.body as { content: string };
     const bodyWordCount = computeBodyWordCount(content);
 
