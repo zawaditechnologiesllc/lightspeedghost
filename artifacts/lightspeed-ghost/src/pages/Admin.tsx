@@ -16,6 +16,7 @@ import {
 import { exportAsDocx, exportAsPDF, exportAsTxt, copyText, richToHtml, wrapDocHtml } from "@/lib/exportUtils";
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
+import SeoAdmin from "./SeoAdmin";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
@@ -39,7 +40,7 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "tools" | "documents" | "ebooks" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings" | "messages" | "intelligence" | "admin-management";
+type Tab = "overview" | "users" | "tools" | "documents" | "ebooks" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "seo" | "settings" | "messages" | "intelligence" | "admin-management";
 
 interface AdminRole {
   role: "super" | "sector";
@@ -1116,6 +1117,7 @@ export default function Admin() {
     { id: "finance",           label: "Finance",        icon: BarChart3 },
     { id: "announcements",     label: "Announcements",  icon: Megaphone },
     { id: "referrals",         label: "Referrals",      icon: Share2 },
+    { id: "seo",               label: "SEO",            icon: Search },
     { id: "messages",          label: "Messages",       icon: Inbox },
     { id: "settings",          label: "Settings",       icon: Settings },
     { id: "intelligence",      label: "Intelligence",   icon: Brain },
@@ -1327,6 +1329,7 @@ export default function Admin() {
                           { id: "finance",       label: "Finance",        sub: "Revenue & reports",         icon: BarChart3,    color: "text-emerald-400", bg: "bg-emerald-500/8", border: "border-emerald-500/12" },
                           { id: "announcements", label: "Announcements",  sub: "Banner messages",           icon: Megaphone,    color: "text-pink-400",    bg: "bg-pink-500/8",    border: "border-pink-500/12" },
                           { id: "referrals",     label: "Referrals",      sub: "Affiliate commissions",     icon: Share2,       color: "text-lime-400",    bg: "bg-lime-500/8",    border: "border-lime-500/12" },
+                          { id: "seo",           label: "SEO",            sub: "AI content engine",         icon: Search,       color: "text-sky-400",     bg: "bg-sky-500/8",     border: "border-sky-500/12" },
                           { id: "settings",      label: "Settings",       sub: "Platform config",           icon: Settings,     color: "text-white/50",    bg: "bg-white/5",       border: "border-white/10" },
                         ] as const).map(({ id, label, sub, icon: Icon, color, bg, border }) => (
                           <button
@@ -1581,7 +1584,7 @@ export default function Admin() {
                       <span className="text-[11px] text-white/25 font-normal">· programmatic page generation, sitemap & budget</span>
                     </div>
                   </div>
-                  <Link href="/mwaramuriuki-login/seo">
+                  <button onClick={() => setActiveTab("seo")} className="w-full text-left">
                     <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/8 border border-emerald-500/15 hover:bg-emerald-500/12 transition-colors cursor-pointer group">
                       <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
                         <Search size={15} className="text-emerald-400" />
@@ -1592,7 +1595,7 @@ export default function Admin() {
                       </div>
                       <ChevronRight size={14} className="text-white/25 group-hover:text-emerald-400 transition-colors flex-shrink-0" />
                     </div>
-                  </Link>
+                  </button>
                 </div>
 
                 {/* ── Ebook Management ──────────────────────────────────── */}
@@ -2750,6 +2753,9 @@ export default function Admin() {
                 )}
               </div>
             )}
+
+            {/* ── SEO Engine ────────────────────────────────────────────── */}
+            {activeTab === "seo" && <SeoAdmin />}
 
             {/* ── Settings ──────────────────────────────────────────────── */}
             {activeTab === "settings" && (

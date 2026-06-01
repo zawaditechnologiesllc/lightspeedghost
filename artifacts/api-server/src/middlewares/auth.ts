@@ -6,6 +6,11 @@ declare global {
     interface Request {
       userId?: string;
       userEmail?: string;
+      adminAuth?: {
+        authorized: boolean;
+        isSuperAdmin: boolean;
+        sectorAdmin?: { id: number; name: string; email: string; sectors: string[] };
+      };
     }
   }
 }
