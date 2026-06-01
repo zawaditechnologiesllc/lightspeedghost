@@ -1,0 +1,3 @@
+- [Plan structure overhaul](plan-structure.md) — Free + campus plans removed; only starter, pro, institution remain. Legacy "campus" values normalized at runtime.
+- [useSubscription PlanTier type](plan-structure.md) — Must include "institution" | "campus" or TypeScript errors appear in ManageFundsModal and paywall guards.
+- [Institution plan limits](plan-structure.md) — Institution has null (unlimited) limits in both backend usageTracker.ts and frontend useSubscription.ts PLAN_LIMITS.

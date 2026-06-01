@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { useLocation } from "wouter";
 
 const API = "/api";
 
@@ -20,6 +19,94 @@ async function apiFetch(path: string, opts: RequestInit = {}) {
   return res.json();
 }
 
+// ── Shared primitives ─────────────────────────────────────────────────────────
+
+function Spinner() {
+  return (
+    <div className="flex items-center justify-center py-14">
+      <div className="w-7 h-7 border-2 border-slate-600 border-t-blue-500 rounded-full animate-spin" />
+    </div>
+  );
+}
+
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function CardTitle({ children }: { children: React.ReactNode }) {
+  return <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">{children}</h3>;
+}
+
+function Stat({ label, value, sub, color = "text-white" }: { label: string; value: string | number; sub?: string; color?: string }) {
+  return (
+    <div className="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <div className={`text-2xl font-bold ${color}`}>{value}</div>
+      <div className="text-xs font-medium text-slate-300 mt-0.5">{label}</div>
+      {sub && <div className="text-[10px] text-slate-500 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    published:     "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25",
+    review:        "bg-amber-500/15 text-amber-300 border border-amber-500/25",
+    draft:         "bg-slate-600/30 text-slate-400 border border-slate-600/30",
+    archived:      "bg-red-500/15 text-red-400 border border-red-500/25",
+    "not-seeded":  "bg-slate-700/40 text-slate-500 border border-slate-700/40",
+  };
+  return (
+    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${map[status] ?? "bg-slate-700 text-slate-400"}`}>
+      {status}
+    </span>
+  );
+}
+
+function Toast({ msg, variant = "success" }: { msg: string; variant?: "success" | "error" }) {
+  if (!msg) return null;
+  return (
+    <div className={`text-xs rounded-xl px-4 py-2.5 flex items-center gap-2 ${
+      variant === "success"
+        ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
+        : "bg-red-500/10 border border-red-500/20 text-red-400"
+    }`}>
+      <span>{variant === "success" ? "✓" : "✗"}</span> {msg}
+    </div>
+  );
+}
+
+function Btn({ children, onClick, disabled, variant = "primary", size = "sm", className = "" }: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  variant?: "primary" | "secondary" | "danger" | "success" | "amber" | "purple";
+  size?: "xs" | "sm";
+  className?: string;
+}) {
+  const variantCls = {
+    primary:   "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/30",
+    secondary: "bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600",
+    danger:    "bg-red-600/30 hover:bg-red-600/50 text-red-300 border border-red-600/30",
+    success:   "bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-600/30",
+    amber:     "bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/30",
+    purple:    "bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/30",
+  }[variant];
+  const sizeCls = size === "xs" ? "text-[10px] px-2 py-0.5" : "text-xs px-3.5 py-1.5";
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${sizeCls} ${variantCls} rounded-lg font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
 // ── Tab: Dashboard ────────────────────────────────────────────────────────────
 function DashboardTab() {
   const [data, setData] = useState<any>(null);
@@ -36,76 +123,113 @@ function DashboardTab() {
   if (loading) return <Spinner />;
 
   const pages = data?.pages ?? {};
-  const pct = budget?.percentUsed ?? 0;
+  const pct = Math.round(budget?.percentUsed ?? 0);
+  const budgetColor = pct > 80 ? "bg-red-500" : pct > 60 ? "bg-amber-500" : "bg-emerald-500";
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Published", value: pages.published ?? 0, color: "text-green-400" },
-          { label: "In Review", value: pages.review ?? 0, color: "text-amber-400" },
-          { label: "Draft", value: pages.draft ?? 0, color: "text-slate-400" },
-          { label: "Total Pages", value: pages.total ?? 0, color: "text-blue-400" },
-        ].map((m) => (
-          <div key={m.label} className="bg-slate-800 rounded-lg p-4 text-center">
-            <div className={`text-3xl font-bold ${m.color}`}>{m.value}</div>
-            <div className="text-xs text-slate-400 mt-1">{m.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-slate-800 rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-slate-300 mb-3">Monthly LLM Budget</h3>
-        <div className="flex justify-between text-xs text-slate-400 mb-2">
-          <span>${budget?.totalSpend?.toFixed(4) ?? "0.00"} spent</span>
-          <span>${budget?.budgetLimit ?? 8} limit</span>
-        </div>
-        <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${pct > 80 ? "bg-red-500" : pct > 60 ? "bg-amber-500" : "bg-green-500"}`}
-            style={{ width: `${Math.min(pct, 100)}%` }}
-          />
-        </div>
-        <div className="mt-2 text-xs text-slate-400 flex justify-between">
-          <span>Gemini: ${budget?.geminiSpend?.toFixed(4) ?? "0"}</span>
-          <span>Claude: ${budget?.claudeSpend?.toFixed(4) ?? "0"}</span>
-          <span>{pct}% used</span>
-        </div>
-        {budget?.upgraded && (
-          <p className="text-xs text-green-400 mt-2">✓ Budget upgraded — Claude unlocked for all pages</p>
-        )}
-        {budget?.pillarRemainingThisMonth !== undefined && (
-          <p className="text-xs text-blue-400 mt-1">
-            Claude pillar pages: {budget.pillarUsedThisMonth}/{15} used this month ({budget.pillarRemainingThisMonth} remaining)
-          </p>
-        )}
+    <div className="space-y-5">
+      {/* KPI grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Stat label="Published" value={pages.published ?? 0} color="text-emerald-400" sub="Live pages" />
+        <Stat label="In Review" value={pages.review ?? 0} color="text-amber-400" sub="Needs approval" />
+        <Stat label="Draft" value={pages.draft ?? 0} color="text-slate-400" sub="Not published" />
+        <Stat label="Total" value={pages.total ?? 0} color="text-blue-400" sub="In database" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-slate-800 rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-slate-300 mb-3">Quality Issues</h3>
+        {/* Budget card */}
+        <Card>
+          <CardTitle>Monthly LLM Budget — {budget?.month}</CardTitle>
+          <div className="flex justify-between text-xs text-slate-400 mb-2">
+            <span>${(budget?.totalSpend ?? 0).toFixed(4)} spent</span>
+            <span className="font-medium text-white">{pct}%</span>
+            <span>${budget?.budgetLimit ?? 8} limit</span>
+          </div>
+          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${budgetColor}`}
+              style={{ width: `${Math.min(pct, 100)}%` }} />
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+            <div className="text-center">
+              <div className="text-slate-300 font-medium">${(budget?.geminiSpend ?? 0).toFixed(4)}</div>
+              <div className="text-slate-500">Gemini</div>
+            </div>
+            <div className="text-center">
+              <div className="text-slate-300 font-medium">${(budget?.claudeSpend ?? 0).toFixed(4)}</div>
+              <div className="text-slate-500">Claude</div>
+            </div>
+            <div className="text-center">
+              <div className="text-slate-300 font-medium">{budget?.pagesGenerated ?? 0}</div>
+              <div className="text-slate-500">Pages</div>
+            </div>
+          </div>
+          {budget?.pillarRemainingThisMonth !== undefined && (
+            <p className="text-[10px] text-blue-400 mt-3 bg-blue-500/10 rounded-lg px-3 py-1.5">
+              Claude pillar pages: {budget.pillarUsedThisMonth}/15 used · {budget.pillarRemainingThisMonth} remaining
+            </p>
+          )}
+        </Card>
+
+        {/* Quick actions + quality issues */}
+        <Card>
+          <CardTitle>Quick Actions</CardTitle>
+          <div className="space-y-2 mb-4">
+            {[
+              { href: "/seo/ai-paper-writer", label: "↗ Preview: AI Paper Writer" },
+              { href: "/sitemap.xml", label: "↗ View sitemap.xml" },
+              { href: "/robots.txt", label: "↗ View robots.txt" },
+            ].map((l) => (
+              <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer"
+                className="block text-xs text-blue-400 hover:text-blue-300 transition-colors py-0.5">
+                {l.label}
+              </a>
+            ))}
+          </div>
+          {(pages.missing_disclosure > 0 || pages.integrity_issues > 0) && (
+            <div className="border-t border-slate-700/50 pt-3 space-y-1.5">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Quality Issues</div>
+              {pages.missing_disclosure > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400">Missing AI disclosure</span>
+                  <span className="text-amber-400 font-semibold">{pages.missing_disclosure}</span>
+                </div>
+              )}
+              {pages.integrity_issues > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400">Integrity failures</span>
+                  <span className="text-red-400 font-semibold">{pages.integrity_issues}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* SemRush known issues tracker */}
+      <Card>
+        <CardTitle>
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-500/20 text-orange-400 text-[10px] font-bold">S</span>
+          SemRush Issues — Resolved Status
+        </CardTitle>
+        <div className="space-y-2">
           {[
-            { label: "Missing AI disclosure", value: pages.missing_disclosure ?? 0, color: "text-amber-400" },
-            { label: "Integrity failures", value: pages.integrity_issues ?? 0, color: "text-red-400" },
-          ].map((q) => (
-            <div key={q.label} className="flex justify-between items-center py-2 border-b border-slate-700 last:border-0">
-              <span className="text-xs text-slate-400">{q.label}</span>
-              <span className={`text-sm font-bold ${q.color}`}>{q.value}</span>
+            { issue: "Title tag too long (was 78 chars)", fix: "Shortened to 52 chars: 'Light Speed Ghost — AI Academic Writing for Students'", status: "fixed" },
+            { issue: "Missing H1 heading (SPA doesn't render H1 for crawlers)", fix: "Added hidden sr-only H1 to index.html body", status: "fixed" },
+            { issue: "Invalid structured data — Institution Offer price ambiguous", fix: "Removed price field; set availability to PreOrder", status: "fixed" },
+            { issue: "Invalid structured data — SearchAction query-input format", fix: "Updated target to use EntryPoint @type with urlTemplate", status: "fixed" },
+          ].map((item) => (
+            <div key={item.issue} className="flex items-start gap-3 py-2.5 border-b border-slate-700/40 last:border-0">
+              <span className={`mt-0.5 shrink-0 text-base ${item.status === "fixed" ? "text-emerald-400" : "text-amber-400"}`}>
+                {item.status === "fixed" ? "✓" : "○"}
+              </span>
+              <div className="min-w-0">
+                <div className="text-xs text-slate-300 font-medium">{item.issue}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">{item.fix}</div>
+              </div>
             </div>
           ))}
         </div>
-        <div className="bg-slate-800 rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-slate-300 mb-3">Quick Actions</h3>
-          <div className="space-y-2">
-            <a href="/seo/ai-paper-writer" target="_blank" rel="noopener noreferrer"
-              className="block text-xs text-blue-400 hover:text-blue-300">→ Preview: AI Paper Writer</a>
-            <a href="/sitemap.xml" target="_blank" rel="noopener noreferrer"
-              className="block text-xs text-blue-400 hover:text-blue-300">→ View sitemap.xml</a>
-            <a href="/robots.txt" target="_blank" rel="noopener noreferrer"
-              className="block text-xs text-blue-400 hover:text-blue-300">→ View robots.txt</a>
-          </div>
-        </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -143,47 +267,52 @@ function CatalogTab() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-center justify-between">
-        <div className="flex gap-2 text-xs text-slate-400">
-          <span className="bg-slate-700 px-2 py-1 rounded">{stats.total} in catalog</span>
-          <span className="bg-slate-700 px-2 py-1 rounded">{stats.inDb} in DB</span>
+        <div className="flex gap-2">
+          <span className="bg-slate-700/60 border border-slate-600/40 text-slate-300 text-xs px-3 py-1 rounded-lg">
+            {stats.total ?? 0} in catalog
+          </span>
+          <span className="bg-slate-700/60 border border-slate-600/40 text-slate-300 text-xs px-3 py-1 rounded-lg">
+            {stats.inDb ?? 0} in DB
+          </span>
         </div>
         <div className="flex gap-2">
           <select value={filter} onChange={(e) => setFilter(e.target.value)}
-            className="bg-slate-700 text-xs text-white rounded px-2 py-1 border border-slate-600">
-            <option value="all">All</option>
-            <option value="not-seeded">Not Seeded</option>
+            className="bg-slate-800 text-xs text-slate-200 rounded-lg px-3 py-1.5 border border-slate-600/60 focus:outline-none focus:border-blue-500/60">
+            <option value="all">All pages</option>
+            <option value="not-seeded">Not seeded</option>
             <option value="draft">Draft</option>
             <option value="review">Review</option>
             <option value="published">Published</option>
           </select>
-          <button onClick={seed} disabled={seeding}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded disabled:opacity-50">
-            {seeding ? "Seeding…" : "Seed Catalog"}
-          </button>
+          <Btn onClick={seed} disabled={seeding}>{seeding ? "Seeding…" : "Seed Catalog"}</Btn>
         </div>
       </div>
-      {msg && <div className="text-xs text-green-400 bg-green-400/10 rounded px-3 py-2">{msg}</div>}
+      {msg && <Toast msg={msg} />}
       {loading ? <Spinner /> : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-slate-700/40">
           <table className="w-full text-xs">
-            <thead><tr className="text-slate-400 border-b border-slate-700">
-              <th className="text-left py-2 pr-3">Slug</th>
-              <th className="text-left py-2 pr-3">Type</th>
-              <th className="text-left py-2 pr-3">Priority</th>
-              <th className="text-left py-2 pr-3">Status</th>
-              <th className="text-left py-2">In DB</th>
-            </tr></thead>
-            <tbody>{filtered.map((c) => (
-              <tr key={c.slug} className="border-b border-slate-800 hover:bg-slate-800/50">
-                <td className="py-1.5 pr-3 text-blue-300 font-mono">{c.slug}</td>
-                <td className="py-1.5 pr-3 text-slate-300">{c.type}</td>
-                <td className="py-1.5 pr-3">{c.priority}</td>
-                <td className="py-1.5 pr-3"><StatusBadge status={c.status} /></td>
-                <td className="py-1.5">{c.inDb ? "✓" : "—"}</td>
+            <thead>
+              <tr className="bg-slate-800/80 border-b border-slate-700/60">
+                {["Slug", "Type", "Priority", "Status", "In DB"].map((h) => (
+                  <th key={h} className="text-left py-2.5 px-3 text-slate-400 font-medium">{h}</th>
+                ))}
               </tr>
-            ))}</tbody>
+            </thead>
+            <tbody>
+              {filtered.map((c, i) => (
+                <tr key={c.slug} className={`border-b border-slate-800/60 hover:bg-slate-800/40 transition-colors ${i % 2 === 0 ? "" : "bg-slate-900/20"}`}>
+                  <td className="py-2 px-3 text-blue-400 font-mono text-[10px]">{c.slug}</td>
+                  <td className="py-2 px-3 text-slate-300">{c.type}</td>
+                  <td className="py-2 px-3 text-slate-400">{c.priority}</td>
+                  <td className="py-2 px-3"><StatusBadge status={c.status} /></td>
+                  <td className="py-2 px-3 text-emerald-400">{c.inDb ? "✓" : <span className="text-slate-600">—</span>}</td>
+                </tr>
+              ))}
+            </tbody>
           </table>
-          {filtered.length === 0 && <p className="text-center text-slate-500 py-8 text-sm">No pages match this filter</p>}
+          {filtered.length === 0 && (
+            <p className="text-center text-slate-500 py-10 text-sm">No pages match this filter</p>
+          )}
         </div>
       )}
     </div>
@@ -222,67 +351,66 @@ function PagesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
         <input value={search} onChange={(e) => { setSearch(e.target.value); setOffset(0); }}
-          placeholder="Search pages…" className="bg-slate-700 text-white text-xs rounded px-3 py-1.5 border border-slate-600 w-48" />
+          placeholder="Search pages…"
+          className="bg-slate-800 text-white text-xs rounded-lg px-3 py-1.5 border border-slate-600/60 w-48 focus:outline-none focus:border-blue-500/60 placeholder:text-slate-500" />
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }}
-          className="bg-slate-700 text-xs text-white rounded px-2 py-1.5 border border-slate-600">
+          className="bg-slate-800 text-xs text-slate-200 rounded-lg px-3 py-1.5 border border-slate-600/60 focus:outline-none focus:border-blue-500/60">
           <option value="all">All statuses</option>
           <option value="published">Published</option>
           <option value="review">Review</option>
           <option value="draft">Draft</option>
           <option value="archived">Archived</option>
         </select>
-        <span className="text-xs text-slate-400 self-center">{total} total</span>
+        <span className="text-xs text-slate-400 ml-auto">{total} pages total</span>
       </div>
-      {actionMsg && <div className="text-xs text-green-400 bg-green-400/10 rounded px-3 py-2">{actionMsg}</div>}
+      {actionMsg && <Toast msg={actionMsg} />}
       {loading ? <Spinner /> : (
         <>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-slate-700/40">
             <table className="w-full text-xs">
-              <thead><tr className="text-slate-400 border-b border-slate-700">
-                <th className="text-left py-2 pr-3">Slug</th>
-                <th className="text-left py-2 pr-3">Type</th>
-                <th className="text-left py-2 pr-3">Words</th>
-                <th className="text-left py-2 pr-3">LLM</th>
-                <th className="text-left py-2 pr-3">Status</th>
-                <th className="text-left py-2 pr-3">Checks</th>
-                <th className="text-left py-2">Actions</th>
-              </tr></thead>
-              <tbody>{pages.map((p) => (
-                <tr key={p.slug} className="border-b border-slate-800 hover:bg-slate-800/50">
-                  <td className="py-1.5 pr-3">
-                    <a href={`/seo/${p.slug}`} target="_blank" rel="noopener noreferrer"
-                      className="text-blue-300 hover:text-blue-200 font-mono">{p.slug}</a>
-                  </td>
-                  <td className="py-1.5 pr-3 text-slate-400">{p.page_type}</td>
-                  <td className="py-1.5 pr-3">{p.word_count ?? "—"}</td>
-                  <td className="py-1.5 pr-3 text-slate-400">{p.llm_used ? p.llm_used.split("-")[0] : "—"}</td>
-                  <td className="py-1.5 pr-3"><StatusBadge status={p.status} /></td>
-                  <td className="py-1.5 pr-3">
-                    <span className={p.has_ai_disclosure ? "text-green-400" : "text-red-400"}>AI</span>
-                    {" "}<span className={p.integrity_check ? "text-green-400" : "text-amber-400"}>INT</span>
-                    {" "}<span className={p.has_faq_schema ? "text-green-400" : "text-slate-500"}>FAQ</span>
-                  </td>
-                  <td className="py-1.5">
-                    <button onClick={() => togglePublish(p.slug, p.published)}
-                      className={`text-xs px-2 py-0.5 rounded ${p.published ? "bg-red-600/30 text-red-300 hover:bg-red-600/50" : "bg-green-600/30 text-green-300 hover:bg-green-600/50"}`}>
-                      {p.published ? "Unpublish" : "Publish"}
-                    </button>
-                  </td>
+              <thead>
+                <tr className="bg-slate-800/80 border-b border-slate-700/60">
+                  {["Slug", "Type", "Words", "Model", "Status", "Checks", "Action"].map((h) => (
+                    <th key={h} className="text-left py-2.5 px-3 text-slate-400 font-medium">{h}</th>
+                  ))}
                 </tr>
-              ))}</tbody>
+              </thead>
+              <tbody>
+                {pages.map((p, i) => (
+                  <tr key={p.slug} className={`border-b border-slate-800/60 hover:bg-slate-800/40 transition-colors ${i % 2 === 0 ? "" : "bg-slate-900/20"}`}>
+                    <td className="py-2 px-3">
+                      <a href={`/seo/${p.slug}`} target="_blank" rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 font-mono text-[10px] transition-colors">{p.slug}</a>
+                    </td>
+                    <td className="py-2 px-3 text-slate-400">{p.page_type}</td>
+                    <td className="py-2 px-3 text-slate-300">{p.word_count ?? <span className="text-slate-600">—</span>}</td>
+                    <td className="py-2 px-3 text-slate-500 font-mono text-[10px]">{p.llm_used ? p.llm_used.split("-")[0] : "—"}</td>
+                    <td className="py-2 px-3"><StatusBadge status={p.status} /></td>
+                    <td className="py-2 px-3">
+                      <div className="flex gap-1">
+                        <span title="AI Disclosure" className={`text-[9px] px-1 py-0.5 rounded ${p.has_ai_disclosure ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>AI</span>
+                        <span title="Integrity" className={`text-[9px] px-1 py-0.5 rounded ${p.integrity_check ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>INT</span>
+                        <span title="FAQ Schema" className={`text-[9px] px-1 py-0.5 rounded ${p.has_faq_schema ? "bg-emerald-500/15 text-emerald-400" : "bg-slate-700/60 text-slate-500"}`}>FAQ</span>
+                      </div>
+                    </td>
+                    <td className="py-2 px-3">
+                      <Btn onClick={() => togglePublish(p.slug, p.published)}
+                        variant={p.published ? "danger" : "success"} size="xs">
+                        {p.published ? "Unpublish" : "Publish"}
+                      </Btn>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
-            {pages.length === 0 && <p className="text-center text-slate-500 py-8 text-sm">No pages found</p>}
+            {pages.length === 0 && <p className="text-center text-slate-500 py-10 text-sm">No pages found</p>}
           </div>
-          <div className="flex gap-2 justify-center">
-            <button onClick={() => setOffset(Math.max(0, offset - limit))} disabled={offset === 0}
-              className="text-xs bg-slate-700 px-3 py-1 rounded disabled:opacity-40">← Prev</button>
-            <span className="text-xs text-slate-400 self-center">
-              {offset + 1}–{Math.min(offset + limit, total)} of {total}
-            </span>
-            <button onClick={() => setOffset(offset + limit)} disabled={offset + limit >= total}
-              className="text-xs bg-slate-700 px-3 py-1 rounded disabled:opacity-40">Next →</button>
+          <div className="flex items-center gap-3 justify-center">
+            <Btn onClick={() => setOffset(Math.max(0, offset - limit))} disabled={offset === 0} variant="secondary">← Prev</Btn>
+            <span className="text-xs text-slate-400">{offset + 1}–{Math.min(offset + limit, total)} of {total}</span>
+            <Btn onClick={() => setOffset(offset + limit)} disabled={offset + limit >= total} variant="secondary">Next →</Btn>
           </div>
         </>
       )}
@@ -324,78 +452,96 @@ function GeneratorTab() {
     setLoading(false);
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="bg-slate-800 rounded-lg p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-slate-300">Generate Single Page</h3>
-        <div className="flex gap-3">
-          <input value={slug} onChange={(e) => setSlug(e.target.value)}
-            placeholder="e.g. ai-paper-writer"
-            className="flex-1 bg-slate-700 text-white text-xs rounded px-3 py-2 border border-slate-600" />
-          <button onClick={generateSingle} disabled={loading || !slug.trim()}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded disabled:opacity-50">
-            Generate
-          </button>
-        </div>
-        <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
-          <input type="checkbox" checked={autoPublish} onChange={(e) => setAutoPublish(e.target.checked)} className="rounded" />
-          Auto-publish on generation
-        </label>
-      </div>
+  const PAGE_TYPES = [
+    "tool","service","paper-type","subject","software-specific","method-specific",
+    "financial-analysis","use-case","problem-solution","comparison",
+    "academic-level","citation-guide","ebook-type","ebook-platform","how-to",
+  ];
 
-      <div className="bg-slate-800 rounded-lg p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-slate-300">Batch Generate</h3>
-        <div className="flex gap-3 flex-wrap">
-          <select value={batchType} onChange={(e) => setBatchType(e.target.value)}
-            className="bg-slate-700 text-xs text-white rounded px-2 py-2 border border-slate-600">
-            {["tool","service","paper-type","subject","software-specific","method-specific",
-              "financial-analysis","use-case","problem-solution","comparison",
-              "academic-level","citation-guide","ebook-type","ebook-platform","how-to"].map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-          <input type="number" value={batchLimit} onChange={(e) => setBatchLimit(parseInt(e.target.value))}
-            min={1} max={30}
-            className="w-20 bg-slate-700 text-white text-xs rounded px-2 py-2 border border-slate-600" />
-          <span className="text-xs text-slate-400 self-center">pages</span>
-          <button onClick={generateBatch} disabled={loading}
-            className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-4 py-2 rounded disabled:opacity-50">
-            Batch Generate
-          </button>
-        </div>
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Single page */}
+        <Card>
+          <CardTitle>Generate Single Page</CardTitle>
+          <div className="space-y-3">
+            <input value={slug} onChange={(e) => setSlug(e.target.value)}
+              placeholder="e.g. ai-paper-writer"
+              className="w-full bg-slate-900/60 text-white text-xs rounded-lg px-3 py-2 border border-slate-600/60 focus:outline-none focus:border-blue-500/60 placeholder:text-slate-500 font-mono" />
+            <label className="flex items-center gap-2.5 text-xs text-slate-400 cursor-pointer select-none">
+              <input type="checkbox" checked={autoPublish} onChange={(e) => setAutoPublish(e.target.checked)}
+                className="w-3.5 h-3.5 rounded accent-blue-500" />
+              Auto-publish on generation
+            </label>
+            <Btn onClick={generateSingle} disabled={loading || !slug.trim()} className="w-full justify-center">
+              {loading ? "Generating…" : "Generate Page"}
+            </Btn>
+          </div>
+        </Card>
+
+        {/* Batch */}
+        <Card>
+          <CardTitle>Batch Generate</CardTitle>
+          <div className="space-y-3">
+            <select value={batchType} onChange={(e) => setBatchType(e.target.value)}
+              className="w-full bg-slate-900/60 text-xs text-slate-200 rounded-lg px-3 py-2 border border-slate-600/60 focus:outline-none focus:border-blue-500/60">
+              {PAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <div className="flex items-center gap-2">
+              <input type="number" value={batchLimit} onChange={(e) => setBatchLimit(parseInt(e.target.value))}
+                min={1} max={30}
+                className="w-20 bg-slate-900/60 text-white text-xs rounded-lg px-3 py-2 border border-slate-600/60 focus:outline-none" />
+              <span className="text-xs text-slate-400">pages max</span>
+            </div>
+            <label className="flex items-center gap-2.5 text-xs text-slate-400 cursor-pointer select-none">
+              <input type="checkbox" checked={autoPublish} onChange={(e) => setAutoPublish(e.target.checked)}
+                className="w-3.5 h-3.5 rounded accent-blue-500" />
+              Auto-publish on generation
+            </label>
+            <Btn onClick={generateBatch} disabled={loading} variant="purple" className="w-full justify-center">
+              {loading ? "Generating batch…" : "Run Batch"}
+            </Btn>
+          </div>
+        </Card>
       </div>
 
       {loading && (
-        <div className="bg-slate-800 rounded-lg p-6 text-center">
+        <Card>
           <Spinner />
-          <p className="text-sm text-slate-400 mt-3">Generating with Gemini 2.5 Flash / Claude Haiku…</p>
-          <p className="text-xs text-slate-500 mt-1">This may take 30–90 seconds per page</p>
-        </div>
+          <p className="text-sm text-slate-300 text-center mt-2">Generating with Gemini 2.5 Flash / Claude Haiku…</p>
+          <p className="text-xs text-slate-500 text-center mt-1">Allow 30–90 seconds per page</p>
+        </Card>
       )}
 
       {result && !loading && (
-        <div className={`rounded-lg p-5 text-sm ${result.success || result.results ? "bg-green-900/20 border border-green-700/30" : "bg-red-900/20 border border-red-700/30"}`}>
-          {result.error && <p className="text-red-400">{result.error}</p>}
+        <Card className={result.success || result.results ? "border-emerald-500/20 bg-emerald-900/10" : "border-red-500/20 bg-red-900/10"}>
+          {result.error && <p className="text-red-400 text-sm">{result.error}</p>}
           {result.success && (
-            <div className="space-y-1">
-              <p className="text-green-400 font-medium">✓ Generated: {result.slug}</p>
-              <p className="text-xs text-slate-400">Words: {result.wordCount} · Model: {result.model} · Cost: ${result.costUsd?.toFixed(6)}</p>
+            <div className="space-y-1.5">
+              <p className="text-emerald-400 font-semibold text-sm">✓ Generated: {result.slug}</p>
+              <div className="flex gap-4 text-[10px] text-slate-400">
+                <span>Words: <span className="text-slate-300">{result.wordCount}</span></span>
+                <span>Model: <span className="text-slate-300">{result.model}</span></span>
+                <span>Cost: <span className="text-emerald-400">${result.costUsd?.toFixed(6)}</span></span>
+              </div>
             </div>
           )}
           {result.results && (
             <div className="space-y-2">
-              <p className="text-green-400 font-medium">Batch complete — {result.results.filter((r: any) => r.success).length}/{result.results.length} succeeded</p>
+              <p className="text-emerald-400 font-semibold text-sm">
+                Batch complete — {result.results.filter((r: any) => r.success).length}/{result.results.length} succeeded
+              </p>
               <p className="text-xs text-slate-400">Total cost: ${result.totalCost?.toFixed(6)}</p>
-              <div className="max-h-48 overflow-y-auto space-y-1 mt-2">
+              <div className="max-h-48 overflow-y-auto space-y-0.5 mt-2 bg-slate-900/60 rounded-lg p-2">
                 {result.results.map((r: any) => (
-                  <div key={r.slug} className={`text-xs ${r.success ? "text-green-300" : "text-red-300"}`}>
-                    {r.success ? "✓" : "✗"} {r.slug} {r.error ? `— ${r.error}` : ""}
+                  <div key={r.slug} className={`text-[10px] font-mono ${r.success ? "text-emerald-400" : "text-red-400"}`}>
+                    {r.success ? "✓" : "✗"} {r.slug}{r.error ? ` — ${r.error}` : ""}
                   </div>
                 ))}
               </div>
             </div>
           )}
-        </div>
+        </Card>
       )}
     </div>
   );
@@ -419,74 +565,75 @@ function BudgetTab() {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Gemini Spend", value: `$${(budget?.geminiSpend ?? 0).toFixed(4)}`, sub: "Gemini 2.5 Flash" },
-          { label: "Claude Spend", value: `$${(budget?.claudeSpend ?? 0).toFixed(4)}`, sub: "Claude Haiku 4.5" },
-          { label: "Total Spend", value: `$${(budget?.totalSpend ?? 0).toFixed(4)}`, sub: "This month" },
-          { label: "Remaining", value: `$${(budget?.remainingBudget ?? 0).toFixed(4)}`, sub: "Budget left" },
-        ].map((m) => (
-          <div key={m.label} className="bg-slate-800 rounded-lg p-4">
-            <div className="text-lg font-bold text-white">{m.value}</div>
-            <div className="text-xs font-medium text-slate-300 mt-0.5">{m.label}</div>
-            <div className="text-xs text-slate-500">{m.sub}</div>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Stat label="Gemini Spend" value={`$${(budget?.geminiSpend ?? 0).toFixed(4)}`} sub="Gemini 2.5 Flash" color="text-blue-400" />
+        <Stat label="Claude Spend" value={`$${(budget?.claudeSpend ?? 0).toFixed(4)}`} sub="Claude Haiku 4.5" color="text-violet-400" />
+        <Stat label="Total Spend" value={`$${(budget?.totalSpend ?? 0).toFixed(4)}`} sub="This month" color="text-white" />
+        <Stat label="Remaining" value={`$${(budget?.remainingBudget ?? 0).toFixed(2)}`} sub="Budget left" color="text-emerald-400" />
       </div>
 
-      <div className="bg-slate-800 rounded-lg p-5">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-sm font-semibold text-slate-300">Budget: {budget?.month}</h3>
+      <Card>
+        <div className="flex justify-between items-center mb-4">
+          <CardTitle>Budget — {budget?.month}</CardTitle>
           {!budget?.upgraded && (
-            <button onClick={async () => {
+            <Btn onClick={async () => {
               setUpgrading(true);
               await apiFetch("/seo/budget/upgrade", { method: "POST" });
-              const b = await apiFetch("/seo/budget/status");
-              setBudget(b);
+              setBudget(await apiFetch("/seo/budget/status"));
               setUpgrading(false);
-            }} disabled={upgrading} className="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded disabled:opacity-50">
+            }} disabled={upgrading} variant="amber">
               {upgrading ? "Upgrading…" : "Upgrade to Full Claude"}
-            </button>
+            </Btn>
           )}
         </div>
-        <div className="h-4 bg-slate-700 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full ${budget?.percentUsed > 80 ? "bg-red-500" : "bg-blue-500"}`}
+        <div className="flex justify-between text-xs text-slate-400 mb-2">
+          <span>${(budget?.totalSpend ?? 0).toFixed(4)} of ${budget?.budgetLimit ?? 8} used</span>
+          <span className="font-medium text-white">{Math.round(budget?.percentUsed ?? 0)}%</span>
+        </div>
+        <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${(budget?.percentUsed ?? 0) > 80 ? "bg-red-500" : "bg-blue-500"}`}
             style={{ width: `${Math.min(budget?.percentUsed ?? 0, 100)}%` }} />
         </div>
-        <p className="text-xs text-slate-400 mt-2">{budget?.percentUsed ?? 0}% of ${budget?.budgetLimit ?? 8} budget used · {budget?.pagesGenerated ?? 0} pages generated</p>
-      </div>
+        <p className="text-[10px] text-slate-500 mt-2">{budget?.pagesGenerated ?? 0} pages generated this month</p>
+        {budget?.upgraded && (
+          <p className="text-xs text-emerald-400 mt-2 bg-emerald-500/10 rounded-lg px-3 py-1.5">
+            ✓ Budget upgraded — Claude unlocked for all pages this month
+          </p>
+        )}
+      </Card>
 
-      <div className="bg-slate-800 rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-slate-300 mb-3">Recent LLM Cost Log</h3>
-        <div className="overflow-x-auto">
+      <Card>
+        <CardTitle>Recent LLM Cost Log</CardTitle>
+        <div className="overflow-x-auto rounded-lg border border-slate-700/40">
           <table className="w-full text-xs">
-            <thead><tr className="text-slate-500 border-b border-slate-700">
-              <th className="text-left py-1.5 pr-3">Task</th>
-              <th className="text-left py-1.5 pr-3">Model</th>
-              <th className="text-right py-1.5 pr-3">In Tokens</th>
-              <th className="text-right py-1.5 pr-3">Out Tokens</th>
-              <th className="text-right py-1.5 pr-3">Cost</th>
-              <th className="text-left py-1.5">Time</th>
-            </tr></thead>
-            <tbody>{log.slice(0, 25).map((l) => (
-              <tr key={l.id} className="border-b border-slate-800">
-                <td className="py-1.5 pr-3 text-slate-300">{l.task_type}</td>
-                <td className="py-1.5 pr-3 text-slate-400">{l.model_used}</td>
-                <td className="py-1.5 pr-3 text-right">{l.input_tokens?.toLocaleString()}</td>
-                <td className="py-1.5 pr-3 text-right">{l.output_tokens?.toLocaleString()}</td>
-                <td className="py-1.5 pr-3 text-right text-green-400">${parseFloat(l.cost_usd).toFixed(6)}</td>
-                <td className="py-1.5 text-slate-500">{new Date(l.logged_at).toLocaleString()}</td>
+            <thead>
+              <tr className="bg-slate-900/60 border-b border-slate-700/60">
+                {["Task", "Model", "In", "Out", "Cost", "Time"].map((h) => (
+                  <th key={h} className="text-left py-2 px-3 text-slate-500 font-medium">{h}</th>
+                ))}
               </tr>
-            ))}</tbody>
+            </thead>
+            <tbody>
+              {log.slice(0, 25).map((l) => (
+                <tr key={l.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
+                  <td className="py-1.5 px-3 text-slate-300">{l.task_type}</td>
+                  <td className="py-1.5 px-3 text-slate-500 font-mono text-[10px]">{l.model_used}</td>
+                  <td className="py-1.5 px-3 text-right text-slate-400">{l.input_tokens?.toLocaleString()}</td>
+                  <td className="py-1.5 px-3 text-right text-slate-400">{l.output_tokens?.toLocaleString()}</td>
+                  <td className="py-1.5 px-3 text-right text-emerald-400 font-mono">${parseFloat(l.cost_usd).toFixed(6)}</td>
+                  <td className="py-1.5 px-3 text-slate-500">{new Date(l.logged_at).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
           </table>
-          {log.length === 0 && <p className="text-center text-slate-500 py-6 text-sm">No cost log entries yet</p>}
+          {log.length === 0 && <p className="text-center text-slate-500 py-8 text-sm">No cost log entries yet</p>}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
 
-// ── Tab: Integrity (Academic & Compliance) ────────────────────────────────────
+// ── Tab: Integrity ────────────────────────────────────────────────────────────
 function IntegrityTab() {
   const [audit, setAudit] = useState<any>(null);
   const [compliance, setCompliance] = useState<any>(null);
@@ -514,74 +661,79 @@ function IntegrityTab() {
 
   if (loading) return <Spinner />;
 
+  const complianceStats = [
+    { label: "AI Disclosure", value: compliance?.has_disclosure ?? 0, total: compliance?.generated ?? 0, color: "text-blue-400" },
+    { label: "Integrity OK", value: compliance?.integrity_ok ?? 0, total: compliance?.generated ?? 0, color: "text-emerald-400" },
+    { label: "Has FAQ Schema", value: compliance?.has_faq ?? 0, total: compliance?.generated ?? 0, color: "text-violet-400" },
+    { label: "800+ Words", value: compliance?.meets_word_count ?? 0, total: compliance?.generated ?? 0, color: "text-amber-400" },
+  ];
+
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "AI Disclosure", value: compliance?.has_disclosure ?? 0, total: compliance?.generated ?? 0, color: "text-blue-400" },
-          { label: "Integrity OK", value: compliance?.integrity_ok ?? 0, total: compliance?.generated ?? 0, color: "text-green-400" },
-          { label: "Has FAQ", value: compliance?.has_faq ?? 0, total: compliance?.generated ?? 0, color: "text-purple-400" },
-          { label: "800+ words", value: compliance?.meets_word_count ?? 0, total: compliance?.generated ?? 0, color: "text-amber-400" },
-        ].map((m) => (
-          <div key={m.label} className="bg-slate-800 rounded-lg p-4">
-            <div className={`text-2xl font-bold ${m.color}`}>{m.value}<span className="text-slate-500 text-sm font-normal">/{m.total}</span></div>
-            <div className="text-xs text-slate-400 mt-1">{m.label}</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {complianceStats.map((m) => (
+          <div key={m.label} className="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4 text-center">
+            <div className={`text-2xl font-bold ${m.color}`}>
+              {m.value}<span className="text-slate-600 text-sm font-normal">/{m.total}</span>
+            </div>
+            <div className="text-[10px] text-slate-400 mt-1">{m.label}</div>
           </div>
         ))}
       </div>
 
-      <div className="bg-slate-800 rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-slate-300 mb-3">
-          Academic Integrity Issues ({audit?.issueCount ?? 0} pages affected)
-        </h3>
+      <Card>
+        <CardTitle>Academic Integrity Issues ({audit?.issueCount ?? 0} pages)</CardTitle>
         {audit?.issues?.length === 0 ? (
-          <p className="text-green-400 text-sm">✓ All pages pass academic integrity checks</p>
+          <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 rounded-xl px-4 py-3">
+            <span>✓</span> All pages pass academic integrity checks
+          </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {audit?.issues?.map((issue: any) => (
-              <div key={issue.slug} className="border border-red-800/40 bg-red-900/10 rounded p-3">
-                <div className="flex justify-between items-start">
-                  <div>
+              <div key={issue.slug} className="border border-red-500/20 bg-red-900/10 rounded-xl p-4">
+                <div className="flex justify-between items-start gap-3">
+                  <div className="min-w-0">
                     <span className="text-xs text-red-300 font-mono">{issue.slug}</span>
-                    <ul className="mt-1 space-y-0.5">
+                    <ul className="mt-1.5 space-y-0.5">
                       {issue.violations.slice(0, 3).map((v: string, i: number) => (
-                        <li key={i} className="text-xs text-slate-400">• {v}</li>
+                        <li key={i} className="text-[10px] text-slate-400">• {v}</li>
                       ))}
                     </ul>
                   </div>
-                  <button onClick={() => fix(issue.slug)} disabled={fixing === issue.slug}
-                    className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded disabled:opacity-50 ml-3 shrink-0">
+                  <Btn onClick={() => fix(issue.slug)} disabled={fixing === issue.slug} variant="danger" size="xs">
                     {fixing === issue.slug ? "Fixing…" : "Auto-Fix"}
-                  </button>
+                  </Btn>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
-      <div className="bg-slate-800 rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-slate-300 mb-3">Compliance Coverage</h3>
-        {[
-          { label: "EU AI Act — Content Disclosure", desc: "ai-generated meta tag + visible disclosure label on all generated pages", status: "active" },
-          { label: "WCAG 2.2 Level AA", desc: "Skip links, focus rings, table captions, ARIA labels, 24px touch targets", status: "active" },
-          { label: "Academic Integrity", desc: "No bypass/cheat/undetectable language. AI writing assistance framing only.", status: "active" },
-          { label: "Robots.txt Crawler Policy", desc: "Training crawlers blocked, search crawlers allowed, Perplexity allowed", status: "active" },
-        ].map((c) => (
-          <div key={c.label} className="flex items-start gap-3 py-3 border-b border-slate-700 last:border-0">
-            <span className="text-green-400 mt-0.5 shrink-0">✓</span>
-            <div>
-              <div className="text-xs font-medium text-slate-300">{c.label}</div>
-              <div className="text-xs text-slate-500 mt-0.5">{c.desc}</div>
+      <Card>
+        <CardTitle>Compliance Coverage</CardTitle>
+        <div className="space-y-0">
+          {[
+            { label: "EU AI Act — Content Disclosure", desc: "ai-generated meta tag + visible disclosure label on all generated pages" },
+            { label: "WCAG 2.2 Level AA", desc: "Skip links, focus rings, table captions, ARIA labels, 24px touch targets" },
+            { label: "Academic Integrity", desc: "No bypass/cheat/undetectable language. AI writing assistance framing only." },
+            { label: "Robots.txt Crawler Policy", desc: "Training crawlers blocked, search crawlers allowed, Perplexity allowed" },
+          ].map((c) => (
+            <div key={c.label} className="flex items-start gap-3 py-3 border-b border-slate-700/40 last:border-0">
+              <span className="text-emerald-400 mt-0.5 shrink-0">✓</span>
+              <div>
+                <div className="text-xs font-medium text-slate-200">{c.label}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">{c.desc}</div>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }
 
-// ── Tab: Sitemap & Robots ─────────────────────────────────────────────────────
+// ── Tab: Sitemap ──────────────────────────────────────────────────────────────
 function SitemapTab() {
   const [pinging, setPinging] = useState(false);
   const [pingResult, setPingResult] = useState<any>(null);
@@ -602,115 +754,108 @@ function SitemapTab() {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-slate-800 rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-slate-300 mb-3">Sitemap</h3>
-          <div className="space-y-2 text-xs">
+        <Card>
+          <CardTitle>Sitemap</CardTitle>
+          <div className="space-y-2 text-xs mb-4">
             <a href="/sitemap.xml" target="_blank" rel="noopener noreferrer"
-              className="block text-blue-400 hover:text-blue-300">↗ View sitemap.xml</a>
-            <p className="text-slate-400">Dynamic — auto-includes all published SEO pages</p>
+              className="block text-blue-400 hover:text-blue-300 transition-colors">↗ View sitemap.xml</a>
+            <p className="text-slate-500">Dynamic — auto-includes all published SEO pages on every request</p>
           </div>
-          <button onClick={ping} disabled={pinging}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded disabled:opacity-50">
-            {pinging ? "Pinging…" : "Ping Google & Bing"}
-          </button>
+          <Btn onClick={ping} disabled={pinging}>{pinging ? "Pinging…" : "Ping Google & Bing"}</Btn>
           {pingResult && (
-            <div className={`mt-3 text-xs rounded p-2 ${pingResult.ok ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>
+            <div className={`mt-3 text-xs rounded-lg p-3 ${pingResult.ok ? "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20" : "text-red-400 bg-red-400/10 border border-red-400/20"}`}>
               {pingResult.ok ? `✓ Pinged: ${pingResult.pinged?.join(", ")}` : pingResult.error}
             </div>
           )}
-        </div>
-        <div className="bg-slate-800 rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-slate-300 mb-3">Robots.txt</h3>
+        </Card>
+        <Card>
+          <CardTitle>Robots.txt</CardTitle>
           <a href="/robots.txt" target="_blank" rel="noopener noreferrer"
-            className="block text-xs text-blue-400 hover:text-blue-300 mb-3">↗ View live robots.txt</a>
-          <p className="text-xs text-slate-400">Dynamically rendered. Blocks: GPTBot, CCBot, anthropic-ai, ClaudeBot, Bytespider (training). Allows: Googlebot, Bingbot, Perplexity, OAI-SearchBot.</p>
-        </div>
+            className="block text-xs text-blue-400 hover:text-blue-300 mb-3 transition-colors">↗ View live robots.txt</a>
+          <div className="space-y-1.5 text-[10px] text-slate-500">
+            <p><span className="text-red-400">Blocked:</span> GPTBot, CCBot, anthropic-ai, ClaudeBot, Bytespider</p>
+            <p><span className="text-emerald-400">Allowed:</span> Googlebot, Bingbot, Perplexity, OAI-SearchBot</p>
+          </div>
+        </Card>
       </div>
-      <div className="bg-slate-800 rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-slate-300 mb-3">Robots.txt Preview</h3>
+      <Card>
+        <CardTitle>Robots.txt Preview</CardTitle>
         {robotsLoading ? <Spinner /> : (
-          <pre className="text-xs text-slate-300 bg-slate-900 rounded p-3 overflow-x-auto whitespace-pre-wrap max-h-64 overflow-y-auto">{robots}</pre>
+          <pre className="text-[10px] text-slate-300 bg-slate-900/80 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap max-h-72 overflow-y-auto font-mono leading-relaxed">
+            {robots}
+          </pre>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
 
 // ── Tab: Settings ─────────────────────────────────────────────────────────────
 function SettingsTab() {
+  const settings = [
+    { label: "Primary LLM", value: "Gemini 2.5 Flash", note: "gemini-2.5-flash-preview-05-20" },
+    { label: "Pillar LLM", value: "Claude Haiku 4.5", note: "claude-haiku-4-5 — max 15/month" },
+    { label: "Monthly budget", value: "$8.00", note: "overridable via SEO_BUDGET_LIMIT env var" },
+    { label: "Min word count", value: "800 words", note: "SEO_MIN_WORD_COUNT env var" },
+    { label: "Daily page limit", value: "30 pages", note: "SEO_DAILY_PAGE_LIMIT env var" },
+    { label: "Auto-publish", value: "Off by default", note: "requires manual publish or autoPublish flag" },
+    { label: "Robots.txt", value: "Dynamic", note: "served by Express, replaces static file" },
+    { label: "Sitemap.xml", value: "Dynamic", note: "includes all published SEO pages automatically" },
+    { label: "WCAG standard", value: "2.2 Level AA", note: "skip links, focus rings, ARIA, min touch targets" },
+    { label: "Academic integrity", value: "Enforced", note: "no bypass/cheat/undetectable — pre-publish + post-generation" },
+    { label: "EU AI Act", value: "Compliant", note: "ai-generated meta tag + visible disclosure label on all pages" },
+    { label: "Page catalog", value: "130+ slugs", note: "across 15 page types" },
+  ];
+
+  const envVars = [
+    { name: "GEMINI_API_KEY", desc: "Google AI Studio API key (primary LLM for SEO)" },
+    { name: "ANTHROPIC_API_KEY", desc: "Anthropic API key (Claude Haiku for pillar pages)" },
+    { name: "SEO_BUDGET_LIMIT", desc: "Monthly USD budget cap (default: 8.00)" },
+    { name: "SEO_DAILY_PAGE_LIMIT", desc: "Max pages per batch run (default: 30)" },
+  ];
+
   return (
     <div className="space-y-5">
-      <div className="bg-slate-800 rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-slate-300 mb-4">SEO Engine Configuration</h3>
-        <div className="space-y-3 text-xs text-slate-400">
-          {[
-            { label: "Primary LLM", value: "Gemini 2.5 Flash (gemini-2.5-flash-preview-05-20)" },
-            { label: "Pillar LLM", value: "Claude Haiku 4.5 (claude-haiku-4-5) — max 15/month" },
-            { label: "Monthly budget", value: "$8.00 (overridable via SEO_BUDGET_LIMIT env var)" },
-            { label: "Minimum word count", value: "800 words (SEO_MIN_WORD_COUNT env var)" },
-            { label: "Daily page limit", value: "30 pages (SEO_DAILY_PAGE_LIMIT env var)" },
-            { label: "Auto-publish", value: "Off by default — requires manual publish or autoPublish flag" },
-            { label: "Robots.txt", value: "Dynamic — served by Express, replaces static file" },
-            { label: "Sitemap.xml", value: "Dynamic — includes all published SEO pages automatically" },
-            { label: "WCAG standard", value: "2.2 Level AA (skip links, focus rings, ARIA, min touch targets)" },
-            { label: "Academic integrity", value: "No bypass/cheat/undetectable — enforced pre-publish and post-generation" },
-            { label: "EU AI Act", value: "ai-generated meta tag + visible disclosure label on all pages" },
-            { label: "Page catalog size", value: "130+ predefined slugs across 15 page types" },
-          ].map((s) => (
-            <div key={s.label} className="flex gap-3 py-2 border-b border-slate-700 last:border-0">
-              <span className="w-44 shrink-0 text-slate-300">{s.label}</span>
-              <span>{s.value}</span>
+      <Card>
+        <CardTitle>SEO Engine Configuration</CardTitle>
+        <div className="space-y-0">
+          {settings.map((s) => (
+            <div key={s.label} className="flex gap-3 py-2.5 border-b border-slate-700/40 last:border-0">
+              <span className="w-36 shrink-0 text-xs text-slate-300 font-medium">{s.label}</span>
+              <div className="min-w-0">
+                <span className="text-xs text-slate-200">{s.value}</span>
+                <span className="text-[10px] text-slate-500 ml-2">{s.note}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <div className="bg-amber-900/15 border border-amber-700/30 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-amber-400 mb-3">Required Environment Variables</h3>
+        <div className="space-y-2">
+          {envVars.map((e) => (
+            <div key={e.name} className="flex gap-3 text-xs">
+              <code className="text-amber-300 font-mono shrink-0">{e.name}</code>
+              <span className="text-slate-400">— {e.desc}</span>
             </div>
           ))}
         </div>
       </div>
-      <div className="bg-amber-900/20 border border-amber-700/30 rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-amber-400 mb-2">Required Environment Variables</h3>
-        <div className="space-y-1 text-xs text-slate-400">
-          <p><span className="text-amber-300 font-mono">GEMINI_API_KEY</span> — Google AI Studio API key (primary LLM for SEO)</p>
-          <p><span className="text-amber-300 font-mono">ANTHROPIC_API_KEY</span> — Anthropic API key (Claude Haiku for pillar pages)</p>
-          <p><span className="text-amber-300 font-mono">SEO_BUDGET_LIMIT</span> — Monthly USD budget cap (default: 8.00)</p>
-          <p><span className="text-amber-300 font-mono">SEO_DAILY_PAGE_LIMIT</span> — Max pages per batch run (default: 30)</p>
-        </div>
-      </div>
     </div>
-  );
-}
-
-// ── Shared components ─────────────────────────────────────────────────────────
-function Spinner() {
-  return (
-    <div className="flex items-center justify-center py-10">
-      <div className="w-8 h-8 border-2 border-slate-600 border-t-blue-500 rounded-full animate-spin" />
-    </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    published: "bg-green-600/30 text-green-300",
-    review: "bg-amber-600/30 text-amber-300",
-    draft: "bg-slate-600/30 text-slate-400",
-    archived: "bg-red-600/30 text-red-400",
-    "not-seeded": "bg-slate-700 text-slate-500",
-  };
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded font-medium ${map[status] ?? "bg-slate-700 text-slate-400"}`}>
-      {status}
-    </span>
   );
 }
 
 // ── Main SeoAdmin component ───────────────────────────────────────────────────
+
 const TABS = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "catalog", label: "Catalog" },
-  { id: "pages", label: "Pages" },
-  { id: "generator", label: "Generator" },
-  { id: "budget", label: "Budget" },
-  { id: "integrity", label: "Integrity" },
-  { id: "sitemap", label: "Sitemap" },
-  { id: "settings", label: "Settings" },
+  { id: "dashboard",  label: "Dashboard",  icon: "⚡" },
+  { id: "catalog",    label: "Catalog",    icon: "📋" },
+  { id: "pages",      label: "Pages",      icon: "📄" },
+  { id: "generator",  label: "Generator",  icon: "✨" },
+  { id: "budget",     label: "Budget",     icon: "💰" },
+  { id: "integrity",  label: "Integrity",  icon: "🛡" },
+  { id: "sitemap",    label: "Sitemap",    icon: "🗺" },
+  { id: "settings",   label: "Settings",   icon: "⚙" },
 ];
 
 export default function SeoAdmin() {
@@ -718,40 +863,57 @@ export default function SeoAdmin() {
 
   const renderTab = () => {
     switch (activeTab) {
-      case "dashboard": return <DashboardTab />;
-      case "catalog": return <CatalogTab />;
-      case "pages": return <PagesTab />;
-      case "generator": return <GeneratorTab />;
-      case "budget": return <BudgetTab />;
-      case "integrity": return <IntegrityTab />;
-      case "sitemap": return <SitemapTab />;
-      case "settings": return <SettingsTab />;
-      default: return <DashboardTab />;
+      case "dashboard":  return <DashboardTab />;
+      case "catalog":    return <CatalogTab />;
+      case "pages":      return <PagesTab />;
+      case "generator":  return <GeneratorTab />;
+      case "budget":     return <BudgetTab />;
+      case "integrity":  return <IntegrityTab />;
+      case "sitemap":    return <SitemapTab />;
+      case "settings":   return <SettingsTab />;
+      default:           return <DashboardTab />;
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">SEO Engine</h1>
-          <p className="text-sm text-slate-400 mt-1">
-            AI-powered SEO content engine · Gemini 2.5 Flash + Claude Haiku · $8/month budget
-          </p>
+        {/* Page header */}
+        <div className="mb-6 pb-5 border-b border-slate-800">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                <span className="text-2xl">⚡</span>
+                SEO Engine
+              </h1>
+              <p className="text-sm text-slate-500 mt-1">
+                Gemini 2.5 Flash · Claude Haiku 4.5 · $8/month budget · 130+ catalog pages
+              </p>
+            </div>
+            <a
+              href="/seo/ai-paper-writer"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-400 hover:text-blue-300 border border-blue-500/20 hover:border-blue-400/40 rounded-lg px-3 py-1.5 transition-all"
+            >
+              ↗ Preview live page
+            </a>
+          </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 flex-wrap border-b border-slate-700 mb-6 pb-0">
+        {/* Tab navigation */}
+        <div className="flex gap-1 flex-wrap mb-6">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-2 text-sm rounded-t font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 text-xs rounded-xl font-medium transition-all ${
                 activeTab === tab.id
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-900/40"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
               }`}
             >
+              <span className="text-[11px]">{tab.icon}</span>
               {tab.label}
             </button>
           ))}

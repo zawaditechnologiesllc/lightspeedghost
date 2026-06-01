@@ -112,7 +112,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                     <Star size={9} /> Active
                   </span>
                 )}
-                {!planLoading && resolvedPlan === "campus" && (
+                {!planLoading && (resolvedPlan === "campus" || resolvedPlan === "institution") && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1">
                     <Star size={9} /> Active
                   </span>
@@ -127,7 +127,8 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                 {planLoading                  && "Fetching your plan…"}
                 {!planLoading && resolvedPlan === "starter" && "3 papers · 1 revision · 15 STEM · 20 study · 5 plagiarism/outlines per month"}
                 {!planLoading && resolvedPlan === "pro"     && "15 papers · 20 revisions · 20 humanizations · 20 outlines · 60 STEM · 150 study · 20 plagiarism per month"}
-                {!planLoading && resolvedPlan === "campus"  && "5 papers · 8 revisions · 8 humanizations · 30 STEM · 75 study · 10 plagiarism · 10 outlines per seat/month"}
+                {!planLoading && resolvedPlan === "campus"       && "5 papers · 8 revisions · 8 humanizations · 30 STEM · 75 study · 10 plagiarism · 10 outlines per seat/month"}
+                {!planLoading && resolvedPlan === "institution"  && "Unlimited papers · revisions · STEM · study sessions · plagiarism checks · outlines"}
               </p>
             </div>
 

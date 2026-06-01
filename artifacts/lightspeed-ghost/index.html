@@ -8,7 +8,7 @@
     <meta name="format-detection" content="telephone=no" />
 
     <!-- Primary SEO -->
-    <title>Light Speed Ghost — AI Academic Writing, Humanizer &amp; Ebook Writer for Students</title>
+    <title>Light Speed Ghost — AI Academic Writing for Students</title>
     <meta name="description" content="Write full academic papers with real citations, humanize AI-written text with LightSpeed Humanizer, revise drafts to hit your target grade, detect AI &amp; plagiarism, solve STEM problems step-by-step, get 24/7 personalized AI tutoring, and publish AI-written ebooks to Amazon KDP &amp; 40+ platforms. Starter from $9.99/month." />
     <meta name="keywords" content="AI paper writer, academic writing assistant, AI humanizer, humanize AI text, AI detection remover, GPTZero remover, Turnitin humanizer, plagiarism checker, AI essay writer, STEM solver, APA citation generator, MLA essay writer, homework helper, paper revision, academic tutor, student writing tool, essay generator, college writing AI, AI homework help, AI study assistant, best AI writing tool for students, academic paper AI, essay checker, university AI tool, AI academic platform, AI content rewriter, AI ebook writer, ebook generator, Amazon KDP AI, publish ebook AI, write and publish ebook, AI book writer" />
     <meta name="author" content="Light Speed Ghost" />
@@ -81,7 +81,10 @@
       "description": "AI-powered academic writing platform for students worldwide. Write papers, humanize AI text with LightSpeed Humanizer, solve STEM problems, check plagiarism, get AI tutoring, and publish ebooks to Amazon KDP and 40+ platforms.",
       "potentialAction": {
         "@type": "SearchAction",
-        "target": "https://lightspeedghost.com/write?q={search_term_string}",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://lightspeedghost.com/write?q={search_term_string}"
+        },
         "query-input": "required name=search_term_string"
       },
       "publisher": {
@@ -144,12 +147,10 @@
         {
           "@type": "Offer",
           "name": "Institution",
-          "price": "9",
           "priceCurrency": "USD",
-          "priceValidUntil": "2027-01-01",
-          "availability": "https://schema.org/InStock",
+          "availability": "https://schema.org/PreOrder",
           "url": "https://lightspeedghost.com/pricing",
-          "description": "5 papers per seat per month, 8 revisions per seat, 8 humanizer jobs per seat, 30 STEM problems per seat per month, 75 study messages per seat per month. Shared document library, admin dashboard, academic integrity reporting. Minimum 5 seats. $9/seat/month billed annually."
+          "description": "Custom-quoted institution plan. Unlimited tools per seat, shared document library, admin dashboard, academic integrity reporting. Contact us for pricing."
         },
         {
           "@type": "Offer",
@@ -636,6 +637,7 @@
     </style>
   </head>
   <body>
+    <h1 class="sr-only">Light Speed Ghost — AI Academic Writing for Students</h1>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

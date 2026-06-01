@@ -75,10 +75,10 @@ const tools = [
   },
   {
     icon: BotMessageSquare,
-    name: "Floating AI Assistant",
-    desc: "A draggable AI panel that rides alongside any page. Choose from 7 modes — Learn, Quick Answer, Exam, Simplify, Diagram, Deep Research, or let Auto-Router pick the best approach for your question. Upload images, paste MCQs, get instant answers.",
-    badge: "New",
-    href: "/auth",
+    name: "Flashcards & Quizzes",
+    desc: "A dedicated AI tutor with long-term memory. Generate flashcards, summaries, practice quizzes, mind maps, and concept explanations from any topic or uploaded material. Upload notes, screenshots, or financial statements — it reads them all.",
+    badge: null,
+    href: "/study",
     color: "bg-violet-500/10 text-violet-400 border-violet-500/20",
   },
 ];
@@ -107,11 +107,11 @@ const testimonials = [
 const faqs = [
   {
     q: "What is Light Speed Ghost?",
-    a: "Light Speed Ghost is an AI-powered academic assistance platform built for students. It includes eight tools: an AI paper writer with real citations, an outline builder, a paper revision tool, LightSpeed Humanizer for bypassing AI detectors, an AI and plagiarism checker, a STEM step-by-step solver, an AI study assistant with session memory, and a floating AI assistant with seven answer modes including auto-routing.",
+    a: "Light Speed Ghost is an AI-powered academic assistance platform built for students. It includes seven core tools: an AI paper writer with real verified citations, an outline builder, a paper revision tool, LightSpeed Humanizer for making AI text undetectable, an AI and plagiarism checker, a STEM step-by-step solver, and an AI study assistant with long-term session memory.",
   },
   {
-    q: "What is the Floating AI Assistant and how does it work?",
-    a: "The Floating AI Assistant is a draggable panel that appears on any page of the platform. Click the sparkle button in the bottom-right corner to open it. Drag it anywhere on your screen. Choose from seven modes: Learn (step-by-step breakdown), Quick Answer (2-4 sentences), Exam (picks the correct MCQ option with justification), Simplify (explains like you're 10), Diagram (explains uploaded images or diagrams), Deep Research (sourced, multi-perspective answer), or Auto (the AI reads your input and picks the right mode automatically). You can also upload images directly — useful for photographing diagrams, textbook pages, or problem sets.",
+    q: "What is the AI Study Assistant and what can it generate?",
+    a: "The AI Study Assistant is a dedicated tutor page that generates flashcards, summaries, practice quizzes, mind maps, concept explanations, essays, and more from any topic or uploaded material. Paste your notes, upload a PDF or Word document, attach a screenshot, or upload financial statements for analysis. The assistant remembers your past sessions and adapts to your weakest topics over time.",
   },
   {
     q: "Can I upload my own data or research to the tools?",
@@ -135,7 +135,7 @@ const faqs = [
   },
   {
     q: "What's the cheapest plan?",
-    a: "The Starter plan is $9.99/month. It includes 3 papers, 1 revision, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves, and 20 study messages per month. The LightSpeed Humanizer is not included in Starter — upgrade to Pro or buy it per use.",
+    a: "The Starter plan is $9.99/month. It includes 3 papers, 1 revision, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves, and 20 study messages per month. The LightSpeed Humanizer is not included in Starter — upgrade to Pro or use Pay-As-You-Go. There is no free plan — but PAYG means you can use just one tool for as little as $1.99 without any commitment.",
   },
   {
     q: "What's the difference between Pro monthly and annual?",
@@ -527,9 +527,21 @@ export default function Landing() {
 
       {/* ─── HERO ─── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 pt-20 pb-12 sm:pt-24 sm:pb-16 text-center overflow-hidden">
+        {/* Hero background photo */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: "url('/hero-student-bg.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center top",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+        {/* Dark overlay over photo */}
+        <div className="absolute inset-0 pointer-events-none bg-[#030d1f]/80" />
         <div className="absolute inset-0 pointer-events-none">
           {/* Dot grid texture */}
-          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "36px 36px" }} />
+          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)", backgroundSize: "36px 36px" }} />
           {/* Gradient glow blobs */}
           <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] sm:w-[1000px] h-[500px] sm:h-[700px] bg-blue-600/20 rounded-full blur-[140px]" />
           <div className="absolute top-1/2 -left-32 w-[400px] h-[400px] bg-violet-600/18 rounded-full blur-[110px]" />
@@ -574,7 +586,7 @@ export default function Landing() {
           </h1>
 
           <p className="text-base sm:text-lg md:text-xl text-white/55 max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10">
-            Light Speed Ghost handles the writing, revision, plagiarism checking, STEM problems, and instant Q&amp;A — with a draggable AI assistant that rides alongside every page so you can stop staring at a blank screen and actually sleep.
+            Eight specialized AI tools for everything academics throw at you — write papers with real citations, humanize AI text to 0% detection, solve STEM step-by-step, check plagiarism, and get 24/7 tutoring. Stop staring at a blank screen and actually sleep.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
@@ -1077,10 +1089,10 @@ export default function Landing() {
               },
               {
                 icon: "⚡",
-                title: "AI Mode Router",
-                desc: "Set the Floating Assistant to Auto and it reads your input — if it sees an MCQ it switches to Exam mode, a diagram to Diagram mode, a formula to Learn mode. You get the right output for your question without having to pick a mode manually.",
+                title: "Adaptive Study Assistant",
+                desc: "The Study Assistant remembers your past sessions and tracks your weak topics. Each new session builds on the last — the AI knows what you struggled with, adjusts difficulty, and generates targeted practice until you're ready.",
                 color: "border-violet-500/20 bg-violet-500/5",
-                tag: "Floating AI Assistant",
+                tag: "AI Study Assistant",
               },
               {
                 icon: "📊",
@@ -1124,7 +1136,7 @@ export default function Landing() {
               </div>
               <div className="space-y-6">
                 {[
-                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter plan at $9.99/month or Pro at $29.99/month. Cancel any time." },
+                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter plan at $9.99/month or Pro at $29.99/month. Or pay per use with no subscription. Cancel any time." },
                   { num: "02", title: "Upload your brief or describe your task", body: "Drag in your assignment PDF, paste the rubric, or just type what you need. The platform detects citation style, length, and subject automatically." },
                   { num: "03", title: "Generate, revise, humanize, and submit", body: "Run any tool in sequence — paper → plagiarism check → LightSpeed Humanizer → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
                 ].map(({ num, title, body }) => (

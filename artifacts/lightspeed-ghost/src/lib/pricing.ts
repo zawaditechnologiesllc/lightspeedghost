@@ -1,4 +1,4 @@
-export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "campus_annual" | "ebooks_monthly";
+export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "campus_annual" | "institution_annual" | "ebooks_monthly";
 export type PaygTool = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline";
 export type DocumentTier = "discussion" | "essay" | "research" | "proposal" | "dissertation";
 

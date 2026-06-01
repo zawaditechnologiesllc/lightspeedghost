@@ -154,9 +154,10 @@ async function callGenerate(
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function StudyAssistant() {
-  const fileInputRef    = useRef<HTMLInputElement>(null);
-  const imageInputRef   = useRef<HTMLInputElement>(null);
-  const datasetInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef       = useRef<HTMLInputElement>(null);
+  const imageInputRef      = useRef<HTMLInputElement>(null);
+  const datasetInputRef    = useRef<HTMLInputElement>(null);
+  const financialStmtRef   = useRef<HTMLInputElement>(null);
   const { guard, openBuy, plan, isAtLimit, pickerState, checkoutState, closePicker, closeCheckout, chooseSubscription, choosePayg } = usePaywallGuard();
   const subjectInputRef = useRef<HTMLInputElement>(null);
 
@@ -175,6 +176,11 @@ export default function StudyAssistant() {
   const [datasetText,    setDatasetText]    = useState("");
   const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
   const [showDataset,    setShowDataset]    = useState(false);
+
+  // Financial statements
+  const [financialStmtText, setFinancialStmtText] = useState("");
+  const [showFinancialStmt, setShowFinancialStmt] = useState(false);
+  const [finStmtExtracting, setFinStmtExtracting] = useState(false);
 
   // Generation state
   const [isGenerating,  setIsGenerating]  = useState(false);
@@ -282,6 +288,23 @@ export default function StudyAssistant() {
     reader.readAsText(file);
   }, []);
 
+  const handleFinancialStmtFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setFinStmtExtracting(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await apiFetch(`/files/extract`, { method: "POST", body: fd });
+      if (res.ok) {
+        const data = await res.json() as { text?: string };
+        setFinancialStmtText(data.text ?? "");
+        setShowFinancialStmt(true);
+      }
+    } catch { /* silent */ } finally { setFinStmtExtracting(false); }
+  }, []);
+
   const handleDatasetPaste = useCallback((raw: string) => {
     setDatasetText(raw);
     const lines = raw.trim().split("\n").filter(Boolean);
@@ -308,8 +331,12 @@ export default function StudyAssistant() {
     setProgressStep(0);
     setActiveView(type as ActiveView);
     try {
+      const baseContent = content || "(See uploaded images for context)";
+      const fullContent = financialStmtText.trim()
+        ? `${baseContent}\n\n--- Financial Statements / Balance Sheet Context ---\n\n${financialStmtText.trim()}`
+        : baseContent;
       const r = await callGenerate(
-        content || "(See uploaded images for context)",
+        fullContent,
         type,
         selectedSubject,
         images,
@@ -327,7 +354,7 @@ export default function StudyAssistant() {
       setGenerateError(e instanceof Error ? e.message : "Generation failed. Please try again.");
       setActiveView(null);
     } finally { setIsGenerating(false); }
-  }, [topic, sources, selectedType, selectedSubject, wrongTopics, datasetText]);
+  }, [topic, sources, selectedType, selectedSubject, wrongTopics, datasetText, financialStmtText]);
 
   // ── Quiz helpers ──────────────────────────────────────────────────────
 
@@ -464,6 +491,8 @@ export default function StudyAssistant() {
               accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleFileInput} />
             <input ref={datasetInputRef} type="file" className="sr-only"
               accept=".csv,.tsv,.txt" onChange={handleDatasetFile} />
+            <input ref={financialStmtRef} type="file" className="sr-only"
+              accept=".pdf,.docx,.doc,.txt,.xlsx,.xls" onChange={handleFinancialStmtFile} />
 
             {/* Upload row */}
             <div className="flex gap-2">
@@ -497,6 +526,18 @@ export default function StudyAssistant() {
               >
                 <Database size={14} className="shrink-0" />
                 <span className="text-xs">{datasetText ? "Dataset ✓" : "Dataset"}</span>
+              </button>
+              <button
+                onClick={() => setShowFinancialStmt(v => !v)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
+                  showFinancialStmt || financialStmtText
+                    ? "border-emerald-400/60 text-emerald-600 dark:text-emerald-400 bg-emerald-50/10 dark:bg-emerald-900/20"
+                    : "border-border text-muted-foreground hover:border-emerald-400/40 hover:text-emerald-500"
+                )}
+              >
+                <FileText size={14} className="shrink-0" />
+                <span className="text-xs">{financialStmtText ? "Financials ✓" : "Financials"}</span>
               </button>
             </div>
 
@@ -543,6 +584,38 @@ export default function StudyAssistant() {
                       </tbody>
                     </table>
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* Financial statement panel */}
+            {showFinancialStmt && (
+              <div className="rounded-xl border border-emerald-400/30 bg-emerald-50/10 dark:bg-emerald-900/10 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                    Financial Statements <span className="font-normal text-muted-foreground ml-1">(balance sheet, income statement, cash flow — AI analyses and generates study content)</span>
+                  </p>
+                  {financialStmtText && (
+                    <button onClick={() => setFinancialStmtText("")}
+                      className="text-[10px] text-muted-foreground hover:text-destructive transition-colors">
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => financialStmtRef.current?.click()}
+                  disabled={finStmtExtracting}
+                  className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-emerald-300 dark:border-emerald-700 rounded-lg py-2 transition-colors hover:border-emerald-400 disabled:opacity-50"
+                >
+                  {finStmtExtracting
+                    ? <Loader2 size={12} className="animate-spin" />
+                    : <FileText size={12} />}
+                  {finStmtExtracting ? "Extracting…" : "Upload financial statement (PDF · DOCX · XLSX)"}
+                </button>
+                {financialStmtText && (
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <CheckCircle size={10} /> {financialStmtText.split(/\s+/).filter(Boolean).length} words extracted — AI will analyse ratios, trends, and key figures
+                  </p>
                 )}
               </div>
             )}

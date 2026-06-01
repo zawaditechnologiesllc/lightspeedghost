@@ -251,13 +251,14 @@ function countryName(code: string): string {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  starter: "bg-blue-500/12 text-blue-300 border-blue-500/20",
-  pro: "bg-amber-500/12 text-amber-300 border-amber-500/20",
-  campus: "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
+  starter:     "bg-blue-500/12 text-blue-300 border-blue-500/20",
+  pro:         "bg-amber-500/12 text-amber-300 border-amber-500/20",
+  institution: "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
+  campus:      "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
 };
 
 function planDisplayName(plan: string): string {
-  if (plan === "campus") return "Institution";
+  if (plan === "campus" || plan === "campus_annual" || plan === "institution" || plan === "institution_annual") return "Institution";
   return plan.charAt(0).toUpperCase() + plan.slice(1);
 }
 
@@ -940,10 +941,10 @@ export default function Admin() {
                       <div className="bg-gradient-to-br from-violet-600/10 to-violet-500/5 border border-violet-500/12 rounded-xl p-4">
                         <p className="text-xs text-white/40 mb-2 font-medium">Plan Distribution</p>
                         <div className="space-y-1.5">
-                          {[["starter", "text-blue-400"], ["pro", "text-amber-400"], ["campus", "text-emerald-400"]].map(([plan, color]) => (
+                          {[["starter", "text-blue-400"], ["pro", "text-amber-400"], ["institution", "text-emerald-400"]].map(([plan, color]) => (
                             <div key={plan} className="flex items-center justify-between">
-                              <span className={`text-[11px] font-semibold capitalize ${color}`}>{plan}</span>
-                              <span className="text-xs text-white/60 tabular-nums">{(stats.planDistribution[plan] ?? 0).toLocaleString()}</span>
+                              <span className={`text-[11px] font-semibold capitalize ${color}`}>{planDisplayName(plan)}</span>
+                              <span className="text-xs text-white/60 tabular-nums">{((stats.planDistribution[plan] ?? 0) + (plan === "institution" ? (stats.planDistribution["campus"] ?? 0) : 0)).toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -2174,22 +2175,22 @@ export default function Admin() {
                     </SettingsCard>
 
                     {/* Plan limits */}
-                    {(["starter", "pro", "campus"] as const).map((plan) => (
-                      <SettingsCard key={plan} title={`${plan === "campus" ? "Institution" : plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Monthly Limits`}>
+                    {(["starter", "pro", "institution"] as const).map((plan) => (
+                      <SettingsCard key={plan} title={`${planDisplayName(plan)} Plan Monthly Limits`}>
                         <p className="text-[10px] text-white/30 mb-3">Changes take effect within 30 seconds across all active sessions.</p>
                         <div className="grid grid-cols-2 gap-3">
                           {([
-                            { key: `${plan}_paper`,      label: "Papers" },
-                            { key: `${plan}_revision`,   label: "Revisions" },
-                            { key: `${plan}_humanizer`,  label: "Humanizer" },
-                            { key: `${plan}_stem`,       label: "STEM Solves" },
-                            { key: `${plan}_study`,      label: "Study Sessions" },
-                            { key: `${plan}_plagiarism`, label: "Plagiarism" },
-                            { key: `${plan}_outline`,    label: "Outlines" },
+                            { key: `${plan === "institution" ? "institution" : plan}_paper`,      label: "Papers" },
+                            { key: `${plan === "institution" ? "institution" : plan}_revision`,   label: "Revisions" },
+                            { key: `${plan === "institution" ? "institution" : plan}_humanizer`,  label: "Humanizer" },
+                            { key: `${plan === "institution" ? "institution" : plan}_stem`,       label: "STEM Solves" },
+                            { key: `${plan === "institution" ? "institution" : plan}_study`,      label: "Study Sessions" },
+                            { key: `${plan === "institution" ? "institution" : plan}_plagiarism`, label: "Plagiarism" },
+                            { key: `${plan === "institution" ? "institution" : plan}_outline`,    label: "Outlines" },
                           ] as { key: string; label: string }[]).map(({ key, label }) => (
                             <div key={key}>
                               <label className="block text-xs text-white/40 mb-1.5">{label} / month</label>
-                              <input type="number" min="0" value={settings[key] ?? ""}
+                              <input type="number" min="0" value={(settings as unknown as Record<string, string>)[key] ?? ""}
                                 onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
                                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
                               />
@@ -2245,9 +2246,9 @@ export default function Admin() {
               <label className="block text-xs text-white/40 mb-1.5">Plan</label>
               <select value={planEditValue} onChange={(e) => setPlanEditValue(e.target.value)}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
-                <option value="starter">Starter (free)</option>
+                <option value="starter">Starter</option>
                 <option value="pro">Pro</option>
-                <option value="campus">Campus</option>
+                <option value="institution">Institution</option>
               </select>
             </div>
             <div className="bg-amber-500/8 border border-amber-500/15 rounded-xl px-3 py-2.5 text-xs text-amber-400/80">

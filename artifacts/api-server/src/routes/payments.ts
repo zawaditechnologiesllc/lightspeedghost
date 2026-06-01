@@ -622,7 +622,7 @@ router.post("/payments/create", async (req: Request, res: Response) => {
         return;
       }
       amountCents = SUBSCRIPTION_PLANS[plan].amountCents;
-      if (plan === "campus_annual") {
+      if (plan === "institution_annual" || plan === "campus_annual") {
         const numSeats = Math.max(5, seats ?? 5);
         amountCents = amountCents * numSeats * 12;
       }
@@ -811,7 +811,7 @@ router.get("/payments/verify", async (req: Request, res: Response) => {
 
       if (payment?.type === "subscription" && payment.plan) {
         const billing = payment.plan.endsWith("annual") ? "annual" : "monthly";
-        const planName = payment.plan.startsWith("campus") ? "campus" : payment.plan.startsWith("starter") ? "starter" : "pro";
+        const planName = (payment.plan.startsWith("campus") || payment.plan.startsWith("institution")) ? "institution" : payment.plan.startsWith("starter") ? "starter" : "pro";
         const periodEnd = billing === "annual"
           ? new Date(Date.now() + 365 * 86400000)
           : new Date(Date.now() + 31 * 86400000);

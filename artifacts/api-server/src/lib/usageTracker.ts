@@ -28,16 +28,17 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     assistant:  300, // per month — Haiku text; Sonnet image/doc (Pro only)
     ebook:      0,   // not included — requires ebooks_monthly add-on
   },
-  campus: {
-    paper:      5,   // per month per seat
-    revision:   8,   // per month per seat
-    humanizer:  8,   // per month per seat
-    stem:       30,  // per month per seat
-    study:      75,  // per month per seat
-    plagiarism: 10,  // per month per seat
-    outline:    10,  // per month per seat
-    assistant:  150, // per month per seat
-    ebook:      0,   // not included — requires ebooks_monthly add-on
+  // Institution plan: custom-quoted, request-only; generous limits assigned per-seat
+  institution: {
+    paper:      null, // unlimited
+    revision:   null,
+    humanizer:  null,
+    stem:       null,
+    study:      null,
+    plagiarism: null,
+    outline:    null,
+    assistant:  null,
+    ebook:      null,
   },
   ebooks_subscriber: {
     paper:      0,
@@ -108,7 +109,10 @@ export async function getUserPlan(userId: string): Promise<string> {
     );
     const sub = rows[0];
     if (!sub || sub.status !== "active") return "starter";
-    return sub.plan ?? "starter";
+    // Normalise legacy plan keys
+    const plan = sub.plan ?? "starter";
+    if (plan === "campus" || plan === "campus_annual") return "institution";
+    return plan;
   } catch {
     return "starter";
   }
@@ -138,12 +142,16 @@ export async function enforceLimit(
   incrementBy = 1,
 ): Promise<{ allowed: boolean; plan: string; used: number; limit: number | null }> {
   const plan = await getUserPlan(userId);
-  const limits = PLAN_LIMITS[plan];
+  const limits = await getEffectiveLimits(plan);
   const limit = limits?.[tool] ?? null;
 
   if (limit === null || limit === undefined) {
     for (let i = 0; i < incrementBy; i++) await trackUsage(userId, tool);
     return { allowed: true, plan, used: 0, limit };
+  }
+
+  if (limit === 0) {
+    return { allowed: false, plan, used: 0, limit: 0 };
   }
 
   const period = getPeriod(tool);

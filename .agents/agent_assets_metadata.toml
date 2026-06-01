@@ -1,5 +1,10 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "8m4Qp6hecnPPc3lVH_fwX"
+uri = "file://artifacts/lightspeed-ghost/public/hero-student-bg.png"
+type = "image"
+title = "dark-academic-student-hero"
 
 [[outputs]]
 id = "d-gZlXxv30Cuk7xZvR2ue"
