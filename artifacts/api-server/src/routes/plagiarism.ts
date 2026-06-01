@@ -190,7 +190,7 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
 
     const [
       { plagiarismScore, matchedWords, sourceMatches },
-      { score: aiScore, indicators: aiIndicators, burstiness, stdDev },
+      { score: aiScore, indicators: aiIndicators, burstiness, stdDev, perplexity: aiPerplexity, bypasserDetected: aiBypasserDetected },
       readability,
       liveMatches,
       openSourceResult,
@@ -317,6 +317,8 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       burstiness,
       stdDev: Math.round(stdDev * 10) / 10,
       aiFlags: aiIndicators,
+      perplexity: aiPerplexity ?? null,
+      bypasserDetected: aiBypasserDetected ?? false,
       readability,
       detectionModel: "gpt-4o-mini + burstiness",
       sourcesScanned: [

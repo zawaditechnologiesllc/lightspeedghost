@@ -208,6 +208,8 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
     const body = req.body as {
       text: string;
       tone?: "academic" | "conversational" | "professional";
+      mode?: "academic" | "blog" | "creative";
+      aggressionLevel?: number;
       instructions?: string;
     };
 
@@ -217,14 +219,32 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       return;
     }
 
-    const tone = body.tone ?? "academic";
+    // Aggression level 1-10 (StealthWriter-inspired): controls max passes + intensity
+    // 1-3 = Light (preserve style, minimal changes), 4-6 = Standard, 7-9 = Deep, 10 = Stealth Max
+    const aggressionLevel = Math.min(10, Math.max(1, Math.round(body.aggressionLevel ?? 5)));
+    const maxPasses = aggressionLevel <= 3 ? 1 : aggressionLevel <= 6 ? 2 : 3;
+    const aggressionNote = aggressionLevel <= 3
+      ? "\nLIGHT MODE: Preserve the author's original voice and style — minimal structural changes, fix only the clearest AI patterns."
+      : aggressionLevel >= 8
+      ? "\nSTEALTH MAX: Full deep restructuring — every paragraph transformed, zero tolerance for AI patterns, maximum variation injected."
+      : "";
+
+    // Mode maps to tone register (compatible with existing tone parameter)
+    const modeToTone: Record<string, "academic" | "conversational" | "professional"> = {
+      academic: "academic",
+      blog: "conversational",
+      creative: "conversational",
+    };
+    const tone = body.tone ?? (body.mode ? modeToTone[body.mode] : undefined) ?? "academic";
     const wordCount = body.text.split(/\s+/).filter(Boolean).length;
 
     const toneGuide: Record<string, string> = {
       academic:
         "formal academic register — precise vocabulary, analytical hedging ('may suggest', 'this analysis contends'), discipline-appropriate jargon, no colloquialisms",
       conversational:
-        "natural conversational tone — contractions allowed, shorter punchy sentences, approachable but intelligent, clear and direct",
+        body.mode === "creative"
+          ? "creative narrative register — vivid imagery, varied sentence cadence, storytelling voice, fresh metaphors, show-don't-tell"
+          : "natural conversational tone — contractions allowed, shorter punchy sentences, approachable but intelligent, clear and direct",
       professional:
         "professional register — authoritative but readable, business-appropriate, avoids academic hedging but remains precise",
     };
@@ -232,11 +252,11 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
     // ── Step 1: Baseline scan ────────────────────────────────────────────────
     send("step", {
       id: "analyse",
-      message: "Scanning text for AI patterns — identifying flagged sentences, uniform structures, and AI clichés…",
+      message: `Scanning text for AI patterns — measuring burstiness, perplexity, and phrase-level AI probability across all sentences…`,
       status: "running",
     });
 
-    const { score: baselineScore, indicators: baselineIndicators } =
+    const { score: baselineScore, indicators: baselineIndicators, perplexity: baselinePerplexity, burstiness: baselineBurstiness, bypasserDetected: baselineBypasser } =
       await detectAIScore(body.text);
 
     if (baselineScore < 0) {
@@ -249,9 +269,15 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       return;
     }
 
+    const bypasserWarn = baselineBypasser
+      ? " ⚠️ Turnitin bypasser detection triggered — this text shows systematic humanizer patterns. Applying deep structural overhaul."
+      : "";
+    const perplexityNote = baselinePerplexity > 50
+      ? ` Predictability (perplexity proxy): ${baselinePerplexity}/100 — high AI-trigram density detected.`
+      : "";
     send("step", {
       id: "analyse",
-      message: `Baseline AI score: ${baselineScore}%. Found ${baselineIndicators.length} pattern groups. Target: below 5%. Starting multi-pass humanization…`,
+      message: `Baseline AI score: ${baselineScore}%. Burstiness: ${baselineBurstiness}/100. Found ${baselineIndicators.length} pattern groups.${perplexityNote}${bypasserWarn} Starting ${maxPasses}-pass humanization…`,
       status: "done",
     });
 
@@ -266,8 +292,14 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       ? `\nADDITIONAL USER INSTRUCTIONS: ${body.instructions}`
       : "";
 
+    // Append aggression note and bypasser warning to instructions for the AI
+    const bypasserAwarenessNote = baselineBypasser
+      ? "\nBYPASSER DETECTION ACTIVE: Do NOT apply uniform synonym substitution or formulaic short/long/short sentence patterns — Turnitin's 2025 bypasser detector flags these. Each paragraph must use a different structural transformation approach."
+      : "";
+    const fullInstructions = aggressionNote + bypasserAwarenessNote + (additionalNote ? `\n${additionalNote}` : "");
+
     const pass1Text = await humanizePass(
-      body.text + (additionalNote ? `\n\n[NOTE: ${body.instructions}]` : ""),
+      body.text + (fullInstructions ? `\n\n[INSTRUCTIONS: ${fullInstructions}]` : ""),
       tone,
       toneGuide[tone],
       1,
@@ -302,8 +334,8 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
     let currentScore = score1Effective;
     let currentIndicators = indicators1;
 
-    // ── Step 4: Pass 2 if still above 0% ──────────────────────────────────────
-    if (currentScore > 0) {
+    // ── Step 4: Pass 2 if still above 0% AND aggression allows it ─────────────
+    if (currentScore > 0 && maxPasses >= 2) {
       send("step", {
         id: "humanize-2",
         message: `Pass 2 — targeting specific residual patterns: ${currentIndicators.slice(0, 2).join(", ") || "sentence uniformity"}. Applying deeper structural variation…`,
@@ -345,8 +377,8 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       currentScore = score2Effective;
       currentIndicators = indicators2;
 
-      // ── Step 5: Pass 3 (final, only if still above 0%) ──────────────────
-      if (currentScore > 0) {
+      // ── Step 5: Pass 3 (final, only if still above 0% AND aggression allows) ──
+      if (currentScore > 0 && maxPasses >= 3) {
         send("step", {
           id: "humanize-3",
           message: `Pass 3 (final) — deep restructuring pass targeting: ${currentIndicators.slice(0, 2).join(", ") || "persistent patterns"}…`,
@@ -438,11 +470,14 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       changesSummary,
       estimatedAiScore: currentScore,
       toneApplied: tone,
+      modeApplied: body.mode ?? "academic",
+      aggressionLevel,
       wordCount: humanizedWordCount,
       originalWordCount: wordCount,
       wordCountDrift: Math.round((wcRatio - 1) * 100),
       documentId,
       passesApplied: currentScore > 10 ? 3 : currentScore > 5 ? 2 : 1,
+      bypasserDetected: baselineBypasser ?? false,
     });
 
     const passesApplied = currentScore > 10 ? 3 : currentScore > 5 ? 2 : 1;

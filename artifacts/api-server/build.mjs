@@ -106,6 +106,7 @@ async function buildAll() {
       "@memvid/sdk",
       "file-type",
       "officeparser",
+      "xlsx",
     ],
     sourcemap: "linked",
     plugins: [

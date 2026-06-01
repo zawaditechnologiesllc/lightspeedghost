@@ -29,6 +29,10 @@ interface AnalysisResult {
   plagiarismReason: string;
   recommendation: "revise" | "new_paper";
   wordCount: number;
+  detectedTone?: string;
+  toneConfidence?: number;
+  toneNote?: string;
+  consistencyIssues?: string[];
 }
 
 interface RevisionChange {
@@ -556,6 +560,31 @@ export default function Revision() {
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Plagiarism Analysis</p>
                 <p className="text-sm text-foreground">{analysis.plagiarismReason}</p>
               </div>
+              {analysis.detectedTone && (
+                <div className="px-4 py-3 rounded-xl bg-card border border-border">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Tone Detection <span className="normal-case font-normal text-muted-foreground/60">(Grammarly-style)</span></p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-foreground capitalize">{analysis.detectedTone}</span>
+                    {analysis.toneConfidence !== undefined && (
+                      <span className="text-[10px] text-muted-foreground/60">{analysis.toneConfidence}% confidence</span>
+                    )}
+                  </div>
+                  {analysis.toneNote && <p className="text-xs text-muted-foreground">{analysis.toneNote}</p>}
+                </div>
+              )}
+              {analysis.consistencyIssues && analysis.consistencyIssues.length > 0 && (
+                <div className="px-4 py-3 rounded-xl bg-amber-500/8 border border-amber-500/20">
+                  <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-2">Consistency Issues</p>
+                  <ul className="space-y-1">
+                    {analysis.consistencyIssues.map((issue, i) => (
+                      <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                        <span className="text-amber-500 shrink-0 mt-0.5">•</span>
+                        {issue}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {tooMuchAI && (

@@ -311,6 +311,101 @@ export function computeReadabilityScores(text: string): ReadabilityScores {
   };
 }
 
+// ── Perplexity proxy (Turnitin-style token predictability) ───────────────────
+// AI models choose the most statistically probable next token, producing
+// predictable n-grams. We measure this by checking how many of the text's
+// 3-grams match a curated list of known AI-generated patterns.
+// High match rate → low perplexity → likely AI.
+
+const AI_TRIGRAMS = new Set([
+  "it is important","it should be","it is worth","in today s","in the realm",
+  "in conclusion it","furthermore it is","moreover it","additionally it",
+  "it is evident","it can be","it is clear","this essay will","this paper will",
+  "this study will","this report will","in order to","due to the",
+  "as a result","with respect to","in terms of","it is also","can be seen",
+  "can be found","plays a crucial","plays a vital","plays an important",
+  "of great importance","it is essential","it is necessary","needs to be",
+  "has been shown","has been found","research has shown","studies have shown",
+  "one of the","in the context","in the field","the fact that","the ability to",
+  "the importance of","the role of","is a key","is an important",
+  "have a significant","have a major","this is a","this is an","there is a",
+  "this can be","this may be","this could be","this would be","this should be",
+]);
+
+/**
+ * Perplexity proxy: measures fraction of 3-grams matching known AI patterns.
+ * Mirrors Turnitin's token-level predictability signal.
+ * Returns 0-100 (100 = maximally predictable / AI-like, 0 = highly random / human-like).
+ */
+export function computePerplexityProxy(text: string): { score: number; aiTrigramCount: number; totalTrigrams: number } {
+  const words = text.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter(w => w.length > 0);
+  if (words.length < 6) return { score: 0, aiTrigramCount: 0, totalTrigrams: 0 };
+
+  let aiTrigramCount = 0;
+  const totalTrigrams = Math.max(1, words.length - 2);
+
+  for (let i = 0; i < words.length - 2; i++) {
+    const trigram = `${words[i]} ${words[i + 1]} ${words[i + 2]}`;
+    if (AI_TRIGRAMS.has(trigram)) aiTrigramCount++;
+  }
+
+  // 0-100 scale: >5% AI trigrams = suspicious, >15% = very likely AI
+  const fraction = aiTrigramCount / totalTrigrams;
+  const score = Math.min(100, Math.round(fraction * 650));
+
+  return { score, aiTrigramCount, totalTrigrams };
+}
+
+// ── Sentence-level AI scorer (Copyleaks AI Phrases Tool approach) ─────────────
+// Assigns each sentence a 0-100 AI probability so the UI can render per-sentence
+// heatmaps — matching Turnitin's and Copyleaks' phrase-level detection output.
+
+const AI_PHRASE_LIST = [
+  "it is important to note","it should be noted","it is worth noting",
+  "in today's","in the realm of","furthermore","moreover","additionally",
+  "in conclusion","delve into","crucial","pivotal","underscore",
+  "it is evident","it can be argued","navigate the complexities",
+  "shed light on","multifaceted","nuanced approach","tapestry",
+  "it goes without saying","at the end of the day","it is clear that",
+  "plays a vital role","plays a crucial role","has been shown to",
+  "it is essential","one of the most important","it is necessary to",
+];
+
+/**
+ * Score individual sentences for AI probability.
+ * Implements Copyleaks' phrase-level AI probability concept.
+ * Returns sentences flagged if score ≥ 30.
+ */
+export function scoreSentences(text: string): Array<{ text: string; score: number; flagged: boolean }> {
+  const sentences = text
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.split(/\s+/).length >= 4);
+
+  return sentences.map(sentence => {
+    const lower = sentence.toLowerCase();
+    const wordCount = sentence.split(/\s+/).length;
+    let score = 0;
+
+    for (const phrase of AI_PHRASE_LIST) {
+      if (lower.includes(phrase)) score += 25;
+    }
+
+    // AI sweet-spot sentence length (20-30 words — uniformly produced by LLMs)
+    if (wordCount >= 20 && wordCount <= 30) score += 10;
+    if (wordCount >= 23 && wordCount <= 27) score += 15;
+
+    // Short punchy sentences = burstiness signal = human-like (reduce score)
+    if (wordCount <= 7) score = Math.max(0, score - 20);
+
+    // Formulaic AI transition openers
+    const aiOpeners = ["furthermore,","moreover,","additionally,","therefore,","consequently,","it is important","in conclusion,","in summary,"];
+    if (aiOpeners.some(w => lower.startsWith(w))) score += 25;
+
+    return { text: sentence, score: Math.min(100, score), flagged: score >= 30 };
+  });
+}
+
 // ── Multi-section text sampler ────────────────────────────────────────────────
 // Turnitin analyses the full document — not just the opening paragraphs.
 // Sample beginning, middle, and end so long papers are scored throughout.
