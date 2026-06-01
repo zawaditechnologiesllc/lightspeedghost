@@ -112,6 +112,8 @@ export default function Humanizer() {
   // ── input
   const [inputText, setInputText] = useState("");
   const [tone, setTone] = useState<Tone>("academic");
+  const [mode, setMode] = useState<"academic" | "blog" | "creative">("academic");
+  const [aggressionLevel, setAggressionLevel] = useState(5);
   const [instructions, setInstructions] = useState("");
 
   // ── auto-populate from sessionStorage (redirect from Plagiarism checker)
@@ -212,7 +214,7 @@ export default function Humanizer() {
           "Content-Type": "application/json",
           
         },
-        body: JSON.stringify({ text, tone, instructions: instructions.trim() || undefined }),
+        body: JSON.stringify({ text, tone, mode, aggressionLevel, instructions: instructions.trim() || undefined }),
         signal: abortRef.current.signal,
       });
 
@@ -496,31 +498,67 @@ export default function Humanizer() {
               </div>
             </div>
 
-            {/* Intensity selector */}
+            {/* Writing mode */}
             <div className="rounded-xl border border-border bg-card/50 p-4">
-              <p className="text-xs font-semibold text-foreground mb-3">Humanization intensity</p>
+              <p className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5">
+                <span>Writing Mode</span>
+              </p>
               <div className="grid grid-cols-3 gap-2">
                 {([
-                  { value: "light", label: "Light", desc: "Minor edits — preserves your voice", color: "text-green-500" },
-                  { value: "medium", label: "Medium", desc: "Balanced rewrite — new phrasing", color: "text-yellow-500" },
-                  { value: "aggressive", label: "Aggressive", desc: "Full rewrite — maximum stealth", color: "text-red-500" },
-                ] as const).map((opt) => (
+                  { value: "academic", label: "Academic", desc: "Formal register, citations preserved" },
+                  { value: "blog", label: "Blog", desc: "Conversational & approachable" },
+                  { value: "creative", label: "Creative", desc: "Narrative voice, vivid style" },
+                ] as const).map((m) => (
                   <button
-                    key={opt.value}
+                    key={m.value}
                     type="button"
-                    onClick={() => setInstructions(opt.value === "light" ? "Minimal changes, keep original voice" : opt.value === "aggressive" ? "Full rewrite, maximum humanization" : "")}
+                    onClick={() => setMode(m.value)}
                     className={cn(
                       "py-2.5 px-3 rounded-lg text-xs border transition-all text-left",
-                      instructions === (opt.value === "light" ? "Minimal changes, keep original voice" : opt.value === "aggressive" ? "Full rewrite, maximum humanization" : "")
+                      mode === m.value
                         ? "bg-primary/10 text-primary border-primary/30 shadow-sm"
                         : "border-border text-muted-foreground hover:border-primary/40"
                     )}
                   >
-                    <span className={cn("font-semibold block", opt.color)}>{opt.label}</span>
-                    <span className="text-[10px] opacity-60 leading-tight block mt-0.5">{opt.desc}</span>
+                    <span className="font-semibold block">{m.label}</span>
+                    <span className="text-[10px] opacity-60 leading-tight block mt-0.5">{m.desc}</span>
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Aggression level slider (StealthWriter-inspired 1-10 scale) */}
+            <div className="rounded-xl border border-border bg-card/50 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-foreground">Humanization Intensity</p>
+                <span className={cn(
+                  "text-xs font-bold px-2 py-0.5 rounded-full",
+                  aggressionLevel <= 3 ? "bg-green-500/15 text-green-500" :
+                  aggressionLevel <= 6 ? "bg-yellow-500/15 text-yellow-500" :
+                  "bg-red-500/15 text-red-500"
+                )}>
+                  {aggressionLevel <= 3 ? "Light" : aggressionLevel <= 6 ? "Standard" : aggressionLevel <= 9 ? "Deep" : "Stealth Max"} — {aggressionLevel}/10
+                </span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={10}
+                value={aggressionLevel}
+                onChange={(e) => setAggressionLevel(Number(e.target.value))}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-muted"
+              />
+              <div className="flex justify-between text-[9px] text-muted-foreground/50 mt-1.5">
+                <span>Light (preserve voice)</span>
+                <span>Standard</span>
+                <span>Stealth Max</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground/60 mt-2">
+                {aggressionLevel <= 3 ? "Minimal edits — fixes obvious AI patterns, preserves your original voice and structure."
+                  : aggressionLevel <= 6 ? "Balanced rewrite — restructures patterns, injects burstiness, removes AI clichés."
+                  : aggressionLevel <= 9 ? "Deep restructuring — every paragraph transformed, bypasser-resistant variation applied."
+                  : "Stealth Max — full syntactic overhaul, maximum unpredictability, Turnitin bypasser-aware."}
+              </p>
             </div>
 
             {/* Error from humanize attempt */}

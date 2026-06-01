@@ -23,7 +23,7 @@
  */
 
 import { openai } from "./ai.js";
-import { computeBurstiness, sampleTextSections } from "./textAnalysis.js";
+import { computeBurstiness, sampleTextSections, computePerplexityProxy, scoreSentences } from "./textAnalysis.js";
 import { recordUsage } from "./apiCost.js";
 import { anthropic } from "./ai.js";
 import { WRITER_SOUL } from "./soul.js";
@@ -99,25 +99,45 @@ export function removeSlopPatterns(text: string): string {
   return out.trim();
 }
 
+export interface SentenceScore {
+  text: string;
+  score: number;
+  flagged: boolean;
+}
+
 export interface AIDetectionResult {
   score: number;
   indicators: string[];
   burstiness: number;
   stdDev: number;
+  perplexity: number;
+  sentenceScores: SentenceScore[];
+  /** True when score < 20 (Turnitin-style false-positive suppression) */
+  falsePositiveSuppressed: boolean;
+  /** Minimum word count met for reliable detection (Turnitin requires 400+) */
+  meetsMinimumWordCount: boolean;
+  /** True if text shows systematic AI humanizer tool patterns (Turnitin 2025 bypasser detection) */
+  bypasserDetected?: boolean;
   mode?: "blended" | "burstiness_fallback";
 }
 
-const DETECTION_SYSTEM = (burstiness: number, stdDev: number) => `\
-You are an expert AI content detection specialist replicating Turnitin, GPTZero, and Originality.AI methodology.
+const DETECTION_SYSTEM = (burstiness: number, stdDev: number, perplexity: number) => `\
+You are an expert AI content detection specialist replicating Turnitin, GPTZero, Copyleaks, and Originality.AI methodology.
 
-The text has already been measured for burstiness (sentence length variance):
-- Burstiness stdDev: ${stdDev.toFixed(1)} words (human writing: 8–15, AI writing: 3–6)
-- Burstiness score: ${burstiness}/100 (higher = more human-like variation)
+The text has already been measured with two local signals:
+- Burstiness stdDev: ${stdDev.toFixed(1)} words (human: 8–15, AI: 3–6)
+- Burstiness score: ${burstiness}/100 (higher = more human-like sentence variation)
+- Perplexity proxy: ${perplexity}/100 (AI-trigram density — higher = more predictable/AI-like)
+
+Turnitin 2025 BYPASSER DETECTION: also flag if text shows systematic humanizer patterns —
+uniform synonym substitution throughout, formulaic burstiness injection (every paragraph has same
+short/long/short pattern), or mechanical transition replacement. These are signs of AI humanizer tools.
 
 Analyse the sampled text sections and return JSON:
 {
-  "aiScore": number (0-100, probability the full text is AI-generated — calibrate against burstiness above),
-  "indicators": ["up to 4 specific AI patterns found, or 'none detected' if clean"]
+  "aiScore": number (0-100, probability the full text is AI-generated — calibrate against both signals above),
+  "indicators": ["up to 4 specific AI or humanizer patterns found, or 'none detected' if clean"],
+  "bypasserDetected": boolean (true if text shows systematic humanizer tool patterns)
 }
 
 TURNITIN AI DETECTION SIGNALS — each one found raises the score:
@@ -148,6 +168,10 @@ export async function detectAIScore(
   context = "ai-detection",
 ): Promise<AIDetectionResult> {
   const { score: burstiness, stdDev } = computeBurstiness(text);
+  const { score: perplexity } = computePerplexityProxy(text);
+  const sentenceScores = scoreSentences(text);
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  const meetsMinimumWordCount = wordCount >= 400;
   const sample = sampleTextSections(text);
 
   const MAX_RETRIES = 2;
@@ -158,7 +182,7 @@ export async function detectAIScore(
         max_tokens: 600,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: DETECTION_SYSTEM(burstiness, stdDev) },
+          { role: "system", content: DETECTION_SYSTEM(burstiness, stdDev, perplexity) },
           { role: "user", content: `Detect AI content in these sampled sections:\n\n${sample}` },
         ],
       });
@@ -170,17 +194,25 @@ export async function detectAIScore(
       const raw = JSON.parse(resp.choices[0]?.message?.content ?? "{}") as {
         aiScore?: number;
         indicators?: string[];
+        bypasserDetected?: boolean;
       };
 
       const gptScore = Math.min(100, Math.max(0, Number(raw.aiScore) ?? 40));
       const burstinessPenalty = burstiness < 30 ? Math.round((30 - burstiness) * 0.5) : 0;
-      const blendedScore = Math.min(98, gptScore + burstinessPenalty);
+      // Perplexity penalty: high AI-trigram rate boosts score (Turnitin's predictability signal)
+      const perplexityPenalty = perplexity > 40 ? Math.round((perplexity - 40) * 0.25) : 0;
+      const blendedScore = Math.min(98, gptScore + burstinessPenalty + perplexityPenalty);
 
       return {
         score: blendedScore,
         indicators: Array.isArray(raw.indicators) ? raw.indicators : [],
         burstiness,
         stdDev,
+        perplexity,
+        sentenceScores,
+        falsePositiveSuppressed: blendedScore < 20,
+        meetsMinimumWordCount,
+        bypasserDetected: raw.bypasserDetected === true,
         mode: "blended",
       };
     } catch {
@@ -188,14 +220,19 @@ export async function detectAIScore(
     }
   }
 
-  // Deterministic fallback (no guessing): derive score from measured burstiness only.
-  // Lower burstiness => more likely AI-like rhythmic uniformity.
-  const fallbackScore = Math.min(98, Math.max(0, Math.round((100 - burstiness) * 0.8)));
+  // Deterministic fallback (no guessing): derive score from burstiness + perplexity only.
+  const burstinessContrib = (100 - burstiness) * 0.6;
+  const perplexityContrib = perplexity * 0.4;
+  const fallbackScore = Math.min(98, Math.max(0, Math.round(burstinessContrib + perplexityContrib)));
   return {
     score: fallbackScore,
-    indicators: ["burstiness_only_fallback:model_unavailable"],
+    indicators: ["burstiness_perplexity_fallback:model_unavailable"],
     burstiness,
     stdDev,
+    perplexity,
+    sentenceScores,
+    falsePositiveSuppressed: fallbackScore < 20,
+    meetsMinimumWordCount,
     mode: "burstiness_fallback",
   };
 }

@@ -83,12 +83,12 @@ router.post("/revision/analyse", requireAuth, async (req, res) => {
 
     const resp = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      max_tokens: 700,
+      max_tokens: 800,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
-          content: `You are a specialist academic integrity analyst replicating Turnitin and GPTZero methodology.
+          content: `You are a specialist academic integrity analyst replicating Turnitin, GPTZero, and Grammarly methodology.
 
 The text has been pre-measured for burstiness (sentence length variance):
 - Burstiness stdDev: ${stdDev} words (human writing: 8–15, AI writing: 3–6)
@@ -101,7 +101,11 @@ Analyse the sampled text sections (beginning, middle, end) and return ONLY valid
   "aiReason": "1-2 sentence explanation of the specific AI indicators found",
   "plagiarismReason": "1-2 sentence explanation of the plagiarism indicators found",
   "recommendation": "revise" or "new_paper",
-  "wordCount": number
+  "wordCount": number,
+  "detectedTone": "formal" | "informal" | "neutral" | "persuasive" | "analytical" | "descriptive" | "narrative",
+  "toneConfidence": number (0-100),
+  "toneNote": "1 sentence describing the tone and whether it suits academic writing",
+  "consistencyIssues": ["up to 3 specific consistency problems found, e.g. dialect mixing US/UK, tense shifts, register inconsistency — or empty array if clean"]
 }
 
 AI SIGNALS (raise aiScore):
@@ -147,6 +151,10 @@ THRESHOLD: aiScore > 25 → "new_paper". Papers above 25% are extremely difficul
       plagiarismReason: String(raw.plagiarismReason ?? "Analysis complete."),
       recommendation: aiScore > 25 ? "new_paper" : "revise",
       wordCount,
+      detectedTone: String(raw.detectedTone ?? "neutral"),
+      toneConfidence: Math.min(100, Math.max(0, Number(raw.toneConfidence) || 70)),
+      toneNote: String(raw.toneNote ?? ""),
+      consistencyIssues: Array.isArray(raw.consistencyIssues) ? raw.consistencyIssues : [],
     });
   } catch (err) {
     req.log.error({ err }, "Error analysing paper");

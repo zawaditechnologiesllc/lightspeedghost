@@ -971,6 +971,32 @@ export default function PlagiarismChecker() {
                           </div>
                         )}
                       </div>
+                      {/* Perplexity proxy (Turnitin-style) */}
+                      {result.perplexity != null && (
+                        <div className="mt-3 bg-muted/40 rounded-lg p-3 border border-border">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Predictability Score (Turnitin-style)</div>
+                            <span className={cn("text-xs font-bold",
+                              result.perplexity >= 60 ? "text-red-500" : result.perplexity >= 35 ? "text-yellow-500" : "text-green-500"
+                            )}>{result.perplexity}/100</span>
+                          </div>
+                          <div className="h-1 bg-muted rounded-full overflow-hidden">
+                            <div className={cn("h-full rounded-full", result.perplexity >= 60 ? "bg-red-500" : result.perplexity >= 35 ? "bg-yellow-500" : "bg-green-500")}
+                              style={{ width: `${result.perplexity}%` }} />
+                          </div>
+                          <div className="text-[10px] text-muted-foreground mt-1">
+                            {result.perplexity >= 60 ? "High AI-trigram density — matches Turnitin flag threshold" : result.perplexity >= 35 ? "Moderate predictability — some AI patterns" : "Low predictability — varied phrasing"}
+                          </div>
+                        </div>
+                      )}
+                      {result.bypasserDetected && (
+                        <div className="mt-2 flex items-start gap-1.5 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                          <AlertTriangle size={11} className="text-orange-500 shrink-0 mt-0.5" />
+                          <p className="text-[11px] text-orange-700 dark:text-orange-400">
+                            <strong>Bypasser detection triggered:</strong> Turnitin 2025 can detect systematic humanizer patterns. We recommend using the Humanizer with Stealth Max intensity.
+                          </p>
+                        </div>
+                      )}
                       {result.aiFlags && result.aiFlags.length > 0 && (
                         <div className="mt-3 space-y-1">
                           {result.aiFlags.map((flag: string, i: number) => (
