@@ -143,11 +143,16 @@ interface SolveStep { id: string; message: string; status: "running" | "done" | 
 export default function StemSolver() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const datasetInputRef = useRef<HTMLInputElement>(null);
+  const financialStmtInputRef = useRef<HTMLInputElement>(null);
   const [isFileExtracting, setIsFileExtracting] = useState(false);
   const [fileExtractError, setFileExtractError] = useState<string | null>(null);
   const [datasetText, setDatasetText] = useState("");
   const [datasetPreview, setDatasetPreview] = useState<string[][]>([]);
   const [showDataset, setShowDataset] = useState(false);
+  const [financialStatementText, setFinancialStatementText] = useState("");
+  const [financialStatementType, setFinancialStatementType] = useState("all");
+  const [isFinStmtExtracting, setIsFinStmtExtracting] = useState(false);
+  const [showFinancialStmt, setShowFinancialStmt] = useState(false);
   const [result, setResult] = useState<StemSolution | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [papersLoading, setPapersLoading] = useState(false);
@@ -250,6 +255,30 @@ export default function StemSolver() {
     }
   };
 
+  const handleFinancialStmtFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setIsFinStmtExtracting(true);
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      const { data: { session } } = await supabase.auth.getSession();
+      const formData = new FormData();
+      formData.append("file", file);
+      const headers: HeadersInit = {};
+      if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+      const res = await fetch(`${API}/api/files/extract`, { method: "POST", headers, body: formData });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `Server error ${res.status}`); }
+      const data = await res.json();
+      if (data.isImage) { setFileExtractError("Images not supported here — paste or use PDF/Word/Excel."); return; }
+      setFinancialStatementText(prev => prev ? `${prev}\n\n---\n\n${data.text}` : data.text);
+    } catch (err) {
+      setFileExtractError(err instanceof Error ? err.message : "Failed to extract file");
+    } finally {
+      setIsFinStmtExtracting(false);
+    }
+  };
+
   const onSubmit = async (data: FormData) => {
     if (isAtLimit("stem")) { guard("stem", () => {}); return; }
     setPapers([]);
@@ -273,7 +302,12 @@ export default function StemSolver() {
       const resp = await apiFetch(`/stem/solve-stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, datasetText: datasetText.trim() || undefined }),
+        body: JSON.stringify({
+          ...data,
+          datasetText: datasetText.trim() || undefined,
+          financialStatementText: financialStatementText.trim() || undefined,
+          financialStatementType: financialStatementText.trim() ? financialStatementType : undefined,
+        }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -519,8 +553,9 @@ export default function StemSolver() {
         {/* Upload tools row */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-0 flex-wrap">
           <StemImageOcr onExtracted={handleStemImageOcr} compact />
-          <input ref={fileInputRef} type="file" accept=".txt,.pdf,.docx,.doc,.md" className="sr-only" onChange={handleStemFileExtracted} />
-          <input ref={datasetInputRef} type="file" accept=".csv,.tsv,.txt" className="sr-only" onChange={handleDatasetFile} />
+          <input ref={fileInputRef} type="file" accept=".txt,.pdf,.docx,.doc,.md,.xlsx,.xls" className="sr-only" onChange={handleStemFileExtracted} />
+          <input ref={datasetInputRef} type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" className="sr-only" onChange={handleDatasetFile} />
+          <input ref={financialStmtInputRef} type="file" accept=".pdf,.docx,.doc,.txt,.csv,.xlsx,.xls,.png,.jpg,.jpeg" className="sr-only" onChange={handleFinancialStmtFile} />
           <button
             type="button"
             disabled={isFileExtracting}
@@ -544,6 +579,21 @@ export default function StemSolver() {
             <Database size={12} />
             {datasetText ? "Dataset loaded" : "Add dataset"}
           </button>
+          {["finance","accounting","economics","actuarial_science"].includes(selectedSubject) && (
+            <button
+              type="button"
+              disabled={isFinStmtExtracting}
+              onClick={() => setShowFinancialStmt(v => !v)}
+              className={cn(
+                "flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50",
+                showFinancialStmt || financialStatementText
+                  ? "border-emerald-400/60 text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/20"
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-primary/50 bg-card"
+              )}
+            >
+              {isFinStmtExtracting ? <><Loader2 size={12} className="animate-spin" /> Reading…</> : <><FileText size={12} /> {financialStatementText ? "Financials loaded" : "Add financials"}</>}
+            </button>
+          )}
           {fileExtractError && (
             <span className="text-xs text-destructive">{fileExtractError}</span>
           )}
@@ -596,6 +646,42 @@ export default function StemSolver() {
             )}
           </div>
         )}
+        {/* Financial Statements panel */}
+        {showFinancialStmt && ["finance","accounting","economics","actuarial_science"].includes(selectedSubject) && (
+          <div className="mx-4 mt-2 rounded-xl border border-emerald-400/30 bg-emerald-50/20 dark:bg-emerald-900/10 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                Financial Statements <span className="font-normal text-muted-foreground">(PDF/Word/Excel/CSV — AI extracts ratios, trends, and journal entries)</span>
+              </p>
+              <button type="button" onClick={() => { setFinancialStatementText(""); setFinancialStatementType("all"); }} className="text-[10px] text-muted-foreground hover:text-destructive transition-colors">Clear</button>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] text-muted-foreground font-medium">Statement type:</span>
+              {(["all","income_statement","balance_sheet","cash_flow","ratio_analysis"] as const).map(t => (
+                <button key={t} type="button" onClick={() => setFinancialStatementType(t)}
+                  className={cn("text-[10px] px-2 py-0.5 rounded-full border transition-all", financialStatementType === t ? "border-emerald-400 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30" : "border-border text-muted-foreground hover:border-emerald-300")}>
+                  {t === "all" ? "All" : t === "income_statement" ? "Income Stmt" : t === "balance_sheet" ? "Balance Sheet" : t === "cash_flow" ? "Cash Flow" : "Ratios"}
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={() => financialStmtInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-emerald-300 dark:border-emerald-700 rounded-lg py-2 transition-colors hover:border-emerald-400">
+              <FileText size={12} /> Upload PDF, Word, or Excel file
+            </button>
+            <textarea
+              value={financialStatementText}
+              onChange={e => setFinancialStatementText(e.target.value)}
+              rows={3}
+              placeholder={"Or paste financial statement data…\ne.g.  Revenue: $5.2M, COGS: $3.1M, Net Income: $0.8M\n      Total Assets: $12M, Total Liabilities: $7.5M"}
+              className="w-full px-2.5 py-1.5 font-mono text-xs rounded-lg border border-emerald-200 dark:border-emerald-800 bg-background focus:outline-none focus:ring-1 focus:ring-emerald-400 resize-none"
+            />
+            {financialStatementText.trim() && (
+              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <CheckCircle size={10} /> {financialStatementText.trim().split("\n").length} lines loaded — AI will compute ratios and incorporate analysis
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Textarea */}
         <textarea
           {...form.register("problem")}

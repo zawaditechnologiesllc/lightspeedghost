@@ -13,6 +13,7 @@ import { anthropic } from "../lib/ai";
 import { ACADEMIC_SOUL } from "../lib/soul";
 import { trackUsage, enforceLimit } from "../lib/usageTracker";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
+import { buildFinancialStatementsContext } from "../lib/financialStatements";
 
 const router = Router();
 
@@ -57,9 +58,14 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
     } catch { /* non-fatal — proceed without RAG */ }
 
     const datasetBlock = body.datasetText?.trim() ? parseAndAnalyzeDataset(body.datasetText) : "";
-    const augmentedProblem = datasetBlock
-      ? `${body.problem}\n\n---\n\n${datasetBlock}`
-      : body.problem;
+    const finStmtBlock = body.financialStatementText?.trim()
+      ? buildFinancialStatementsContext(body.financialStatementText, body.financialStatementType ?? "all")
+      : "";
+    const augmentedProblem = [
+      body.problem,
+      datasetBlock ? `\n\n--- Dataset Analysis ---\n\n${datasetBlock}` : "",
+      finStmtBlock ? `\n\n--- Financial Statement Context ---\n\n${finStmtBlock}` : "",
+    ].join("").trim();
 
     // 1. ReAct Loop — Pi Engine pattern: Think → Act → Observe → Reflect
     const reactResult = await reactSolve(augmentedProblem, body.subject, undefined, academicContext);
@@ -241,9 +247,14 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
     });
 
     const datasetBlock = body.datasetText?.trim() ? parseAndAnalyzeDataset(body.datasetText) : "";
-    const augmentedProblem = datasetBlock
-      ? `${body.problem}\n\n---\n\n${datasetBlock}`
-      : body.problem;
+    const finStmtBlock = body.financialStatementText?.trim()
+      ? buildFinancialStatementsContext(body.financialStatementText, body.financialStatementType ?? "all")
+      : "";
+    const augmentedProblem = [
+      body.problem,
+      datasetBlock ? `\n\n--- Dataset Analysis ---\n\n${datasetBlock}` : "",
+      finStmtBlock ? `\n\n--- Financial Statement Context ---\n\n${finStmtBlock}` : "",
+    ].join("").trim();
 
     let reactResult: Awaited<ReturnType<typeof reactSolve>>;
     try {

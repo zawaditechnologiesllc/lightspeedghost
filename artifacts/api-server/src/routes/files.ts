@@ -2,7 +2,6 @@ import { Router } from "express";
 import multer from "multer";
 import mammoth from "mammoth";
 import { convert as htmlToText } from "html-to-text";
-import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
@@ -23,22 +22,27 @@ const upload = multer({
       "image/jpeg",
       "image/jpg",
       "image/webp",
+      // Excel formats
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+      "application/vnd.ms-excel", // .xls
+      "application/octet-stream", // some browsers send xlsx as this
     ];
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+      // Also allow by extension for browsers that send wrong mime
+      const name = (file.originalname ?? "").toLowerCase();
+      if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv")) {
+        cb(null, true);
+      } else {
+        cb(new Error(`Unsupported file type: ${file.mimetype}`));
+      }
     }
   },
 });
 
 /**
- * Extract text from a PDF buffer using pdf-parse v2 (pure JS, no system binaries).
- * Works on any host including Render, Vercel, etc.
- *
- * v2 API: { PDFParse } is a class.
- *   const parser = new PDFParse({ data: buffer });
- *   const { text, totalPages } = await parser.getText();
+ * Extract text from a PDF buffer using pdf-parse v2.
  */
 async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; pageCount: number }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,9 +56,25 @@ async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; pageC
 }
 
 /**
- * Fallback text extractor for files that aren't true Word binary documents:
- * - RTF files (strip control codes)
- * - Plain text / HTML saved with a .doc extension
+ * Extract text from Excel files (.xlsx, .xls) using the xlsx library.
+ * Converts each sheet to CSV and returns all sheets concatenated.
+ */
+async function extractTextFromExcel(buffer: Buffer): Promise<string> {
+  const XLSX = await import("xlsx");
+  const workbook = XLSX.read(buffer, { type: "buffer" });
+  const sheetTexts: string[] = [];
+  for (const sheetName of workbook.SheetNames) {
+    const worksheet = workbook.Sheets[sheetName];
+    const csv = XLSX.utils.sheet_to_csv(worksheet, { blankrows: false });
+    if (csv.trim()) {
+      sheetTexts.push(`=== Sheet: ${sheetName} ===\n${csv}`);
+    }
+  }
+  return sheetTexts.join("\n\n");
+}
+
+/**
+ * Fallback text extractor for RTF, HTML, and plain text saved with odd extensions.
  */
 function extractTextFallback(buffer: Buffer): string {
   const raw = buffer.toString("utf-8");
@@ -62,9 +82,9 @@ function extractTextFallback(buffer: Buffer): string {
   // RTF: strip control words and groups, keep visible text
   if (raw.trimStart().startsWith("{\\rtf")) {
     return raw
-      .replace(/\{\\[^{}]*\}/g, " ")         // remove \{...\} groups
-      .replace(/\\[a-z]+[-]?\d* ?/g, " ")    // remove \controlword
-      .replace(/[{}\\]/g, " ")               // remove remaining { } \
+      .replace(/\{\\[^{}]*\}/g, " ")
+      .replace(/\\[a-z]+[-]?\d* ?/g, " ")
+      .replace(/[{}\\]/g, " ")
       .replace(/\s{2,}/g, " ")
       .trim();
   }
@@ -80,7 +100,6 @@ function extractTextFallback(buffer: Buffer): string {
     }).trim();
   }
 
-  // Plain text: strip non-printable bytes (keep tabs, newlines, and printable Unicode)
   const cleaned = raw.replace(/[^\x09\x0A\x0D\x20-\x7E\u00A0-\uFFFF]/g, "").trim();
   if (cleaned.length < 20) {
     throw new Error("File does not appear to contain readable text");
@@ -88,13 +107,19 @@ function extractTextFallback(buffer: Buffer): string {
   return cleaned;
 }
 
-router.post("/files/extract", requireAuth, upload.single("file"), async (req, res) => {
+/**
+ * POST /api/files/extract
+ * Extracts text from an uploaded file. Does NOT require authentication —
+ * text extraction is stateless and stores no user data.
+ */
+router.post("/files/extract", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
     const { mimetype, originalname, buffer, size } = req.file;
+    const nameLower = (originalname ?? "").toLowerCase();
     let text = "";
     let pageCount: number | undefined;
 
@@ -110,7 +135,6 @@ router.post("/files/extract", requireAuth, upload.single("file"), async (req, re
         const result = await mammoth.extractRawText({ buffer });
         text = result.value;
       } catch {
-        // mammoth failed — the file may be RTF, HTML, or plain text with a .doc extension
         text = extractTextFallback(buffer);
       }
     } else if (mimetype === "application/rtf" || mimetype === "text/rtf") {
@@ -124,6 +148,15 @@ router.post("/files/extract", requireAuth, upload.single("file"), async (req, re
           { selector: "script", format: "skip" },
         ],
       });
+    } else if (
+      mimetype === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      mimetype === "application/vnd.ms-excel" ||
+      nameLower.endsWith(".xlsx") ||
+      nameLower.endsWith(".xls")
+    ) {
+      text = await extractTextFromExcel(buffer);
+    } else if (nameLower.endsWith(".csv") || mimetype === "text/csv") {
+      text = buffer.toString("utf-8");
     } else if (mimetype.startsWith("text/")) {
       text = buffer.toString("utf-8");
     } else if (mimetype.startsWith("image/")) {
@@ -136,6 +169,13 @@ router.post("/files/extract", requireAuth, upload.single("file"), async (req, re
         message: "Image uploaded — OCR will run in your browser",
         base64: buffer.toString("base64"),
       });
+    } else if (mimetype === "application/octet-stream") {
+      // Try Excel first (common when browser doesn't set correct mime)
+      try {
+        text = await extractTextFromExcel(buffer);
+      } catch {
+        text = extractTextFallback(buffer);
+      }
     } else {
       return res.status(400).json({ error: "Could not extract text from this file type" });
     }
@@ -148,6 +188,7 @@ router.post("/files/extract", requireAuth, upload.single("file"), async (req, re
 
     const wordCount = cleaned.split(/\s+/).filter(Boolean).length;
 
+    const isExcel = nameLower.endsWith(".xlsx") || nameLower.endsWith(".xls");
     res.json({
       text: cleaned,
       mimeType: mimetype,
@@ -156,6 +197,7 @@ router.post("/files/extract", requireAuth, upload.single("file"), async (req, re
       pageCount,
       fileSize: size,
       isImage: false,
+      isSpreadsheet: isExcel,
     });
   } catch (err) {
     req.log.error({ err }, "Error extracting file text");

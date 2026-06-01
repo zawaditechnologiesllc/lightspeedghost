@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from "react";
 import { Upload, FileText, Image, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export interface ExtractedFile {
   text: string;
@@ -66,8 +67,14 @@ export default function FileUploadZone({
       formData.append("file", file);
 
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: HeadersInit = {};
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
         const res = await fetch(`${API}/api/files/extract`, {
           method: "POST",
+          headers,
           body: formData,
         });
 

@@ -9,9 +9,11 @@ import {
   Radio, ServerCrash, Database, Clock, CheckCheck, XCircle, Signal,
   Megaphone, Link2, Eye, EyeOff, ThumbsUp, ThumbsDown,
   Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
+  Search,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link, useParams, useLocation } from "wouter";
+import SeoAdmin from "@/pages/SeoAdmin";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
@@ -28,7 +30,7 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "tools" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings";
+type Tab = "overview" | "users" | "tools" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings" | "seo";
 
 interface AdminTool {
   key: string;
@@ -268,7 +270,7 @@ export default function Admin() {
   const [authLoading, setAuthLoading] = useState(false);
   const { tab: urlTab } = useParams<{ tab?: string }>();
   const [, setLocation] = useLocation();
-  const validTabs: Tab[] = ["overview","users","tools","documents","gateways","payments","credits","finance","analytics","logs","announcements","referrals","settings"];
+  const validTabs: Tab[] = ["overview","users","tools","documents","gateways","payments","credits","finance","analytics","logs","announcements","referrals","settings","seo"];
   const initialTab = (urlTab && validTabs.includes(urlTab as Tab) ? urlTab : "overview") as Tab;
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
@@ -828,6 +830,7 @@ export default function Admin() {
     { id: "finance",        label: "Finance",        icon: BarChart3 },
     { id: "announcements",  label: "Announcements",  icon: Megaphone },
     { id: "referrals",      label: "Referrals",      icon: Share2 },
+    { id: "seo",            label: "SEO",            icon: Search },
     { id: "settings",       label: "Settings",       icon: Settings },
   ];
 
@@ -2139,6 +2142,13 @@ export default function Admin() {
                     </div>
                   </>
                 )}
+              </div>
+            )}
+
+            {/* ── SEO ───────────────────────────────────────────────────── */}
+            {activeTab === "seo" && (
+              <div className="h-full">
+                <SeoAdmin />
               </div>
             )}
 

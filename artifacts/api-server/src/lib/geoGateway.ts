@@ -101,11 +101,11 @@ export function resolveGateway(
     };
   }
 
-  // Rest of world → Paddle, then fallbacks
+  // Rest of world → Stripe (global), then fallbacks
+  if (!paused.stripe) return { primary: "stripe", reason: "fallback", isMobileMoney: false, momoProvider: null, cardFallback: null };
   if (!paused.paddle) return { primary: "paddle", reason: "fallback", isMobileMoney: false, momoProvider: null, cardFallback: null };
   if (!paused.lemon_squeezy) return { primary: "lemon_squeezy", reason: "fallback", isMobileMoney: false, momoProvider: null, cardFallback: null };
   if (!paused.paystack) return { primary: "paystack", reason: "fallback", isMobileMoney: false, momoProvider: null, cardFallback: null };
-  if (!paused.stripe) return { primary: "stripe", reason: "fallback", isMobileMoney: false, momoProvider: null, cardFallback: null };
 
   throw new Error("All payment gateways are currently paused");
 }

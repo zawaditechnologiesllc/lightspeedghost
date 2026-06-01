@@ -27,7 +27,6 @@ import { ManageFundsModal } from "@/components/ManageFundsModal";
 import { PAYGMarketModal } from "@/components/PAYGMarketModal";
 import { AnnouncementBanner, NotificationBell } from "@/components/AnnouncementBanner";
 import OfflineBanner from "@/components/OfflineBanner";
-import FloatingWidget from "@/components/FloatingWidget";
 
 const navItems = [
   { path: "/app",        label: "Dashboard",           icon: LayoutDashboard },
@@ -313,8 +312,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <ManageFundsModal open={fundsOpen} onClose={() => setFundsOpen(false)} />
       <PAYGMarketModal open={paygOpen} onClose={() => setPaygOpen(false)} />
 
-      {/* ── Floating AI Assistant widget ───────────────────────────────── */}
-      <FloatingWidget />
     </div>
   );
 }

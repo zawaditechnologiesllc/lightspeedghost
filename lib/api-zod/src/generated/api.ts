@@ -299,6 +299,8 @@ export const SolveStemBody = zod.object({
     .enum(["text", "latex", "json", "csv"])
     .default(solveStemBodyExportFormatDefault),
   datasetText: zod.string().optional(),
+  financialStatementText: zod.string().optional(),
+  financialStatementType: zod.enum(["all", "income_statement", "balance_sheet", "cash_flow", "ratio_analysis"]).optional(),
 });
 
 export const SolveStemResponse = zod.object({
