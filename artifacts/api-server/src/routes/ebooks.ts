@@ -259,7 +259,7 @@ Return ONLY valid JSON with this exact shape (no markdown, no code fences):
       response_format: { type: "json_object" },
     });
     const outlineUsage = outlineResp.usage;
-    if (outlineUsage) await recordUsage(userId, "ebook", outlineUsage.prompt_tokens, outlineUsage.completion_tokens, "gpt-4o-mini");
+    if (outlineUsage) await recordUsage("gpt-4o-mini", outlineUsage.prompt_tokens, outlineUsage.completion_tokens, "ebook");
 
     let outline: {
       title: string; subtitle: string; tagline: string;
@@ -360,7 +360,7 @@ ${inspiration ? `- Keep this inspiration/angle throughout: ${inspiration}` : ""}
         messages: [{ role: "user", content: chapterPrompt }],
       });
       const chUsage = chResp.usage;
-      if (chUsage) await recordUsage(userId, "ebook", chUsage.prompt_tokens, chUsage.completion_tokens, "gpt-4o-mini");
+      if (chUsage) await recordUsage("gpt-4o-mini", chUsage.prompt_tokens, chUsage.completion_tokens, "ebook");
 
       let chapterText = chResp.choices[0]?.message.content ?? "";
 
@@ -381,7 +381,7 @@ ${inspiration ? `- Keep this inspiration/angle throughout: ${inspiration}` : ""}
           ],
         });
         const corrUsage = corrResp.usage;
-        if (corrUsage) await recordUsage(userId, "ebook", corrUsage.prompt_tokens, corrUsage.completion_tokens, "gpt-4o-mini");
+        if (corrUsage) await recordUsage("gpt-4o-mini", corrUsage.prompt_tokens, corrUsage.completion_tokens, "ebook");
         chapterText = corrResp.choices[0]?.message.content ?? chapterText;
       }
 

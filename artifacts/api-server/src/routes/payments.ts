@@ -622,7 +622,7 @@ router.post("/payments/create", async (req: Request, res: Response) => {
         return;
       }
       amountCents = SUBSCRIPTION_PLANS[plan].amountCents;
-      if (plan === "institution_annual") {
+      if (plan === "institution_annual" || (plan as string) === "campus_annual") {
         const numSeats = Math.max(5, seats ?? 5);
         amountCents = amountCents * numSeats * 12;
       }

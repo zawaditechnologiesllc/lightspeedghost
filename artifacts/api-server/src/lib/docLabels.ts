@@ -130,10 +130,8 @@ export function formatDocTitle(opts: DocLabelOptions): string {
       return `${prefix}-${label}`;
     }
     case "ebook": {
-      const label = opts.ebookTitle
-        ? opts.ebookTitle.toUpperCase().slice(0, 40)
-        : "EBOOK";
-      return `${prefix}-${label}`;
+      const title = (opts.ebookTitle ?? "").trim();
+      return title ? `${prefix}-${title.toUpperCase().slice(0, 40)}` : `${prefix}-EBOOK`;
     }
     default:
       return `${prefix}-DOCUMENT`;
