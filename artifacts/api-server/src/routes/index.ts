@@ -15,6 +15,7 @@ import pwaRouter from "./pwa";
 import referralRouter from "./referral";
 import assistantRouter from "./assistant";
 import ebooksRouter from "./ebooks";
+import seoRouter from "./seo";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(pwaRouter);
 router.use(referralRouter);
 router.use(assistantRouter);
 router.use(ebooksRouter);
+router.use(seoRouter);
 
 export default router;
