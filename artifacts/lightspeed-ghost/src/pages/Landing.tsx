@@ -28,7 +28,7 @@ const tools = [
   {
     icon: PenLine,
     name: "AI Paper Writer",
-    desc: "Papers grounded in 25+ live academic databases (1B+ papers). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
+    desc: "Papers grounded in 25+ live academic databases (10B+ papers). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
     badge: "Most used",
     href: "/auth",
     color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -123,7 +123,7 @@ const faqs = [
   },
   {
     q: "How is the paper quality? I've tried AI writers before and they're terrible.",
-    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 25+ live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, Europe PMC, JSTOR, Scopus, SSRN, NBER, BASE, PhilPapers, EconPapers, WHO IRIS, MEDLINE, ClinicalTrials.gov, Cochrane Library, bioRxiv, medRxiv, PsycINFO, ProQuest and more — pulling over a billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop until the AI score reaches 0%. That is the pipeline on every single output.",
+    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 25+ live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, Europe PMC, JSTOR, Scopus, SSRN, NBER, BASE, PhilPapers, EconPapers, WHO IRIS, MEDLINE, ClinicalTrials.gov, Cochrane Library, bioRxiv, medRxiv, PsycINFO, ProQuest and more — pulling over 10 billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop until the AI score reaches 0%. That is the pipeline on every single output.",
   },
   {
     q: "Does file upload work with PDFs from my university portal?",
@@ -171,6 +171,30 @@ const pricingPlans = [
     badge: null,
   },
   {
+    name: "Student Pro",
+    priceMonthly: "$19.99",
+    priceAnnual: "$14.99",
+    perMonthly: "/ month",
+    perAnnual: "/ month  ·  billed annually",
+    desc: "Everything in Starter, plus the Humanizer and priority processing.",
+    features: [
+      "8 papers / month",
+      "4 revisions / month",
+      "20 outline generations / month",
+      "20 plagiarism + AI checks / month",
+      "40 STEM solver problems / month",
+      "Unlimited study messages",
+      "LightSpeed Humanizer (up to 5,000 words)",
+      "Priority AI processing",
+      "Citation export (BibTeX / RIS)",
+    ],
+    locked: [],
+    cta: "Start for $19.99",
+    ctaLink: "/auth",
+    highlight: true,
+    badge: "Most popular",
+  },
+  {
     name: "Pro",
     priceMonthly: "$29.99",
     priceAnnual: "$22.42",
@@ -191,8 +215,8 @@ const pricingPlans = [
     locked: [],
     cta: "Get Pro",
     ctaLink: "/auth",
-    highlight: true,
-    badge: "Most popular",
+    highlight: false,
+    badge: null,
   },
   {
     name: "Institution",
@@ -1036,7 +1060,7 @@ export default function Landing() {
               {
                 value: "25+",
                 label: "Live academic databases",
-                sub: "1B+ papers · OpenAlex · PubMed · CrossRef · Semantic Scholar · JSTOR · Scopus · arXiv · CORE · SSRN + 16 more",
+                sub: "10B+ papers · OpenAlex · PubMed · CrossRef · Semantic Scholar · JSTOR · Scopus · arXiv · CORE · SSRN + 16 more",
                 color: "text-amber-400",
                 border: "border-amber-500/20 bg-amber-500/5",
               },
@@ -1221,7 +1245,7 @@ export default function Landing() {
               <tbody>
                 {[
                   { feature: "Real DOI citations",        lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "25+ academic databases",    lsg: true,  gpt: false, qb: false, gr: false },
+                  { feature: "25+ databases, 10B+ papers", lsg: true,  gpt: false, qb: false, gr: false },
                   { feature: "Rubric upload + A-grade targeting", lsg: true, gpt: false, qb: false, gr: false },
                   { feature: "Plagiarism detection",      lsg: true,  gpt: false, qb: "paid", gr: false },
                   { feature: "AI humanizer to 0%",        lsg: true,  gpt: false, qb: false, gr: false },
@@ -1418,7 +1442,7 @@ export default function Landing() {
               </p>
               <ul className="space-y-3">
                 {[
-                  "25+ live academic databases queried per paper — 1B+ papers",
+                  "25+ live academic databases queried per paper — 10B+ papers",
                   "A-grade rubric extraction + cross-check on every output",
                   "Plagiarism enforced below 8% — not estimated, measured",
                   "STEM mode: equations mapped to the right section (Methods, Results, etc.)",
@@ -1584,10 +1608,13 @@ export default function Landing() {
               <span className={`text-sm font-medium transition-colors ${billingAnnual ? "text-white" : "text-white/35"}`}>Annual</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-semibold">Save 25%</span>
             </div>
+            <p className="text-[11px] text-white/30 mt-2 max-w-sm mx-auto">
+              Best value: lock in a full semester at the annual rate — most students upgrade in August or January.
+            </p>
           </div>
 
           {/* ── Subscription plan cards ── */}
-          <StaggerGrid className="grid md:grid-cols-3 gap-4 sm:gap-6 mb-16 sm:mb-24">
+          <StaggerGrid className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-16 sm:mb-24">
             {pricingPlans.map(({ name, priceMonthly, priceAnnual, perMonthly, perAnnual, desc, features, locked, cta, ctaLink, highlight, badge }) => {
               const showAnnual = billingAnnual || priceMonthly === null;
               const price = showAnnual ? priceAnnual : priceMonthly;
@@ -1635,6 +1662,12 @@ export default function Landing() {
                     >
                       {cta}
                     </button>
+                  ) : name === "Student Pro" ? (
+                    <Link href="/auth">
+                      <span className={`block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${highlight ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20" : "border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5"}`}>
+                        {cta}
+                      </span>
+                    </Link>
                   ) : isInstitution ? (
                     <Link href="/contact">
                       <span className="w-full block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-emerald-500/30 text-emerald-400 hover:border-emerald-500/60 hover:bg-emerald-500/5">
@@ -1866,6 +1899,8 @@ export default function Landing() {
                   { label: "Careers", href: "/careers" },
                   { label: "Contact", href: "/contact" },
                   { label: "Pricing", href: "#pricing" },
+                  { label: "For African Students", href: "/africa" },
+                  { label: "For Institutions", href: "/enterprise" },
                 ].map(({ label, href }) => (
                   <li key={label}>
                     {href.startsWith("#") ? (
@@ -2091,7 +2126,7 @@ export default function Landing() {
 
               <div className="space-y-2 mb-6">
                 {[
-                  "25+ live academic databases — 1B+ real papers",
+                  "25+ live academic databases — 10B+ real papers",
                   "A-grade rubric extraction from your brief",
                   "Plagiarism checked below 8% before delivery",
                   "7-day money-back guarantee",
