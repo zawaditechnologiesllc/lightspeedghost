@@ -285,6 +285,7 @@ export default function Admin() {
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [adminTools, setAdminTools] = useState<AdminTool[]>([]);
+  const [toolsError, setToolsError] = useState<string | null>(null);
   const [togglingTool, setTogglingTool] = useState<string | null>(null);
   const [toggleError, setToggleError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -398,8 +399,9 @@ export default function Admin() {
 
   const loadTools = useCallback(async () => {
     setLoading(true);
+    setToolsError(null);
     try { setAdminTools((await adminFetch("/admin/tools", password) as { tools: AdminTool[] }).tools); }
-    catch { setAdminTools([]); }
+    catch (e) { setAdminTools([]); setToolsError(e instanceof Error ? e.message : "Failed to load tools"); }
     finally { setLoading(false); }
   }, [password]);
 
@@ -1133,7 +1135,12 @@ export default function Admin() {
                     <span>{toggleError}</span>
                   </div>
                 )}
-                {loading && adminTools.length === 0 ? <Spinner /> : (
+                {loading && adminTools.length === 0 ? <Spinner /> : toolsError ? (
+                  <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
+                    <span>Failed to load tools: {toolsError}</span>
+                    <button onClick={loadTools} className="ml-auto underline hover:no-underline">Retry</button>
+                  </div>
+                ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {adminTools.map((tool) => {
                       const toolIcons: Record<string, React.ReactNode> = {

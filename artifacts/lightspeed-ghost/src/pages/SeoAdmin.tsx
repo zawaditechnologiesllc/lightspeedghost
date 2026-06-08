@@ -149,25 +149,19 @@ function DashboardTab() {
             <div className={`h-full rounded-full transition-all ${budgetColor}`}
               style={{ width: `${Math.min(pct, 100)}%` }} />
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+          <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
             <div className="text-center">
               <div className="text-slate-300 font-medium">${(budget?.geminiSpend ?? 0).toFixed(4)}</div>
-              <div className="text-slate-500">Gemini</div>
-            </div>
-            <div className="text-center">
-              <div className="text-slate-300 font-medium">${(budget?.claudeSpend ?? 0).toFixed(4)}</div>
-              <div className="text-slate-500">Claude</div>
+              <div className="text-slate-500">Gemini 2.5 Pro spend</div>
             </div>
             <div className="text-center">
               <div className="text-slate-300 font-medium">{budget?.pagesGenerated ?? 0}</div>
-              <div className="text-slate-500">Pages</div>
+              <div className="text-slate-500">Pages generated</div>
             </div>
           </div>
-          {budget?.pillarRemainingThisMonth !== undefined && (
-            <p className="text-[10px] text-blue-400 mt-3 bg-blue-500/10 rounded-lg px-3 py-1.5">
-              Claude pillar pages: {budget.pillarUsedThisMonth}/15 used · {budget.pillarRemainingThisMonth} remaining
-            </p>
-          )}
+          <p className="text-[10px] text-purple-400 mt-3 bg-purple-500/10 rounded-lg px-3 py-1.5">
+            Gemini 2.5 Pro (free tier) · $0 within 50 req/24hr limit · $1.25/M input if exceeded
+          </p>
         </Card>
 
         {/* Quick actions + quality issues */}
@@ -845,9 +839,565 @@ function SettingsTab() {
   );
 }
 
+// ── Tab: Review Queue ─────────────────────────────────────────────────────────
+
+const PAGE_TYPE_COLORS: Record<string, string> = {
+  hook:        "text-sky-400",
+  comparison:  "text-violet-400",
+  breakdown:   "text-amber-400",
+  alternative: "text-rose-400",
+  trust:       "text-emerald-400",
+};
+
+function ReviewTab() {
+  const [clusters, setClusters] = useState<any[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [busy, setBusy]         = useState<string | null>(null);
+  const [toast, setToast]       = useState("");
+  const [toastErr, setToastErr] = useState("");
+
+  const showToast = (msg: string, err = false) => {
+    if (err) { setToastErr(msg); setTimeout(() => setToastErr(""), 5000); }
+    else      { setToast(msg);   setTimeout(() => setToast(""), 5000); }
+  };
+
+  const load = useCallback(async () => {
+    try {
+      const data = await apiFetch("/seo/pipeline/review-queue");
+      setClusters(data.clusters ?? []);
+    } catch {
+      showToast("Failed to load review queue", true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handlePublish = async (clusterId: string) => {
+    setBusy(clusterId);
+    try {
+      const res = await apiFetch(`/seo/pipeline/cluster/${clusterId}/publish-all`, { method: "POST", body: "{}" });
+      showToast(`Published ${res.published} pages`);
+      await load();
+    } catch (err: any) {
+      showToast(err.message ?? "Publish failed", true);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDiscard = async (clusterId: string) => {
+    if (!confirm("Move all 5 pages to draft? They won't be published.")) return;
+    setBusy(clusterId);
+    try {
+      await apiFetch(`/seo/pipeline/cluster/${clusterId}/discard`, { method: "POST", body: "{}" });
+      showToast("Pages moved to draft");
+      await load();
+    } catch (err: any) {
+      showToast(err.message ?? "Discard failed", true);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-white">Review Queue</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Read each article below, then Publish All or Discard. Competitor was chosen by AI.</p>
+        </div>
+        <button onClick={load} className="text-xs text-slate-500 hover:text-white transition-colors">↻ Refresh</button>
+      </div>
+
+      {toast    && <Toast msg={toast} variant="success" />}
+      {toastErr && <Toast msg={toastErr} variant="error" />}
+
+      {clusters.length === 0 ? (
+        <Card>
+          <div className="text-center py-10">
+            <p className="text-3xl mb-3">📭</p>
+            <p className="text-sm font-medium text-white">Nothing to review</p>
+            <p className="text-xs text-slate-500 mt-1">Enable the daily scheduler or start a manual pipeline — articles appear here when complete.</p>
+          </div>
+        </Card>
+      ) : (
+        clusters.map((cluster) => {
+          const pages = cluster.pages ?? [];
+          const totalWords = pages.reduce((s: number, p: any) => s + (p.wordCount ?? 0), 0);
+          return (
+            <Card key={cluster.id}>
+              {/* Cluster header */}
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-white leading-snug">{cluster.topic}</h3>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25">
+                      {cluster.toolFocus}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-300 border border-slate-600/40">
+                      vs {cluster.competitor}
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      {totalWords.toLocaleString()} words · {pages.length} pages · {new Date(cluster.completedAt ?? cluster.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleDiscard(cluster.id)}
+                    disabled={busy === cluster.id}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-slate-600 text-slate-300 hover:border-red-500/50 hover:text-red-400 transition-colors disabled:opacity-40"
+                  >
+                    Discard
+                  </button>
+                  <button
+                    onClick={() => handlePublish(cluster.id)}
+                    disabled={busy === cluster.id}
+                    className="text-xs px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors disabled:opacity-40"
+                  >
+                    {busy === cluster.id ? "Publishing…" : "Publish All 5"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Pages list */}
+              <div className="space-y-2">
+                {pages.map((page: any) => (
+                  <div key={page.slug} className="flex items-center gap-3 px-3 py-2 bg-slate-900/50 rounded-lg border border-slate-700/40">
+                    <span className={`text-[10px] font-bold w-2.5 ${PAGE_TYPE_COLORS[page.pageType] ?? "text-slate-400"}`}>
+                      {page.pageNumber}
+                    </span>
+                    <span className={`text-[10px] font-semibold uppercase tracking-wider w-20 shrink-0 ${PAGE_TYPE_COLORS[page.pageType] ?? "text-slate-400"}`}>
+                      {page.pageType}
+                    </span>
+                    <span className="text-xs text-slate-300 flex-1 min-w-0 truncate">{page.title ?? page.slug}</span>
+                    <span className="text-[10px] text-slate-500 shrink-0">{page.wordCount ? `${page.wordCount.toLocaleString()}w` : "—"}</span>
+                    <a
+                      href={`/seo/${page.slug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-blue-400 hover:text-blue-300 shrink-0"
+                    >
+                      Preview →
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// ── Tab: Pipeline ─────────────────────────────────────────────────────────────
+
+const TOOL_FOCUS_OPTIONS = [
+  { value: "paper-writer", label: "AI Paper Writer" },
+  { value: "humanizer",    label: "LightSpeed Humanizer" },
+  { value: "plagiarism",   label: "AI & Plagiarism Checker" },
+  { value: "stem",         label: "STEM Solver" },
+  { value: "study",        label: "AI Study Assistant" },
+  { value: "revision",     label: "Paper Revision" },
+  { value: "outline",      label: "Outline Builder" },
+  { value: "ebook",        label: "Ebook Generator" },
+];
+
+const STAGE_LABELS: Record<string, string> = {
+  pending:    "Pending",
+  researching: "Step 1: Researching (Reddit + AI)",
+  outlining:  "Step 2: Building Outline",
+  write_1:    "Step 3: Writing Page 1 — Hook",
+  write_2:    "Step 3: Writing Page 2 — Comparison",
+  write_3:    "Step 3: Writing Page 3 — Breakdown",
+  write_4:    "Step 3: Writing Page 4 — Competitor Alt",
+  write_5:    "Step 3: Writing Page 5 — Trust",
+  complete:   "Complete",
+  failed:     "Failed",
+};
+
+const PAGE_TYPE_LABELS: Record<string, { label: string; color: string; desc: string }> = {
+  hook:        { label: "Hook",       color: "text-blue-400",   desc: "Traffic magnet — informational intent" },
+  comparison:  { label: "Comparison", color: "text-amber-400",  desc: "High-intent — best X tools" },
+  breakdown:   { label: "Breakdown",  color: "text-violet-400", desc: "Educational depth — how X works" },
+  alternative: { label: "Alternative",color: "text-rose-400",   desc: "Competitor comparison — buyer intent" },
+  trust:       { label: "Trust",      color: "text-emerald-400",desc: "Social proof — review/does it work" },
+};
+
+function PipelineTab() {
+  const [dailyLimit, setDailyLimit]   = useState<{ used: number; limit: number; canStart: boolean } | null>(null);
+  const [clusters, setClusters]       = useState<any[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [starting, setStarting]       = useState(false);
+  const [polling, setPolling]         = useState<string | null>(null);
+  const [toast, setToast]             = useState("");
+  const [toastErr, setToastErr]       = useState("");
+
+  const [topic, setTopic]             = useState("");
+  const [toolFocus, setToolFocus]     = useState("paper-writer");
+  const [autoPublish, setAutoPublish] = useState(false);
+  const [scheduler, setScheduler]     = useState<{ enabled: boolean; time: string; nextRunAt: string | null; lastRuns: any[] } | null>(null);
+  const [schedSaving, setSchedSaving] = useState(false);
+
+  const showToast = (msg: string, err = false) => {
+    if (err) { setToastErr(msg); setTimeout(() => setToastErr(""), 5000); }
+    else      { setToast(msg);   setTimeout(() => setToast(""), 5000); }
+  };
+
+  const load = useCallback(async () => {
+    try {
+      const [lim, cls, sched] = await Promise.all([
+        apiFetch("/seo/pipeline/daily-limit"),
+        apiFetch("/seo/pipeline/clusters"),
+        apiFetch("/seo/scheduler/status").catch(() => null),
+      ]);
+      setDailyLimit(lim);
+      setClusters(cls.clusters ?? []);
+      if (sched) setScheduler(sched);
+    } catch {
+      showToast("Failed to load pipeline data", true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Poll active cluster status every 4 seconds
+  useEffect(() => {
+    if (!polling) return;
+    const interval = setInterval(async () => {
+      try {
+        const cluster = await apiFetch(`/seo/pipeline/cluster/${polling}`);
+        setClusters((prev) => prev.map((c) => c.id === polling ? cluster : c));
+        if (["complete", "failed"].includes(cluster.status)) {
+          setPolling(null);
+          load(); // refresh daily limit
+        }
+      } catch { /* ignore poll errors */ }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [polling, load]);
+
+  const handleStart = async () => {
+    setStarting(true);
+    try {
+      const body: Record<string, unknown> = { autoPublish };
+      if (topic.trim()) { body.topic = topic.trim(); body.toolFocus = toolFocus; }
+      const res = await apiFetch("/seo/pipeline/start", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      showToast(`Pipeline started: "${res.topic ?? topic}"`);
+      setTopic("");
+      setPolling(res.clusterId);
+      await load();
+    } catch (err: any) {
+      showToast(err.message ?? "Failed to start pipeline", true);
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const saveScheduler = async (patch: { enabled?: boolean; time?: string }) => {
+    setSchedSaving(true);
+    try {
+      await apiFetch("/seo/scheduler/settings", { method: "PATCH", body: JSON.stringify(patch) });
+      const sched = await apiFetch("/seo/scheduler/status");
+      setScheduler(sched);
+    } catch { showToast("Failed to save scheduler", true); }
+    finally { setSchedSaving(false); }
+  };
+
+  const triggerScheduler = async () => {
+    try {
+      await apiFetch("/seo/scheduler/trigger", { method: "POST", body: "{}" });
+      showToast("Scheduler triggered — pages will appear in Review tab in ~3 minutes");
+    } catch (err: any) {
+      showToast(err.message ?? "Trigger failed", true);
+    }
+  };
+
+  const handleResume = async (clusterId: string) => {
+    try {
+      await apiFetch(`/seo/pipeline/cluster/${clusterId}/resume`, { method: "POST", body: JSON.stringify({}) });
+      showToast("Pipeline resumed");
+      setPolling(clusterId);
+      await load();
+    } catch (err: any) {
+      showToast(err.message ?? "Failed to resume", true);
+    }
+  };
+
+  if (loading) return <Spinner />;
+
+  const used     = dailyLimit?.used    ?? 0;
+  const limit    = dailyLimit?.limit   ?? 5;
+  const canStart = dailyLimit?.canStart ?? true;
+  const limitPct = Math.round((used / limit) * 100);
+
+  return (
+    <div className="space-y-5">
+      {/* Daily quota card */}
+      <Card>
+        <CardTitle>Daily Pipeline Quota</CardTitle>
+        <div className="flex items-end justify-between mb-2">
+          <div>
+            <span className={`text-3xl font-bold ${used >= limit ? "text-red-400" : "text-white"}`}>{used}</span>
+            <span className="text-slate-400 text-sm ml-1">/ {limit} pages in last 24 hrs</span>
+          </div>
+          <span className="text-xs text-slate-500">{limit - used} remaining · resets 24 hrs after last generation</span>
+        </div>
+        <div className="h-2 bg-slate-700 rounded-full overflow-hidden mb-2">
+          <div
+            className={`h-full rounded-full transition-all ${used >= limit ? "bg-red-500" : used >= 3 ? "bg-amber-500" : "bg-emerald-500"}`}
+            style={{ width: `${Math.min(limitPct, 100)}%` }}
+          />
+        </div>
+        <p className="text-[10px] text-slate-500">5 pages = 1 cluster. Gemini 2.5 Pro free tier: 50 req/24hr · 5 req/5min. 17s delays between stages keep within rate limits.</p>
+      </Card>
+
+      {/* Daily scheduler card */}
+      <Card>
+        <CardTitle>📅 Daily Auto-Scheduler</CardTitle>
+        {scheduler ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white">{scheduler.enabled ? "Enabled" : "Disabled"}</p>
+                <p className="text-[11px] text-slate-500">
+                  {scheduler.enabled
+                    ? `Runs daily at ${scheduler.time} UTC — next: ${scheduler.nextRunAt ? new Date(scheduler.nextRunAt).toLocaleString() : "unknown"}`
+                    : "Scheduler is off. Enable to generate articles automatically every day."}
+                </p>
+              </div>
+              <button
+                onClick={() => saveScheduler({ enabled: !scheduler.enabled })}
+                disabled={schedSaving}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${scheduler.enabled ? "bg-emerald-500" : "bg-slate-600"}`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${scheduler.enabled ? "translate-x-5" : "translate-x-0"}`} />
+              </button>
+            </div>
+            {scheduler.enabled && (
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] text-slate-400 shrink-0">Run time (UTC):</label>
+                <input
+                  type="time"
+                  defaultValue={scheduler.time}
+                  onBlur={(e) => { if (e.target.value) saveScheduler({ time: e.target.value }); }}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500"
+                />
+                <Btn onClick={triggerScheduler} size="sm" variant="default" className="ml-auto">
+                  Run Now
+                </Btn>
+              </div>
+            )}
+            {scheduler.lastRuns.length > 0 && (
+              <div className="mt-1">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Recent runs</p>
+                <div className="space-y-1">
+                  {scheduler.lastRuns.slice(0, 3).map((run, i) => (
+                    <div key={i} className={`text-[10px] px-2 py-1 rounded ${run.status === "started" ? "bg-emerald-500/10 text-emerald-300" : run.status === "skipped" ? "bg-slate-700/40 text-slate-400" : "bg-red-500/10 text-red-400"}`}>
+                      {new Date(run.createdAt).toLocaleString()} — {run.status}: {String(run.detail).slice(0, 80)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500">Loading scheduler status…</p>
+        )}
+      </Card>
+
+      {/* Start new pipeline */}
+      <Card>
+        <CardTitle>Start New Article Pipeline</CardTitle>
+
+        {toast    && <Toast msg={toast} variant="success" />}
+        {toastErr && <Toast msg={toastErr} variant="error" />}
+
+        <div className="space-y-3 mt-2">
+          {/* AI mode notice */}
+          <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl px-3 py-2.5 text-[11px] text-purple-300">
+            <strong>AI-driven by default.</strong> Leave topic blank and the system picks the best opportunity using Google Search Console + Analytics data. Competitor is always AI-selected during research.
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Topic override <span className="text-slate-600">(optional)</span></label>
+            <input
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="Leave blank for AI to choose — or e.g. AI essay writing for PhD students"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {topic.trim() && (
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">Tool to Promote <span className="text-slate-500">(required when topic is set)</span></label>
+              <select
+                value={toolFocus}
+                onChange={(e) => setToolFocus(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+              >
+                {TOOL_FOCUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 5-page structure preview */}
+          <div className="bg-slate-900/60 rounded-xl p-3 border border-slate-700/40">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">5 pages that will be generated</p>
+            <div className="space-y-1">
+              {Object.entries(PAGE_TYPE_LABELS).map(([type, info], i) => (
+                <div key={type} className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-600 w-3">{i + 1}</span>
+                  <span className={`font-medium ${info.color} w-20 shrink-0`}>{info.label}</span>
+                  <span className="text-slate-500">{info.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Btn
+            onClick={handleStart}
+            disabled={starting || !canStart}
+            variant="purple"
+            size="sm"
+            className="w-full"
+          >
+            {starting ? "Starting pipeline…" : !canStart ? `Daily limit reached (${used}/${limit})` : topic.trim() ? "Start Pipeline with This Topic →" : "Let AI Pick Best Topic & Start →"}
+          </Btn>
+        </div>
+      </Card>
+
+      {/* Cluster list */}
+      {clusters.length > 0 && (
+        <Card>
+          <CardTitle>Article Clusters ({clusters.length})</CardTitle>
+          <div className="space-y-3">
+            {clusters.map((cluster) => {
+              const isActive = ["researching","outlining","writing_1","writing_2","writing_3","writing_4","writing_5"].includes(cluster.status);
+              const pages    = cluster.pages ?? [];
+
+              return (
+                <div key={cluster.id} className={`rounded-xl border p-4 ${
+                  cluster.status === "complete" ? "border-emerald-500/20 bg-emerald-500/5" :
+                  cluster.status === "failed"   ? "border-red-500/20 bg-red-500/5" :
+                  isActive                       ? "border-blue-500/20 bg-blue-500/5" :
+                                                   "border-slate-700/40 bg-slate-900/40"
+                }`}>
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{cluster.topic}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Tool: {cluster.toolFocus} · Competitor: {cluster.competitor} · {pages.length}/5 pages
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isActive && polling === cluster.id && (
+                        <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin" />
+                      )}
+                      <StatusBadge status={cluster.status === "complete" ? "published" : cluster.status === "failed" ? "archived" : "review"} />
+                    </div>
+                  </div>
+
+                  {/* Stage progress */}
+                  <p className="text-[10px] text-slate-400 mb-2">
+                    {STAGE_LABELS[cluster.currentStage] ?? cluster.currentStage}
+                    {cluster.pagesCompleted > 0 && ` · ${cluster.pagesCompleted}/5 pages written`}
+                  </p>
+
+                  {/* Progress bar */}
+                  <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden mb-3">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        cluster.status === "complete" ? "bg-emerald-500" :
+                        cluster.status === "failed"   ? "bg-red-500" : "bg-blue-500"
+                      }`}
+                      style={{ width: `${cluster.status === "complete" ? 100 : Math.round((cluster.pagesCompleted / 5) * 100)}%` }}
+                    />
+                  </div>
+
+                  {/* Generated pages */}
+                  {pages.length > 0 && (
+                    <div className="grid grid-cols-5 gap-1.5 mb-2">
+                      {pages.map((p: any) => {
+                        const info = PAGE_TYPE_LABELS[p.pageType] ?? { label: p.pageType, color: "text-slate-400", desc: "" };
+                        return (
+                          <a
+                            key={p.slug}
+                            href={`/seo/${p.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`${info.label} — ${p.wordCount ?? "?"}w · ${p.published ? "published" : p.status}`}
+                            className={`rounded-lg p-1.5 text-center border transition-all hover:opacity-80 ${
+                              p.published ? "border-emerald-500/30 bg-emerald-500/10" : "border-slate-700/40 bg-slate-800/40"
+                            }`}
+                          >
+                            <div className={`text-[9px] font-bold ${info.color}`}>{info.label}</div>
+                            <div className="text-[8px] text-slate-600">{p.wordCount ?? "?"}w</div>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Error message */}
+                  {cluster.errorMessage && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-2">
+                      <p className="text-[10px] text-red-400">{cluster.errorMessage}</p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    {cluster.status === "failed" && (
+                      <Btn variant="amber" size="xs" onClick={() => handleResume(cluster.id)}>
+                        Retry Pipeline
+                      </Btn>
+                    )}
+                    {isActive && polling !== cluster.id && (
+                      <Btn variant="secondary" size="xs" onClick={() => setPolling(cluster.id)}>
+                        Watch Progress
+                      </Btn>
+                    )}
+                    {cluster.status === "complete" && (
+                      <span className="text-[10px] text-emerald-400 flex items-center gap-1">
+                        ✓ All 5 pages ready · {new Date(cluster.completedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {clusters.length === 0 && (
+        <div className="text-center py-10 text-slate-500 text-sm">
+          No article clusters yet. Start your first pipeline above.
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main SeoAdmin component ───────────────────────────────────────────────────
 
 const TABS = [
+  { id: "review",     label: "Review",     icon: "✅" },
+  { id: "pipeline",   label: "Pipeline",   icon: "🚀" },
   { id: "dashboard",  label: "Dashboard",  icon: "⚡" },
   { id: "catalog",    label: "Catalog",    icon: "📋" },
   { id: "pages",      label: "Pages",      icon: "📄" },
@@ -859,10 +1409,12 @@ const TABS = [
 ];
 
 export default function SeoAdmin() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("review");
 
   const renderTab = () => {
     switch (activeTab) {
+      case "review":     return <ReviewTab />;
+      case "pipeline":   return <PipelineTab />;
       case "dashboard":  return <DashboardTab />;
       case "catalog":    return <CatalogTab />;
       case "pages":      return <PagesTab />;
@@ -871,7 +1423,7 @@ export default function SeoAdmin() {
       case "integrity":  return <IntegrityTab />;
       case "sitemap":    return <SitemapTab />;
       case "settings":   return <SettingsTab />;
-      default:           return <DashboardTab />;
+      default:           return <ReviewTab />;
     }
   };
 
@@ -887,7 +1439,7 @@ export default function SeoAdmin() {
                 SEO Engine
               </h1>
               <p className="text-sm text-slate-500 mt-1">
-                Gemini 2.5 Flash · Claude Haiku 4.5 · $8/month budget · 130+ catalog pages
+                Gemini 2.5 Pro (free tier) · AI selects topic + competitor · daily schedule · review queue
               </p>
             </div>
             <a

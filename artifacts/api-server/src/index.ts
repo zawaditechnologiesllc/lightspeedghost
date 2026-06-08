@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { ensureUsageTable } from "./lib/usageTracker";
 import { initReferralTables } from "./routes/referral";
 import { initEbooksTable } from "./routes/ebooks";
+import { startScheduler } from "./seo-engine/scheduler";
 import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
@@ -179,6 +180,9 @@ async function runStartupTasks(): Promise<void> {
 runStartupTasks().catch((err) => {
   logger.error({ err }, "[startup] Startup tasks failed");
 });
+
+// Start SEO article scheduler (runs daily at configured UTC time)
+startScheduler();
 
 app.listen(port, (err) => {
   if (err) {

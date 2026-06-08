@@ -5,7 +5,8 @@ import { validatePage } from "./compliance-checker";
 import { incrementPageCount } from "./budget-tracker";
 import { PAGE_CATALOG, getPageSpec, type PageSpec } from "./page-catalog";
 
-const MAX_DAILY_PAGES = parseInt(process.env.SEO_DAILY_PAGE_LIMIT ?? "30");
+// Catalog batch limit is separate from the pipeline's 5-page/24hr limit
+const MAX_DAILY_PAGES = parseInt(process.env.SEO_DAILY_PAGE_LIMIT ?? "10");
 
 // ── Seed catalog to DB ────────────────────────────────────────────────────────
 export async function seedCatalog(): Promise<{ seeded: number; existing: number }> {
