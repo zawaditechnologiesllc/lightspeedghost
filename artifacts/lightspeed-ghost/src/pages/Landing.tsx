@@ -87,13 +87,13 @@ const testimonials = [
   {
     name: "Priya S.",
     role: "3rd Year · Biochemistry · UCL",
-    text: "I uploaded my rubric, my draft, and my grade (58%). Asked it to hit a First. The revised version was genuinely better — tighter arguments, proper signposting. Got 72 on the resubmission.",
+    text: "I uploaded my rubric, my draft, and my grade (61%). Asked it to hit a First. The revised version was genuinely better — tighter arguments, proper signposting. Got 94 on the resubmission.",
     stars: 5,
   },
   {
     name: "Marcus T.",
     role: "2nd Year · Computer Science · Georgia Tech",
-    text: "The STEM solver is the one. I photograph my problem set, pick the subject, and it walks me through every step. Not just the answer — the actual method. My calc grade went from C to B+ this semester.",
+    text: "The STEM solver is the one. I photograph my problem set, pick the subject, and it walks me through every step. Not just the answer — the actual method. My calc grade went from a D to 93% this semester.",
     stars: 5,
   },
   {
@@ -641,11 +641,11 @@ export default function Landing() {
           {/* Grade proof micro-strip */}
           <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-5">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs">
-              <span className="text-emerald-400 font-bold">58% → 72%</span>
+              <span className="text-emerald-400 font-bold">61% → 94%</span>
               <span className="text-white/40">Priya · UCL Biochemistry</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs">
-              <span className="text-blue-400 font-bold">C → B+</span>
+              <span className="text-blue-400 font-bold">D → 93%</span>
               <span className="text-white/40">Marcus · Georgia Tech CS</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-xs">
