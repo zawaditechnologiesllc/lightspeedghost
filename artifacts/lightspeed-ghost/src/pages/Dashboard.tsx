@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   PenLine, BookOpen, Files, ShieldCheck, FlaskConical,
   GraduationCap, TrendingUp, Clock, ArrowRight, Sparkles, Zap, Wand2,
-  Share2, Copy, Check, Gift,
+  Share2, Copy, Check, Gift, CheckCircle2, X,
 } from "lucide-react";
 import { useGetDocumentStats } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/apiFetch";
@@ -78,9 +78,17 @@ export default function Dashboard() {
   const { data: stats, isLoading } = useGetDocumentStats();
   const [referral, setReferral] = useState<ReferralInfo | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [paygCount, setPaygCount] = useState<number>(0);
+  const [plan, setPlan] = useState<string>("free");
 
   useEffect(() => {
     let cancelled = false;
+
+    // First-visit onboarding banner
+    if (localStorage.getItem("lsg_onboarding_done") === null) {
+      setShowOnboarding(true);
+    }
 
     // If the user signed up via a referral link, record it now that they have a session
     const storedRef = localStorage.getItem("lsg_ref");
@@ -99,6 +107,17 @@ export default function Dashboard() {
       .then((r) => r.json())
       .then((d: ReferralInfo) => { if (!cancelled) setReferral(d); })
       .catch(() => { /* non-fatal */ });
+
+    // Load payment plan + PAYG count for upgrade nudge
+    apiFetch("/payments/config")
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled) setPlan(d.plan ?? "free"); })
+      .catch(() => {});
+
+    apiFetch("/payments/payg-count")
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled) setPaygCount(d.count ?? 0); })
+      .catch(() => {});
 
     return () => { cancelled = true; };
   }, []);
@@ -136,6 +155,42 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* First-visit onboarding banner */}
+      {showOnboarding && (
+        <div className="relative bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border border-blue-500/20 rounded-2xl p-4 sm:p-5">
+          <button
+            onClick={() => { setShowOnboarding(false); localStorage.setItem("lsg_onboarding_done", "1"); }}
+            className="absolute top-3 right-3 p-1.5 text-white/30 hover:text-white/70 rounded-lg hover:bg-white/5 transition-all"
+          >
+            <X size={14} />
+          </button>
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles size={13} className="text-blue-400" />
+            <span className="text-xs font-semibold text-blue-400 uppercase tracking-widest">Get started</span>
+          </div>
+          <p className="text-sm font-semibold text-foreground mb-3">Complete your first 3 actions to unlock your academic workflow:</p>
+          <div className="grid sm:grid-cols-3 gap-2.5">
+            {[
+              { step: "1", title: "Write your first paper", desc: "Upload a rubric for best results", href: "/write", color: "text-blue-400 border-blue-500/20 bg-blue-500/5" },
+              { step: "2", title: "Check for AI & plagiarism", desc: "See your similarity and AI score", href: "/plagiarism", color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" },
+              { step: "3", title: "Share & earn discounts", desc: "Refer a friend, get 10% off", href: "#refer", color: "text-purple-400 border-purple-500/20 bg-purple-500/5" },
+            ].map(({ step, title, desc, href, color }) => (
+              <Link key={step} href={href}>
+                <div className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-80 transition-opacity ${color}`}>
+                  <div className="w-6 h-6 rounded-full bg-current/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-[10px] font-bold">{step}</span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-foreground leading-tight">{title}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">{desc}</div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {isLoading
@@ -156,6 +211,32 @@ export default function Dashboard() {
           )}
       </div>
 
+      {/* PAYG → subscription upgrade nudge */}
+      {paygCount >= 2 && plan === "free" && (
+        <div className="relative overflow-hidden bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 rounded-2xl p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <Zap size={13} className="text-amber-400" />
+                <span className="text-xs font-semibold text-amber-400 uppercase tracking-widest">Save money</span>
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                You've generated {paygCount} papers pay-as-you-go.
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                A Starter subscription ($9.99/mo) includes 3 papers + revisions + STEM + study — likely cheaper than what you're paying per paper.
+              </p>
+            </div>
+            <Link href="/#pricing">
+              <button className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl text-xs transition-colors">
+                <TrendingUp size={12} />
+                See plans
+              </button>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Refer & Earn */}
       <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500/8 via-emerald-500/4 to-transparent border border-emerald-500/20 rounded-2xl p-4 sm:p-5">
         <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/4 pointer-events-none" />
@@ -166,7 +247,7 @@ export default function Dashboard() {
               <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Refer & Save</span>
             </div>
             <p className="text-sm text-muted-foreground mt-0.5 max-w-md">
-              Get <span className="text-foreground font-semibold">10% off your next subscription</span> for every student you refer who pays. Share your unique link below.
+              Get <span className="text-foreground font-semibold">20% off your next subscription</span> for every student you refer who pays. They get 10% off too. Share your unique link below.
             </p>
             {/* Referral link */}
             <div className="mt-3 flex items-center gap-2 max-w-sm">
@@ -181,6 +262,22 @@ export default function Dashboard() {
                 {copied ? <Check size={12} /> : <Copy size={12} />}
                 {copied ? "Copied!" : "Copy"}
               </button>
+              <a
+                href={referral ? `https://wa.me/?text=${encodeURIComponent(`Use my LightSpeed Ghost link and get 10% off your first subscription: ${window.location.origin}/ref/${referral.code}`)}` : "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors disabled:opacity-40"
+              >
+                WhatsApp
+              </a>
+              <a
+                href={referral ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(`I use LightSpeed Ghost for AI-powered academic papers — get 10% off with my link: ${window.location.origin}/ref/${referral.code}`)}` : "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium transition-colors disabled:opacity-40"
+              >
+                Post
+              </a>
             </div>
           </div>
           {/* Stats */}

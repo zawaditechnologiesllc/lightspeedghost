@@ -34,6 +34,8 @@ import BlogPost from "@/pages/BlogPost";
 import RefundPolicy from "@/pages/RefundPolicy";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import Ebooks from "@/pages/Ebooks";
+import Africa from "@/pages/Africa";
+import Enterprise from "@/pages/Enterprise";
 import NotFound from "@/pages/not-found";
 import FloatingAssistant from "@/pages/FloatingAssistant";
 import { Loader2, Wrench } from "lucide-react";
@@ -221,6 +223,8 @@ function Router() {
       <Route path="/blog/:slug" component={BlogPost} />
       <Route path="/blog" component={Blog} />
       <Route path="/payment/success" component={PaymentSuccess} />
+      <Route path="/africa" component={Africa} />
+      <Route path="/enterprise" component={Enterprise} />
       <Route component={AppRoutes} />
     </Switch>
   );

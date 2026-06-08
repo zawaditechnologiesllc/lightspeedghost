@@ -889,6 +889,24 @@ router.get("/payments/transactions", async (req: Request, res: Response) => {
   }
 });
 
+// ── Route: PAYG paper count (for upgrade nudge) ───────────────────────────────
+
+// Returns the user's PAYG paper count — used by Dashboard to decide whether to show upgrade nudge
+router.get("/payments/payg-count", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const result = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM documents WHERE user_id = $1 AND type IN ('paper','essay','research','proposal','dissertation','discussion')`,
+      [userId]
+    );
+    res.json({ count: parseInt(result.rows[0]?.count ?? "0", 10) });
+  } catch (err) {
+    logger.error({ err }, "[payments] Failed to get payg count");
+    res.json({ count: 0 });
+  }
+});
+
 // ── Webhook: Stripe ───────────────────────────────────────────────────────────
 
 router.post("/payments/webhook/stripe", async (req: Request, res: Response) => {
