@@ -9,7 +9,7 @@ import { logger } from "../lib/logger";
 import { sanitizeContent, buildAIDisclosureLabel, validatePage } from "./compliance-checker";
 import { buildPageSchemas } from "./schema-engine";
 import { logLLMCost, computeCost, incrementPageCount } from "./budget-tracker";
-import { GEMINI_FLASH_MODEL } from "./researcher";
+import { GEMINI_PRO_MODEL } from "./researcher";
 import { getToolInfo } from "./outliner";
 import type { PageOutlineItem, ArticleOutline } from "./outliner";
 import type { ResearchData } from "./researcher";
@@ -322,7 +322,7 @@ export async function generateClusterPage(
   geminiClient:  GoogleGenerativeAI,
 ): Promise<ClusterPageResult> {
   const tool = getToolInfo(fullOutline.toolFocus);
-  const model = geminiClient.getGenerativeModel({ model: GEMINI_FLASH_MODEL });
+  const model = geminiClient.getGenerativeModel({ model: GEMINI_PRO_MODEL });
 
   const promptMap: Record<string, string> = {
     hook:        buildHookPrompt(outline, research, tool),
@@ -371,11 +371,11 @@ export async function generateClusterPage(
   });
 
   const wordCount = html.split(/\s+/).filter(Boolean).length;
-  const costUsd   = computeCost("gemini-2.5-flash", inputTokens, outputTokens);
+  const costUsd   = computeCost("gemini-2.5-pro", inputTokens, outputTokens);
 
   await logLLMCost({
     taskType:  `seo-cluster-${outline.pageType}`,
-    model:     "gemini-2.5-flash",
+    model:     "gemini-2.5-pro",
     inputTokens,
     outputTokens,
     costUsd,
@@ -452,7 +452,7 @@ export async function saveClusterPage(
       validation.hasFAQ,
       validation.hasAIDisclosure,
       validation.integrityCheck,
-      "gemini-2.5-flash",
+      "gemini-2.5-pro",
       page.costUsd,
       autoPublish ? "published" : "review",
       autoPublish,

@@ -21,7 +21,13 @@ import {
   getCluster,
   listClusters,
   getDailyPipelineUsage,
+  getReviewQueue,
+  publishCluster,
+  discardCluster,
 } from "../seo-engine/pipeline";
+import { selectTopic } from "../seo-engine/topic-selector";
+import { getSchedulerStatus, restartScheduler, triggerNow } from "../seo-engine/scheduler";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { renderRobotsTxt } from "../seo-engine/html-renderer";
 import { PAGE_CATALOG } from "../seo-engine/page-catalog";
 import { checkAcademicIntegrity, sanitizeContent } from "../seo-engine/compliance-checker";
@@ -367,32 +373,47 @@ router.get("/seo/pipeline/cluster/:id", async (req: Request, res: Response) => {
 });
 
 // ── Start pipeline — POST /api/seo/pipeline/start ────────────────────────────
+// If topic is omitted or blank, AI selects the best topic automatically.
+// Competitor is always AI-selected during the research phase.
 router.post("/seo/pipeline/start", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const { topic, toolFocus, competitor, audienceSegment, autoPublish } = req.body as {
-    topic?: string;
-    toolFocus?: string;
-    competitor?: string;
+  const { topic, toolFocus, audienceSegment, autoPublish } = req.body as {
+    topic?:           string;
+    toolFocus?:       string;
     audienceSegment?: string;
-    autoPublish?: boolean;
+    autoPublish?:     boolean;
   };
 
-  if (!topic || topic.trim().length < 3) {
-    res.status(400).json({ error: "topic is required (min 3 characters)" });
-    return;
-  }
-  if (!toolFocus) {
-    res.status(400).json({ error: "toolFocus is required" });
-    return;
-  }
-
   try {
+    let resolvedTopic           = topic?.trim() ?? "";
+    let resolvedToolFocus       = toolFocus ?? "";
+    let resolvedAudienceSegment = audienceSegment?.trim() ?? "students";
+
+    // If no topic provided, let AI pick the best one using GSC/GA4/catalog data
+    if (!resolvedTopic) {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        res.status(400).json({ error: "Either provide a topic or configure GEMINI_API_KEY for AI topic selection" });
+        return;
+      }
+      const gemini = new GoogleGenerativeAI(apiKey);
+      const selection = await selectTopic(gemini);
+      resolvedTopic           = selection.topic;
+      resolvedToolFocus       = resolvedToolFocus || selection.toolFocus;
+      resolvedAudienceSegment = resolvedAudienceSegment || selection.audienceSegment;
+      logger.info({ topic: resolvedTopic, toolFocus: resolvedToolFocus, source: selection.dataSource }, "[seo-api] AI-selected topic");
+    }
+
+    if (!resolvedToolFocus) {
+      res.status(400).json({ error: "toolFocus is required when topic is manually specified" });
+      return;
+    }
+
     const result = await startPipeline({
-      topic:           topic.trim(),
-      toolFocus,
-      competitor:      competitor?.trim(),
-      audienceSegment: audienceSegment?.trim(),
+      topic:           resolvedTopic,
+      toolFocus:       resolvedToolFocus,
+      audienceSegment: resolvedAudienceSegment,
       autoPublish:     Boolean(autoPublish),
     });
 
@@ -401,7 +422,11 @@ router.post("/seo/pipeline/start", async (req: Request, res: Response) => {
       return;
     }
 
-    res.status(202).json({ clusterId: result.clusterId, message: "Pipeline started — poll /api/seo/pipeline/cluster/:id for status" });
+    res.status(202).json({
+      clusterId: result.clusterId,
+      topic:     resolvedTopic,
+      message:   "Pipeline started — pages will appear in review queue when complete",
+    });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     logger.error({ err }, "[seo-api] POST /seo/pipeline/start failed");
@@ -419,6 +444,86 @@ router.post("/seo/pipeline/cluster/:id/resume", async (req: Request, res: Respon
     const error = err instanceof Error ? err.message : String(err);
     res.status(400).json({ error });
   }
+});
+
+// ── Review queue — GET /api/seo/pipeline/review-queue ────────────────────────
+router.get("/seo/pipeline/review-queue", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  try {
+    const clusters = await getReviewQueue();
+    res.json({ clusters, count: clusters.length });
+  } catch (err) {
+    logger.error({ err }, "[seo-api] GET /seo/pipeline/review-queue failed");
+    res.status(500).json({ error: "Failed to fetch review queue" });
+  }
+});
+
+// ── Publish cluster — POST /api/seo/pipeline/cluster/:id/publish-all ─────────
+router.post("/seo/pipeline/cluster/:id/publish-all", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  try {
+    const published = await publishCluster(req.params.id);
+    res.json({ ok: true, published, message: `${published} pages published` });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error });
+  }
+});
+
+// ── Discard cluster — POST /api/seo/pipeline/cluster/:id/discard ─────────────
+router.post("/seo/pipeline/cluster/:id/discard", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  try {
+    const discarded = await discardCluster(req.params.id);
+    res.json({ ok: true, discarded, message: `${discarded} pages moved to draft` });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error });
+  }
+});
+
+// ── Scheduler status — GET /api/seo/scheduler/status ─────────────────────────
+router.get("/seo/scheduler/status", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  try {
+    res.json(await getSchedulerStatus());
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch scheduler status" });
+  }
+});
+
+// ── Update scheduler settings — PATCH /api/seo/scheduler/settings ─────────────
+router.patch("/seo/scheduler/settings", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  const { enabled, time } = req.body as { enabled?: boolean; time?: string };
+  try {
+    const updates: Array<[string, string]> = [];
+    if (enabled !== undefined) updates.push(["scheduler_enabled", String(enabled)]);
+    if (time !== undefined && /^\d{2}:\d{2}$/.test(time)) updates.push(["scheduler_time", time]);
+
+    for (const [key, value] of updates) {
+      await pool.query(
+        `INSERT INTO system_settings (key, value) VALUES ($1, $2)
+         ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+        [key, value],
+      );
+    }
+
+    restartScheduler();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to save scheduler settings" });
+  }
+});
+
+// ── Manual trigger — POST /api/seo/scheduler/trigger ─────────────────────────
+router.post("/seo/scheduler/trigger", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  res.status(202).json({ message: "Scheduled pipeline triggered — check review queue in ~3 minutes" });
+  // Run async after response
+  setImmediate(() => {
+    triggerNow().catch((err) => logger.error({ err }, "[seo-api] Manual trigger failed"));
+  });
 });
 
 export default router;

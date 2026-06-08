@@ -4,7 +4,7 @@
  */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../lib/logger";
-import { GEMINI_FLASH_MODEL } from "./researcher";
+import { GEMINI_PRO_MODEL } from "./researcher";
 import type { ResearchData } from "./researcher";
 
 export type ClusterPageType = "hook" | "comparison" | "breakdown" | "alternative" | "trust";
@@ -123,7 +123,7 @@ export async function buildOutline(
     `Summary: ${research.summary}`,
   ].join("\n");
 
-  const model = geminiClient.getGenerativeModel({ model: GEMINI_FLASH_MODEL });
+  const model = geminiClient.getGenerativeModel({ model: GEMINI_PRO_MODEL });
 
   const prompt = `You are an SEO content strategist. Build a 5-page article cluster outline for:
 

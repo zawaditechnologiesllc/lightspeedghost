@@ -1,11 +1,11 @@
 /**
- * SEO Budget Tracker — Gemini 2.5 Flash (free tier).
+ * SEO Budget Tracker — Gemini 2.5 Pro (free tier: 50 req/24hr, 5 req/5min).
  * Single model, simplified cost accounting.
  */
 import { pool } from "@workspace/db";
 import { logger } from "../lib/logger";
 
-export type LLMModel = "gemini-2.5-flash";
+export type LLMModel = "gemini-2.5-pro";
 
 interface CostEntry {
   taskType:     string;
@@ -16,14 +16,14 @@ interface CostEntry {
   pageSlug?:    string;
 }
 
-// Gemini 2.5 Flash pricing (per million tokens) — free tier available
-// Input: $0.15/M, Output: $0.60/M
+// Gemini 2.5 Pro pricing (per million tokens) — free tier: 50 req/24hr
+// Input: $1.25/M (≤200k context), Output: $10.00/M — $0 on free tier within limits
 const COST_PER_M = {
-  input:  0.15,
-  output: 0.60,
+  input:  1.25,
+  output: 10.00,
 };
 
-const MONTHLY_BUDGET_USD = parseFloat(process.env.SEO_BUDGET_LIMIT ?? "8.00");
+const MONTHLY_BUDGET_USD = parseFloat(process.env.SEO_BUDGET_LIMIT ?? "25.00");
 
 export function computeCost(model: string, inputTokens: number, outputTokens: number): number {
   return (inputTokens / 1_000_000) * COST_PER_M.input
@@ -117,19 +117,19 @@ export async function getBudgetStatus(): Promise<{
     claudeUnlocked:           false,
     pillarUsedThisMonth:      0,
     pillarRemainingThisMonth: 0,
-    model:                    "gemini-2.5-flash",
+    model:                    "gemini-2.5-pro",
   };
 }
 
 export async function canAffordGeneration(estimatedOutputTokens = 2000): Promise<boolean> {
   const status = await getBudgetStatus();
-  const estimatedCost = computeCost("gemini-2.5-flash", 2000, estimatedOutputTokens);
+  const estimatedCost = computeCost("gemini-2.5-pro", 2000, estimatedOutputTokens);
   return status.remainingBudget >= estimatedCost;
 }
 
 // Kept for import compatibility with orchestrator
 export async function selectModel(): Promise<LLMModel> {
-  return "gemini-2.5-flash";
+  return "gemini-2.5-pro";
 }
 
 export async function markBudgetUpgraded(): Promise<void> {

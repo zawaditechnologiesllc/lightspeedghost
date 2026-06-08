@@ -1,12 +1,12 @@
 /**
  * SEO Research Engine — Step 1 of 3-step pipeline
  * Fetches community discussions from edtech Reddit communities,
- * then synthesizes insights with Gemini 2.5 Pro.
+ * then synthesizes insights with Gemini 2.5 Pro (free tier: 50 req/24hr).
  */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../lib/logger";
 
-export const GEMINI_FLASH_MODEL = "gemini-2.5-flash";
+export const GEMINI_PRO_MODEL = "gemini-2.5-pro";
 
 // Subreddits with strong edtech/academic traffic
 const REDDIT_SUBS = [
@@ -19,6 +19,7 @@ export interface ResearchData {
   topQuestions: string[];
   highVolumeKeywords: string[];
   competitorMentions: string[];
+  suggestedCompetitor: string;
   keyStats: string[];
   summary: string;
   redditInsights: string;
@@ -92,7 +93,7 @@ export async function researchTopic(
           .join("\n\n")
       : "No Reddit data retrieved — use general edtech knowledge instead.";
 
-  const model = geminiClient.getGenerativeModel({ model: GEMINI_FLASH_MODEL });
+  const model = geminiClient.getGenerativeModel({ model: GEMINI_PRO_MODEL });
 
   const prompt = `You are an SEO strategist specialising in edtech and academic writing tools.
 
@@ -111,6 +112,7 @@ Return a JSON object with EXACTLY this structure:
   "topQuestions": [up to 8 questions students actually search for — phrase as real Google queries],
   "highVolumeKeywords": [up to 10 keywords ordered by estimated search volume, from head to long-tail],
   "competitorMentions": [up to 5 competing tools/services students mention when discussing this topic],
+  "suggestedCompetitor": "the SINGLE most Googled competitor for a head-to-head comparison page — choose the one students compare most vs AI writing assistants (e.g. ChatGPT, QuillBot, Grammarly, Chegg, Course Hero, Turnitin, Jasper, Writesonic)",
   "keyStats": [up to 6 real, verifiable statistics about this topic — include source hint in brackets],
   "summary": "2–3 sentence strategic summary: what is the content opportunity and how does ${toolFocus} solve it",
   "redditInsights": "1–2 sentence summary of the specific angles, tone, and vocabulary the Reddit community uses about this topic"
@@ -138,6 +140,7 @@ Be specific and actionable. Every pain point and question must reflect something
       topQuestions:         Array.isArray(parsed.topQuestions) ? parsed.topQuestions : [],
       highVolumeKeywords:   Array.isArray(parsed.highVolumeKeywords) ? parsed.highVolumeKeywords : [],
       competitorMentions:   Array.isArray(parsed.competitorMentions) ? parsed.competitorMentions : [],
+      suggestedCompetitor:  String(parsed.suggestedCompetitor ?? "ChatGPT"),
       keyStats:             Array.isArray(parsed.keyStats) ? parsed.keyStats : [],
       summary:              String(parsed.summary ?? ""),
       redditInsights:       String(parsed.redditInsights ?? ""),
@@ -146,17 +149,18 @@ Be specific and actionable. Every pain point and question must reflect something
   } catch (err) {
     logger.error({ err, topic }, "[seo-research] Gemini synthesis failed — using minimal fallback");
     research = {
-      painPoints:         [`Students struggle with ${topic}`],
-      topQuestions:       [`How does ${topic} work?`, `Best ${topic} tools for students?`],
-      highVolumeKeywords: [topic, `${topic} tool`, `${topic} for students`, `best ${topic}`],
-      competitorMentions: ["ChatGPT", "QuillBot", "Grammarly"],
-      keyStats:           [],
-      summary:            `Research for "${topic}" targeting students who need ${toolFocus} support.`,
-      redditInsights:     "Community frequently discusses this topic in academic contexts.",
+      painPoints:          [`Students struggle with ${topic}`],
+      topQuestions:        [`How does ${topic} work?`, `Best ${topic} tools for students?`],
+      highVolumeKeywords:  [topic, `${topic} tool`, `${topic} for students`, `best ${topic}`],
+      competitorMentions:  ["ChatGPT", "QuillBot", "Grammarly"],
+      suggestedCompetitor: "ChatGPT",
+      keyStats:            [],
+      summary:             `Research for "${topic}" targeting students who need ${toolFocus} support.`,
+      redditInsights:      "Community frequently discusses this topic in academic contexts.",
       redditPostCount,
     };
   }
 
-  logger.info({ topic, toolFocus, redditPostCount, painPoints: research.painPoints.length }, "[seo-research] Research complete");
+  logger.info({ topic, toolFocus, redditPostCount, painPoints: research.painPoints.length, competitor: research.suggestedCompetitor }, "[seo-research] Research complete");
   return research;
 }

@@ -62,6 +62,13 @@ async function initAdminTables() {
       comment TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS seo_scheduler_log (
+      id BIGSERIAL PRIMARY KEY,
+      status TEXT NOT NULL,
+      detail TEXT,
+      cluster_id TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
     INSERT INTO system_settings (key, value) VALUES
       ('maintenance_mode',        'false'),
       ('allow_signups',           'true'),
@@ -94,7 +101,9 @@ async function initAdminTables() {
       ('tool_plagiarism_enabled', 'true'),
       ('tool_stem_enabled',       'true'),
       ('tool_study_enabled',      'true'),
-      ('tool_ebooks_enabled',     'true')
+      ('tool_ebooks_enabled',     'true'),
+      ('scheduler_enabled',       'false'),
+      ('scheduler_time',          '02:00')
     ON CONFLICT (key) DO NOTHING;
   `);
 }

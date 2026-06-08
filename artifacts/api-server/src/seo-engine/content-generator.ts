@@ -8,7 +8,7 @@ import { logLLMCost, computeCost } from "./budget-tracker";
 import { sanitizeContent, buildAIDisclosureLabel } from "./compliance-checker";
 import { buildFAQSchema, buildPageSchemas } from "./schema-engine";
 import type { PageSpec } from "./page-catalog";
-import { GEMINI_FLASH_MODEL } from "./researcher";
+import { GEMINI_PRO_MODEL } from "./researcher";
 
 const geminiClient = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
@@ -115,7 +115,7 @@ write my paper, generate my essay, create my outline, build my bibliography, che
 async function generateWithGemini(spec: PageSpec): Promise<{ html: string; inputTokens: number; outputTokens: number }> {
   if (!geminiClient) throw new Error("GEMINI_API_KEY not configured");
 
-  const model = geminiClient.getGenerativeModel({ model: GEMINI_FLASH_MODEL });
+  const model = geminiClient.getGenerativeModel({ model: GEMINI_PRO_MODEL });
 
   const result = await model.generateContent({
     contents: [{
@@ -221,11 +221,11 @@ export async function generatePageContent(spec: PageSpec, retryCount = 0): Promi
   });
 
   const wordCount = html.split(/\s+/).filter(Boolean).length;
-  const costUsd   = computeCost("gemini-2.5-flash", inputTokens, outputTokens);
+  const costUsd   = computeCost("gemini-2.5-pro", inputTokens, outputTokens);
 
   await logLLMCost({
     taskType:  `seo-page-${spec.type}`,
-    model:     "gemini-2.5-flash",
+    model:     "gemini-2.5-pro",
     inputTokens,
     outputTokens,
     costUsd,
@@ -238,7 +238,7 @@ export async function generatePageContent(spec: PageSpec, retryCount = 0): Promi
     html,
     schemaJson:  JSON.stringify(schemas),
     wordCount,
-    model:       "gemini-2.5-flash",
+    model:       "gemini-2.5-pro",
     costUsd,
     inputTokens,
     outputTokens,
