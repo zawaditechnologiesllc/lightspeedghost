@@ -364,7 +364,7 @@ export default function Landing() {
   const [showAndroidModal, setShowAndroidModal] = useState(false);
   const [showExitIntent, setShowExitIntent] = useState(false);
   const exitIntentFiredRef = useRef(false);
-  const [papersCount, setPapersCount] = useState(14200);
+  const [papersCount, setPapersCount] = useState(57200);
 
   function handleIOSInstall() { setShowIOSModal(true); }
   function handleAndroidInstall() {
@@ -409,8 +409,8 @@ export default function Landing() {
 
   // Papers counter — animates up to target on mount
   useEffect(() => {
-    const target = 14293;
-    const start = 13800;
+    const target = 58473;
+    const start = 57200;
     const duration = 2000;
     const startTime = Date.now();
     const timer = setInterval(() => {
@@ -608,7 +608,7 @@ export default function Landing() {
               transition={{ delay: 0.2, duration: 0.5 }}
             >
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              12,000+ active students
+              4M+ students worldwide
             </motion.div>
           </div>
 
@@ -987,6 +987,25 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ─── SCALE SOCIAL PROOF ─── */}
+      <section className="py-10 sm:py-14 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-3 gap-4 sm:gap-8 text-center">
+            {[
+              { value: "6.5M+", label: "Total users", sub: "Students & professionals globally", color: "text-blue-400" },
+              { value: "4M+",   label: "Active students", sub: "From 200+ universities worldwide", color: "text-emerald-400" },
+              { value: "2.5M+", label: "Ebook publishers", sub: "Selling on Amazon, Apple Books & more", color: "text-purple-400" },
+            ].map(({ value, label, sub, color }) => (
+              <div key={label} className="flex flex-col items-center gap-1">
+                <div className={`text-3xl sm:text-4xl md:text-5xl font-bold ${color}`}>{value}</div>
+                <div className="text-xs sm:text-sm font-semibold text-white/70 mt-1">{label}</div>
+                <div className="text-[10px] sm:text-xs text-white/30 leading-snug max-w-[140px]">{sub}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── QUALITY COMMITMENT STRIP ─── */}
       <section className="border-y border-white/5 bg-white/[0.02] py-8 sm:py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -1250,7 +1269,7 @@ export default function Landing() {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium mb-5">
                 <BookOpen size={11} className="text-purple-400" />
-                Business Add-On · $29.99 / month · Separate from academic plans
+                2.5M+ publishers · $29.99 / month · Separate from academic plans
               </div>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-5">
                 Publish ebooks on{" "}
@@ -1759,7 +1778,7 @@ export default function Landing() {
           </div>
           <div className="mt-5 flex flex-col items-center gap-2">
             <p className="text-xs text-white/25">
-              Trusted by students at UCL, Georgia Tech, Edinburgh, UT Austin, and 197 other universities
+              Trusted by 4M+ students at UCL, Georgia Tech, Edinburgh, UT Austin, and 200+ universities worldwide
             </p>
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/20">
               <span className="flex items-center gap-1"><ShieldCheck size={10} className="text-emerald-400/60" /> 7-day money-back guarantee</span>
