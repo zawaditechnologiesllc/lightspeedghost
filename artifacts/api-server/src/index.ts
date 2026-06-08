@@ -33,6 +33,21 @@ const REQUIRED_VARS: Record<string, string> = {
   SESSION_SECRET:            "Random 32-char string for session cookies",
 };
 
+// Optional vars — logged as info when present, silently absent when not
+const OPTIONAL_VARS: Record<string, string> = {
+  RESEND_API_KEY:  "Resend API key for transactional emails (resend.com → API Keys) — welcome, PAYG nudge, and enterprise lead emails require this",
+  EMAIL_FROM:      "Sender address displayed on outgoing emails, e.g. 'LightSpeed Ghost <hello@lightspeedghost.com>' — requires a verified domain in Resend",
+  ADMIN_EMAIL:     "Email address that receives enterprise lead notifications — defaults to hello@lightspeedghost.com when absent",
+};
+
+for (const [name, hint] of Object.entries(OPTIONAL_VARS)) {
+  if (process.env[name]) {
+    logger.info(`[startup] optional env var OK: ${name}`);
+  } else {
+    logger.warn(`[startup] optional env var not set: ${name} — ${hint}`);
+  }
+}
+
 const missingVars: string[] = [];
 for (const [name, hint] of Object.entries(REQUIRED_VARS)) {
   if (!process.env[name]) {

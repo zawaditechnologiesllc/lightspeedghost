@@ -16,6 +16,7 @@ import referralRouter from "./referral";
 import assistantRouter from "./assistant";
 import ebooksRouter from "./ebooks";
 import seoRouter from "./seo";
+import contactRouter from "./contact";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(referralRouter);
 router.use(assistantRouter);
 router.use(ebooksRouter);
 router.use(seoRouter);
+router.use(contactRouter);
 
 export default router;
