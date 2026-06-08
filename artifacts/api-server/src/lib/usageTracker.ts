@@ -9,13 +9,24 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
   starter: {
     paper:      3,
     revision:   1,
-    humanizer:  0,   // locked on Starter — requires Pro or PAYG
+    humanizer:  0,   // locked on Starter — requires Student Pro, Pro, or PAYG
     stem:       15,  // per month
     study:      20,  // per month
     plagiarism: 5,   // per month
     outline:    5,   // per month
     assistant:  30,  // per month — text modes only; image mode blocked at route level
     ebook:      0,   // not included — requires ebooks_monthly add-on
+  },
+  student_pro_monthly: {
+    paper:      8,
+    revision:   4,
+    humanizer:  8,   // humanizer unlocked at Student Pro
+    stem:       40,
+    study:      null, // unlimited
+    plagiarism: 20,
+    outline:    20,
+    assistant:  150,
+    ebook:      0,
   },
   pro: {
     paper:      15,  // per month
