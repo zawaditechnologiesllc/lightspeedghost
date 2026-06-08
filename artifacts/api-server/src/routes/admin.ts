@@ -210,6 +210,7 @@ const TOOL_DEFS = [
   { key: "plagiarism", label: "Plagiarism Check",  settingKey: "tool_plagiarism_enabled", docType: "plagiarism", path: "/plagiarism/" },
   { key: "stem",       label: "STEM Solver",       settingKey: "tool_stem_enabled",       docType: "stem",       path: "/stem/" },
   { key: "study",      label: "Study Assistant",   settingKey: "tool_study_enabled",      docType: null,         path: "/study/" },
+  { key: "ebook",      label: "Ebook Generator",   settingKey: "tool_ebooks_enabled",     docType: "ebook",      path: "/ebooks/" },
 ];
 
 router.get("/admin/tools", async (req: Request, res: Response) => {
