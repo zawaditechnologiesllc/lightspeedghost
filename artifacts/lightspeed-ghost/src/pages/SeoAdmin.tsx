@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 const API = "/api";
 
@@ -152,7 +152,7 @@ function DashboardTab() {
           <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
             <div className="text-center">
               <div className="text-slate-300 font-medium">${(budget?.geminiSpend ?? 0).toFixed(4)}</div>
-              <div className="text-slate-500">Gemini 2.5 Pro spend</div>
+              <div className="text-slate-500">Gemini 2.5 Flash spend</div>
             </div>
             <div className="text-center">
               <div className="text-slate-300 font-medium">{budget?.pagesGenerated ?? 0}</div>
@@ -160,7 +160,7 @@ function DashboardTab() {
             </div>
           </div>
           <p className="text-[10px] text-purple-400 mt-3 bg-purple-500/10 rounded-lg px-3 py-1.5">
-            Gemini 2.5 Pro (free tier) · $0 within 50 req/24hr limit · $1.25/M input if exceeded
+            Gemini 2.5 Flash · $0.075/M input · $0.30/M output · free tier: 50 req/24hr
           </p>
         </Card>
 
@@ -229,13 +229,23 @@ function DashboardTab() {
 }
 
 // ── Tab: Catalog ──────────────────────────────────────────────────────────────
+const BATCH_PAGE_TYPES = [
+  "tool","service","paper-type","subject","software-specific","method-specific",
+  "financial-analysis","use-case","problem-solution","comparison",
+  "academic-level","citation-guide","ebook-type","ebook-platform","how-to",
+];
+
 function CatalogTab() {
   const [catalog, setCatalog] = useState<any[]>([]);
   const [stats, setStats] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [batchType, setBatchType] = useState("tool");
+  const [batchLimit, setBatchLimit] = useState(10);
   const [filter, setFilter] = useState("all");
   const [msg, setMsg] = useState("");
+  const [msgVariant, setMsgVariant] = useState<"success" | "error">("success");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -252,11 +262,34 @@ function CatalogTab() {
     try {
       const res = await apiFetch("/seo/catalog/seed", { method: "POST" });
       setMsg(`Seeded ${res.seeded} new pages, ${res.existing} already existed`);
+      setMsgVariant("success");
       await load();
     } finally { setSeeding(false); }
   };
 
+  const generateBatch = async () => {
+    setGenerating(true);
+    setMsg("");
+    try {
+      const r = await apiFetch("/seo/generate-batch", {
+        method: "POST",
+        body: JSON.stringify({ type: batchType, limit: batchLimit, autoPublish: false }),
+      });
+      const succeeded = r.results?.filter((x: any) => x.success).length ?? 0;
+      const failed = (r.results?.length ?? 0) - succeeded;
+      setMsg(`Generated ${succeeded} pages${failed > 0 ? `, ${failed} failed` : ""} · cost $${r.totalCost?.toFixed(6) ?? "0"}`);
+      setMsgVariant(failed === 0 ? "success" : "error");
+      await load();
+    } catch (e: any) {
+      setMsg(`Generation error: ${e.message}`);
+      setMsgVariant("error");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const filtered = filter === "all" ? catalog : catalog.filter((c) => c.status === filter || (!c.inDb && filter === "not-seeded"));
+  const pendingCount = catalog.filter((c) => c.status === "not-seeded" || c.status === "draft").length;
 
   return (
     <div className="space-y-4">
@@ -268,8 +301,13 @@ function CatalogTab() {
           <span className="bg-slate-700/60 border border-slate-600/40 text-slate-300 text-xs px-3 py-1 rounded-lg">
             {stats.inDb ?? 0} in DB
           </span>
+          {pendingCount > 0 && (
+            <span className="bg-amber-500/15 border border-amber-500/25 text-amber-300 text-xs px-3 py-1 rounded-lg">
+              {pendingCount} pending
+            </span>
+          )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <select value={filter} onChange={(e) => setFilter(e.target.value)}
             className="bg-slate-800 text-xs text-slate-200 rounded-lg px-3 py-1.5 border border-slate-600/60 focus:outline-none focus:border-blue-500/60">
             <option value="all">All pages</option>
@@ -278,10 +316,44 @@ function CatalogTab() {
             <option value="review">Review</option>
             <option value="published">Published</option>
           </select>
-          <Btn onClick={seed} disabled={seeding}>{seeding ? "Seeding…" : "Seed Catalog"}</Btn>
+          <Btn onClick={seed} disabled={seeding} variant="secondary">{seeding ? "Seeding…" : "Seed Catalog"}</Btn>
         </div>
       </div>
-      {msg && <Toast msg={msg} />}
+
+      {/* Catalog page generator */}
+      <Card>
+        <CardTitle>Generate Catalog Pages</CardTitle>
+        <p className="text-[11px] text-slate-500 mb-3">
+          Generate content for unseeded/draft catalog pages using Gemini 2.5 Flash. For AI-driven article clusters, use the Pipeline tab.
+        </p>
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] text-slate-500 uppercase tracking-wider">Page type</label>
+            <select value={batchType} onChange={(e) => setBatchType(e.target.value)}
+              className="bg-slate-900/60 text-xs text-slate-200 rounded-lg px-3 py-2 border border-slate-600/60 focus:outline-none focus:border-blue-500/60 w-44">
+              <option value="all">All types</option>
+              {BATCH_PAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] text-slate-500 uppercase tracking-wider">Limit</label>
+            <input type="number" value={batchLimit} onChange={(e) => setBatchLimit(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
+              min={1} max={30}
+              className="w-20 bg-slate-900/60 text-white text-xs rounded-lg px-3 py-2 border border-slate-600/60 focus:outline-none" />
+          </div>
+          <Btn onClick={generateBatch} disabled={generating} variant="primary">
+            {generating ? "Generating…" : `Generate up to ${batchLimit} pages`}
+          </Btn>
+        </div>
+        {generating && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-slate-400">
+            <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin" />
+            Generating with Gemini 2.5 Flash — allow 30–90s per page
+          </div>
+        )}
+      </Card>
+
+      {msg && <Toast msg={msg} variant={msgVariant} />}
       {loading ? <Spinner /> : (
         <div className="overflow-x-auto rounded-xl border border-slate-700/40">
           <table className="w-full text-xs">
@@ -412,134 +484,6 @@ function PagesTab() {
   );
 }
 
-// ── Tab: Generator ────────────────────────────────────────────────────────────
-function GeneratorTab() {
-  const [slug, setSlug] = useState("");
-  const [batchType, setBatchType] = useState("tool");
-  const [batchLimit, setBatchLimit] = useState(5);
-  const [autoPublish, setAutoPublish] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-
-  const generateSingle = async () => {
-    if (!slug.trim()) return;
-    setLoading(true); setResult(null);
-    try {
-      const r = await apiFetch("/seo/generate-page", {
-        method: "POST",
-        body: JSON.stringify({ slug: slug.trim(), autoPublish }),
-      });
-      setResult(r);
-    } catch (e: any) { setResult({ success: false, error: e.message }); }
-    setLoading(false);
-  };
-
-  const generateBatch = async () => {
-    setLoading(true); setResult(null);
-    try {
-      const r = await apiFetch("/seo/generate-batch", {
-        method: "POST",
-        body: JSON.stringify({ type: batchType, limit: batchLimit, autoPublish }),
-      });
-      setResult(r);
-    } catch (e: any) { setResult({ success: false, error: e.message }); }
-    setLoading(false);
-  };
-
-  const PAGE_TYPES = [
-    "tool","service","paper-type","subject","software-specific","method-specific",
-    "financial-analysis","use-case","problem-solution","comparison",
-    "academic-level","citation-guide","ebook-type","ebook-platform","how-to",
-  ];
-
-  return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Single page */}
-        <Card>
-          <CardTitle>Generate Single Page</CardTitle>
-          <div className="space-y-3">
-            <input value={slug} onChange={(e) => setSlug(e.target.value)}
-              placeholder="e.g. ai-paper-writer"
-              className="w-full bg-slate-900/60 text-white text-xs rounded-lg px-3 py-2 border border-slate-600/60 focus:outline-none focus:border-blue-500/60 placeholder:text-slate-500 font-mono" />
-            <label className="flex items-center gap-2.5 text-xs text-slate-400 cursor-pointer select-none">
-              <input type="checkbox" checked={autoPublish} onChange={(e) => setAutoPublish(e.target.checked)}
-                className="w-3.5 h-3.5 rounded accent-blue-500" />
-              Auto-publish on generation
-            </label>
-            <Btn onClick={generateSingle} disabled={loading || !slug.trim()} className="w-full justify-center">
-              {loading ? "Generating…" : "Generate Page"}
-            </Btn>
-          </div>
-        </Card>
-
-        {/* Batch */}
-        <Card>
-          <CardTitle>Batch Generate</CardTitle>
-          <div className="space-y-3">
-            <select value={batchType} onChange={(e) => setBatchType(e.target.value)}
-              className="w-full bg-slate-900/60 text-xs text-slate-200 rounded-lg px-3 py-2 border border-slate-600/60 focus:outline-none focus:border-blue-500/60">
-              {PAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <div className="flex items-center gap-2">
-              <input type="number" value={batchLimit} onChange={(e) => setBatchLimit(parseInt(e.target.value))}
-                min={1} max={30}
-                className="w-20 bg-slate-900/60 text-white text-xs rounded-lg px-3 py-2 border border-slate-600/60 focus:outline-none" />
-              <span className="text-xs text-slate-400">pages max</span>
-            </div>
-            <label className="flex items-center gap-2.5 text-xs text-slate-400 cursor-pointer select-none">
-              <input type="checkbox" checked={autoPublish} onChange={(e) => setAutoPublish(e.target.checked)}
-                className="w-3.5 h-3.5 rounded accent-blue-500" />
-              Auto-publish on generation
-            </label>
-            <Btn onClick={generateBatch} disabled={loading} variant="purple" className="w-full justify-center">
-              {loading ? "Generating batch…" : "Run Batch"}
-            </Btn>
-          </div>
-        </Card>
-      </div>
-
-      {loading && (
-        <Card>
-          <Spinner />
-          <p className="text-sm text-slate-300 text-center mt-2">Generating with Gemini 2.5 Flash / Claude Haiku…</p>
-          <p className="text-xs text-slate-500 text-center mt-1">Allow 30–90 seconds per page</p>
-        </Card>
-      )}
-
-      {result && !loading && (
-        <Card className={result.success || result.results ? "border-emerald-500/20 bg-emerald-900/10" : "border-red-500/20 bg-red-900/10"}>
-          {result.error && <p className="text-red-400 text-sm">{result.error}</p>}
-          {result.success && (
-            <div className="space-y-1.5">
-              <p className="text-emerald-400 font-semibold text-sm">✓ Generated: {result.slug}</p>
-              <div className="flex gap-4 text-[10px] text-slate-400">
-                <span>Words: <span className="text-slate-300">{result.wordCount}</span></span>
-                <span>Model: <span className="text-slate-300">{result.model}</span></span>
-                <span>Cost: <span className="text-emerald-400">${result.costUsd?.toFixed(6)}</span></span>
-              </div>
-            </div>
-          )}
-          {result.results && (
-            <div className="space-y-2">
-              <p className="text-emerald-400 font-semibold text-sm">
-                Batch complete — {result.results.filter((r: any) => r.success).length}/{result.results.length} succeeded
-              </p>
-              <p className="text-xs text-slate-400">Total cost: ${result.totalCost?.toFixed(6)}</p>
-              <div className="max-h-48 overflow-y-auto space-y-0.5 mt-2 bg-slate-900/60 rounded-lg p-2">
-                {result.results.map((r: any) => (
-                  <div key={r.slug} className={`text-[10px] font-mono ${r.success ? "text-emerald-400" : "text-red-400"}`}>
-                    {r.success ? "✓" : "✗"} {r.slug}{r.error ? ` — ${r.error}` : ""}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Card>
-      )}
-    </div>
-  );
-}
 
 // ── Tab: Budget ───────────────────────────────────────────────────────────────
 function BudgetTab() {
@@ -786,34 +730,133 @@ function SitemapTab() {
 
 // ── Tab: Settings ─────────────────────────────────────────────────────────────
 function SettingsTab() {
-  const settings = [
-    { label: "Primary LLM", value: "Gemini 2.5 Flash", note: "gemini-2.5-flash-preview-05-20" },
-    { label: "Pillar LLM", value: "Claude Haiku 4.5", note: "claude-haiku-4-5 — max 15/month" },
-    { label: "Monthly budget", value: "$8.00", note: "overridable via SEO_BUDGET_LIMIT env var" },
-    { label: "Min word count", value: "800 words", note: "SEO_MIN_WORD_COUNT env var" },
-    { label: "Daily page limit", value: "30 pages", note: "SEO_DAILY_PAGE_LIMIT env var" },
-    { label: "Auto-publish", value: "Off by default", note: "requires manual publish or autoPublish flag" },
-    { label: "Robots.txt", value: "Dynamic", note: "served by Express, replaces static file" },
-    { label: "Sitemap.xml", value: "Dynamic", note: "includes all published SEO pages automatically" },
-    { label: "WCAG standard", value: "2.2 Level AA", note: "skip links, focus rings, ARIA, min touch targets" },
-    { label: "Academic integrity", value: "Enforced", note: "no bypass/cheat/undetectable — pre-publish + post-generation" },
-    { label: "EU AI Act", value: "Compliant", note: "ai-generated meta tag + visible disclosure label on all pages" },
-    { label: "Page catalog", value: "130+ slugs", note: "across 15 page types" },
+  const [scheduler, setScheduler] = useState<{ enabled: boolean; time: string; nextRunAt: string | null; lastRuns: any[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState("");
+  const [toastErr, setToastErr] = useState("");
+
+  useEffect(() => {
+    apiFetch("/seo/scheduler/status")
+      .then(setScheduler)
+      .catch(() => setScheduler(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const save = async (patch: { enabled?: boolean; time?: string }) => {
+    setSaving(true);
+    if (scheduler) setScheduler({ ...scheduler, ...patch });
+    try {
+      await apiFetch("/seo/scheduler/settings", { method: "PATCH", body: JSON.stringify(patch) });
+      const updated = await apiFetch("/seo/scheduler/status");
+      setScheduler(updated);
+      setToast("Settings saved");
+      setTimeout(() => setToast(""), 3000);
+    } catch {
+      setToastErr("Failed to save settings");
+      setTimeout(() => setToastErr(""), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const triggerNow = async () => {
+    try {
+      await apiFetch("/seo/scheduler/trigger", { method: "POST", body: "{}" });
+      setToast("Pipeline triggered — check Review tab in ~3 minutes");
+      setTimeout(() => setToast(""), 5000);
+    } catch {
+      setToastErr("Trigger failed");
+      setTimeout(() => setToastErr(""), 3000);
+    }
+  };
+
+  const staticConfig = [
+    { label: "Primary LLM", value: "Gemini 2.5 Flash", note: "gemini-2.5-flash-preview-05-20 · $0.075/M input" },
+    { label: "Pillar LLM", value: "Claude Haiku 4.5", note: "claude-haiku-4-5 · max 15 pillar pages/month · $3 budget" },
+    { label: "Monthly budget", value: "$8.00", note: "$5 Gemini + $3 Claude Haiku · override via SEO_BUDGET_LIMIT" },
+    { label: "Min word count", value: "800 words", note: "per page minimum · override via SEO_MIN_WORD_COUNT" },
+    { label: "Daily page limit", value: "30 pages", note: "per batch run · override via SEO_DAILY_PAGE_LIMIT" },
+    { label: "Robots.txt", value: "Dynamic", note: "served by Express · training crawlers blocked" },
+    { label: "Sitemap.xml", value: "Dynamic", note: "auto-includes all published SEO pages" },
+    { label: "WCAG standard", value: "2.2 Level AA", note: "skip links, focus rings, ARIA, 24px touch targets" },
+    { label: "Academic integrity", value: "Enforced", note: "no bypass/cheat/undetectable · AI writing assistance framing only" },
+    { label: "EU AI Act", value: "Compliant", note: "ai-generated meta tag + visible disclosure on all pages" },
+    { label: "Page catalog", value: "130+ slugs", note: "across 15 page types · seed from Catalog tab" },
   ];
 
   const envVars = [
-    { name: "GEMINI_API_KEY", desc: "Google AI Studio API key (primary LLM for SEO)" },
-    { name: "ANTHROPIC_API_KEY", desc: "Anthropic API key (Claude Haiku for pillar pages)" },
+    { name: "GEMINI_API_KEY", desc: "Google AI Studio key — primary LLM for all catalog + cluster generation" },
+    { name: "ANTHROPIC_API_KEY", desc: "Anthropic key — Claude Haiku 4.5 for pillar pages only (max 15/month)" },
     { name: "SEO_BUDGET_LIMIT", desc: "Monthly USD budget cap (default: 8.00)" },
-    { name: "SEO_DAILY_PAGE_LIMIT", desc: "Max pages per batch run (default: 30)" },
+    { name: "SEO_DAILY_PAGE_LIMIT", desc: "Max catalog pages per batch run (default: 30)" },
   ];
 
   return (
     <div className="space-y-5">
+      {/* Saveable scheduler settings */}
       <Card>
-        <CardTitle>SEO Engine Configuration</CardTitle>
+        <CardTitle>Scheduler Settings</CardTitle>
+        {toast && <div className="mb-3"><Toast msg={toast} variant="success" /></div>}
+        {toastErr && <div className="mb-3"><Toast msg={toastErr} variant="error" /></div>}
+
+        {loading ? <Spinner /> : scheduler === null ? (
+          <p className="text-xs text-slate-500">Scheduler unavailable — configure GEMINI_API_KEY to enable</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between py-2.5 border-b border-slate-700/40">
+              <div>
+                <p className="text-xs text-slate-200 font-medium">Daily Auto-Scheduler</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  {scheduler.enabled
+                    ? `Runs daily at ${scheduler.time} UTC · next run: ${scheduler.nextRunAt ? new Date(scheduler.nextRunAt).toLocaleString() : "unknown"}`
+                    : "Disabled — enable to generate article clusters automatically every day"}
+                </p>
+              </div>
+              <button
+                onClick={() => save({ enabled: !scheduler.enabled })}
+                disabled={saving}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:opacity-40 ${scheduler.enabled ? "bg-emerald-500" : "bg-slate-600"}`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${scheduler.enabled ? "translate-x-5" : "translate-x-0"}`} />
+              </button>
+            </div>
+
+            {scheduler.enabled && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <label className="text-xs text-slate-400 shrink-0">Run time (UTC)</label>
+                <input
+                  type="time"
+                  defaultValue={scheduler.time}
+                  onBlur={(e) => { if (e.target.value && e.target.value !== scheduler.time) save({ time: e.target.value }); }}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 w-32"
+                />
+                <Btn onClick={triggerNow} disabled={saving} variant="secondary" size="sm">Run Now</Btn>
+                <span className="text-[10px] text-slate-500">Time saves on blur</span>
+              </div>
+            )}
+
+            {scheduler.lastRuns.length > 0 && (
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">Recent scheduler runs</p>
+                <div className="space-y-1">
+                  {scheduler.lastRuns.slice(0, 3).map((run: any, i: number) => (
+                    <div key={i} className={`text-[10px] px-2.5 py-1.5 rounded-lg ${run.status === "started" ? "bg-emerald-500/10 text-emerald-300" : run.status === "skipped" ? "bg-slate-700/40 text-slate-400" : "bg-red-500/10 text-red-400"}`}>
+                      {new Date(run.createdAt).toLocaleString()} — {run.status}: {String(run.detail).slice(0, 80)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* Static config reference */}
+      <Card>
+        <CardTitle>Engine Configuration</CardTitle>
         <div className="space-y-0">
-          {settings.map((s) => (
+          {staticConfig.map((s) => (
             <div key={s.label} className="flex gap-3 py-2.5 border-b border-slate-700/40 last:border-0">
               <span className="w-36 shrink-0 text-xs text-slate-300 font-medium">{s.label}</span>
               <div className="min-w-0">
@@ -824,13 +867,15 @@ function SettingsTab() {
           ))}
         </div>
       </Card>
+
+      {/* Env vars */}
       <div className="bg-amber-900/15 border border-amber-700/30 rounded-xl p-5">
         <h3 className="text-sm font-semibold text-amber-400 mb-3">Required Environment Variables</h3>
         <div className="space-y-2">
           {envVars.map((e) => (
             <div key={e.name} className="flex gap-3 text-xs">
-              <code className="text-amber-300 font-mono shrink-0">{e.name}</code>
-              <span className="text-slate-400">— {e.desc}</span>
+              <code className="text-amber-300 font-mono shrink-0 w-44">{e.name}</code>
+              <span className="text-slate-400">{e.desc}</span>
             </div>
           ))}
         </div>
@@ -1159,7 +1204,7 @@ function PipelineTab() {
             style={{ width: `${Math.min(limitPct, 100)}%` }}
           />
         </div>
-        <p className="text-[10px] text-slate-500">5 pages = 1 cluster. Gemini 2.5 Pro free tier: 50 req/24hr · 5 req/5min. 17s delays between stages keep within rate limits.</p>
+        <p className="text-[10px] text-slate-500">5 pages = 1 cluster. Gemini 2.5 Flash: 50 req/24hr free tier · 5 req/5min. 17s delays between stages keep within rate limits.</p>
       </Card>
 
       {/* Daily scheduler card */}
@@ -1193,7 +1238,7 @@ function PipelineTab() {
                   onBlur={(e) => { if (e.target.value) saveScheduler({ time: e.target.value }); }}
                   className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500"
                 />
-                <Btn onClick={triggerScheduler} size="sm" variant="default" className="ml-auto">
+                <Btn onClick={triggerScheduler} size="sm" variant="secondary" className="ml-auto">
                   Run Now
                 </Btn>
               </div>
@@ -1396,16 +1441,15 @@ function PipelineTab() {
 // ── Main SeoAdmin component ───────────────────────────────────────────────────
 
 const TABS = [
-  { id: "review",     label: "Review",     icon: "✅" },
-  { id: "pipeline",   label: "Pipeline",   icon: "🚀" },
-  { id: "dashboard",  label: "Dashboard",  icon: "⚡" },
-  { id: "catalog",    label: "Catalog",    icon: "📋" },
-  { id: "pages",      label: "Pages",      icon: "📄" },
-  { id: "generator",  label: "Generator",  icon: "✨" },
-  { id: "budget",     label: "Budget",     icon: "💰" },
-  { id: "integrity",  label: "Integrity",  icon: "🛡" },
-  { id: "sitemap",    label: "Sitemap",    icon: "🗺" },
-  { id: "settings",   label: "Settings",   icon: "⚙" },
+  { id: "review",    label: "Review",    icon: "✅" },
+  { id: "pipeline",  label: "Pipeline",  icon: "🚀" },
+  { id: "dashboard", label: "Dashboard", icon: "⚡" },
+  { id: "catalog",   label: "Catalog",   icon: "📋" },
+  { id: "pages",     label: "Pages",     icon: "📄" },
+  { id: "budget",    label: "Budget",    icon: "💰" },
+  { id: "integrity", label: "Integrity", icon: "🛡" },
+  { id: "sitemap",   label: "Sitemap",   icon: "🗺" },
+  { id: "settings",  label: "Settings",  icon: "⚙" },
 ];
 
 export default function SeoAdmin() {
@@ -1416,10 +1460,9 @@ export default function SeoAdmin() {
       case "review":     return <ReviewTab />;
       case "pipeline":   return <PipelineTab />;
       case "dashboard":  return <DashboardTab />;
-      case "catalog":    return <CatalogTab />;
-      case "pages":      return <PagesTab />;
-      case "generator":  return <GeneratorTab />;
-      case "budget":     return <BudgetTab />;
+      case "catalog":   return <CatalogTab />;
+      case "pages":     return <PagesTab />;
+      case "budget":    return <BudgetTab />;
       case "integrity":  return <IntegrityTab />;
       case "sitemap":    return <SitemapTab />;
       case "settings":   return <SettingsTab />;
@@ -1439,7 +1482,7 @@ export default function SeoAdmin() {
                 SEO Engine
               </h1>
               <p className="text-sm text-slate-500 mt-1">
-                Gemini 2.5 Pro (free tier) · AI selects topic + competitor · daily schedule · review queue
+                Gemini 2.5 Flash · $8/month budget · AI-driven topic + competitor selection · daily scheduler
               </p>
             </div>
             <a

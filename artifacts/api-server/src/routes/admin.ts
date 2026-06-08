@@ -499,6 +499,17 @@ router.patch("/admin/users/:id/ban", async (req: Request, res: Response) => {
   }
 });
 
+// ── DELETE /admin/users/bans/all — clear every ban at once ───────────────────
+router.delete("/admin/users/bans/all", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const result = await pool.query("DELETE FROM user_bans RETURNING user_id");
+    res.json({ ok: true, cleared: result.rowCount ?? 0 });
+  } catch {
+    res.status(500).json({ error: "Failed to clear bans" });
+  }
+});
+
 // ── PATCH /admin/users/:id/plan ───────────────────────────────────────────────
 
 router.patch("/admin/users/:id/plan", async (req: Request, res: Response) => {
