@@ -8,7 +8,9 @@ import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
 import { createRemoteJWKSet, jwtVerify, decodeProtectedHeader, decodeJwt } from "jose";
 import router from "./routes";
+import publicSeoRouter from "./routes/seo-public";
 import { authMiddleware } from "./middlewares/auth";
+import { resolveAdminAuth } from "./middlewares/adminAuth";
 import { requestLoggerMiddleware } from "./lib/requestLogger";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
@@ -132,6 +134,10 @@ app.get("/api/auth/test", async (req: Request, res: Response) => {
 
   res.json(result);
 });
+
+// ── SEO public routes — MUST be before CORS so crawlers (no Origin header) ───
+// can reach /robots.txt, /sitemap.xml, and /seo/:slug without being blocked.
+app.use(publicSeoRouter);
 
 // ── Security headers (helmet) ─────────────────────────────────────────────────
 app.use(
@@ -313,6 +319,9 @@ app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 // ── Auth — resolve userId from session or Bearer JWT ─────────────────────────
 app.use(authMiddleware);
 
+// ── Admin auth — resolve req.adminAuth for ALL routes (used by seoRouter etc) ─
+app.use(resolveAdminAuth);
+
 // ── /api/me — returns the authenticated user's id/email (auth debug helper) ───
 // Visit https://your-render-url.onrender.com/api/me in the browser with a valid
 // Supabase JWT to quickly confirm that JWT verification is working on Render.
@@ -344,6 +353,9 @@ const MAINTENANCE_EXEMPT = [
   /^\/api\/status/,
   /^\/api\/admin\//,
   /^\/api\/payments\/webhook\//,
+  /^\/robots\.txt$/,
+  /^\/sitemap\.xml$/,
+  /^\/seo\//,
 ];
 
 app.use(async (req: Request, res: Response, next: NextFunction) => {

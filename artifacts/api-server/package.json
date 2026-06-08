@@ -20,6 +20,7 @@
     "@upstash/redis": "^1.37.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@google/generative-ai": "^0.24.0",
     "bcryptjs": "^3.0.3",
     "bottleneck": "^2.19.5",
     "compromise": "^14.15.0",
