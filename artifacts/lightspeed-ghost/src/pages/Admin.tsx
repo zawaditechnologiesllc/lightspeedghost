@@ -312,6 +312,7 @@ export default function Admin() {
   const [planEditValue, setPlanEditValue] = useState("starter");
   const [planEditing, setPlanEditing] = useState(false);
   const [banTogglingId, setBanTogglingId] = useState<string | null>(null);
+  const [clearingBans, setClearingBans] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "completed" | "pending" | "failed">("all");
   const [traffic, setTraffic] = useState<TrafficData | null>(null);
@@ -630,6 +631,18 @@ export default function Admin() {
       });
       setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, banned: !u.banned } : u));
     } catch {} finally { setBanTogglingId(null); }
+  }
+
+  async function clearAllBans() {
+    if (!confirm("Unban all users? This removes every entry from the ban table.")) return;
+    setClearingBans(true);
+    try {
+      const res = await adminFetch("/admin/users/bans/all", password, { method: "DELETE" });
+      const cleared = res?.cleared ?? 0;
+      setUsers((prev) => prev.map((u) => ({ ...u, banned: false, banReason: null })));
+      alert(`Cleared ${cleared} ban${cleared !== 1 ? "s" : ""}.`);
+    } catch { alert("Failed to clear bans."); }
+    finally { setClearingBans(false); }
   }
 
   async function submitCreditAdjust() {
@@ -1055,11 +1068,23 @@ export default function Admin() {
               <div className="space-y-5 max-w-6xl">
                 <div className="flex items-start justify-between flex-wrap gap-3">
                   <SectionHeader title="Users" sub={`${users.length} ${hasEmailData ? "registered accounts" : "known users"}`} />
-                  <input
-                    type="text" placeholder="Search by email or ID…" value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    className="w-64 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-white/25 transition-all"
-                  />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {users.some((u) => u.banned) && (
+                      <button
+                        onClick={clearAllBans}
+                        disabled={clearingBans}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl text-xs text-red-400 font-medium transition-all disabled:opacity-40"
+                      >
+                        {clearingBans ? <Loader2 size={11} className="animate-spin" /> : <UserCheck size={11} />}
+                        Unban All ({users.filter((u) => u.banned).length})
+                      </button>
+                    )}
+                    <input
+                      type="text" placeholder="Search by email or ID…" value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="w-64 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-white/25 transition-all"
+                    />
+                  </div>
                 </div>
                 {supabaseError && (
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-xs text-amber-300">
