@@ -1,6 +1,6 @@
 /**
  * SEO Content Generator — catalog page writer (single-page mode)
- * Uses Gemini 2.5 Pro exclusively. Claude removed.
+ * Uses Gemini 2.5 Flash (free tier).
  */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../lib/logger";
@@ -8,7 +8,7 @@ import { logLLMCost, computeCost } from "./budget-tracker";
 import { sanitizeContent, buildAIDisclosureLabel } from "./compliance-checker";
 import { buildFAQSchema, buildPageSchemas } from "./schema-engine";
 import type { PageSpec } from "./page-catalog";
-import { GEMINI_PRO_MODEL } from "./researcher";
+import { GEMINI_FLASH_MODEL } from "./researcher";
 
 const geminiClient = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
@@ -104,14 +104,18 @@ UNIQUE DATA POINTS required (pick 8+ relevant ones):
 - Financial analysis covers IFRS 1–17 standards
 - Plans from $9.99/month; PAYG from $1.99
 - 25+ live academic databases (1B+ papers)
-- Grade target: minimum A / First Class`;
+- Grade target: minimum A / First Class
+
+TRANSACTIONAL KEYWORD INTEGRATION (MANDATORY):
+Naturally weave in at least 20 of these 30 transactional keywords throughout the content. They must appear in context — in headings, body text, CTAs, and FAQs. Never list them raw.
+write my paper, generate my essay, create my outline, build my bibliography, check my paper, solve my homework, improve my grade, analyze my data, review my draft, revise my essay, edit my writing, humanize my text, detect AI in my paper, compare AI tools, fix my citations, optimize my essay, submit my assignment, get writing help, try AI writing, start my paper, use AI for essays, download my report, pass my course, score higher, boost my GPA, cite my sources, format my paper, complete my assignment, upload my data, get my results`;
 }
 
 // ── Generate with Gemini 2.5 Pro ──────────────────────────────────────────────
 async function generateWithGemini(spec: PageSpec): Promise<{ html: string; inputTokens: number; outputTokens: number }> {
   if (!geminiClient) throw new Error("GEMINI_API_KEY not configured");
 
-  const model = geminiClient.getGenerativeModel({ model: GEMINI_PRO_MODEL });
+  const model = geminiClient.getGenerativeModel({ model: GEMINI_FLASH_MODEL });
 
   const result = await model.generateContent({
     contents: [{
@@ -217,11 +221,11 @@ export async function generatePageContent(spec: PageSpec, retryCount = 0): Promi
   });
 
   const wordCount = html.split(/\s+/).filter(Boolean).length;
-  const costUsd   = computeCost("gemini-2.5-pro", inputTokens, outputTokens);
+  const costUsd   = computeCost("gemini-2.5-flash", inputTokens, outputTokens);
 
   await logLLMCost({
     taskType:  `seo-page-${spec.type}`,
-    model:     "gemini-2.5-pro",
+    model:     "gemini-2.5-flash",
     inputTokens,
     outputTokens,
     costUsd,
@@ -234,7 +238,7 @@ export async function generatePageContent(spec: PageSpec, retryCount = 0): Promi
     html,
     schemaJson:  JSON.stringify(schemas),
     wordCount,
-    model:       "gemini-2.5-pro",
+    model:       "gemini-2.5-flash",
     costUsd,
     inputTokens,
     outputTokens,

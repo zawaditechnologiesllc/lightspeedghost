@@ -6,7 +6,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../lib/logger";
 
-export const GEMINI_PRO_MODEL = "gemini-2.5-pro";
+export const GEMINI_FLASH_MODEL = "gemini-2.5-flash";
 
 // Subreddits with strong edtech/academic traffic
 const REDDIT_SUBS = [
@@ -92,8 +92,7 @@ export async function researchTopic(
           .join("\n\n")
       : "No Reddit data retrieved — use general edtech knowledge instead.";
 
-  // ── Step 2: synthesise with Gemini 2.5 Pro ────────────────────────────────
-  const model = geminiClient.getGenerativeModel({ model: GEMINI_PRO_MODEL });
+  const model = geminiClient.getGenerativeModel({ model: GEMINI_FLASH_MODEL });
 
   const prompt = `You are an SEO strategist specialising in edtech and academic writing tools.
 

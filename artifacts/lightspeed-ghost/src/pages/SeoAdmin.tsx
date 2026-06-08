@@ -152,7 +152,7 @@ function DashboardTab() {
           <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
             <div className="text-center">
               <div className="text-slate-300 font-medium">${(budget?.geminiSpend ?? 0).toFixed(4)}</div>
-              <div className="text-slate-500">Gemini 2.5 Pro spend</div>
+              <div className="text-slate-500">Gemini 2.5 Flash spend</div>
             </div>
             <div className="text-center">
               <div className="text-slate-300 font-medium">{budget?.pagesGenerated ?? 0}</div>
@@ -160,7 +160,7 @@ function DashboardTab() {
             </div>
           </div>
           <p className="text-[10px] text-purple-400 mt-3 bg-purple-500/10 rounded-lg px-3 py-1.5">
-            Pipeline: 5 pages / 24 hrs · Model: Gemini 2.5 Pro · $1.25/M input · $10/M output
+            Pipeline: 5 pages / 24 hrs · Model: Gemini 2.5 Flash · $0.15/M input · $0.60/M output
           </p>
         </Card>
 
@@ -980,7 +980,7 @@ function PipelineTab() {
             style={{ width: `${Math.min(limitPct, 100)}%` }}
           />
         </div>
-        <p className="text-[10px] text-slate-500">5 pages = 1 article cluster. One article per 24-hour window. Gemini 2.5 Pro — 3-step pipeline: research → outline → write.</p>
+        <p className="text-[10px] text-slate-500">5 pages = 1 article cluster. One article per 24-hour window. Gemini 2.5 Flash — 3-step pipeline: research → outline → write.</p>
       </Card>
 
       {/* Start new pipeline */}
@@ -1219,7 +1219,7 @@ export default function SeoAdmin() {
                 SEO Engine
               </h1>
               <p className="text-sm text-slate-500 mt-1">
-                Gemini 2.5 Pro · 3-step pipeline · 5 pages/24 hrs · catalog + cluster generation
+                Gemini 2.5 Flash · 3-step pipeline · 5 pages/24 hrs · catalog + cluster generation
               </p>
             </div>
             <a

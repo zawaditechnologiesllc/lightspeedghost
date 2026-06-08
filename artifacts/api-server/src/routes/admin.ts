@@ -93,7 +93,8 @@ async function initAdminTables() {
       ('tool_humanizer_enabled',  'true'),
       ('tool_plagiarism_enabled', 'true'),
       ('tool_stem_enabled',       'true'),
-      ('tool_study_enabled',      'true')
+      ('tool_study_enabled',      'true'),
+      ('tool_ebooks_enabled',     'true')
     ON CONFLICT (key) DO NOTHING;
   `);
 }
@@ -245,6 +246,7 @@ router.get("/admin/tools", async (req: Request, res: Response) => {
             WHEN path LIKE '%/plagiarism/%'        THEN 'plagiarism'
             WHEN path LIKE '%/stem/%'              THEN 'stem'
             WHEN path LIKE '%/study/%'             THEN 'study'
+            WHEN path LIKE '%/ebooks/%'            THEN 'ebook'
           END AS path_group,
           COUNT(*)                                                          AS total,
           COUNT(*) FILTER (WHERE status >= 500)                            AS errors,
@@ -254,7 +256,8 @@ router.get("/admin/tools", async (req: Request, res: Response) => {
           MAX(created_at)                                                   AS last_used
         FROM request_logs
         WHERE (path LIKE '%/writing/%' OR path LIKE '%/revision/%' OR path LIKE '%/humanizer/%'
-            OR path LIKE '%/plagiarism/%' OR path LIKE '%/stem/%' OR path LIKE '%/study/%')
+            OR path LIKE '%/plagiarism/%' OR path LIKE '%/stem/%' OR path LIKE '%/study/%'
+            OR path LIKE '%/ebooks/%')
           AND created_at > NOW() - INTERVAL '30 days'
         GROUP BY 1
       `).catch(() => ({ rows: [] })),

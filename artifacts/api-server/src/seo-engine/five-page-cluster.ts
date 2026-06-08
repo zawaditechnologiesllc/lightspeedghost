@@ -9,7 +9,7 @@ import { logger } from "../lib/logger";
 import { sanitizeContent, buildAIDisclosureLabel, validatePage } from "./compliance-checker";
 import { buildPageSchemas } from "./schema-engine";
 import { logLLMCost, computeCost, incrementPageCount } from "./budget-tracker";
-import { GEMINI_PRO_MODEL } from "./researcher";
+import { GEMINI_FLASH_MODEL } from "./researcher";
 import { getToolInfo } from "./outliner";
 import type { PageOutlineItem, ArticleOutline } from "./outliner";
 import type { ResearchData } from "./researcher";
@@ -36,7 +36,11 @@ HTML FORMAT:
 - FAQ section: <div class="seo-faq-section"> with each item as <div class="seo-faq-item">.
 - AI disclosure: <div class="ai-disclosure">🤖 This content was created with AI assistance and reviewed for accuracy.</div> — place at end.
 - All tables: must have <caption> and <th scope="col"> (WCAG 2.2 required).
-- Minimum 900 words. Target 1,100–1,300 words for depth.`;
+- Minimum 900 words. Target 1,100–1,300 words for depth.
+
+TRANSACTIONAL KEYWORD INTEGRATION (MANDATORY):
+Naturally weave in at least 20 of these 30 transactional keywords throughout the page. Place them in headings, body copy, CTAs, and FAQ answers — never list them raw.
+write my paper · generate my essay · create my outline · build my bibliography · check my paper · solve my homework · improve my grade · analyze my data · review my draft · revise my essay · edit my writing · humanize my text · detect AI in my paper · compare AI tools · fix my citations · optimize my essay · submit my assignment · get writing help · try AI writing · start my paper · use AI for essays · download my report · pass my course · score higher · boost my GPA · cite my sources · format my paper · complete my assignment · upload my data · get my results`;
 }
 
 // ── Page-type-specific prompts ────────────────────────────────────────────────
@@ -318,7 +322,7 @@ export async function generateClusterPage(
   geminiClient:  GoogleGenerativeAI,
 ): Promise<ClusterPageResult> {
   const tool = getToolInfo(fullOutline.toolFocus);
-  const model = geminiClient.getGenerativeModel({ model: GEMINI_PRO_MODEL });
+  const model = geminiClient.getGenerativeModel({ model: GEMINI_FLASH_MODEL });
 
   const promptMap: Record<string, string> = {
     hook:        buildHookPrompt(outline, research, tool),
@@ -367,11 +371,11 @@ export async function generateClusterPage(
   });
 
   const wordCount = html.split(/\s+/).filter(Boolean).length;
-  const costUsd   = computeCost("gemini-2.5-pro", inputTokens, outputTokens);
+  const costUsd   = computeCost("gemini-2.5-flash", inputTokens, outputTokens);
 
   await logLLMCost({
     taskType:  `seo-cluster-${outline.pageType}`,
-    model:     "gemini-2.5-pro",
+    model:     "gemini-2.5-flash",
     inputTokens,
     outputTokens,
     costUsd,
@@ -448,7 +452,7 @@ export async function saveClusterPage(
       validation.hasFAQ,
       validation.hasAIDisclosure,
       validation.integrityCheck,
-      "gemini-2.5-pro",
+      "gemini-2.5-flash",
       page.costUsd,
       autoPublish ? "published" : "review",
       autoPublish,
