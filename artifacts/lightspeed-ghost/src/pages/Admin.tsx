@@ -1144,6 +1144,7 @@ export default function Admin() {
                         plagiarism: <Shield size={16} className="text-cyan-400" />,
                         stem:       <FlaskConical size={16} className="text-amber-400" />,
                         study:      <GraduationCap size={16} className="text-emerald-400" />,
+                        ebook:      <BookOpen size={16} className="text-purple-400" />,
                       };
                       const toolColors: Record<string, string> = {
                         write:      "from-blue-600/10 to-blue-500/5 border-blue-500/12",
@@ -1153,6 +1154,7 @@ export default function Admin() {
                         plagiarism: "from-cyan-600/10 to-cyan-500/5 border-cyan-500/12",
                         stem:       "from-amber-600/10 to-amber-500/5 border-amber-500/12",
                         study:      "from-emerald-600/10 to-emerald-500/5 border-emerald-500/12",
+                        ebook:      "from-purple-600/10 to-purple-500/5 border-purple-500/12",
                       };
                       const rate7d = tool.totalRequests7d > 0 ? tool.errorRate7d : null;
                       const rate30d = tool.totalRequests > 0 ? tool.errorRate : null;
