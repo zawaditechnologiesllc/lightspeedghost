@@ -15,6 +15,13 @@ import {
   getDashboardSummary,
 } from "../seo-engine/orchestrator";
 import { getBudgetStatus, markBudgetUpgraded } from "../seo-engine/budget-tracker";
+import {
+  startPipeline,
+  resumePipeline,
+  getCluster,
+  listClusters,
+  getDailyPipelineUsage,
+} from "../seo-engine/pipeline";
 import { renderRobotsTxt } from "../seo-engine/html-renderer";
 import { PAGE_CATALOG } from "../seo-engine/page-catalog";
 import { checkAcademicIntegrity, sanitizeContent } from "../seo-engine/compliance-checker";
@@ -318,6 +325,100 @@ router.get("/seo/dashboard/compliance", async (req: Request, res: Response) => {
 router.get("/seo/robots/preview", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   res.json({ robots: renderRobotsTxt([]) });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Pipeline API — 3-step article cluster generation
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Daily pipeline usage — GET /api/seo/pipeline/daily-limit ─────────────────
+router.get("/seo/pipeline/daily-limit", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  try {
+    res.json(await getDailyPipelineUsage());
+  } catch {
+    res.status(500).json({ error: "Failed to fetch daily usage" });
+  }
+});
+
+// ── List clusters — GET /api/seo/pipeline/clusters ───────────────────────────
+router.get("/seo/pipeline/clusters", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  try {
+    const limit = parseInt(String(req.query.limit ?? "30"));
+    res.json({ clusters: await listClusters(limit) });
+  } catch (err) {
+    logger.error({ err }, "[seo-api] GET /seo/pipeline/clusters failed");
+    res.status(500).json({ error: "Failed to fetch clusters" });
+  }
+});
+
+// ── Get single cluster — GET /api/seo/pipeline/cluster/:id ───────────────────
+router.get("/seo/pipeline/cluster/:id", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  try {
+    const cluster = await getCluster(req.params.id);
+    if (!cluster) { res.status(404).json({ error: "Cluster not found" }); return; }
+    res.json(cluster);
+  } catch (err) {
+    logger.error({ err }, "[seo-api] GET /seo/pipeline/cluster/:id failed");
+    res.status(500).json({ error: "Failed to fetch cluster" });
+  }
+});
+
+// ── Start pipeline — POST /api/seo/pipeline/start ────────────────────────────
+router.post("/seo/pipeline/start", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const { topic, toolFocus, competitor, audienceSegment, autoPublish } = req.body as {
+    topic?: string;
+    toolFocus?: string;
+    competitor?: string;
+    audienceSegment?: string;
+    autoPublish?: boolean;
+  };
+
+  if (!topic || topic.trim().length < 3) {
+    res.status(400).json({ error: "topic is required (min 3 characters)" });
+    return;
+  }
+  if (!toolFocus) {
+    res.status(400).json({ error: "toolFocus is required" });
+    return;
+  }
+
+  try {
+    const result = await startPipeline({
+      topic:           topic.trim(),
+      toolFocus,
+      competitor:      competitor?.trim(),
+      audienceSegment: audienceSegment?.trim(),
+      autoPublish:     Boolean(autoPublish),
+    });
+
+    if (result.error) {
+      res.status(429).json({ error: result.error });
+      return;
+    }
+
+    res.status(202).json({ clusterId: result.clusterId, message: "Pipeline started — poll /api/seo/pipeline/cluster/:id for status" });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    logger.error({ err }, "[seo-api] POST /seo/pipeline/start failed");
+    res.status(500).json({ error });
+  }
+});
+
+// ── Resume failed pipeline — POST /api/seo/pipeline/cluster/:id/resume ───────
+router.post("/seo/pipeline/cluster/:id/resume", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  try {
+    await resumePipeline(req.params.id, { autoPublish: Boolean(req.body?.autoPublish) });
+    res.json({ ok: true, message: "Pipeline resumed" });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    res.status(400).json({ error });
+  }
 });
 
 export default router;
