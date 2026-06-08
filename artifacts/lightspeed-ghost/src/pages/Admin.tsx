@@ -9,7 +9,7 @@ import {
   Radio, ServerCrash, Database, Clock, CheckCheck, XCircle, Signal,
   Megaphone, Link2, Eye, EyeOff, ThumbsUp, ThumbsDown,
   Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
-  Search,
+  Search, BookOpen,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link, useParams, useLocation } from "wouter";
