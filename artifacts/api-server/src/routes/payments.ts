@@ -145,13 +145,23 @@ async function getUserRisk(userId: string): Promise<"low" | "medium" | "high"> {
   }
 }
 
+// ── Credit packages (server-side source of truth — must match BuyCreditsModal) ──
+
+const CREDIT_PACKAGES: Record<string, { priceCents: number; credits: number; label: string }> = {
+  credits_500:  { priceCents: 500,  credits: 500,  label: "500 Credits" },
+  credits_1100: { priceCents: 1000, credits: 1100, label: "1,100 Credits (+10% bonus)" },
+  credits_2850: { priceCents: 2500, credits: 2850, label: "2,850 Credits (+14% bonus)" },
+  credits_6000: { priceCents: 5000, credits: 6000, label: "6,000 Credits (+20% bonus)" },
+};
+
 // ── Stripe helpers ────────────────────────────────────────────────────────────
 
 async function createStripeSession(params: {
-  type: "subscription" | "payg";
+  type: "subscription" | "payg" | "credits";
   plan?: PlanId;
   tool?: PaygTool;
   tier?: DocumentTier;
+  label?: string;
   userId: string;
   userEmail: string;
   amountCents: number;
@@ -188,9 +198,10 @@ async function createStripeSession(params: {
           currency: "usd",
           unit_amount: params.amountCents,
           product_data: {
-            name: params.plan
-              ? SUBSCRIPTION_PLANS[params.plan]?.label ?? "LightSpeed Ghost"
-              : getPaygLabel(params.tool!, params.tier),
+            name: params.label
+              ?? (params.plan
+                ? SUBSCRIPTION_PLANS[params.plan]?.label ?? "LightSpeed Ghost"
+                : getPaygLabel(params.tool!, params.tier)),
           },
         },
       }],
@@ -300,7 +311,7 @@ async function createIntaSendSession(params: {
 // ── Paddle helpers ────────────────────────────────────────────────────────────
 
 async function createPaddleSession(params: {
-  type: "subscription" | "payg";
+  type: "subscription" | "payg" | "credits";
   plan?: PlanId;
   amountCents: number;
   label: string;
@@ -370,7 +381,7 @@ async function createPaddleSession(params: {
 // ── Lemon Squeezy helpers ─────────────────────────────────────────────────────
 
 async function createLemonSqueezySession(params: {
-  type: "subscription" | "payg";
+  type: "subscription" | "payg" | "credits";
   plan?: PlanId;
   amountCents: number;
   label: string;
@@ -616,12 +627,13 @@ router.post("/payments/create", async (req: Request, res: Response) => {
     return;
   }
 
-  const { type, plan, tool, tier, seats, preferredGateway } = req.body as {
-    type: "subscription" | "payg";
+  const { type, plan, tool, tier, seats, creditPackageId, preferredGateway } = req.body as {
+    type: "subscription" | "payg" | "credits";
     plan?: PlanId;
     tool?: PaygTool;
     tier?: DocumentTier;
     seats?: number;
+    creditPackageId?: string;
     preferredGateway?: GatewayName;
   };
 
@@ -630,7 +642,15 @@ router.post("/payments/create", async (req: Request, res: Response) => {
     let amountCents: number;
     let label: string;
 
-    if (type === "subscription") {
+    if (type === "credits") {
+      const pkg = CREDIT_PACKAGES[creditPackageId ?? ""];
+      if (!pkg) {
+        res.status(400).json({ error: "Invalid credit package" });
+        return;
+      }
+      amountCents = pkg.priceCents;
+      label = pkg.label;
+    } else if (type === "subscription") {
       if (!plan || !SUBSCRIPTION_PLANS[plan]) {
         res.status(400).json({ error: "Invalid plan" });
         return;
@@ -687,6 +707,7 @@ router.post("/payments/create", async (req: Request, res: Response) => {
           plan: plan as PlanId | undefined,
           tool: tool as PaygTool | undefined,
           tier: tier as DocumentTier | undefined,
+          label: type === "credits" ? label : undefined,
           userId,
           userEmail,
           amountCents,
@@ -754,12 +775,12 @@ router.post("/payments/create", async (req: Request, res: Response) => {
         return;
     }
 
-    // Record pending payment
+    // Record pending payment — for credits the package id rides in the plan column
     await pool.query(
       `INSERT INTO payments
          (user_id, gateway, gateway_session_id, type, plan, tool, tier, amount_cents, currency, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'USD','pending')`,
-      [userId, gateway, sessionId, type, plan ?? null, tool ?? null, tier ?? null, amountCents]
+      [userId, gateway, sessionId, type, plan ?? creditPackageId ?? null, tool ?? null, tier ?? null, amountCents]
     );
 
     res.json({ gateway, sessionId, checkoutUrl, amountCents, label });
@@ -793,6 +814,34 @@ export async function activateSubscription(userId: string, checkoutPlan: string,
        status='active', current_period_end=EXCLUDED.current_period_end, updated_at=NOW()`,
     [userId, planName, billing, gateway, ref, periodEnd]
   );
+}
+
+// ── Payment completion (shared by ALL gateway webhooks) ───────────────────────
+// Atomically flips pending→completed, then runs every one-time side effect:
+// subscription activation, credit-package crediting, referral commission, and
+// pending-discount consumption. Idempotent — repeat webhook deliveries no-op.
+async function applyPaymentCompletion(sessionId: string, gateway: string): Promise<void> {
+  const flip = await pool.query<{ user_id: string; type: string; plan: string | null; amount_cents: number }>(
+    `UPDATE payments SET status='completed', completed_at=NOW()
+     WHERE gateway_session_id=$1 AND status='pending'
+     RETURNING user_id, type, plan, amount_cents`,
+    [sessionId]
+  );
+  const p = flip.rows[0];
+  if (!p) return; // already processed — webhook retry or verify beat us to it
+
+  if (p.type === "subscription" && p.plan) {
+    await activateSubscription(p.user_id, p.plan, gateway, sessionId);
+  }
+  if (p.type === "credits" && p.plan) {
+    const pkg = CREDIT_PACKAGES[p.plan];
+    if (pkg) {
+      await adjustCredits(p.user_id, pkg.credits, "purchase", `${pkg.label} purchase`, sessionId);
+      logger.info({ userId: p.user_id, packageId: p.plan, credits: pkg.credits, gateway }, "[payments] credits applied via webhook");
+    }
+  }
+  await maybeRecordReferralCommission(p.user_id, p.amount_cents);
+  await markFirstPendingDiscountApplied(p.user_id);
 }
 
 // ── Route: verify payment (polling after redirect) ────────────────────────────
@@ -843,11 +892,14 @@ router.get("/payments/verify", async (req: Request, res: Response) => {
     }
 
     if (confirmed) {
-      await pool.query(
+      // rowCount tells us if WE flipped pending→completed (vs webhook already did) —
+      // one-time side effects like crediting must only run on that transition.
+      const flip = await pool.query(
         `UPDATE payments SET status='completed', completed_at=NOW()
          WHERE gateway_session_id=$1 AND user_id=$2 AND status='pending'`,
         [ref, userId]
       );
+      const justCompleted = (flip.rowCount ?? 0) > 0;
 
       const row = await pool.query<{ type: string; plan: string | null }>(
         "SELECT type, plan FROM payments WHERE gateway_session_id=$1 AND user_id=$2",
@@ -858,6 +910,15 @@ router.get("/payments/verify", async (req: Request, res: Response) => {
       if (payment?.type === "subscription" && payment.plan) {
         await activateSubscription(userId, payment.plan, gateway, ref);
         await markFirstPendingDiscountApplied(userId);
+      }
+
+      // Credits purchase — apply exactly once
+      if (justCompleted && payment?.type === "credits" && payment.plan) {
+        const pkg = CREDIT_PACKAGES[payment.plan];
+        if (pkg) {
+          await adjustCredits(userId, pkg.credits, "purchase", `${pkg.label} purchase`, ref);
+          logger.info({ userId, packageId: payment.plan, credits: pkg.credits }, "[payments] credits applied after verify");
+        }
       }
     }
 
@@ -965,22 +1026,7 @@ router.post("/payments/webhook/stripe", async (req: Request, res: Response) => {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.metadata?.userId;
       if (userId && session.payment_status === "paid") {
-        await pool.query(
-          `UPDATE payments SET status='completed', completed_at=NOW()
-           WHERE gateway_session_id=$1`,
-          [session.id]
-        );
-        // Activate subscription even if the buyer never returns to the success page
-        const payRow = await pool.query<{ type: string; plan: string | null }>(
-          "SELECT type, plan FROM payments WHERE gateway_session_id=$1",
-          [session.id]
-        );
-        const pay = payRow.rows[0];
-        if (pay?.type === "subscription" && pay.plan) {
-          await activateSubscription(userId, pay.plan, "stripe", session.id);
-        }
-        await maybeRecordReferralCommission(userId, session.amount_total ?? 0);
-        await markFirstPendingDiscountApplied(userId);
+        await applyPaymentCompletion(session.id, "stripe");
       }
     } else if (event.type === "customer.subscription.deleted") {
       const sub = event.data.object as Stripe.Subscription;
@@ -1017,13 +1063,7 @@ router.post("/payments/webhook/paystack", async (req: Request, res: Response) =>
     };
 
     if (event.event === "charge.success" && event.data?.reference) {
-      const pRes = await pool.query<{ user_id: string }>(
-        `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id`,
-        [event.data.reference]
-      );
-      const uid = pRes.rows[0]?.user_id;
-      if (uid) await markFirstPendingDiscountApplied(uid);
+      await applyPaymentCompletion(event.data.reference, "paystack");
     }
   } catch (err) {
     logger.error({ err }, "Paystack webhook error");
@@ -1051,13 +1091,7 @@ router.post("/payments/webhook/intasend", async (req: Request, res: Response) =>
     const raw = req.body as Buffer | Record<string, unknown>;
     const payload = (Buffer.isBuffer(raw) ? JSON.parse(raw.toString()) : raw) as { invoice_id?: string; state?: string };
     if (payload.state === "COMPLETE" && payload.invoice_id) {
-      const pRes = await pool.query<{ user_id: string }>(
-        `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id`,
-        [payload.invoice_id]
-      );
-      const uid = pRes.rows[0]?.user_id;
-      if (uid) await markFirstPendingDiscountApplied(uid);
+      await applyPaymentCompletion(payload.invoice_id, "intasend");
     }
   } catch (err) {
     logger.error({ err }, "IntaSend webhook error");
@@ -1094,13 +1128,7 @@ router.post("/payments/webhook/paddle", async (req: Request, res: Response) => {
     };
 
     if (event.event_type === "transaction.completed" && event.data?.id) {
-      const pRes = await pool.query<{ user_id: string }>(
-        `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id`,
-        [event.data.id]
-      );
-      const uid = pRes.rows[0]?.user_id;
-      if (uid) await markFirstPendingDiscountApplied(uid);
+      await applyPaymentCompletion(event.data.id, "paddle");
     }
   } catch (err) {
     logger.error({ err }, "Paddle webhook error");
@@ -1132,14 +1160,7 @@ router.post("/payments/webhook/lemon-squeezy", async (req: Request, res: Respons
 
     const evName = event.meta?.event_name ?? "";
     if ((evName === "order_created" || evName === "subscription_created") && event.data?.id) {
-      const lsUserId = event.meta?.custom_data?.userId;
-      const pRes = await pool.query<{ user_id: string }>(
-        `UPDATE payments SET status='completed', completed_at=NOW()
-         WHERE gateway_session_id=$1 RETURNING user_id`,
-        [event.data.id]
-      );
-      const uid = lsUserId ?? pRes.rows[0]?.user_id;
-      if (uid) await markFirstPendingDiscountApplied(uid);
+      await applyPaymentCompletion(event.data.id, "lemon_squeezy");
     }
   } catch (err) {
     logger.error({ err }, "Lemon Squeezy webhook error");
