@@ -50,6 +50,20 @@ function TidioChat() {
     s.src = `//code.tidio.co/${key}.js`;
     s.async = true;
     document.head.appendChild(s);
+
+    // On mobile, lift the Tidio bubble above the bottom quick-nav bar
+    if (!document.getElementById("tidio-mobile-offset")) {
+      const style = document.createElement("style");
+      style.id = "tidio-mobile-offset";
+      style.textContent = `
+        @media (max-width: 1023px) {
+          #tidio-chat-iframe {
+            bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
   }, []);
   return null;
 }

@@ -21,7 +21,7 @@ It is available at https://lightspeedghost.com and works in any modern browser w
 ## The eight tools
 
 ### 1. AI Paper Writer
-Generates full academic papers grounded in 15 live academic databases (1B+ papers): OpenAlex, CrossRef, PubMed NCBI, Semantic Scholar, ERIC (US Dept of Education), Zenodo (CERN), arXiv, CORE, DOAJ, Europe PMC, BASE, DataCite, OpenAIRE, Sci-Net, and Unpaywall. Results are ranked by citation count. No Wikipedia. No hallucinated citations.
+Generates full academic papers grounded in 25+ live academic databases (10B+ papers): OpenAlex, CrossRef, PubMed NCBI, Semantic Scholar, ERIC (US Dept of Education), Zenodo (CERN), arXiv, CORE, DOAJ, Europe PMC, BASE, DataCite, OpenAIRE, Sci-Net, and Unpaywall. Results are ranked by citation count. No Wikipedia. No hallucinated citations.
 
 Supports all major citation formats: APA 7th, MLA 9th, Chicago, Harvard, IEEE.
 Upload an assignment rubric PDF to automatically extract A-grade criteria and lock them as paper requirements before generation starts.
@@ -95,3 +95,22 @@ Total coverage: 1B+ papers. Wikipedia is excluded. All sources require DOI or ve
 - Contact: https://lightspeedghost.com/contact
 - Privacy: https://lightspeedghost.com/privacy
 - Terms: https://lightspeedghost.com/terms
+
+
+## Pricing (2026)
+
+- Starter: $9.99/month — 3 papers, 1 revision, 15 STEM solves, 20 study messages, 5 plagiarism checks, 5 outlines
+- Student Pro: $19.99/month (most popular) — 8 papers (up to 3,500 words each), 4 revisions, LightSpeed Humanizer (6 jobs), 40 STEM solves, 75 study messages, 10 plagiarism checks, 10 outlines, priority processing
+- Pro: $29.99/month or $269/year — 15 papers (all lengths), 20 revisions, 20 humanizer jobs, 60 STEM solves, 150 study messages, 20 plagiarism checks, 20 outlines
+- Institution: custom pricing per seat — for universities, departments, and tutoring centers (https://lightspeedghost.com/enterprise)
+- Ebooks Add-On: $29.99/month — 15 AI-written ebooks/month for Amazon KDP and 40+ platforms
+- Pay-As-You-Go: from $1.99 per task, papers from $3.99 — credits never expire
+
+## Audience pages
+
+- African students (M-Pesa, MTN MoMo, Airtel Money payments): https://lightspeedghost.com/africa
+- Universities and institutions (bulk seats, single invoice): https://lightspeedghost.com/enterprise
+
+## Platform scale
+
+6.5M+ users worldwide · 4M+ students at 200+ universities · 2.5M+ ebook publishers · 92%+ average grade target · papers grounded in 25+ live academic databases with 10B+ papers

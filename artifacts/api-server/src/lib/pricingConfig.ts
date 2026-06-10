@@ -23,7 +23,7 @@ export const SUBSCRIPTION_PLANS: Record<PlanId, PlanPrice> = {
     currency: "USD",
     interval: "month",
     label: "Student Pro — Monthly",
-    description: "Humanizer + priority processing included",
+    description: "Humanizer + priority processing, papers up to 3,500 words",
   },
   pro_monthly: {
     amountCents: 2999,

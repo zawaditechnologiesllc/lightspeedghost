@@ -334,16 +334,28 @@ export async function generateClusterPage(
 
   const prompt = promptMap[outline.pageType] ?? buildHookPrompt(outline, research, tool);
 
-  const result = await model.generateContent({
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 4000,
-    },
-  });
+  // gemini-2.5-pro is a thinking model — reasoning tokens count against
+  // maxOutputTokens, so it needs generous headroom or it returns empty
+  // responses. One retry covers transient empty/truncated outputs.
+  let html = "";
+  let usage: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 16384,
+      },
+    });
+    html = result.response.text();
+    usage = result.response.usageMetadata;
+    if (html && html.trim().length >= 200) break;
+    if (attempt === 2) {
+      throw new Error(`Gemini returned ${html ? "near-empty" : "empty"} content after 2 attempts (finishReason: ${result.response.candidates?.[0]?.finishReason ?? "unknown"})`);
+    }
+    await new Promise((r) => setTimeout(r, 20_000)); // respect 5 req / 5 min free-tier window
+  }
 
-  let html = result.response.text();
-  const usage = result.response.usageMetadata;
   const inputTokens  = usage?.promptTokenCount    ?? 2000;
   const outputTokens = usage?.candidatesTokenCount ?? 2500;
 

@@ -127,7 +127,9 @@ Be specific and actionable. Every pain point and question must reflect something
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 2000,
+        // gemini-2.5-pro is a thinking model — reasoning tokens count against this
+        // budget, so it needs generous headroom or it returns empty responses.
+        maxOutputTokens: 8192,
         responseMimeType: "application/json",
       },
     });

@@ -54,6 +54,12 @@ async function initAdminTables() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS announcement_reads (
+      user_id         TEXT    NOT NULL,
+      announcement_id INTEGER NOT NULL,
+      read_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, announcement_id)
+    );
     CREATE TABLE IF NOT EXISTS tool_feedback (
       id BIGSERIAL PRIMARY KEY,
       user_id TEXT,
@@ -80,6 +86,13 @@ async function initAdminTables() {
       ('starter_study',           '20'),
       ('starter_plagiarism',      '5'),
       ('starter_outline',         '5'),
+      ('student_pro_monthly_paper',      '8'),
+      ('student_pro_monthly_revision',   '4'),
+      ('student_pro_monthly_humanizer',  '6'),
+      ('student_pro_monthly_stem',       '40'),
+      ('student_pro_monthly_study',      '75'),
+      ('student_pro_monthly_plagiarism', '10'),
+      ('student_pro_monthly_outline',    '10'),
       ('pro_paper',               '15'),
       ('pro_revision',            '20'),
       ('pro_humanizer',           '20'),
@@ -103,7 +116,10 @@ async function initAdminTables() {
       ('tool_study_enabled',      'true'),
       ('tool_ebooks_enabled',     'true'),
       ('scheduler_enabled',       'false'),
-      ('scheduler_time',          '02:00')
+      ('scheduler_time',          '02:00'),
+      ('referral_referrer_discount_pct', '20'),
+      ('referral_friend_discount_pct',   '10'),
+      ('referral_commission_pct',        '10')
     ON CONFLICT (key) DO NOTHING;
   `);
 }
@@ -832,16 +848,65 @@ router.get("/admin/logs", async (req: Request, res: Response) => {
 });
 
 // ── GET /api/announcements (PUBLIC — no auth) ─────────────────────────────────
+// Logged-in users never see announcements they've already marked read —
+// reads are persisted server-side so they survive devices and reinstalls.
 
-router.get("/announcements", async (_req: Request, res: Response) => {
+router.get("/announcements", async (req: Request, res: Response) => {
   try {
-    const rows = await pool.query(
-      `SELECT id, title, message, link, link_text, color
-       FROM announcements WHERE is_active = true ORDER BY created_at DESC`
-    );
+    const rows = req.userId
+      ? await pool.query(
+          `SELECT a.id, a.title, a.message, a.link, a.link_text, a.color
+           FROM announcements a
+           WHERE a.is_active = true
+             AND NOT EXISTS (
+               SELECT 1 FROM announcement_reads r
+               WHERE r.announcement_id = a.id AND r.user_id = $1
+             )
+           ORDER BY a.created_at DESC`,
+          [req.userId]
+        )
+      : await pool.query(
+          `SELECT id, title, message, link, link_text, color
+           FROM announcements WHERE is_active = true ORDER BY created_at DESC`
+        );
     res.json({ announcements: rows.rows });
   } catch {
     res.json({ announcements: [] });
+  }
+});
+
+// ── POST /api/announcements/:id/read — persist a single read ─────────────────
+
+router.post("/announcements/:id/read", async (req: Request, res: Response) => {
+  if (!req.userId) { res.status(401).json({ error: "Authentication required" }); return; }
+  const id = parseInt(req.params["id"] ?? "", 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid announcement id" }); return; }
+  try {
+    await pool.query(
+      `INSERT INTO announcement_reads (user_id, announcement_id)
+       VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [req.userId, id]
+    );
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to mark read" });
+  }
+});
+
+// ── POST /api/announcements/read-all — persist all current reads ─────────────
+
+router.post("/announcements/read-all", async (req: Request, res: Response) => {
+  if (!req.userId) { res.status(401).json({ error: "Authentication required" }); return; }
+  try {
+    await pool.query(
+      `INSERT INTO announcement_reads (user_id, announcement_id)
+       SELECT $1, id FROM announcements WHERE is_active = true
+       ON CONFLICT DO NOTHING`,
+      [req.userId]
+    );
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to mark all read" });
   }
 });
 

@@ -106,6 +106,33 @@ export function usePaymentGateway() {
     }
   }, []);
 
+  const createCreditsSession = useCallback(async (
+    creditPackageId: string,
+    preferredGateway?: string,
+  ): Promise<PaymentSession | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/payments/create`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ type: "credits", creditPackageId, preferredGateway }),
+      });
+      const data = await res.json() as PaymentSession & { error?: string };
+      if (data.error) throw new Error(data.error);
+      setSession(data);
+      return data;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Payment failed";
+      setError(msg);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const verifyPayment = useCallback(async (gateway: string, ref: string): Promise<{
     confirmed: boolean;
     plan: string;
@@ -131,6 +158,7 @@ export function usePaymentGateway() {
     detectGateway,
     createSubscriptionSession,
     createPaygSession,
+    createCreditsSession,
     verifyPayment,
   };
 }

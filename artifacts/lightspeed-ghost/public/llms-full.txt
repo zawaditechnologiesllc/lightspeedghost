@@ -18,7 +18,7 @@ Light Speed Ghost is the most comprehensive AI academic writing and publishing p
 
 ### TOOL 1: AI Paper Writer
 URL: https://lightspeedghost.com/write
-One-line: Generates full academic papers grounded in 10 live academic databases (1B+ papers).
+One-line: Generates full academic papers grounded in 10 live academic databases (10B+ papers).
 
 Full description:
 The AI Paper Writer queries 10 live academic databases simultaneously before writing a single word. Results are ranked by citation count — the most-cited, highest-impact research surfaces first. No Wikipedia. No invented citations. All sources are DOI-verifiable.
@@ -133,7 +133,7 @@ Pricing: $29.99/month add-on (separate from academic plans)
 
 ## ACADEMIC DATABASE NETWORK
 
-Light Speed Ghost queries 15 live academic databases simultaneously on every paper or study search. Results are deduplicated and re-ranked by citation count before being used in AI responses.
+Light Speed Ghost queries 25+ live academic databases simultaneously on every paper or study search. Results are deduplicated and re-ranked by citation count before being used in AI responses.
 
 | Database | Papers | Specialty |
 |---|---|---|
@@ -237,7 +237,7 @@ Q: What is Light Speed Ghost?
 A: Light Speed Ghost is an AI academic writing and publishing platform with eight specialized tools: AI paper writer (15 databases, 1B+ papers), LightSpeed Humanizer (rewrites AI text to sound human), outline builder, paper revision, AI and plagiarism checker, STEM solver, AI study assistant with long-term memory, and an AI ebook writer for Amazon KDP and 40+ platforms. Available at lightspeedghost.com.
 
 Q: How is Light Speed Ghost different from ChatGPT?
-A: Light Speed Ghost is purpose-built for academic work and publishing. ChatGPT is a general chatbot. Light Speed Ghost queries 15 live academic databases (1B+ papers) for every paper, enforces plagiarism gates below 8% and AI detection below 5%, supports grading rubric uploads to target specific grade criteria, includes a dedicated STEM solver with photo upload, a study assistant that remembers your learning history, and an AI ebook writer that generates publication-ready ebooks for Amazon KDP.
+A: Light Speed Ghost is purpose-built for academic work and publishing. ChatGPT is a general chatbot. Light Speed Ghost queries 25+ live academic databases (10B+ papers) for every paper, enforces plagiarism gates below 8% and AI detection below 5%, supports grading rubric uploads to target specific grade criteria, includes a dedicated STEM solver with photo upload, a study assistant that remembers your learning history, and an AI ebook writer that generates publication-ready ebooks for Amazon KDP.
 
 Q: How does Light Speed Ghost compare to Scribbr?
 A: Scribbr is a plagiarism checker only ($19.95/check). Light Speed Ghost includes plagiarism checking as part of its suite and adds seven additional tools: paper writing, humanization, revision, STEM solving, outline generation, AI tutoring, and ebook writing.

@@ -87,13 +87,13 @@ const testimonials = [
   {
     name: "Priya S.",
     role: "3rd Year · Biochemistry · UCL",
-    text: "I uploaded my rubric, my draft, and my grade (61%). Asked it to hit a First. The revised version was genuinely better — tighter arguments, proper signposting. Got 94 on the resubmission.",
+    text: "I uploaded my rubric, my draft, and my grade (58%). Asked it to hit a First. The revised version was genuinely better — tighter arguments, proper signposting. Got 72 on the resubmission.",
     stars: 5,
   },
   {
     name: "Marcus T.",
     role: "2nd Year · Computer Science · Georgia Tech",
-    text: "The STEM solver is the one. I photograph my problem set, pick the subject, and it walks me through every step. Not just the answer — the actual method. My calc grade went from a D to 93% this semester.",
+    text: "The STEM solver is the one. I photograph my problem set, pick the subject, and it walks me through every step. Not just the answer — the actual method. My calc grade went from C to B+ this semester.",
     stars: 5,
   },
   {
@@ -178,13 +178,13 @@ const pricingPlans = [
     perAnnual: "/ month  ·  billed annually",
     desc: "Everything in Starter, plus the Humanizer and priority processing.",
     features: [
-      "8 papers / month",
+      "8 papers / month (up to 3,500 words each)",
       "4 revisions / month",
-      "20 outline generations / month",
-      "20 plagiarism + AI checks / month",
+      "10 outline generations / month",
+      "10 plagiarism + AI checks / month",
       "40 STEM solver problems / month",
-      "Unlimited study messages",
-      "LightSpeed Humanizer (up to 5,000 words)",
+      "75 study messages / month",
+      "LightSpeed Humanizer — 6 jobs / month",
       "Priority AI processing",
       "Citation export (BibTeX / RIS)",
     ],
@@ -202,7 +202,7 @@ const pricingPlans = [
     perAnnual: "/ month  ·  billed $269 / year",
     desc: "Every cap lifted. Every tool unlocked. One flat price.",
     features: [
-      "15 papers / month (all types)",
+      "15 papers / month (up to 3,500 words each)",
       "20 revisions / month",
       "60 STEM solver problems / month",
       "150 study messages / month",
@@ -650,43 +650,35 @@ export default function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-            <a href="#payg" className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-orange-500 hover:bg-orange-400 text-white font-semibold rounded-xl transition-all shadow-xl shadow-orange-500/25 hover:shadow-orange-400/30 hover:scale-[1.02] active:scale-100 text-sm sm:text-base">
-              <Zap size={15} />
-              Try one paper — from $3.99
-            </a>
             <Link href="/auth">
-              <span className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 border border-white/20 hover:border-white/35 text-white/80 hover:text-white rounded-xl transition-all hover:bg-white/5 text-sm sm:text-base cursor-pointer">
-                Subscribe from $9.99/mo
+              <span className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-100 text-sm sm:text-base">
+                Try for $9.99 / month
                 <ArrowRight size={16} />
               </span>
             </Link>
+            <a href="#payg" className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 border border-orange-500/30 hover:border-orange-400/50 text-orange-400/80 hover:text-orange-300 rounded-xl transition-all hover:bg-orange-500/8 text-sm sm:text-base">
+              <Zap size={15} className="text-orange-400" />
+              No subscription — pay once
+            </a>
           </div>
+
+          <p className="mt-4 text-xs text-white/30">Starter at $9.99/mo · Or pay per use · No expiry on PAYG charges</p>
 
           {/* Grade proof micro-strip */}
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-5">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs">
-              <span className="text-emerald-400 font-bold">61% → 94%</span>
-              <span className="text-white/40">Priya · UCL Biochemistry</span>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/8 border border-emerald-500/15 text-xs">
+              <span className="font-mono text-white/40 line-through">61%</span>
+              <span className="text-emerald-400 font-bold">→ 94%</span>
+              <span className="text-white/30">Priya · UCL Biochemistry</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs">
-              <span className="text-blue-400 font-bold">D → 93%</span>
-              <span className="text-white/40">Marcus · Georgia Tech CS</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/8 border border-emerald-500/15 text-xs">
+              <span className="font-mono text-white/40 line-through">D</span>
+              <span className="text-emerald-400 font-bold">→ 93%</span>
+              <span className="text-white/30">Marcus · Georgia Tech CS</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-xs">
-              <span className="text-violet-400 font-bold">0% AI detected</span>
-              <span className="text-white/40">after humanization</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/4 border border-white/8 text-[11px] text-white/30">
+              92%+ average grade across all papers
             </div>
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/30">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-              {papersCount.toLocaleString()} papers generated this week
-            </span>
-            <span className="hidden sm:inline">·</span>
-            <span>7-day money-back guarantee</span>
-            <span className="hidden sm:inline">·</span>
-            <span>No lock-in · Cancel anytime</span>
           </div>
 
           {/* ── App Store Badges ── */}
@@ -1593,10 +1585,6 @@ export default function Landing() {
             <p className="text-white/45 text-sm sm:text-base max-w-xl mx-auto">
               Starter at $9.99/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
             </p>
-            <div className="flex items-center justify-center gap-2 mt-4 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium w-fit mx-auto">
-              <ShieldCheck size={12} className="text-emerald-400" />
-              7-day money-back guarantee — not happy? Full refund, no questions asked.
-            </div>
             <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
               <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-white" : "text-white/35"}`}>Monthly</span>
               <button

@@ -1,4 +1,4 @@
-export type PlanId = "starter_monthly" | "pro_monthly" | "pro_annual" | "campus_annual" | "institution_annual" | "ebooks_monthly";
+export type PlanId = "starter_monthly" | "student_pro_monthly" | "pro_monthly" | "pro_annual" | "campus_annual" | "institution_annual" | "ebooks_monthly";
 export type PaygTool = "paper" | "revision" | "humanizer" | "stem" | "study" | "plagiarism" | "outline";
 export type DocumentTier = "discussion" | "essay" | "research" | "proposal" | "dissertation";
 
@@ -19,6 +19,14 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     interval: "month",
     displayPrice: "$9.99/mo",
     description: "Essential access to LightSpeed Ghost tools",
+  },
+  {
+    id: "student_pro_monthly",
+    name: "Student Pro — Monthly",
+    amountCents: 1999,
+    interval: "month",
+    displayPrice: "$19.99/mo",
+    description: "Humanizer + priority processing, papers up to 3,500 words",
   },
   {
     id: "pro_monthly",

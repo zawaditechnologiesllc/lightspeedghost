@@ -68,6 +68,32 @@ export async function initReferralTables(): Promise<void> {
   `);
 }
 
+// ── Dynamic settings (admin-adjustable from the settings panel) ───────────────
+
+interface ReferralSettings {
+  referrerDiscountPct: number;
+  friendDiscountPct: number;
+  commissionPct: number;
+}
+
+export async function getReferralSettings(): Promise<ReferralSettings> {
+  const defaults: ReferralSettings = { referrerDiscountPct: 20, friendDiscountPct: 10, commissionPct: 10 };
+  try {
+    const rows = await pool.query<{ key: string; value: string }>(
+      `SELECT key, value FROM system_settings
+       WHERE key IN ('referral_referrer_discount_pct','referral_friend_discount_pct','referral_commission_pct')`,
+    );
+    const map = Object.fromEntries(rows.rows.map((r) => [r.key, parseInt(r.value, 10)]));
+    return {
+      referrerDiscountPct: map.referral_referrer_discount_pct || defaults.referrerDiscountPct,
+      friendDiscountPct:   map.referral_friend_discount_pct   || defaults.friendDiscountPct,
+      commissionPct:       map.referral_commission_pct        || defaults.commissionPct,
+    };
+  } catch {
+    return defaults;
+  }
+}
+
 // ── Called by payments webhook: record conversion + grant referrer a discount ──
 
 export async function maybeRecordReferralCommission(
@@ -81,8 +107,9 @@ export async function maybeRecordReferralCommission(
     );
     if (res.rows.length === 0) return;
 
+    const settings = await getReferralSettings();
     const code = res.rows[0].referral_code;
-    const commissionCents = Math.round(amountCents * 0.10);
+    const commissionCents = Math.round(amountCents * (settings.commissionPct / 100));
 
     await pool.query(
       `INSERT INTO referral_conversions (referral_code, referred_user_id, amount_cents, commission_cents, status)
@@ -100,14 +127,46 @@ export async function maybeRecordReferralCommission(
     const referrerUserId = referrerRes.rows[0].user_id;
     await pool.query(
       `INSERT INTO referral_discounts (referrer_user_id, referral_code, referred_user_id, discount_pct, status)
-       VALUES ($1, $2, $3, 10, 'pending')
+       VALUES ($1, $2, $3, $4, 'pending')
        ON CONFLICT (referred_user_id) DO NOTHING`,
-      [referrerUserId, code, userId],
+      [referrerUserId, code, userId, settings.referrerDiscountPct],
     );
 
-    logger.info({ code, referrerUserId, userId }, "[referral] 10% discount granted to referrer");
+    logger.info({ code, referrerUserId, userId, pct: settings.referrerDiscountPct }, "[referral] discount granted to referrer");
   } catch (err) {
     logger.warn({ err }, "[referral] Failed to record — non-fatal");
+  }
+}
+
+// ── Friend's first-purchase discount: referred users get a % off their first sub ──
+
+export async function maybeApplyFriendDiscount(
+  userId: string,
+  amountCents: number,
+): Promise<{ discountedAmount: number; discountApplied: boolean }> {
+  try {
+    // Was this user referred by someone?
+    const signup = await pool.query<{ referral_code: string }>(
+      `SELECT referral_code FROM referral_signups WHERE referred_user_id = $1 LIMIT 1`,
+      [userId],
+    );
+    if (signup.rows.length === 0) return { discountedAmount: amountCents, discountApplied: false };
+
+    // Only on their FIRST completed subscription payment
+    const paid = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM payments
+       WHERE user_id = $1 AND type = 'subscription' AND status = 'completed'`,
+      [userId],
+    );
+    if (parseInt(paid.rows[0]?.count ?? "0", 10) > 0) {
+      return { discountedAmount: amountCents, discountApplied: false };
+    }
+
+    const settings = await getReferralSettings();
+    const discounted = Math.round(amountCents * (1 - settings.friendDiscountPct / 100));
+    return { discountedAmount: discounted, discountApplied: true };
+  } catch {
+    return { discountedAmount: amountCents, discountApplied: false };
   }
 }
 

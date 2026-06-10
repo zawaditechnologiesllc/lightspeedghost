@@ -194,6 +194,13 @@ interface SystemSettings {
   starter_study: string;
   starter_plagiarism: string;
   starter_outline: string;
+  student_pro_monthly_paper: string;
+  student_pro_monthly_revision: string;
+  student_pro_monthly_humanizer: string;
+  student_pro_monthly_stem: string;
+  student_pro_monthly_study: string;
+  student_pro_monthly_plagiarism: string;
+  student_pro_monthly_outline: string;
 }
 
 interface TrafficData {
@@ -251,14 +258,16 @@ function countryName(code: string): string {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  starter:     "bg-blue-500/12 text-blue-300 border-blue-500/20",
-  pro:         "bg-amber-500/12 text-amber-300 border-amber-500/20",
-  institution: "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
-  campus:      "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
+  starter:             "bg-blue-500/12 text-blue-300 border-blue-500/20",
+  student_pro_monthly: "bg-violet-500/12 text-violet-300 border-violet-500/20",
+  pro:                 "bg-amber-500/12 text-amber-300 border-amber-500/20",
+  institution:         "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
+  campus:              "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
 };
 
 function planDisplayName(plan: string): string {
   if (plan === "campus" || plan === "campus_annual" || plan === "institution" || plan === "institution_annual") return "Institution";
+  if (plan === "student_pro_monthly") return "Student Pro";
   return plan.charAt(0).toUpperCase() + plan.slice(1);
 }
 
@@ -2209,7 +2218,7 @@ export default function Admin() {
                     </SettingsCard>
 
                     {/* Plan limits */}
-                    {(["starter", "pro", "institution"] as const).map((plan) => (
+                    {(["starter", "student_pro_monthly", "pro", "institution"] as const).map((plan) => (
                       <SettingsCard key={plan} title={`${planDisplayName(plan)} Plan Monthly Limits`}>
                         <p className="text-[10px] text-white/30 mb-3">Changes take effect within 30 seconds across all active sessions.</p>
                         <div className="grid grid-cols-2 gap-3">
@@ -2233,6 +2242,27 @@ export default function Admin() {
                         </div>
                       </SettingsCard>
                     ))}
+
+                    {/* Referral program */}
+                    <SettingsCard title="Referral Program">
+                      <p className="text-[10px] text-white/30 mb-3">Discount percentages applied automatically at checkout. Changes take effect within 30 seconds.</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {([
+                          { key: "referral_referrer_discount_pct", label: "Referrer discount %", hint: "Off referrer's next sub per converted referral" },
+                          { key: "referral_friend_discount_pct",   label: "Friend discount %",   hint: "Off referred friend's first subscription" },
+                          { key: "referral_commission_pct",        label: "Commission %",        hint: "Tracked per conversion for payouts/reporting" },
+                        ] as { key: string; label: string; hint: string }[]).map(({ key, label, hint }) => (
+                          <div key={key}>
+                            <label className="block text-xs text-white/40 mb-1.5">{label}</label>
+                            <input type="number" min="0" max="100" value={(settings as unknown as Record<string, string>)[key] ?? ""}
+                              onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
+                              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
+                            />
+                            <p className="text-[9px] text-white/25 mt-1 leading-snug">{hint}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </SettingsCard>
                   </div>
                 ) : <Empty text="Settings unavailable" />}
               </div>
@@ -2281,6 +2311,7 @@ export default function Admin() {
               <select value={planEditValue} onChange={(e) => setPlanEditValue(e.target.value)}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
                 <option value="starter">Starter</option>
+                <option value="student_pro_monthly">Student Pro</option>
                 <option value="pro">Pro</option>
                 <option value="institution">Institution</option>
               </select>

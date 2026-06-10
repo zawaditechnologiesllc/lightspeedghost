@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useGetDocumentStats } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/apiFetch";
+import { ManageFundsModal } from "@/components/ManageFundsModal";
 
 const quickActions = [
   {
@@ -81,6 +82,7 @@ export default function Dashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [paygCount, setPaygCount] = useState<number>(0);
   const [plan, setPlan] = useState<string>("free");
+  const [plansOpen, setPlansOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -173,7 +175,7 @@ export default function Dashboard() {
             {[
               { step: "1", title: "Write your first paper", desc: "Upload a rubric for best results", href: "/write", color: "text-blue-400 border-blue-500/20 bg-blue-500/5" },
               { step: "2", title: "Check for AI & plagiarism", desc: "See your similarity and AI score", href: "/plagiarism", color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" },
-              { step: "3", title: "Share & earn discounts", desc: "Refer a friend, get 10% off", href: "#refer", color: "text-purple-400 border-purple-500/20 bg-purple-500/5" },
+              { step: "3", title: "Share & earn discounts", desc: "Refer a friend, get 20% off", href: "#refer", color: "text-purple-400 border-purple-500/20 bg-purple-500/5" },
             ].map(({ step, title, desc, href, color }) => (
               <Link key={step} href={href}>
                 <div className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-80 transition-opacity ${color}`}>
@@ -227,12 +229,13 @@ export default function Dashboard() {
                 A Starter subscription ($9.99/mo) includes 3 papers + revisions + STEM + study — likely cheaper than what you're paying per paper.
               </p>
             </div>
-            <Link href="/#pricing">
-              <button className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl text-xs transition-colors">
-                <TrendingUp size={12} />
-                See plans
-              </button>
-            </Link>
+            <button
+              onClick={() => setPlansOpen(true)}
+              className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl text-xs transition-colors"
+            >
+              <TrendingUp size={12} />
+              See plans
+            </button>
           </div>
         </div>
       )}
@@ -363,6 +366,9 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Plans & funds popup — opened from the upgrade nudge */}
+      <ManageFundsModal open={plansOpen} onClose={() => setPlansOpen(false)} />
     </div>
   );
 }

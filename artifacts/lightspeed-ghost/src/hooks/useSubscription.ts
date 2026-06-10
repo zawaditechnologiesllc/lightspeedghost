@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
-export type PlanTier = "starter" | "pro" | "campus" | "institution" | "payg" | null;
+export type PlanTier = "starter" | "student_pro_monthly" | "pro" | "campus" | "institution" | "payg" | null;
 
 export interface UsageData {
   paper: number;
@@ -24,6 +24,15 @@ const PLAN_LIMITS: Record<string, Partial<Record<keyof UsageData, number | null>
     study:      20,
     plagiarism: 5,
     outline:    5,
+  },
+  student_pro_monthly: {
+    paper:      8,   // up to 3,500 words each — longer papers via PAYG
+    revision:   4,
+    humanizer:  6,
+    stem:       40,
+    study:      75,
+    plagiarism: 10,
+    outline:    10,
   },
   pro: {
     paper:      15,
@@ -116,6 +125,7 @@ export function useSubscription() {
 
   function planDisplayName(): string {
     if (!plan || plan === "starter") return "Starter";
+    if (plan === "student_pro_monthly") return "Student Pro";
     if (plan === "pro") return "Pro";
     if (plan === "campus") return "Institution";
     if (plan === "payg") return "Pay As You Go";

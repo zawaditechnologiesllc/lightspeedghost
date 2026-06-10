@@ -81,6 +81,7 @@ export function CheckoutModal({
     detectGateway,
     createSubscriptionSession,
     createPaygSession,
+    createCreditsSession,
   } = usePaymentGateway();
 
   const { balanceCents, spendCredits, refresh: refreshCredits } = useCredits();
@@ -175,8 +176,8 @@ export function CheckoutModal({
         session = await createSubscriptionSession(plan, seats, preferred);
       } else if (mode === "payg" && tool) {
         session = await createPaygSession(tool, tier, preferred);
-      } else if (mode === "credits") {
-        session = await createPaygSession("study" as PaygTool, undefined, preferred);
+      } else if (mode === "credits" && creditPackageId) {
+        session = await createCreditsSession(creditPackageId, preferred);
       }
 
       if (session?.checkoutUrl) {
