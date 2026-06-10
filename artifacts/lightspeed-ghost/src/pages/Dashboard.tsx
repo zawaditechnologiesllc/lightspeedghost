@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   PenLine, BookOpen, Files, ShieldCheck, FlaskConical,
   GraduationCap, TrendingUp, Clock, ArrowRight, Sparkles, Zap, Wand2,
-  Copy, Check, Gift, Wallet,
+  Copy, Check, Gift, Wallet, X,
 } from "lucide-react";
 import { useGetDocumentStats } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/apiFetch";

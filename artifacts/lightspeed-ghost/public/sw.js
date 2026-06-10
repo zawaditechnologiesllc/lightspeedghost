@@ -1,7 +1,12 @@
-const CACHE_NAME = "lsg-v2";
+// lsg-v3 — cache strategy rewritten to eliminate stale-HTML blank pages:
+//  • index.html is NEVER pre-cached or served from cache. Serving a stale
+//    shell points the browser at old hashed chunks that no longer exist on
+//    the CDN after a deploy → white screen. Navigations are network-first
+//    with an inline offline screen as the only fallback.
+//  • /assets/* (content-hashed, immutable) are cache-first.
+//  • Everything else same-origin is network-first with cache fallback.
+const CACHE_NAME = "lsg-v3";
 const STATIC_URLS = [
-  "/",
-  "/index.html",
   "/manifest.json",
   "/favicon.svg",
   "/icon-192.png",
@@ -49,46 +54,54 @@ self.addEventListener("fetch", (event) => {
 
   if (request.method !== "GET") return;
 
+  // Never intercept API calls or cross-origin requests
   if (url.pathname.includes("/api/") || url.hostname !== self.location.hostname) {
     return;
   }
 
+  // Navigations: always go to the network so a fresh deploy is picked up
+  // immediately. Cache is never consulted for HTML — only the inline offline
+  // screen if the network is truly unreachable.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((res) => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
-          }
-          return res;
+      fetch(request).catch(() =>
+        new Response(OFFLINE_HTML, {
+          status: 200,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
         })
-        .catch(async () => {
-          const cached = await caches.match(request);
-          if (cached) return cached;
-          const indexCached = await caches.match("/index.html");
-          if (indexCached) return indexCached;
-          return new Response(OFFLINE_HTML, {
-            status: 200,
-            headers: { "Content-Type": "text/html; charset=utf-8" },
-          });
-        })
+      )
     );
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const networkFetch = fetch(request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type !== "opaque") {
+  // Hashed build assets are immutable — cache-first is safe and fast.
+  if (url.pathname.startsWith("/assets/")) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
-        })
-        .catch(() => cached ?? new Response("", { status: 503 }));
-      return cached || networkFetch;
-    })
+        });
+      })
+    );
+    return;
+  }
+
+  // Other same-origin GETs (manifest, icons, fonts): network-first so updates
+  // propagate, falling back to cache when offline.
+  event.respondWith(
+    fetch(request)
+      .then((response) => {
+        if (response && response.status === 200 && response.type !== "opaque") {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(request).then((cached) => cached ?? new Response("", { status: 503 })))
   );
 });

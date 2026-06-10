@@ -633,17 +633,11 @@
         z-index: 999998 !important;
       }
 
-      /* On mobile: push Tidio button above the bottom quick-nav bar.
-         84px clears the 72px nav + breathing room; the in-app
-         MutationObserver re-asserts this if Tidio rewrites inline styles. */
-      @media (max-width: 1023px) {
-        #tidio-chat-iframe,
-        #tidio-chat iframe,
-        #tidio-chat-code > iframe,
-        .tidio-1 iframe {
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 84px) !important;
-        }
-      }
+      /* Mobile bubble lift is handled in-app (App.tsx TidioChat): a
+         MutationObserver applies transform: translateY(-84px) inline with
+         !important while the iframe is in bubble state. CSS bottom rules are
+         intentionally NOT used here — Tidio rewrites inline `bottom` and a
+         CSS rule would double-shift when combined with the transform. */
     </style>
   </head>
   <body>
