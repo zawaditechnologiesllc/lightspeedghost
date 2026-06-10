@@ -9,7 +9,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
   starter: {
     paper:      3,
     revision:   1,
-    humanizer:  0,   // locked on Starter — requires Student Pro, Pro, or PAYG
+    humanizer:  0,   // locked on Starter — requires Pro or PAYG
     stem:       15,  // per month
     study:      20,  // per month
     plagiarism: 5,   // per month
@@ -20,11 +20,11 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
   student_pro_monthly: {
     paper:      8,
     revision:   4,
-    humanizer:  8,   // humanizer unlocked at Student Pro
+    humanizer:  6,
     stem:       40,
-    study:      null, // unlimited
-    plagiarism: 20,
-    outline:    20,
+    study:      75,
+    plagiarism: 10,
+    outline:    10,
     assistant:  150,
     ebook:      0,
   },

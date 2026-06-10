@@ -12,7 +12,7 @@ import { analyseTextPlagiarism } from "../lib/textAnalysis";
 import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection.js";
 import { recordUsage } from "../lib/apiCost";
 import { eq, desc, and, isNotNull } from "drizzle-orm";
-import { trackUsage, enforceLimit } from "../lib/usageTracker";
+import { trackUsage, enforceLimit, getUserPlan } from "../lib/usageTracker";
 import { recordSearchResults, recordQualitySignal } from "../lib/learningEngine";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
@@ -573,17 +573,6 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
   const heartbeat = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* ignore */ } }, 10_000);
 
   try {
-    const quota = await enforceLimit(req.userId!, "paper");
-    if (!quota.allowed) {
-      send("error", {
-        type: "quota",
-        message: `You've used all ${quota.limit} paper generations for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
-      });
-      res.end();
-      clearInterval(heartbeat);
-      return;
-    }
-
     const body = req.body as {
       topic: string;
       subject: string;
@@ -604,6 +593,46 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     };
 
     const requestedWords = body.wordCount ?? 1500;
+
+    // 3,500-word gate: subscription plans cover papers up to 3,500 words.
+    // Longer papers require a PAYG credit spend (the frontend spends credits
+    // before calling this endpoint — we confirm via a recent credit_transactions row).
+    if (requestedWords > 3500) {
+      const userPlan = await getUserPlan(req.userId!);
+      if (userPlan !== "institution") {
+        const { rows: paygRows } = await pool.query<{ count: string }>(
+          `SELECT COUNT(*) as count FROM credit_transactions
+           WHERE user_id = $1 AND type = 'spend'
+           AND description LIKE 'Paper Generation%'
+           AND created_at > NOW() - INTERVAL '15 minutes'`,
+          [req.userId!]
+        );
+        if (parseInt(paygRows[0]?.count ?? "0", 10) === 0) {
+          send("error", {
+            type: "payg_required",
+            message: "Papers over 3,500 words require a Pay-As-You-Go purchase. Your subscription plan covers papers up to 3,500 words.",
+          });
+          res.end();
+          clearInterval(heartbeat);
+          return;
+        }
+      }
+      // PAYG confirmed (or institution) — track without enforcing quota
+      await trackUsage(req.userId!, "paper");
+    } else {
+      // Standard subscription quota for papers ≤ 3,500 words
+      const quota = await enforceLimit(req.userId!, "paper");
+      if (!quota.allowed) {
+        send("error", {
+          type: "quota",
+          message: `You've used all ${quota.limit} paper generations for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+        });
+        res.end();
+        clearInterval(heartbeat);
+        return;
+      }
+    }
+
     // Target = exactly what was requested. Max = requested + 5%. Both are hard limits.
     const targetWords = requestedWords;
     const maxWords = Math.ceil(requestedWords * 1.05);

@@ -258,11 +258,11 @@ function countryName(code: string): string {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  starter:              "bg-blue-500/12 text-blue-300 border-blue-500/20",
-  student_pro_monthly:  "bg-violet-500/12 text-violet-300 border-violet-500/20",
-  pro:                  "bg-amber-500/12 text-amber-300 border-amber-500/20",
-  institution:          "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
-  campus:               "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
+  starter:             "bg-blue-500/12 text-blue-300 border-blue-500/20",
+  student_pro_monthly: "bg-violet-500/12 text-violet-300 border-violet-500/20",
+  pro:                 "bg-amber-500/12 text-amber-300 border-amber-500/20",
+  institution:         "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
+  campus:              "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
 };
 
 function planDisplayName(plan: string): string {

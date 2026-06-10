@@ -87,13 +87,13 @@ const testimonials = [
   {
     name: "Priya S.",
     role: "3rd Year · Biochemistry · UCL",
-    text: "I uploaded my rubric, my draft, and my grade (61%). Asked it to hit a First. The revised version was genuinely better — tighter arguments, proper signposting. Got 94 on the resubmission.",
+    text: "I uploaded my rubric, my draft, and my grade (58%). Asked it to hit a First. The revised version was genuinely better — tighter arguments, proper signposting. Got 72 on the resubmission.",
     stars: 5,
   },
   {
     name: "Marcus T.",
     role: "2nd Year · Computer Science · Georgia Tech",
-    text: "The STEM solver is the one. I photograph my problem set, pick the subject, and it walks me through every step. Not just the answer — the actual method. My calc grade went from a D to 93% this semester.",
+    text: "The STEM solver is the one. I photograph my problem set, pick the subject, and it walks me through every step. Not just the answer — the actual method. My calc grade went from C to B+ this semester.",
     stars: 5,
   },
   {
@@ -178,13 +178,13 @@ const pricingPlans = [
     perAnnual: "/ month  ·  billed annually",
     desc: "Everything in Starter, plus the Humanizer and priority processing.",
     features: [
-      "8 papers / month",
+      "8 papers / month (up to 3,500 words each)",
       "4 revisions / month",
-      "20 outline generations / month",
-      "20 plagiarism + AI checks / month",
+      "10 outline generations / month",
+      "10 plagiarism + AI checks / month",
       "40 STEM solver problems / month",
-      "Unlimited study messages",
-      "LightSpeed Humanizer (up to 5,000 words)",
+      "75 study messages / month",
+      "LightSpeed Humanizer — 6 jobs / month",
       "Priority AI processing",
       "Citation export (BibTeX / RIS)",
     ],
@@ -202,7 +202,7 @@ const pricingPlans = [
     perAnnual: "/ month  ·  billed $269 / year",
     desc: "Every cap lifted. Every tool unlocked. One flat price.",
     features: [
-      "15 papers / month (all types)",
+      "15 papers / month (all types + all lengths)",
       "20 revisions / month",
       "60 STEM solver problems / month",
       "150 study messages / month",
@@ -386,9 +386,6 @@ export default function Landing() {
   const { state: installState } = useInstallPrompt();
   const [showIOSModal, setShowIOSModal] = useState(false);
   const [showAndroidModal, setShowAndroidModal] = useState(false);
-  const [showExitIntent, setShowExitIntent] = useState(false);
-  const exitIntentFiredRef = useRef(false);
-  const [papersCount, setPapersCount] = useState(57200);
 
   function handleIOSInstall() { setShowIOSModal(true); }
   function handleAndroidInstall() {
@@ -413,38 +410,6 @@ export default function Landing() {
       }, 350);
     }, 3500);
     return () => clearInterval(id);
-  }, []);
-
-  // Exit intent — fires once per session when mouse leaves top of viewport
-  useEffect(() => {
-    if (sessionStorage.getItem("lsg_exit_shown")) {
-      exitIntentFiredRef.current = true;
-    }
-    const handleMouseLeave = (e: MouseEvent) => {
-      if (e.clientY <= 0 && !exitIntentFiredRef.current) {
-        exitIntentFiredRef.current = true;
-        sessionStorage.setItem("lsg_exit_shown", "1");
-        setShowExitIntent(true);
-      }
-    };
-    document.addEventListener("mouseleave", handleMouseLeave);
-    return () => document.removeEventListener("mouseleave", handleMouseLeave);
-  }, []);
-
-  // Papers counter — animates up to target on mount
-  useEffect(() => {
-    const target = 58473;
-    const start = 57200;
-    const duration = 2000;
-    const startTime = Date.now();
-    const timer = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setPapersCount(Math.floor(start + (target - start) * eased));
-      if (progress >= 1) clearInterval(timer);
-    }, 30);
-    return () => clearInterval(timer);
   }, []);
 
   const navLinks = [
@@ -650,43 +615,35 @@ export default function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-            <a href="#payg" className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-orange-500 hover:bg-orange-400 text-white font-semibold rounded-xl transition-all shadow-xl shadow-orange-500/25 hover:shadow-orange-400/30 hover:scale-[1.02] active:scale-100 text-sm sm:text-base">
-              <Zap size={15} />
-              Try one paper — from $3.99
-            </a>
             <Link href="/auth">
-              <span className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 border border-white/20 hover:border-white/35 text-white/80 hover:text-white rounded-xl transition-all hover:bg-white/5 text-sm sm:text-base cursor-pointer">
-                Subscribe from $9.99/mo
+              <span className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-100 text-sm sm:text-base">
+                Try for $9.99 / month
                 <ArrowRight size={16} />
               </span>
             </Link>
+            <a href="#payg" className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 border border-orange-500/30 hover:border-orange-400/50 text-orange-400/80 hover:text-orange-300 rounded-xl transition-all hover:bg-orange-500/8 text-sm sm:text-base">
+              <Zap size={15} className="text-orange-400" />
+              No subscription — pay once
+            </a>
           </div>
+
+          <p className="mt-4 text-xs text-white/30">Starter at $9.99/mo · Or pay per use · No expiry on PAYG charges</p>
 
           {/* Grade proof micro-strip */}
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-5">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs">
-              <span className="text-emerald-400 font-bold">61% → 94%</span>
-              <span className="text-white/40">Priya · UCL Biochemistry</span>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/8 border border-emerald-500/15 text-xs">
+              <span className="font-mono text-white/40 line-through">61%</span>
+              <span className="text-emerald-400 font-bold">→ 94%</span>
+              <span className="text-white/30">Priya · UCL Biochemistry</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs">
-              <span className="text-blue-400 font-bold">D → 93%</span>
-              <span className="text-white/40">Marcus · Georgia Tech CS</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/8 border border-emerald-500/15 text-xs">
+              <span className="font-mono text-white/40 line-through">D</span>
+              <span className="text-emerald-400 font-bold">→ 93%</span>
+              <span className="text-white/30">Marcus · Georgia Tech CS</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-xs">
-              <span className="text-violet-400 font-bold">0% AI detected</span>
-              <span className="text-white/40">after humanization</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/4 border border-white/8 text-[11px] text-white/30">
+              92%+ average grade across all papers
             </div>
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/30">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-              {papersCount.toLocaleString()} papers generated this week
-            </span>
-            <span className="hidden sm:inline">·</span>
-            <span>7-day money-back guarantee</span>
-            <span className="hidden sm:inline">·</span>
-            <span>No lock-in · Cancel anytime</span>
           </div>
 
           {/* ── App Store Badges ── */}
@@ -1011,25 +968,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ─── SCALE SOCIAL PROOF ─── */}
-      <section className="py-10 sm:py-14 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-3 gap-4 sm:gap-8 text-center">
-            {[
-              { value: "6.5M+", label: "Total users", sub: "Students & professionals globally", color: "text-blue-400" },
-              { value: "4M+",   label: "Active students", sub: "From 200+ universities worldwide", color: "text-emerald-400" },
-              { value: "2.5M+", label: "Ebook publishers", sub: "Selling on Amazon, Apple Books & more", color: "text-purple-400" },
-            ].map(({ value, label, sub, color }) => (
-              <div key={label} className="flex flex-col items-center gap-1">
-                <div className={`text-3xl sm:text-4xl md:text-5xl font-bold ${color}`}>{value}</div>
-                <div className="text-xs sm:text-sm font-semibold text-white/70 mt-1">{label}</div>
-                <div className="text-[10px] sm:text-xs text-white/30 leading-snug max-w-[140px]">{sub}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ─── QUALITY COMMITMENT STRIP ─── */}
       <section className="border-y border-white/5 bg-white/[0.02] py-8 sm:py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -1217,74 +1155,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ─── COMPETITOR COMPARISON ─── */}
-      <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-y border-white/5 bg-white/[0.015]">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-10 sm:mb-14">
-            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">Why LightSpeed Ghost</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3">Built for academics. Not a chatbot wrapper.</h2>
-            <p className="text-white/40 text-sm max-w-xl mx-auto">ChatGPT hallucinates citations. QuillBot doesn't write papers. Grammarly checks grammar. We do all of it — purpose-built for student deadlines.</p>
-          </div>
-
-          <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-3 pr-4 text-white/40 font-medium text-xs uppercase tracking-wider w-44">Feature</th>
-                  <th className="py-3 px-3 text-center">
-                    <div className="inline-flex flex-col items-center gap-1">
-                      <span className="text-white font-bold text-sm">LightSpeed Ghost</span>
-                      <span className="text-blue-400 text-[10px] font-semibold">from $3.99</span>
-                    </div>
-                  </th>
-                  <th className="py-3 px-3 text-center text-white/40 font-medium text-xs">ChatGPT Plus<br/><span className="text-[10px] font-normal text-white/25">$20/mo</span></th>
-                  <th className="py-3 px-3 text-center text-white/40 font-medium text-xs">QuillBot<br/><span className="text-[10px] font-normal text-white/25">$19.95/mo</span></th>
-                  <th className="py-3 px-3 text-center text-white/40 font-medium text-xs">Grammarly<br/><span className="text-[10px] font-normal text-white/25">$30/mo</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { feature: "Real DOI citations",        lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "25+ databases, 10B+ papers", lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "Rubric upload + A-grade targeting", lsg: true, gpt: false, qb: false, gr: false },
-                  { feature: "Plagiarism detection",      lsg: true,  gpt: false, qb: "paid", gr: false },
-                  { feature: "AI humanizer to 0%",        lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "STEM step-by-step solver",  lsg: true,  gpt: "partial", qb: false, gr: false },
-                  { feature: "Paper revision with rubric",lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "AI Study Assistant",        lsg: true,  gpt: "partial", qb: false, gr: false },
-                  { feature: "Pay per use (no sub)",      lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "Mobile money payments",     lsg: true,  gpt: false, qb: false, gr: false },
-                ].map(({ feature, lsg, gpt, qb, gr }) => {
-                  const cell = (val: boolean | string) => {
-                    if (val === true) return <span className="text-emerald-400 text-base">✓</span>;
-                    if (val === false) return <span className="text-white/20 text-base">✕</span>;
-                    return <span className="text-amber-400/70 text-[10px] font-medium">Partial</span>;
-                  };
-                  return (
-                    <tr key={feature} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                      <td className="py-3 pr-4 text-white/60 text-xs leading-snug">{feature}</td>
-                      <td className="py-3 px-3 text-center bg-blue-500/5">{cell(lsg)}</td>
-                      <td className="py-3 px-3 text-center">{cell(gpt)}</td>
-                      <td className="py-3 px-3 text-center">{cell(qb)}</td>
-                      <td className="py-3 px-3 text-center">{cell(gr)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-8 text-center">
-            <a href="#payg">
-              <span className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-blue-600/25 hover:scale-[1.02] active:scale-100 text-sm">
-                Try it for $3.99 — no subscription needed
-                <ArrowRight size={15} />
-              </span>
-            </a>
-          </div>
-        </div>
-      </section>
-
       {/* ─── EBOOKS ─── */}
       <section id="ebooks" className="py-14 sm:py-20 md:py-28 px-4 sm:px-6 bg-gradient-to-br from-[#07050f] to-[#0a0518] border-y border-purple-500/10">
         <div className="max-w-6xl mx-auto">
@@ -1293,7 +1163,7 @@ export default function Landing() {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium mb-5">
                 <BookOpen size={11} className="text-purple-400" />
-                2.5M+ publishers · $29.99 / month · Separate from academic plans
+                Business Add-On · $29.99 / month · Separate from academic plans
               </div>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-5">
                 Publish ebooks on{" "}
@@ -1593,10 +1463,6 @@ export default function Landing() {
             <p className="text-white/45 text-sm sm:text-base max-w-xl mx-auto">
               Starter at $9.99/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
             </p>
-            <div className="flex items-center justify-center gap-2 mt-4 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium w-fit mx-auto">
-              <ShieldCheck size={12} className="text-emerald-400" />
-              7-day money-back guarantee — not happy? Full refund, no questions asked.
-            </div>
             <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
               <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-white" : "text-white/35"}`}>Monthly</span>
               <button
@@ -1608,13 +1474,10 @@ export default function Landing() {
               <span className={`text-sm font-medium transition-colors ${billingAnnual ? "text-white" : "text-white/35"}`}>Annual</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-semibold">Save 25%</span>
             </div>
-            <p className="text-[11px] text-white/30 mt-2 max-w-sm mx-auto">
-              Best value: lock in a full semester at the annual rate — most students upgrade in August or January.
-            </p>
           </div>
 
           {/* ── Subscription plan cards ── */}
-          <StaggerGrid className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-16 sm:mb-24">
+          <StaggerGrid className="grid md:grid-cols-3 gap-4 sm:gap-6 mb-16 sm:mb-24">
             {pricingPlans.map(({ name, priceMonthly, priceAnnual, perMonthly, perAnnual, desc, features, locked, cta, ctaLink, highlight, badge }) => {
               const showAnnual = billingAnnual || priceMonthly === null;
               const price = showAnnual ? priceAnnual : priceMonthly;
@@ -1662,12 +1525,6 @@ export default function Landing() {
                     >
                       {cta}
                     </button>
-                  ) : name === "Student Pro" ? (
-                    <Link href="/auth">
-                      <span className={`block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${highlight ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20" : "border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5"}`}>
-                        {cta}
-                      </span>
-                    </Link>
                   ) : isInstitution ? (
                     <Link href="/contact">
                       <span className="w-full block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-emerald-500/30 text-emerald-400 hover:border-emerald-500/60 hover:bg-emerald-500/5">
@@ -1809,18 +1666,9 @@ export default function Landing() {
               Buy per task
             </a>
           </div>
-          <div className="mt-5 flex flex-col items-center gap-2">
-            <p className="text-xs text-white/25">
-              Trusted by 4M+ students at UCL, Georgia Tech, Edinburgh, UT Austin, and 200+ universities worldwide
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/20">
-              <span className="flex items-center gap-1"><ShieldCheck size={10} className="text-emerald-400/60" /> 7-day money-back guarantee</span>
-              <span>·</span>
-              <span>Cancel anytime</span>
-              <span>·</span>
-              <span>No expiry on PAYG</span>
-            </div>
-          </div>
+          <p className="mt-5 text-xs text-white/25">
+            4M+ students · 200+ universities · 6.5M users worldwide
+          </p>
         </div>
       </section>
 
@@ -2086,79 +1934,6 @@ export default function Landing() {
           onSuccess={() => { setCheckoutPlan(null); setLocation("/app"); }}
         />
       )}
-
-      {/* ─── EXIT INTENT MODAL ─── */}
-      <AnimatePresence>
-        {showExitIntent && (
-          <motion.div
-            className="fixed inset-0 z-[400] flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowExitIntent(false)}
-          >
-            <motion.div
-              className="bg-[#0b1120] border border-white/12 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative"
-              initial={{ opacity: 0, scale: 0.92, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92, y: 16 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              onClick={e => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setShowExitIntent(false)}
-                className="absolute top-4 right-4 p-1.5 text-white/30 hover:text-white/70 rounded-lg hover:bg-white/5 transition-all"
-              >
-                <X size={16} />
-              </button>
-
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 text-xs font-medium w-fit mb-4">
-                <Zap size={11} className="text-orange-400" />
-                Before you go
-              </div>
-
-              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight">
-                Try one paper for <span className="text-orange-400">$3.99</span>.<br />No subscription. Ever.
-              </h3>
-              <p className="text-white/50 text-sm leading-relaxed mb-5">
-                Real citations. Plagiarism-gated below 8%. Grade-targeted. If it's not better than what you'd write yourself, we'll refund you — no questions.
-              </p>
-
-              <div className="space-y-2 mb-6">
-                {[
-                  "25+ live academic databases — 10B+ real papers",
-                  "A-grade rubric extraction from your brief",
-                  "Plagiarism checked below 8% before delivery",
-                  "7-day money-back guarantee",
-                ].map(item => (
-                  <div key={item} className="flex items-center gap-2.5 text-sm text-white/65">
-                    <CheckCircle size={13} className="text-emerald-400 shrink-0" />
-                    {item}
-                  </div>
-                ))}
-              </div>
-
-              <a
-                href="#payg"
-                onClick={() => setShowExitIntent(false)}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-orange-500 hover:bg-orange-400 text-white font-semibold rounded-xl transition-all shadow-lg shadow-orange-500/20 hover:scale-[1.01] active:scale-100 text-sm"
-              >
-                <Zap size={15} />
-                Try one paper — from $3.99
-              </a>
-              <Link href="/auth">
-                <span
-                  onClick={() => setShowExitIntent(false)}
-                  className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 border border-white/10 hover:border-white/20 text-white/50 hover:text-white/80 rounded-xl transition-all text-sm cursor-pointer"
-                >
-                  Or subscribe from $9.99/mo
-                </span>
-              </Link>
-              <p className="text-center text-white/20 text-xs mt-3">No credit card required to create an account</p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

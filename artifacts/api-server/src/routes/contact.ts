@@ -58,19 +58,49 @@ router.post("/contact/enterprise", async (req: Request, res: Response) => {
     );
     const leadId = rows[0]?.id;
 
-    // ── Admin notification (fire-and-forget) ──────────────────────────────────
-    const adminEmail = process.env.ADMIN_EMAIL ?? process.env.EMAIL_FROM ?? "hello@lightspeedghost.com";
+    const adminEmail = process.env["ADMIN_EMAIL"] ?? process.env["EMAIL_FROM"] ?? "hello@lightspeedghost.com";
     sendEmail({
       to: adminEmail,
       subject: `New enterprise enquiry — ${institution.trim()} (${studentCount.trim()} students)`,
-      html: adminNotificationEmail({ leadId, institution: institution.trim(), name: name.trim(), email: email.trim(), role: role.trim(), studentCount: studentCount.trim(), message: (message ?? "").trim() }),
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0a12;font-family:sans-serif;color:#e2e8f0">
+  <div style="max-width:560px;margin:40px auto;padding:0 20px">
+    <div style="background:#111827;border:1px solid #1e293b;border-radius:16px;padding:36px 32px">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#3b82f6;text-transform:uppercase;letter-spacing:0.1em">New Enterprise Lead #${leadId}</p>
+      <h1 style="margin:8px 0 20px;font-size:20px;font-weight:700;color:#f1f5f9">${institution.trim()}</h1>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <tr><td style="padding:6px 0;color:#64748b;width:130px">Contact</td><td style="padding:6px 0;color:#e2e8f0;font-weight:500">${name.trim()}</td></tr>
+        <tr><td style="padding:6px 0;color:#64748b">Email</td><td style="padding:6px 0"><a href="mailto:${email.trim()}" style="color:#3b82f6">${email.trim()}</a></td></tr>
+        <tr><td style="padding:6px 0;color:#64748b">Role</td><td style="padding:6px 0;color:#e2e8f0">${role.trim()}</td></tr>
+        <tr><td style="padding:6px 0;color:#64748b">Students</td><td style="padding:6px 0;color:#e2e8f0;font-weight:600">${studentCount.trim()}</td></tr>
+      </table>
+      ${(message ?? "").trim() ? `<div style="margin-top:16px;padding:14px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;font-size:13px;color:#94a3b8">${(message ?? "").trim()}</div>` : ""}
+    </div>
+  </div>
+</body></html>`,
     }).catch(() => {});
 
-    // ── Confirmation to the lead (fire-and-forget) ────────────────────────────
     sendEmail({
       to: email.trim(),
       subject: "We received your LightSpeed Ghost enterprise enquiry",
-      html: leadConfirmationEmail({ name: name.trim(), institution: institution.trim(), studentCount: studentCount.trim() }),
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0a12;font-family:sans-serif;color:#e2e8f0">
+  <div style="max-width:560px;margin:40px auto;padding:0 20px">
+    <div style="background:#111827;border:1px solid #1e293b;border-radius:16px;padding:36px 32px">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#3b82f6;text-transform:uppercase;letter-spacing:0.1em">LightSpeed Ghost · Enterprise</p>
+      <h1 style="margin:8px 0 16px;font-size:22px;font-weight:700;color:#f1f5f9">We've received your enquiry, ${name.trim()} 👋</h1>
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#94a3b8">
+        Thank you for reaching out about LightSpeed Ghost for <strong style="color:#e2e8f0">${institution.trim()}</strong>.
+        We'll review your enquiry and get back to you within <strong style="color:#e2e8f0">one business day</strong>
+        with a custom proposal for ${studentCount.trim()} students.
+      </p>
+      <p style="margin:0 0 20px;font-size:13px;color:#64748b">
+        Need something sooner? Email us at <a href="mailto:enterprise@lightspeedghost.com" style="color:#3b82f6">enterprise@lightspeedghost.com</a>
+      </p>
+      <a href="https://lightspeedghost.com/enterprise" style="display:inline-block;background:#1e293b;border:1px solid #334155;color:#94a3b8;font-size:13px;padding:10px 20px;border-radius:8px;text-decoration:none">Back to Enterprise page →</a>
+    </div>
+  </div>
+</body></html>`,
     }).catch(() => {});
 
     logger.info({ leadId, institution, email }, "[contact] Enterprise lead saved");
@@ -148,76 +178,5 @@ router.patch("/contact/enterprise/:id/status", async (req: Request, res: Respons
     res.status(500).json({ error: "Failed to update status" });
   }
 });
-
-// ── Email templates ───────────────────────────────────────────────────────────
-
-function adminNotificationEmail(opts: {
-  leadId?: number;
-  institution: string;
-  name: string;
-  email: string;
-  role: string;
-  studentCount: string;
-  message: string;
-}): string {
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#0a0a12;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e2e8f0">
-  <div style="max-width:560px;margin:40px auto;padding:0 20px">
-    <div style="background:#111827;border:1px solid #1e293b;border-radius:16px;padding:36px 32px">
-      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#3b82f6;text-transform:uppercase;letter-spacing:0.1em">🏫 New Enterprise Lead #${opts.leadId ?? "–"}</p>
-      <h1 style="margin:8px 0 20px;font-size:20px;font-weight:700;color:#f1f5f9">${opts.institution}</h1>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <tr><td style="padding:6px 0;color:#64748b;width:130px">Contact</td><td style="padding:6px 0;color:#e2e8f0;font-weight:500">${opts.name}</td></tr>
-        <tr><td style="padding:6px 0;color:#64748b">Email</td><td style="padding:6px 0"><a href="mailto:${opts.email}" style="color:#3b82f6">${opts.email}</a></td></tr>
-        <tr><td style="padding:6px 0;color:#64748b">Role</td><td style="padding:6px 0;color:#e2e8f0">${opts.role}</td></tr>
-        <tr><td style="padding:6px 0;color:#64748b">Students</td><td style="padding:6px 0;color:#e2e8f0;font-weight:600">${opts.studentCount}</td></tr>
-      </table>
-      ${opts.message ? `<div style="margin-top:16px;padding:14px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;font-size:13px;color:#94a3b8;line-height:1.7">${opts.message}</div>` : ""}
-      <div style="margin-top:24px">
-        <a href="https://lightspeedghost.com/mwaramuriuki-login" style="display:inline-block;background:#3b82f6;color:#fff;font-size:13px;font-weight:600;padding:10px 20px;border-radius:8px;text-decoration:none">View in Admin Dashboard →</a>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
-}
-
-function leadConfirmationEmail(opts: {
-  name: string;
-  institution: string;
-  studentCount: string;
-}): string {
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#0a0a12;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e2e8f0">
-  <div style="max-width:560px;margin:40px auto;padding:0 20px">
-    <div style="background:#111827;border:1px solid #1e293b;border-radius:16px;padding:36px 32px">
-      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#3b82f6;text-transform:uppercase;letter-spacing:0.1em">LightSpeed Ghost · Enterprise</p>
-      <h1 style="margin:8px 0 16px;font-size:22px;font-weight:700;color:#f1f5f9">We've received your enquiry, ${opts.name} 👋</h1>
-      <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#94a3b8">
-        Thank you for reaching out about LightSpeed Ghost for <strong style="color:#e2e8f0">${opts.institution}</strong>. We'll review your enquiry and get back to you within <strong style="color:#e2e8f0">one business day</strong> with a custom proposal for ${opts.studentCount} students.
-      </p>
-      <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:16px;margin-bottom:24px">
-        <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#e2e8f0">What to expect:</p>
-        <ul style="margin:0;padding-left:18px;font-size:13px;line-height:2.2;color:#94a3b8">
-          <li>A personalised pricing quote for your institution size</li>
-          <li>30-day free pilot offer for up to 50 students</li>
-          <li>Dedicated onboarding and academic integrity reporting</li>
-        </ul>
-      </div>
-      <p style="margin:0 0 20px;font-size:13px;color:#64748b">
-        Need something sooner? Email us directly at <a href="mailto:enterprise@lightspeedghost.com" style="color:#3b82f6">enterprise@lightspeedghost.com</a>
-      </p>
-      <a href="https://lightspeedghost.com/enterprise" style="display:inline-block;background:#1e293b;border:1px solid #334155;color:#94a3b8;font-size:13px;padding:10px 20px;border-radius:8px;text-decoration:none">Back to Enterprise page →</a>
-    </div>
-  </div>
-</body>
-</html>`;
-}
 
 export default router;

@@ -554,6 +554,20 @@ router.get("/payments/credits", async (req: Request, res: Response) => {
   res.json({ balanceCents });
 });
 
+router.get("/payments/payg-count", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) { res.json({ count: 0 }); return; }
+  try {
+    const { rows } = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM documents WHERE user_id = $1 AND type = 'paper'`,
+      [userId]
+    );
+    res.json({ count: parseInt(rows[0]?.count ?? "0", 10) });
+  } catch {
+    res.json({ count: 0 });
+  }
+});
+
 // ── Route: spend credits for a PAYG purchase ──────────────────────────────────
 
 router.post("/payments/credits/spend", async (req: Request, res: Response) => {
