@@ -31,10 +31,11 @@
     <meta name="geo.placename" content="United States" />
     <meta name="ICBM" content="37.7749,-122.4194" />
 
-    <!-- Handwritten font for STEM + Study math rendering -->
+    <!-- Handwritten font for STEM + Study math rendering — loaded async so it never blocks first paint -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" /></noscript>
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
@@ -616,10 +617,11 @@
     <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM context file" />
     <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLM full context file" />
 
-    <!-- Fonts — preconnect + font-display:swap to avoid render blocking -->
+    <!-- Fonts — async load with display=swap so text renders immediately in fallback font -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&font-display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
 
     <!-- Tidio: push above mobile nav, cap z-index below our AI assistant widget -->
     <style>
@@ -631,17 +633,15 @@
         z-index: 999998 !important;
       }
 
-      /* On mobile: push Tidio button above the 60px bottom nav bar
-         (safe-area-inset-bottom handled by Tidio's own iframe padding) */
+      /* On mobile: push Tidio button above the bottom quick-nav bar.
+         84px clears the 72px nav + breathing room; the in-app
+         MutationObserver re-asserts this if Tidio rewrites inline styles. */
       @media (max-width: 1023px) {
-        #tidio-chat-iframe {
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 66px) !important;
-        }
-        #tidio-chat-code > iframe {
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 66px) !important;
-        }
+        #tidio-chat-iframe,
+        #tidio-chat iframe,
+        #tidio-chat-code > iframe,
         .tidio-1 iframe {
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 66px) !important;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 84px) !important;
         }
       }
     </style>

@@ -66,11 +66,12 @@ const DATA_PAPER_TYPES = new Set([
   "business plan", "financial analysis", "capstone project",
 ]);
 
-const FINANCE_SUBJECTS = new Set([
-  "finance", "accounting", "financial analysis", "economics", "banking",
-  "investment", "insurance", "actuarial", "business studies", "business",
-  "financial management", "corporate finance", "managerial accounting",
-]);
+// Matches any business/finance-adjacent subject ("Business Strategy",
+// "Healthcare Economics", "MBA Corporate Finance"…) — mirrors the backend
+// pattern so the upload is offered whenever it could be useful. The backend
+// always processes uploaded statements regardless of subject.
+const FINANCE_SUBJECT_PATTERN =
+  /finance|financ|accounting|econom|banking|invest|insurance|actuarial|business|credit|audit|treasury|valuation|equity|capital/i;
 
 const PAPER_TYPES = [
   { value: "research",               label: "Research Paper" },
@@ -1044,8 +1045,8 @@ export default function WritePaper() {
           </div>
         )}
 
-        {/* ── Financial Statements upload (finance subjects only) ── */}
-        {FINANCE_SUBJECTS.has(subject.toLowerCase()) && (
+        {/* ── Financial Statements upload (any business/finance-adjacent subject) ── */}
+        {FINANCE_SUBJECT_PATTERN.test(subject) && (
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <BarChart3 size={14} className="text-amber-400 shrink-0" />

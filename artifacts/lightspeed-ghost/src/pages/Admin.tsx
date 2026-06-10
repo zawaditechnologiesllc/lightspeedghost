@@ -9,7 +9,7 @@ import {
   Radio, ServerCrash, Database, Clock, CheckCheck, XCircle, Signal,
   Megaphone, Link2, Eye, EyeOff, ThumbsUp, ThumbsDown,
   Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
-  Search, BookOpen,
+  Search, BookOpen, Mail, Download,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link, useParams, useLocation } from "wouter";
@@ -30,7 +30,7 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "tools" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "settings" | "seo";
+type Tab = "overview" | "users" | "tools" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "messages" | "settings" | "seo";
 
 interface AdminTool {
   key: string;
@@ -204,6 +204,29 @@ interface SystemSettings {
   referral_referrer_pct: string;
   referral_friend_pct: string;
   referral_commission_pct: string;
+  export_expiry_days: string;
+}
+
+interface EnterpriseLead {
+  id: number;
+  institution: string;
+  name: string;
+  email: string;
+  role: string;
+  student_count: string;
+  message: string;
+  status: string;
+  created_at: string;
+}
+
+interface DocExport {
+  id: number;
+  user_id: string;
+  document_id: string;
+  format: string;
+  exported_at: string;
+  title: string | null;
+  type: string | null;
 }
 
 interface TrafficData {
@@ -287,7 +310,7 @@ export default function Admin() {
   const [authLoading, setAuthLoading] = useState(false);
   const { tab: urlTab } = useParams<{ tab?: string }>();
   const [, setLocation] = useLocation();
-  const validTabs: Tab[] = ["overview","users","tools","documents","gateways","payments","credits","finance","analytics","logs","announcements","referrals","settings","seo"];
+  const validTabs: Tab[] = ["overview","users","tools","documents","gateways","payments","credits","finance","analytics","logs","announcements","referrals","messages","settings","seo"];
   const initialTab = (urlTab && validTabs.includes(urlTab as Tab) ? urlTab : "overview") as Tab;
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
@@ -374,6 +397,8 @@ export default function Admin() {
     }>;
   } | null>(null);
   const [applyingDiscountId, setApplyingDiscountId] = useState<number | null>(null);
+  const [enterpriseLeads, setEnterpriseLeads] = useState<EnterpriseLead[]>([]);
+  const [docExports, setDocExports] = useState<DocExport[]>([]);
 
   const isAuthed = !!password;
 
@@ -498,6 +523,10 @@ export default function Admin() {
       setDocTotal(data.total);
     } catch { setDocuments([]); setDocTotal(0); }
     finally { setLoading(false); }
+    // Export audit log (non-blocking)
+    adminFetch("/admin/exports", password)
+      .then((d) => setDocExports((d as { exports: DocExport[]; total: number }).exports ?? []))
+      .catch(() => setDocExports([]));
   }, [password, docTypeFilter, docSearch]);
 
   const loadSubscriptions = useCallback(async () => {
@@ -561,6 +590,25 @@ export default function Admin() {
     finally { setLoading(false); }
   }, [password]);
 
+  const loadMessages = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch("/contact/enterprise", password) as { leads: EnterpriseLead[]; total: number };
+      setEnterpriseLeads(data.leads ?? []);
+    } catch { setEnterpriseLeads([]); }
+    finally { setLoading(false); }
+  }, [password]);
+
+  async function updateLeadStatus(id: number, status: string) {
+    try {
+      await adminFetch(`/contact/enterprise/${id}/status`, password, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      setEnterpriseLeads((prev) => prev.map((l) => l.id === id ? { ...l, status } : l));
+    } catch { /* non-fatal */ }
+  }
+
   async function wakeBeforeLogin() {
     setPreLoginWaking(true);
     setPreLoginStatus("idle");
@@ -609,6 +657,7 @@ export default function Admin() {
     if (activeTab === "logs") loadLogs();
     if (activeTab === "announcements") loadAnnouncements();
     if (activeTab === "referrals") loadReferrals();
+    if (activeTab === "messages") loadMessages();
   }, [isAuthed, activeTab]);
 
   useEffect(() => {
@@ -862,6 +911,7 @@ export default function Admin() {
     { id: "finance",        label: "Finance",        icon: BarChart3 },
     { id: "announcements",  label: "Announcements",  icon: Megaphone },
     { id: "referrals",      label: "Referrals",      icon: Share2 },
+    { id: "messages",       label: "Messages",       icon: Mail },
     { id: "seo",            label: "SEO",            icon: Search },
     { id: "settings",       label: "Settings",       icon: Settings },
   ];
@@ -1369,6 +1419,27 @@ export default function Admin() {
                         ));
                       })()
                   }
+                </div>
+
+                {/* Export audit log */}
+                <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-white/6">
+                    <Download size={12} className="text-white/30" />
+                    <span className="text-xs font-semibold text-white/60">Recent Document Exports</span>
+                    <span className="ml-auto text-[10px] text-white/25">{docExports.length} shown · expiry window set in Settings</span>
+                  </div>
+                  {docExports.length === 0 ? (
+                    <p className="px-4 py-6 text-center text-xs text-white/25">No exports yet</p>
+                  ) : (
+                    docExports.slice(0, 20).map((ex, i) => (
+                      <div key={ex.id} className={`flex items-center gap-3 px-4 py-2.5 ${i < Math.min(docExports.length, 20) - 1 ? "border-b border-white/6" : ""}`}>
+                        <span className="text-xs text-white/60 font-medium truncate flex-1" title={ex.title ?? ex.document_id}>{ex.title ?? `Doc ${ex.document_id.slice(0, 8)}…`}</span>
+                        <span className="text-[10px] text-white/30 uppercase">{ex.format}</span>
+                        <span className="text-[11px] text-white/30 font-mono truncate w-24" title={ex.user_id}>{ex.user_id.slice(0, 10)}…</span>
+                        <span className="text-xs text-white/30 shrink-0">{new Date(ex.exported_at).toLocaleString()}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -2204,6 +2275,67 @@ export default function Admin() {
             )}
 
             {/* ── Settings ──────────────────────────────────────────────── */}
+            {activeTab === "messages" && (
+              <div className="space-y-6">
+                <div className="flex items-start justify-between">
+                  <SectionHeader title="Messages" sub="Enterprise & institution enquiries from the contact form" />
+                  <button onClick={loadMessages} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white/40 hover:text-white/70 hover:bg-white/5 border border-white/8 rounded-lg transition-all">
+                    <RefreshCw size={11} /> Refresh
+                  </button>
+                </div>
+                {loading && enterpriseLeads.length === 0 && <Spinner />}
+                {!loading && enterpriseLeads.length === 0 && <Empty text="No enquiries yet — they appear here when someone submits the institution pricing form" />}
+                {enterpriseLeads.length > 0 && (
+                  <div className="space-y-3">
+                    {enterpriseLeads.map((lead) => (
+                      <div key={lead.id} className="bg-white/[0.02] border border-white/8 rounded-2xl p-4 sm:p-5">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <p className="text-sm font-bold text-white">{lead.institution}</p>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${
+                                lead.status === "new" ? "bg-blue-500/12 text-blue-300 border-blue-500/20"
+                                : lead.status === "contacted" ? "bg-amber-500/12 text-amber-300 border-amber-500/20"
+                                : lead.status === "proposal_sent" ? "bg-violet-500/12 text-violet-300 border-violet-500/20"
+                                : lead.status === "closed_won" ? "bg-emerald-500/12 text-emerald-300 border-emerald-500/20"
+                                : "bg-white/5 text-white/40 border-white/10"
+                              }`}>{lead.status.replace(/_/g, " ")}</span>
+                            </div>
+                            <p className="text-xs text-white/50">
+                              {lead.name} · <a href={`mailto:${lead.email}`} className="text-blue-400 hover:underline">{lead.email}</a> · {lead.role} · <span className="font-semibold text-white/70">{lead.student_count} students</span>
+                            </p>
+                            {lead.message && (
+                              <p className="mt-2 text-xs text-white/60 bg-white/[0.03] border border-white/8 rounded-lg px-3 py-2 leading-relaxed whitespace-pre-wrap">{lead.message}</p>
+                            )}
+                            <p className="mt-2 text-[10px] text-white/25">{new Date(lead.created_at).toLocaleString()}</p>
+                          </div>
+                          <div className="shrink-0 flex sm:flex-col gap-2">
+                            <select
+                              value={lead.status}
+                              onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
+                              className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-white/25 transition-all"
+                            >
+                              <option value="new">New</option>
+                              <option value="contacted">Contacted</option>
+                              <option value="proposal_sent">Proposal Sent</option>
+                              <option value="closed_won">Closed — Won</option>
+                              <option value="closed_lost">Closed — Lost</option>
+                            </select>
+                            <a
+                              href={`mailto:${lead.email}?subject=${encodeURIComponent(`LightSpeed Ghost — ${lead.institution} institutional pricing`)}`}
+                              className="px-3 py-2 bg-blue-500/15 border border-blue-500/25 text-blue-300 rounded-xl text-xs font-semibold text-center hover:bg-blue-500/25 transition-colors"
+                            >
+                              Reply
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeTab === "settings" && (
               <div className="space-y-6 max-w-2xl">
                 <div className="flex items-start justify-between">
@@ -2249,6 +2381,19 @@ export default function Admin() {
                         </div>
                       </SettingsCard>
                     ))}
+
+                    {/* Document Exports */}
+                    <SettingsCard title="Document Exports">
+                      <p className="text-[10px] text-white/30 mb-3">Users can export documents to Word for this many days after the last edit. Exports are logged for audit.</p>
+                      <div className="max-w-[200px]">
+                        <label className="block text-xs text-white/40 mb-1.5">Export window (days)</label>
+                        <input type="number" min="1" max="365" placeholder="30"
+                          value={(settings as unknown as Record<string, string>).export_expiry_days ?? ""}
+                          onChange={(e) => { setSettings((s) => s ? { ...s, export_expiry_days: e.target.value } : s); setSettingsDirty(true); }}
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
+                        />
+                      </div>
+                    </SettingsCard>
 
                     {/* Referral Program */}
                     <SettingsCard title="Referral Program">

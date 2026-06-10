@@ -197,11 +197,11 @@ export function CheckoutModal({
   const gatewayLabel = effectiveGateway ? (GATEWAY_LABELS[effectiveGateway] ?? effectiveGateway) : "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="relative w-full max-w-md bg-[#0a0f1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm">
+      <div className="relative w-full max-w-md max-h-[92dvh] bg-[#0a0f1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
 
         {/* Header */}
-        <div className="relative flex items-center justify-center px-6 py-4 border-b border-white/8">
+        <div className="relative flex items-center justify-center px-6 py-4 border-b border-white/8 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-600 to-orange-500 flex items-center justify-center">
               <CreditCard size={14} className="text-white" />
@@ -217,7 +217,7 @@ export function CheckoutModal({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-4 flex-1 overflow-y-auto overscroll-contain">
 
           {/* Order summary */}
           <div className="bg-white/[0.03] border border-white/8 rounded-xl p-4">

@@ -83,7 +83,7 @@ export function BuyCreditsModal({ open, onClose, onSuccess }: BuyCreditsModalPro
     <>
       <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
         <div
-          className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden"
+          className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md max-h-[92dvh] flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -102,7 +102,7 @@ export function BuyCreditsModal({ open, onClose, onSuccess }: BuyCreditsModalPro
             </button>
           </div>
 
-          <div className="p-5 space-y-3">
+          <div className="p-5 space-y-3 flex-1 overflow-y-auto overscroll-contain">
             {/* How credits work */}
             <div className="rounded-xl bg-muted/30 border border-border p-3 flex items-start gap-2.5">
               <Zap size={13} className="text-primary shrink-0 mt-0.5" />

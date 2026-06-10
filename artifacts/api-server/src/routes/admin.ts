@@ -107,16 +107,10 @@ async function initAdminTables() {
       ('campus_study',            '75'),
       ('campus_plagiarism',       '10'),
       ('campus_outline',          '10'),
-      ('student_pro_monthly_paper',      '8'),
-      ('student_pro_monthly_revision',   '4'),
-      ('student_pro_monthly_humanizer',  '6'),
-      ('student_pro_monthly_stem',       '40'),
-      ('student_pro_monthly_study',      '75'),
-      ('student_pro_monthly_plagiarism', '10'),
-      ('student_pro_monthly_outline',    '10'),
       ('referral_referrer_pct',          '10'),
       ('referral_friend_pct',            '10'),
       ('referral_commission_pct',        '10'),
+      ('export_expiry_days',             '30'),
       ('tool_write_enabled',      'true'),
       ('tool_outline_enabled',    'true'),
       ('tool_revision_enabled',   'true'),
@@ -126,10 +120,7 @@ async function initAdminTables() {
       ('tool_study_enabled',      'true'),
       ('tool_ebooks_enabled',     'true'),
       ('scheduler_enabled',       'false'),
-      ('scheduler_time',          '02:00'),
-      ('referral_referrer_discount_pct', '20'),
-      ('referral_friend_discount_pct',   '10'),
-      ('referral_commission_pct',        '10')
+      ('scheduler_time',          '02:00')
     ON CONFLICT (key) DO NOTHING;
   `);
 }
@@ -719,6 +710,28 @@ router.post("/admin/settings", async (req: Request, res: Response) => {
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Failed to save settings" });
+  }
+});
+
+// ── GET /admin/exports — document export audit log ───────────────────────────
+
+router.get("/admin/exports", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const { rows } = await pool.query(
+      `SELECT e.id, e.user_id, e.document_id, e.format, e.exported_at::text as exported_at,
+              d.title, d.type
+       FROM document_exports e
+       LEFT JOIN documents d ON d.id::text = e.document_id
+       ORDER BY e.exported_at DESC
+       LIMIT 100`
+    );
+    const { rows: countRows } = await pool.query<{ cnt: string }>(
+      "SELECT COUNT(*) as cnt FROM document_exports"
+    );
+    res.json({ exports: rows, total: parseInt(countRows[0]?.cnt ?? "0", 10) });
+  } catch {
+    res.json({ exports: [], total: 0 });
   }
 });
 

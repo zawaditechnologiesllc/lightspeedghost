@@ -77,17 +77,16 @@ interface ReferralSettings {
 }
 
 export async function getReferralSettings(): Promise<ReferralSettings> {
-  const defaults: ReferralSettings = { referrerDiscountPct: 20, friendDiscountPct: 10, commissionPct: 10 };
+  const defaults: ReferralSettings = { referrerDiscountPct: 10, friendDiscountPct: 10, commissionPct: 10 };
   try {
-    const rows = await pool.query<{ key: string; value: string }>(
-      `SELECT key, value FROM system_settings
-       WHERE key IN ('referral_referrer_discount_pct','referral_friend_discount_pct','referral_commission_pct')`,
+    const { rows } = await pool.query<{ key: string; value: string }>(
+      `SELECT key, value FROM system_settings WHERE key IN ('referral_referrer_pct','referral_friend_pct','referral_commission_pct')`,
     );
-    const map = Object.fromEntries(rows.rows.map((r) => [r.key, parseInt(r.value, 10)]));
+    const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     return {
-      referrerDiscountPct: map.referral_referrer_discount_pct || defaults.referrerDiscountPct,
-      friendDiscountPct:   map.referral_friend_discount_pct   || defaults.friendDiscountPct,
-      commissionPct:       map.referral_commission_pct        || defaults.commissionPct,
+      referrerDiscountPct: parseInt(map.referral_referrer_pct ?? "", 10) || defaults.referrerDiscountPct,
+      friendDiscountPct:   parseInt(map.referral_friend_pct   ?? "", 10) || defaults.friendDiscountPct,
+      commissionPct:       parseInt(map.referral_commission_pct ?? "", 10) || defaults.commissionPct,
     };
   } catch {
     return defaults;
@@ -95,28 +94,6 @@ export async function getReferralSettings(): Promise<ReferralSettings> {
 }
 
 // ── Called by payments webhook: record conversion + grant referrer a discount ──
-
-interface ReferralSettings {
-  referrerDiscountPct: number;
-  friendDiscountPct: number;
-  commissionPct: number;
-}
-
-async function getReferralSettings(): Promise<ReferralSettings> {
-  try {
-    const { rows } = await pool.query<{ key: string; value: string }>(
-      `SELECT key, value FROM system_settings WHERE key IN ('referral_referrer_pct','referral_friend_pct','referral_commission_pct')`,
-    );
-    const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
-    return {
-      referrerDiscountPct: parseInt(map.referral_referrer_pct ?? "10", 10),
-      friendDiscountPct:   parseInt(map.referral_friend_pct   ?? "10", 10),
-      commissionPct:       parseInt(map.referral_commission_pct ?? "10", 10),
-    };
-  } catch {
-    return { referrerDiscountPct: 10, friendDiscountPct: 10, commissionPct: 10 };
-  }
-}
 
 export async function maybeRecordReferralCommission(
   userId: string,
@@ -129,7 +106,6 @@ export async function maybeRecordReferralCommission(
     );
     if (res.rows.length === 0) return;
 
-    const settings = await getReferralSettings();
     const code = res.rows[0].referral_code;
     const { commissionPct, referrerDiscountPct } = await getReferralSettings();
     const commissionCents = Math.round(amountCents * (commissionPct / 100));

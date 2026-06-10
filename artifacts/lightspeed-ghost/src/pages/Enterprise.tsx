@@ -166,7 +166,8 @@ export default function Enterprise() {
     setFormState("submitting");
     setErrorMsg("");
     try {
-      const res = await fetch("/api/contact/enterprise", {
+      const apiBase = (import.meta.env.VITE_API_URL ?? "") + "/api";
+      const res = await fetch(`${apiBase}/contact/enterprise`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

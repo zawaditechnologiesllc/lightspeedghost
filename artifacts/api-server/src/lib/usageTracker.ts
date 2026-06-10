@@ -168,13 +168,6 @@ export async function getUserPlan(userId: string): Promise<string> {
   }
 }
 
-export function quotaExceededMessage(quota: { plan: string; limit: number | null }, what: string): string {
-  if (quota.plan === "none" || quota.limit === 0) {
-    return `You don't have an active subscription. Subscribe to a plan for monthly ${what} allowances, or use Pay-As-You-Go — credits never expire.`;
-  }
-  return `You've used all ${quota.limit} ${what} for this month on your ${quota.plan} plan. Upgrade your plan or use Pay-As-You-Go.`;
-}
-
 async function getEffectiveLimits(plan: string): Promise<Record<ToolName, number | null>> {
   try {
     const dynamic = await getDynamicPlanLimits();

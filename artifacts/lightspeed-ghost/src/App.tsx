@@ -46,24 +46,67 @@ function TidioChat() {
   useEffect(() => {
     const key = import.meta.env.VITE_TIDIO_PUBLIC_KEY;
     if (!key || document.querySelector(`script[src*="tidio.co"]`)) return;
-    const s = document.createElement("script");
-    s.src = `//code.tidio.co/${key}.js`;
-    s.async = true;
-    document.head.appendChild(s);
 
-    // On mobile, lift the Tidio bubble above the bottom quick-nav bar
+    // Defer loading until idle/first interaction — Tidio is the single biggest
+    // third-party cost on mobile PageSpeed (render-blocking + TBT).
+    let loaded = false;
+    function loadTidio() {
+      if (loaded) return;
+      loaded = true;
+      const s = document.createElement("script");
+      s.src = `//code.tidio.co/${key}.js`;
+      s.async = true;
+      document.head.appendChild(s);
+    }
+    const idleTimer = setTimeout(loadTidio, 6000);
+    const interactionEvents: (keyof DocumentEventMap)[] = ["scroll", "pointerdown", "keydown", "touchstart"];
+    const onInteract = () => { loadTidio(); cleanupListeners(); };
+    function cleanupListeners() {
+      interactionEvents.forEach((e) => document.removeEventListener(e, onInteract));
+    }
+    interactionEvents.forEach((e) => document.addEventListener(e, onInteract, { passive: true, once: false }));
+
+    // CSS fallback for the bubble offset
     if (!document.getElementById("tidio-mobile-offset")) {
       const style = document.createElement("style");
       style.id = "tidio-mobile-offset";
       style.textContent = `
         @media (max-width: 1023px) {
-          #tidio-chat-iframe {
-            bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+          #tidio-chat-iframe, #tidio-chat iframe {
+            bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
           }
         }
       `;
       document.head.appendChild(style);
     }
+
+    // Tidio re-applies inline styles on its iframe, which beat stylesheet
+    // !important. Watch for the iframe and force the offset directly on the
+    // element with priority, re-asserting whenever Tidio rewrites its style.
+    const mq = window.matchMedia("(max-width: 1023px)");
+    function liftBubble() {
+      const iframe = document.getElementById("tidio-chat-iframe") as HTMLElement | null;
+      if (!iframe) return;
+      if (mq.matches) {
+        const want = "calc(84px + env(safe-area-inset-bottom, 0px))";
+        if (iframe.style.getPropertyValue("bottom") !== want) {
+          iframe.style.setProperty("bottom", want, "important");
+        }
+      } else {
+        iframe.style.removeProperty("bottom");
+      }
+    }
+    const observer = new MutationObserver(liftBubble);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["style"] });
+    mq.addEventListener?.("change", liftBubble);
+    liftBubble();
+
+    return () => {
+      clearTimeout(idleTimer);
+      cleanupListeners();
+      observer.disconnect();
+      mq.removeEventListener?.("change", liftBubble);
+    };
   }, []);
   return null;
 }

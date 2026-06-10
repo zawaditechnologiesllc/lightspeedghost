@@ -388,7 +388,19 @@ export default function Landing() {
   const [showAndroidModal, setShowAndroidModal] = useState(false);
   const [showExitIntent, setShowExitIntent] = useState(false);
   const exitIntentFiredRef = useRef(false);
-  const [papersCount, setPapersCount] = useState(57200);
+  const [liveStats, setLiveStats] = useState<{ documentsThisWeek: number; signupsThisWeek: number } | null>(null);
+
+  useEffect(() => {
+    const apiBase = (import.meta.env.VITE_API_URL ?? "") + "/api";
+    fetch(`${apiBase}/public-stats`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d: { documentsThisWeek?: number; signupsThisWeek?: number } | null) => {
+        if (d && (d.documentsThisWeek || d.signupsThisWeek)) {
+          setLiveStats({ documentsThisWeek: d.documentsThisWeek ?? 0, signupsThisWeek: d.signupsThisWeek ?? 0 });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   function handleIOSInstall() { setShowIOSModal(true); }
   function handleAndroidInstall() {
@@ -452,6 +464,8 @@ export default function Landing() {
     { label: "Ebooks", href: "#ebooks" },
     { label: "How it Works", href: "#howitworks" },
     { label: "Pricing", href: "#pricing" },
+    { label: "Institutions", href: "/enterprise" },
+    { label: "Africa", href: "/africa" },
     { label: "FAQ", href: "#faq" },
   ];
 
@@ -1019,6 +1033,30 @@ export default function Landing() {
               </div>
             ))}
           </div>
+
+          {/* Live platform activity — real numbers from the API, hidden until loaded */}
+          {liveStats && (
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                </span>
+                <span className="text-xs text-white/50">
+                  <span className="font-bold text-white tabular-nums">{liveStats.documentsThisWeek.toLocaleString()}</span> papers &amp; documents generated this week
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-60" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-400" />
+                </span>
+                <span className="text-xs text-white/50">
+                  <span className="font-bold text-white tabular-nums">{liveStats.signupsThisWeek.toLocaleString()}</span> new students joined this week
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -1657,11 +1695,11 @@ export default function Landing() {
                       </span>
                     </Link>
                   ) : isInstitution ? (
-                    <Link href="/contact">
+                    <a href="/enterprise#contact">
                       <span className="w-full block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-emerald-500/30 text-emerald-400 hover:border-emerald-500/60 hover:bg-emerald-500/5">
                         Contact Us for Pricing
                       </span>
-                    </Link>
+                    </a>
                   ) : (
                     <Link href={ctaLink}>
                       <span className={`block text-center py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${highlight ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20" : "border border-white/15 hover:border-white/30 text-white/80 hover:text-white hover:bg-white/5"}`}>

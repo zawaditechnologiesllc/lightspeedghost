@@ -2,7 +2,25 @@ import { useState } from "react";
 import { useListDocuments, useDeleteDocument, getListDocumentsQueryKey } from "@workspace/api-client-react";
 import type { ListDocumentsType } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, FileText, PenLine, FlaskConical, GraduationCap, Files, Search, ListOrdered, Wand2, ShieldCheck } from "lucide-react";
+import { Trash2, FileText, PenLine, FlaskConical, GraduationCap, Files, Search, ListOrdered, Wand2, ShieldCheck, Download, Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/apiFetch";
+
+// Wraps document content in a minimal Word-compatible HTML shell so the
+// browser download opens cleanly in Word/Google Docs/Pages.
+function downloadAsDoc(title: string, content: string) {
+  const safeTitle = title.replace(/[^\w\s-]/g, "").trim() || "document";
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${safeTitle}</title></head>
+<body style="font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 2;">
+${content.split("\n").map((line) => `<p>${line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`).join("\n")}
+</body></html>`;
+  const blob = new Blob([html], { type: "application/msword" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${safeTitle}.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const typeFilters = [
   { value: undefined,       label: "All" },
@@ -56,7 +74,31 @@ function parseLsgTitle(title: string): { code: string | null; label: string } {
 export default function Documents() {
   const [selectedType, setSelectedType] = useState<DocType>(undefined);
   const [search, setSearch] = useState("");
+  const [exportingId, setExportingId] = useState<number | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  async function handleExport(id: number) {
+    setExportingId(id);
+    setExportError(null);
+    try {
+      const res = await apiFetch(`/documents/${id}/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ format: "doc" }),
+      });
+      const data = await res.json() as { ok?: boolean; title?: string; content?: string; error?: string };
+      if (!res.ok || !data.ok) {
+        setExportError(data.error ?? "Export failed — please try again.");
+        return;
+      }
+      downloadAsDoc(data.title ?? "document", data.content ?? "");
+    } catch {
+      setExportError("Export failed — please check your connection and try again.");
+    } finally {
+      setExportingId(null);
+    }
+  }
 
   const { data, isLoading } = useListDocuments(
     { type: selectedType as ListDocumentsType | undefined, limit: 100, offset: 0 },
@@ -111,6 +153,12 @@ export default function Documents() {
         <span className="text-sm text-muted-foreground">{filtered.length} document{filtered.length !== 1 ? "s" : ""}</span>
       </div>
 
+      {exportError && (
+        <div className="bg-amber-500/10 border border-amber-500/25 text-amber-600 dark:text-amber-400 text-xs rounded-lg px-3 py-2.5">
+          {exportError}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -157,6 +205,14 @@ export default function Documents() {
                     {(doc.wordCount ?? 0) > 0 && <span className="text-xs text-muted-foreground">{(doc.wordCount ?? 0).toLocaleString()} words</span>}
                   </div>
                 </div>
+                <button
+                  onClick={() => handleExport(doc.id)}
+                  disabled={exportingId === doc.id}
+                  title="Export as Word document"
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                >
+                  {exportingId === doc.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                </button>
                 <button
                   onClick={() => handleDelete(doc.id)}
                   disabled={deleteDocument.isPending}

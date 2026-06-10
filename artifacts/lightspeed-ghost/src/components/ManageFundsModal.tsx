@@ -237,22 +237,32 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
             {/* Plans list */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-foreground">All plans</p>
-              {SUBSCRIPTION_PLANS.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setCheckoutPlan(p.id)}
-                  className="w-full flex items-center justify-between rounded-xl border border-border bg-muted/20 p-3.5 hover:border-primary/40 hover:bg-muted/40 transition-all group"
-                >
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-foreground">{p.name}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{p.description}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-sm font-bold text-primary">
-                    {p.displayPrice}
-                    <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </button>
-              ))}
+              {SUBSCRIPTION_PLANS.map((p) => {
+                const isContactPlan = p.id === "campus_annual" || p.id === "institution_annual";
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      if (isContactPlan) {
+                        onClose();
+                        window.location.href = "/enterprise#contact";
+                      } else {
+                        setCheckoutPlan(p.id);
+                      }
+                    }}
+                    className="w-full flex items-center justify-between rounded-xl border border-border bg-muted/20 p-3.5 hover:border-primary/40 hover:bg-muted/40 transition-all group"
+                  >
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-foreground">{p.name}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{p.description}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm font-bold text-primary shrink-0">
+                      {isContactPlan ? "Contact us" : p.displayPrice}
+                      <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
