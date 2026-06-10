@@ -56,6 +56,23 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Split heavyweight vendors out of the entry chunk so first paint only
+        // downloads what the landing page needs (Google PageSpeed: reduce
+        // unused JavaScript / avoid enormous network payloads).
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("katex")) return "katex";
+          if (id.includes("framer-motion")) return "motion";
+          if (id.includes("recharts") || id.includes("d3-")) return "charts";
+          if (id.includes("react-dom") || id.includes("/react/") || id.includes("scheduler")) return "react";
+          if (id.includes("@supabase")) return "supabase";
+          if (id.includes("@tanstack")) return "query";
+          return undefined;
+        },
+      },
+    },
   },
   server: {
     port,

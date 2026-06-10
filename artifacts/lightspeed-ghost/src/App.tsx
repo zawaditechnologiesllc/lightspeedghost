@@ -6,41 +6,90 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/Layout";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SplashScreen } from "@/components/SplashScreen";
+// Eager: the two first-paint paths. Everything else is code-split so the
+// entry bundle stays small (Google PageSpeed: reduce unused JavaScript).
 import Landing from "@/pages/Landing";
 import Auth from "@/pages/Auth";
-import Admin from "@/pages/Admin";
-import Dashboard from "@/pages/Dashboard";
-import WritePaper from "@/pages/WritePaper";
-import Outline from "@/pages/Outline";
-import Revision from "@/pages/Revision";
-import Humanizer from "@/pages/Humanizer";
-import Plagiarism from "@/pages/Plagiarism";
-import StemSolver from "@/pages/StemSolver";
-import StudyAssistant from "@/pages/StudyAssistant";
-import Documents from "@/pages/Documents";
-import Billing from "@/pages/Billing";
-import ResetPassword from "@/pages/ResetPassword";
-import ConfirmEmail from "@/pages/ConfirmEmail";
-import Invite from "@/pages/Invite";
-import PrivacyPolicy from "@/pages/PrivacyPolicy";
-import TermsOfService from "@/pages/TermsOfService";
-import CookiePolicy from "@/pages/CookiePolicy";
-import AcademicUsePolicy from "@/pages/AcademicUsePolicy";
-import About from "@/pages/About";
-import Contact from "@/pages/Contact";
-import Careers from "@/pages/Careers";
-import Blog from "@/pages/Blog";
-import BlogPost from "@/pages/BlogPost";
-import RefundPolicy from "@/pages/RefundPolicy";
-import PaymentSuccess from "@/pages/PaymentSuccess";
-import Ebooks from "@/pages/Ebooks";
-import Africa from "@/pages/Africa";
-import Enterprise from "@/pages/Enterprise";
 import NotFound from "@/pages/not-found";
-import FloatingAssistant from "@/pages/FloatingAssistant";
 import { Loader2, Wrench } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense, Component, type ReactNode } from "react";
 import { Logo } from "@/components/Logo";
+
+const Admin = lazy(() => import("@/pages/Admin"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const WritePaper = lazy(() => import("@/pages/WritePaper"));
+const Outline = lazy(() => import("@/pages/Outline"));
+const Revision = lazy(() => import("@/pages/Revision"));
+const Humanizer = lazy(() => import("@/pages/Humanizer"));
+const Plagiarism = lazy(() => import("@/pages/Plagiarism"));
+const StemSolver = lazy(() => import("@/pages/StemSolver"));
+const StudyAssistant = lazy(() => import("@/pages/StudyAssistant"));
+const Documents = lazy(() => import("@/pages/Documents"));
+const Billing = lazy(() => import("@/pages/Billing"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const ConfirmEmail = lazy(() => import("@/pages/ConfirmEmail"));
+const Invite = lazy(() => import("@/pages/Invite"));
+const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
+const CookiePolicy = lazy(() => import("@/pages/CookiePolicy"));
+const AcademicUsePolicy = lazy(() => import("@/pages/AcademicUsePolicy"));
+const About = lazy(() => import("@/pages/About"));
+const Contact = lazy(() => import("@/pages/Contact"));
+const Careers = lazy(() => import("@/pages/Careers"));
+const Blog = lazy(() => import("@/pages/Blog"));
+const BlogPost = lazy(() => import("@/pages/BlogPost"));
+const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
+const PaymentSuccess = lazy(() => import("@/pages/PaymentSuccess"));
+const Ebooks = lazy(() => import("@/pages/Ebooks"));
+const Africa = lazy(() => import("@/pages/Africa"));
+const Enterprise = lazy(() => import("@/pages/Enterprise"));
+const FloatingAssistant = lazy(() => import("@/pages/FloatingAssistant"));
+
+function RouteFallback() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 size={24} className="animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+// Catches render crashes (a blank page otherwise) and stale-chunk errors
+// after a deploy. Chunk-load failures trigger one automatic reload to pick
+// up the new asset hashes; anything else shows a recover screen.
+class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error) {
+    const msg = String(error?.message ?? "");
+    const isStaleChunk = /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk/i.test(msg);
+    if (isStaleChunk && sessionStorage.getItem("lsg_chunk_reload") !== "1") {
+      sessionStorage.setItem("lsg_chunk_reload", "1");
+      window.location.reload();
+    }
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen bg-[#04080f] flex flex-col items-center justify-center gap-4 p-6 text-center">
+          <Logo size={32} />
+          <p className="text-white/70 text-sm">Something went wrong loading this page.</p>
+          <button
+            onClick={() => { sessionStorage.removeItem("lsg_chunk_reload"); window.location.reload(); }}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function TidioChat() {
   useEffect(() => {
@@ -66,43 +115,35 @@ function TidioChat() {
     }
     interactionEvents.forEach((e) => document.addEventListener(e, onInteract, { passive: true, once: false }));
 
-    // CSS fallback for the bubble offset
-    if (!document.getElementById("tidio-mobile-offset")) {
-      const style = document.createElement("style");
-      style.id = "tidio-mobile-offset";
-      style.textContent = `
-        @media (max-width: 1023px) {
-          #tidio-chat-iframe, #tidio-chat iframe {
-            bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
-          }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
-    // Tidio re-applies inline styles on its iframe, which beat stylesheet
-    // !important. Watch for the iframe and force the offset directly on the
-    // element with priority, re-asserting whenever Tidio rewrites its style.
+    // Tidio re-applies inline styles (including `bottom`) on its iframe, which
+    // beat stylesheet !important. We force a `transform` instead — Tidio never
+    // manages transform inline, so ours always wins — and only while the
+    // iframe is in its small bubble state, so the opened chat (which goes
+    // full-screen on mobile) is never displaced. Re-assert on every style
+    // rewrite via the observer, and poll as a safety net for the first load.
     const mq = window.matchMedia("(max-width: 1023px)");
+    const LIFT = "translateY(calc(-84px - env(safe-area-inset-bottom, 0px)))";
     function liftBubble() {
       const iframe = document.getElementById("tidio-chat-iframe") as HTMLElement | null;
       if (!iframe) return;
-      if (mq.matches) {
-        const want = "calc(84px + env(safe-area-inset-bottom, 0px))";
-        if (iframe.style.getPropertyValue("bottom") !== want) {
-          iframe.style.setProperty("bottom", want, "important");
+      const isBubble = iframe.offsetWidth > 0 && iframe.offsetWidth < 200 && iframe.offsetHeight < 200;
+      if (mq.matches && isBubble) {
+        if (iframe.style.getPropertyValue("transform") !== LIFT) {
+          iframe.style.setProperty("transform", LIFT, "important");
         }
       } else {
-        iframe.style.removeProperty("bottom");
+        iframe.style.removeProperty("transform");
       }
     }
     const observer = new MutationObserver(liftBubble);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["style"] });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
     mq.addEventListener?.("change", liftBubble);
+    const liftPoll = setInterval(liftBubble, 1500);
     liftBubble();
 
     return () => {
       clearTimeout(idleTimer);
+      clearInterval(liftPoll);
       cleanupListeners();
       observer.disconnect();
       mq.removeEventListener?.("change", liftBubble);
@@ -288,6 +329,13 @@ function Router() {
 }
 
 function App() {
+  // App booted successfully — re-arm the one-shot stale-chunk auto-reload
+  // (see AppErrorBoundary) for the next deploy.
+  useEffect(() => {
+    const t = setTimeout(() => sessionStorage.removeItem("lsg_chunk_reload"), 10_000);
+    return () => clearTimeout(t);
+  }, []);
+
   const [showSplash, setShowSplash] = useState(() => {
     if (typeof window === "undefined") return false;
     const isPwa =
@@ -305,13 +353,17 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <MaintenanceGate>
-              <AuthProvider>
-                <Router />
-              </AuthProvider>
-            </MaintenanceGate>
-          </WouterRouter>
+          <AppErrorBoundary>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <MaintenanceGate>
+                <AuthProvider>
+                  <Suspense fallback={<RouteFallback />}>
+                    <Router />
+                  </Suspense>
+                </AuthProvider>
+              </MaintenanceGate>
+            </WouterRouter>
+          </AppErrorBoundary>
           <Toaster />
           <TidioChat />
         </TooltipProvider>

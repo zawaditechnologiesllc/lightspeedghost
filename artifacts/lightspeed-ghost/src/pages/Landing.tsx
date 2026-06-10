@@ -443,22 +443,6 @@ export default function Landing() {
     return () => document.removeEventListener("mouseleave", handleMouseLeave);
   }, []);
 
-  // Papers counter — animates up to target on mount
-  useEffect(() => {
-    const target = 58473;
-    const start = 57200;
-    const duration = 2000;
-    const startTime = Date.now();
-    const timer = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setPapersCount(Math.floor(start + (target - start) * eased));
-      if (progress >= 1) clearInterval(timer);
-    }, 30);
-    return () => clearInterval(timer);
-  }, []);
-
   const navLinks = [
     { label: "Tools", href: "#tools" },
     { label: "Ebooks", href: "#ebooks" },
