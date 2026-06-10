@@ -12,7 +12,7 @@ import { analyseTextPlagiarism } from "../lib/textAnalysis";
 import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection.js";
 import { recordUsage } from "../lib/apiCost";
 import { eq, desc, and, isNotNull } from "drizzle-orm";
-import { trackUsage, enforceLimit, getUserPlan } from "../lib/usageTracker";
+import { trackUsage, enforceLimit, getUserPlan, quotaExceededMessage } from "../lib/usageTracker";
 import { recordSearchResults, recordQualitySignal } from "../lib/learningEngine";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
@@ -625,7 +625,7 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
       if (!quota.allowed) {
         send("error", {
           type: "quota",
-          message: `You've used all ${quota.limit} paper generations for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+          message: quotaExceededMessage(quota, "paper generations"),
         });
         res.end();
         clearInterval(heartbeat);
@@ -1646,7 +1646,7 @@ router.post("/writing/outline", requireAuth, async (req, res) => {
     const quota = await enforceLimit(req.userId!, "outline");
     if (!quota.allowed) {
       send("error", {
-        message: `You've used all ${quota.limit} outline generations for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+        message: quotaExceededMessage(quota, "outline generations"),
       });
       return res.end();
     }

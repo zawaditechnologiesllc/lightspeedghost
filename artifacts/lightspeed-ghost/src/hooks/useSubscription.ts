@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
-export type PlanTier = "starter" | "student_pro_monthly" | "pro" | "campus" | "institution" | "payg" | null;
+export type PlanTier = "none" | "starter" | "student_pro_monthly" | "pro" | "campus" | "institution" | "payg" | null;
 
 export interface UsageData {
   paper: number;
@@ -16,6 +16,16 @@ export interface UsageData {
 }
 
 const PLAN_LIMITS: Record<string, Partial<Record<keyof UsageData, number | null>>> = {
+  // No free plan — without an active subscription every tool is PAYG-only
+  none: {
+    paper:      0,
+    revision:   0,
+    humanizer:  0,
+    stem:       0,
+    study:      0,
+    plagiarism: 0,
+    outline:    0,
+  },
   starter: {
     paper:      3,
     revision:   1,
@@ -81,15 +91,15 @@ export function useSubscription() {
         headers,
       });
       if (!res.ok) {
-        setPlan("starter");
+        setPlan("none");
         setUsage({});
         return;
       }
       const data = await res.json() as { usage: Partial<UsageData>; plan: string };
       setUsage(data.usage ?? {});
-      setPlan((data.plan as PlanTier) ?? "starter");
+      setPlan((data.plan as PlanTier) ?? "none");
     } catch {
-      setPlan("starter");
+      setPlan("none");
       setUsage({});
     } finally {
       setLoading(false);
@@ -124,7 +134,8 @@ export function useSubscription() {
   }
 
   function planDisplayName(): string {
-    if (!plan || plan === "starter") return "Starter";
+    if (!plan || plan === "none") return "No plan";
+    if (plan === "starter") return "Starter";
     if (plan === "student_pro_monthly") return "Student Pro";
     if (plan === "pro") return "Pro";
     if (plan === "campus") return "Institution";

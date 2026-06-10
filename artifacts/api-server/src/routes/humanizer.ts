@@ -5,7 +5,7 @@ import { documentsTable } from "@workspace/db";
 import { anthropic } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
-import { trackUsage, enforceLimit } from "../lib/usageTracker";
+import { trackUsage, enforceLimit, quotaExceededMessage } from "../lib/usageTracker";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { detectAIScore } from "../lib/aiDetection.js";
 import { logger } from "../lib/logger";
@@ -198,7 +198,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
     if (!quota.allowed) {
       send("error", {
         type: "quota",
-        message: `You've used all ${quota.limit} humanizer uses for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+        message: quotaExceededMessage(quota, "humanizer uses"),
       });
       res.end();
       clearInterval(heartbeat);

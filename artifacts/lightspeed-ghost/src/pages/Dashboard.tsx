@@ -81,7 +81,7 @@ export default function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [paygCount, setPaygCount] = useState<number>(0);
-  const [plan, setPlan] = useState<string>("free");
+  const [plan, setPlan] = useState<string>("none");
   const [plansOpen, setPlansOpen] = useState(false);
 
   useEffect(() => {
@@ -111,9 +111,9 @@ export default function Dashboard() {
       .catch(() => { /* non-fatal */ });
 
     // Load payment plan + PAYG count for upgrade nudge
-    apiFetch("/payments/config")
+    apiFetch("/payments/usage")
       .then((r) => r.json())
-      .then((d) => { if (!cancelled) setPlan(d.plan ?? "free"); })
+      .then((d) => { if (!cancelled) setPlan(d.plan ?? "none"); })
       .catch(() => {});
 
     apiFetch("/payments/payg-count")
@@ -214,7 +214,7 @@ export default function Dashboard() {
       </div>
 
       {/* PAYG → subscription upgrade nudge */}
-      {paygCount >= 2 && plan === "free" && (
+      {paygCount >= 2 && plan === "none" && (
         <div className="relative overflow-hidden bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 rounded-2xl p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex-1 min-w-0">

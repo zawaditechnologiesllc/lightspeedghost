@@ -5,7 +5,7 @@ import { documentsTable } from "@workspace/db";
 import { anthropic, openai } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
 import { recordUsage } from "../lib/apiCost";
-import { trackUsage, enforceLimit } from "../lib/usageTracker";
+import { trackUsage, enforceLimit, quotaExceededMessage } from "../lib/usageTracker";
 import { recordQualitySignal } from "../lib/learningEngine";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { computeBurstiness, sampleTextSections, analyseTextPlagiarism } from "../lib/textAnalysis.js";
@@ -185,7 +185,7 @@ router.post("/revision/submit-stream", requireAuth, async (req, res) => {
     if (!quota.allowed) {
       send("error", {
         type: "quota",
-        message: `You've used all ${quota.limit} revisions for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+        message: quotaExceededMessage(quota, "revisions"),
       });
       res.end();
       clearInterval(heartbeat);

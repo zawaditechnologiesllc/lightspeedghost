@@ -478,14 +478,14 @@ router.get("/payments/gateway", async (req: Request, res: Response) => {
 router.get("/payments/usage", async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) {
-    res.json({ usage: {}, plan: "starter" });
+    res.json({ usage: {}, plan: "none" });
     return;
   }
   try {
     const [usage, plan] = await Promise.all([getUsage(userId), getUserPlan(userId)]);
     res.json({ usage, plan });
   } catch {
-    res.json({ usage: {}, plan: "starter" });
+    res.json({ usage: {}, plan: "none" });
   }
 });
 
@@ -929,7 +929,7 @@ router.get("/payments/verify", async (req: Request, res: Response) => {
 
     res.json({
       confirmed,
-      plan: sub.rows[0]?.plan ?? "free",
+      plan: sub.rows[0]?.plan ?? "none",
       planStatus: sub.rows[0]?.status ?? null,
     });
   } catch (err: unknown) {
@@ -951,7 +951,7 @@ router.get("/payments/subscription", async (req: Request, res: Response) => {
       "SELECT plan, billing, status, current_period_end, gateway FROM user_subscriptions WHERE user_id=$1",
       [userId]
     );
-    res.json(row.rows[0] ?? { plan: "free", status: "active" });
+    res.json(row.rows[0] ?? { plan: "none", status: "none" });
   } catch {
     res.json({ plan: "free", status: "active" });
   }

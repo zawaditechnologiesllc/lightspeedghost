@@ -12,7 +12,7 @@ import { recordSearchResults, recordTopicSearch } from "../lib/learningEngine";
 import { indexStudyExchange, recallStudyContext } from "../lib/memvidMemory";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { recordUsage } from "../lib/apiCost";
-import { trackUsage, enforceLimit } from "../lib/usageTracker";
+import { trackUsage, enforceLimit, quotaExceededMessage } from "../lib/usageTracker";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
 import { z } from "zod";
 
@@ -81,7 +81,7 @@ router.post("/study/ask", requireAuth, async (req, res) => {
     if (!quota.allowed) {
       return res.status(429).json({
         error: "quota",
-        message: `You've used all ${quota.limit} study sessions for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+        message: quotaExceededMessage(quota, "study sessions"),
       });
     }
     const body = AskStudyAssistantBody.parse(req.body);
@@ -366,7 +366,7 @@ router.post("/study/generate", requireAuth, async (req, res) => {
     if (!quota.allowed) {
       return res.status(429).json({
         error: "quota",
-        message: `You've used all ${quota.limit} study sessions for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+        message: quotaExceededMessage(quota, "study sessions"),
       });
     }
     const body = GenerateBody.parse(req.body);

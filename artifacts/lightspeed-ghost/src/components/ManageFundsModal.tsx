@@ -44,10 +44,10 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
 
   if (!open) return null;
 
-  const resolvedPlan = planLoading ? null : (plan ?? "starter");
+  const resolvedPlan = planLoading ? null : (plan ?? "none");
   const PlanIcon = PLAN_ICON[resolvedPlan ?? "starter"] ?? Zap;
   const planColor = PLAN_COLOR[resolvedPlan ?? "starter"] ?? "text-blue-400";
-  const planName = resolvedPlan === "pro" ? "Pro" : resolvedPlan === "student_pro_monthly" ? "Student Pro" : resolvedPlan === "institution" ? "Institution" : resolvedPlan === "campus" ? "Institution" : resolvedPlan === null ? "…" : "Starter";
+  const planName = resolvedPlan === "pro" ? "Pro" : resolvedPlan === "student_pro_monthly" ? "Student Pro" : resolvedPlan === "institution" ? "Institution" : resolvedPlan === "campus" ? "Institution" : resolvedPlan === "starter" ? "Starter" : resolvedPlan === null ? "…" : "No";
 
   const creditDollars = (balanceCents / 100).toFixed(2);
 
@@ -104,6 +104,11 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                   <PlanIcon size={15} className={planLoading ? "text-muted-foreground" : planColor} />
                   <span className="text-sm font-semibold text-foreground">{planName} Plan</span>
                 </div>
+                {!planLoading && resolvedPlan === "none" && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/50 border border-white/15 font-medium">
+                    PAYG only
+                  </span>
+                )}
                 {!planLoading && resolvedPlan === "starter" && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20 font-medium">
                     $9.99/mo
@@ -132,6 +137,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
               </div>
               <p className="text-[11px] text-muted-foreground">
                 {planLoading                  && "Fetching your plan…"}
+                {!planLoading && resolvedPlan === "none" && "No active subscription — every tool is pay-as-you-go. Subscribe for monthly included quotas."}
                 {!planLoading && resolvedPlan === "starter" && "3 papers · 1 revision · 15 STEM · 20 study · 5 plagiarism/outlines per month"}
                 {!planLoading && resolvedPlan === "student_pro_monthly" && "8 papers (≤3,500 words) · 4 revisions · 6 humanizations · 40 STEM · 75 study · 10 plagiarism · 10 outlines per month"}
                 {!planLoading && resolvedPlan === "pro"     && "15 papers · 20 revisions · 20 humanizations · 20 outlines · 60 STEM · 150 study · 20 plagiarism per month"}
@@ -170,7 +176,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
             </div>
 
             {/* Upgrade CTA */}
-            {!planLoading && resolvedPlan === "starter" && (
+            {!planLoading && (resolvedPlan === "starter" || resolvedPlan === "none") && (
               <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Star size={14} className="text-violet-400" />
