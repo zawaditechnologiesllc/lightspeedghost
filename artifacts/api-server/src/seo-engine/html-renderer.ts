@@ -338,21 +338,19 @@ ${seoEntries}
 </urlset>`;
 }
 
+// Only PUBLIC, crawlable URLs belong here. Tool pages (/write, /stem, …) are
+// auth-gated and redirect anonymous crawlers to /auth — listing them creates
+// soft-404 "page with redirect" errors in Search Console and wastes crawl budget.
 export const STATIC_PAGES = [
   { loc: "https://lightspeedghost.com/", priority: "1.0", changefreq: "weekly" },
-  { loc: "https://lightspeedghost.com/write", priority: "0.95", changefreq: "weekly" },
-  { loc: "https://lightspeedghost.com/stem", priority: "0.95", changefreq: "weekly" },
-  { loc: "https://lightspeedghost.com/humanizer", priority: "0.95", changefreq: "weekly" },
-  { loc: "https://lightspeedghost.com/plagiarism", priority: "0.90", changefreq: "weekly" },
-  { loc: "https://lightspeedghost.com/revision", priority: "0.90", changefreq: "weekly" },
-  { loc: "https://lightspeedghost.com/outline", priority: "0.90", changefreq: "weekly" },
-  { loc: "https://lightspeedghost.com/study", priority: "0.85", changefreq: "weekly" },
-  { loc: "https://lightspeedghost.com/ebooks", priority: "0.85", changefreq: "weekly" },
-  { loc: "https://lightspeedghost.com/pricing", priority: "0.85", changefreq: "monthly" },
+  { loc: "https://lightspeedghost.com/africa", priority: "0.90", changefreq: "weekly" },
+  { loc: "https://lightspeedghost.com/enterprise", priority: "0.90", changefreq: "weekly" },
+  { loc: "https://lightspeedghost.com/blog", priority: "0.70", changefreq: "daily" },
   { loc: "https://lightspeedghost.com/about", priority: "0.60", changefreq: "monthly" },
   { loc: "https://lightspeedghost.com/contact", priority: "0.55", changefreq: "monthly" },
-  { loc: "https://lightspeedghost.com/blog", priority: "0.70", changefreq: "daily" },
+  { loc: "https://lightspeedghost.com/careers", priority: "0.40", changefreq: "monthly" },
+  { loc: "https://lightspeedghost.com/academic-use", priority: "0.40", changefreq: "yearly" },
   { loc: "https://lightspeedghost.com/privacy", priority: "0.30", changefreq: "yearly" },
   { loc: "https://lightspeedghost.com/terms", priority: "0.30", changefreq: "yearly" },
-  { loc: "https://lightspeedghost.com/academic-use", priority: "0.40", changefreq: "yearly" },
+  { loc: "https://lightspeedghost.com/refunds", priority: "0.30", changefreq: "yearly" },
 ];

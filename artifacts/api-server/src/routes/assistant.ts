@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middlewares/auth";
 import { anthropic } from "../lib/ai";
 import { recordUsage } from "../lib/apiCost";
-import { trackUsage, isAtLimit, getUserPlan, getUsage, PLAN_LIMITS, enforceLimit } from "../lib/usageTracker";
+import { trackUsage, isAtLimit, getUserPlan, getUsage, PLAN_LIMITS, enforceLimit, quotaExceededMessage } from "../lib/usageTracker";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { z } from "zod";
 
@@ -135,7 +135,7 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
     if (!quota.allowed) {
       send("error", {
         type: "quota",
-        message: `You've used all ${quota.limit} assistant queries for this month on your ${quota.plan} plan. Upgrade to Pro for unlimited access.`,
+        message: quotaExceededMessage(quota, "assistant queries"),
       });
       return;
     }

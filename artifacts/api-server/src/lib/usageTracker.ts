@@ -6,6 +6,20 @@ export type ToolName = "paper" | "revision" | "humanizer" | "stem" | "study" | "
 const DAILY_TOOLS = new Set<ToolName>([]);
 
 export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
+  // No free plan exists. Users without an active paid subscription (never
+  // subscribed, expired, or cancelled) get zero included quota on every tool —
+  // they can still use Pay-As-You-Go or credits for any single job.
+  none: {
+    paper:      0,
+    revision:   0,
+    humanizer:  0,
+    stem:       0,
+    study:      0,
+    plagiarism: 0,
+    outline:    0,
+    assistant:  0,
+    ebook:      0,
+  },
   starter: {
     paper:      3,
     revision:   1,
@@ -112,6 +126,20 @@ export async function getUsage(userId: string): Promise<Record<string, number>> 
   return usage;
 }
 
+// Builds the user-facing message when a quota check fails. With no free plan,
+// "none" users get a subscribe/PAYG prompt instead of a confusing "0 used" line.
+export function quotaExceededMessage(
+  quota: { plan: string; limit: number | null },
+  what: string,
+): string {
+  if (quota.plan === "none" || quota.limit === 0) {
+    return `You don't have an active subscription. Subscribe to a plan for monthly ${what}, or pay per use — credits never expire.`;
+  }
+  return `You've used all ${quota.limit} ${what} for this month on your ${quota.plan} plan. Upgrade your plan or use Pay-As-You-Go.`;
+}
+
+// There is no free plan: anything other than an active, unexpired, paid
+// subscription resolves to "none" (zero included quota — PAYG/credits only).
 export async function getUserPlan(userId: string): Promise<string> {
   try {
     const { rows } = await pool.query<{ plan: string; status: string; expired: boolean }>(
@@ -121,7 +149,7 @@ export async function getUserPlan(userId: string): Promise<string> {
       [userId],
     );
     const sub = rows[0];
-    if (!sub || sub.status !== "active") return "starter";
+    if (!sub || sub.status !== "active") return "none";
     if (sub.expired) {
       // Lazily flip expired subscriptions so billing UI reflects reality
       pool.query(
@@ -129,14 +157,15 @@ export async function getUserPlan(userId: string): Promise<string> {
          WHERE user_id=$1 AND status='active' AND current_period_end < NOW()`,
         [userId],
       ).catch(() => {});
-      return "starter";
+      return "none";
     }
     // Normalise legacy plan keys
-    const plan = sub.plan ?? "starter";
+    const plan = sub.plan ?? "none";
+    if (plan === "free") return "none";
     if (plan === "campus" || plan === "campus_annual") return "institution";
     return plan;
   } catch {
-    return "starter";
+    return "none";
   }
 }
 
@@ -145,7 +174,7 @@ async function getEffectiveLimits(plan: string): Promise<Record<ToolName, number
     const dynamic = await getDynamicPlanLimits();
     if (dynamic[plan]) return dynamic[plan];
   } catch { /* fall through */ }
-  return PLAN_LIMITS[plan] ?? PLAN_LIMITS.starter;
+  return PLAN_LIMITS[plan] ?? PLAN_LIMITS.none;
 }
 
 export async function isAtLimit(userId: string, tool: ToolName): Promise<boolean> {

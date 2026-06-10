@@ -11,7 +11,7 @@ import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSource
 import { recordUsage } from "../lib/apiCost";
 import { anthropic } from "../lib/ai";
 import { ACADEMIC_SOUL } from "../lib/soul";
-import { trackUsage, enforceLimit } from "../lib/usageTracker";
+import { trackUsage, enforceLimit, quotaExceededMessage } from "../lib/usageTracker";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
 import { buildFinancialStatementsContext } from "../lib/financialStatements";
 
@@ -41,7 +41,7 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
     if (!quota.allowed) {
       return res.status(429).json({
         error: "quota",
-        message: `You've used all ${quota.limit} STEM solves for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+        message: quotaExceededMessage(quota, "STEM solves"),
       });
     }
     const body = SolveStemBody.parse(req.body);
@@ -172,7 +172,7 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
     if (!quota.allowed) {
       send("error", {
         type: "quota",
-        message: `You've used all ${quota.limit} STEM solves for this month on your ${quota.plan} plan. Upgrade to Pro or use Pay-As-You-Go.`,
+        message: quotaExceededMessage(quota, "STEM solves"),
       });
       res.end();
       clearInterval(heartbeat);
