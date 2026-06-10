@@ -199,7 +199,8 @@ IMPORTANT:
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.4,
-        maxOutputTokens: 3000,
+        // Thinking-model headroom — see researcher.ts
+        maxOutputTokens: 8192,
         responseMimeType: "application/json",
       },
     });

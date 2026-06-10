@@ -124,12 +124,18 @@ async function generateWithGemini(spec: PageSpec): Promise<{ html: string; input
     }],
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 3500,
+      // gemini-2.5-pro is a thinking model — reasoning tokens count against this
+      // budget, so it needs generous headroom or it returns empty responses.
+      maxOutputTokens: 16384,
     },
   });
 
   const html  = result.response.text();
   const usage = result.response.usageMetadata;
+
+  if (!html || html.trim().length < 200) {
+    throw new Error(`Gemini returned ${html ? "near-empty" : "empty"} content (finishReason: ${result.response.candidates?.[0]?.finishReason ?? "unknown"})`);
+  }
 
   return {
     html,

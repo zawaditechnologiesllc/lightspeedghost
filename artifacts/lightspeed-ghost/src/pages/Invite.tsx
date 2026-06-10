@@ -3,6 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { Logo } from "@/components/Logo";
 import { Link } from "wouter";
 import { GraduationCap, Zap, ShieldCheck, BookOpen, ArrowRight, CheckCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const PERKS = [
   { icon: Zap,           label: "AI-written papers",       sub: "Real citations, every time" },
@@ -15,6 +16,7 @@ export default function Invite() {
   const params = useParams<{ code?: string }>();
   const [, setLocation] = useLocation();
   const [saved, setSaved] = useState(false);
+  const { user, loading } = useAuth();
 
   const code = params.code?.toUpperCase().trim() ?? null;
 
@@ -24,6 +26,13 @@ export default function Invite() {
       setSaved(true);
     }
   }, [code]);
+
+  // Already signed in — referral links are for new users; go straight to the app
+  useEffect(() => {
+    if (!loading && user) {
+      setLocation("/app");
+    }
+  }, [user, loading, setLocation]);
 
   return (
     <div className="min-h-screen bg-[#04080f] flex flex-col items-center justify-center px-6 py-12">

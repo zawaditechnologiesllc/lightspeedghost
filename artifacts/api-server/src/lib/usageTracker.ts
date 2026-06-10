@@ -114,12 +114,23 @@ export async function getUsage(userId: string): Promise<Record<string, number>> 
 
 export async function getUserPlan(userId: string): Promise<string> {
   try {
-    const { rows } = await pool.query<{ plan: string; status: string }>(
-      "SELECT plan, status FROM user_subscriptions WHERE user_id = $1",
+    const { rows } = await pool.query<{ plan: string; status: string; expired: boolean }>(
+      `SELECT plan, status,
+              (current_period_end IS NOT NULL AND current_period_end < NOW()) AS expired
+       FROM user_subscriptions WHERE user_id = $1`,
       [userId],
     );
     const sub = rows[0];
     if (!sub || sub.status !== "active") return "starter";
+    if (sub.expired) {
+      // Lazily flip expired subscriptions so billing UI reflects reality
+      pool.query(
+        `UPDATE user_subscriptions SET status='expired', updated_at=NOW()
+         WHERE user_id=$1 AND status='active' AND current_period_end < NOW()`,
+        [userId],
+      ).catch(() => {});
+      return "starter";
+    }
     // Normalise legacy plan keys
     const plan = sub.plan ?? "starter";
     if (plan === "campus" || plan === "campus_annual") return "institution";

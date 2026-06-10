@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Bell, ExternalLink, Megaphone } from "lucide-react";
+import { apiFetch } from "@/lib/apiFetch";
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 const DISMISSED_KEY = "lsg_dismissed_announcements";
 
 export interface Announcement {
@@ -32,40 +32,67 @@ function saveDismissed(ids: Set<number>) {
   try { localStorage.setItem(DISMISSED_KEY, JSON.stringify([...ids])); } catch {}
 }
 
+// ── Shared module-level store ───────────────────────────────────────────────
+// A single source of truth so the bell and the banner stay in sync — dismissing
+// in one immediately hides it in the other. Reads are persisted server-side for
+// logged-in users (announcement_reads table), localStorage is the offline fallback.
+
+type Listener = () => void;
+const store = {
+  items: [] as Announcement[],
+  dismissed: getDismissed(),
+  listeners: new Set<Listener>(),
+  fetched: false,
+  notify() { this.listeners.forEach((l) => l()); },
+};
+
+async function fetchAnnouncements() {
+  try {
+    const res = await apiFetch("/announcements");
+    if (!res.ok) return;
+    const data = await res.json() as { announcements: Announcement[] };
+    store.items = data.announcements ?? [];
+    store.fetched = true;
+    store.notify();
+  } catch {}
+}
+
+function persistRead(id: number | "all") {
+  const path = id === "all" ? "/announcements/read-all" : `/announcements/${id}/read`;
+  apiFetch(path, { method: "POST" }).catch(() => {});
+}
+
 export function useAnnouncements() {
-  const [items, setItems] = useState<Announcement[]>([]);
-  const [dismissed, setDismissed] = useState<Set<number>>(getDismissed);
+  const [, forceRender] = useState(0);
 
   useEffect(() => {
-    async function fetch_() {
-      try {
-        const res = await fetch(`${API_BASE}/announcements`);
-        if (!res.ok) return;
-        const data = await res.json() as { announcements: Announcement[] };
-        setItems(data.announcements ?? []);
-      } catch {}
-    }
-    fetch_();
-    const t = setInterval(fetch_, 5 * 60 * 1000);
-    return () => clearInterval(t);
+    const listener = () => forceRender((n) => n + 1);
+    store.listeners.add(listener);
+    if (!store.fetched) fetchAnnouncements();
+    const t = setInterval(fetchAnnouncements, 5 * 60 * 1000);
+    return () => {
+      store.listeners.delete(listener);
+      clearInterval(t);
+    };
   }, []);
 
   function dismiss(id: number) {
-    setDismissed((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      saveDismissed(next);
-      return next;
-    });
+    store.dismissed.add(id);
+    saveDismissed(store.dismissed);
+    store.items = store.items.filter((a) => a.id !== id);
+    persistRead(id);
+    store.notify();
   }
 
   function dismissAll() {
-    const next = new Set(items.map((a) => a.id));
-    saveDismissed(next);
-    setDismissed(next);
+    store.items.forEach((a) => store.dismissed.add(a.id));
+    saveDismissed(store.dismissed);
+    store.items = [];
+    persistRead("all");
+    store.notify();
   }
 
-  const visible = items.filter((a) => !dismissed.has(a.id));
+  const visible = store.items.filter((a) => !store.dismissed.has(a.id));
   return { visible, dismiss, dismissAll };
 }
 

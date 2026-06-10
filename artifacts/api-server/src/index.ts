@@ -37,6 +37,8 @@ const OPTIONAL_VARS: Record<string, string> = {
   RESEND_API_KEY:  "Resend API key for transactional emails (resend.com → API Keys)",
   EMAIL_FROM:      "Sender address, e.g. 'LightSpeed Ghost <hello@lightspeedghost.com>'",
   ADMIN_EMAIL:     "Email to receive enterprise lead notifications — defaults to hello@lightspeedghost.com",
+  GEMINI_API_KEY:  "Google Gemini API key (aistudio.google.com → Get API key) — required for the SEO article engine",
+  STRIPE_PRICE_STUDENT_PRO_MONTHLY: "Stripe Price ID for the $19.99/mo Student Pro plan — required for Student Pro checkout via Stripe",
 };
 for (const [name, hint] of Object.entries(OPTIONAL_VARS)) {
   if (process.env[name]) {

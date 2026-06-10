@@ -2242,6 +2242,27 @@ export default function Admin() {
                         </div>
                       </SettingsCard>
                     ))}
+
+                    {/* Referral program */}
+                    <SettingsCard title="Referral Program">
+                      <p className="text-[10px] text-white/30 mb-3">Discount percentages applied automatically at checkout. Changes take effect within 30 seconds.</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {([
+                          { key: "referral_referrer_discount_pct", label: "Referrer discount %", hint: "Off referrer's next sub per converted referral" },
+                          { key: "referral_friend_discount_pct",   label: "Friend discount %",   hint: "Off referred friend's first subscription" },
+                          { key: "referral_commission_pct",        label: "Commission %",        hint: "Tracked per conversion for payouts/reporting" },
+                        ] as { key: string; label: string; hint: string }[]).map(({ key, label, hint }) => (
+                          <div key={key}>
+                            <label className="block text-xs text-white/40 mb-1.5">{label}</label>
+                            <input type="number" min="0" max="100" value={(settings as unknown as Record<string, string>)[key] ?? ""}
+                              onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
+                              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
+                            />
+                            <p className="text-[9px] text-white/25 mt-1 leading-snug">{hint}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </SettingsCard>
                   </div>
                 ) : <Empty text="Settings unavailable" />}
               </div>

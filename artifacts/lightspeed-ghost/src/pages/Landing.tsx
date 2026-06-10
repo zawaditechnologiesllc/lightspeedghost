@@ -202,7 +202,7 @@ const pricingPlans = [
     perAnnual: "/ month  ·  billed $269 / year",
     desc: "Every cap lifted. Every tool unlocked. One flat price.",
     features: [
-      "15 papers / month (all types + all lengths)",
+      "15 papers / month (up to 3,500 words each)",
       "20 revisions / month",
       "60 STEM solver problems / month",
       "150 study messages / month",

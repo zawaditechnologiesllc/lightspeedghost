@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import crypto from "node:crypto";
 import Stripe from "stripe";
-import { maybeRecordReferralCommission, maybeApplyReferralDiscount, markFirstPendingDiscountApplied } from "./referral";
+import { maybeRecordReferralCommission, maybeApplyReferralDiscount, maybeApplyFriendDiscount, markFirstPendingDiscountApplied } from "./referral";
 import { pool } from "@workspace/db";
 import {
   resolveGateway,
@@ -642,11 +642,18 @@ router.post("/payments/create", async (req: Request, res: Response) => {
       }
       label = SUBSCRIPTION_PLANS[plan].label;
 
-      // Apply referral discount (10% off next subscription) if pending
+      // Referrer reward: pending discount earned from a converted referral
       const disc = await maybeApplyReferralDiscount(userId, amountCents);
       if (disc.discountApplied) {
         amountCents = disc.discountedAmount;
-        logger.info({ userId, original: SUBSCRIPTION_PLANS[plan].amountCents, discounted: amountCents }, "[referral] 10% discount applied at checkout");
+        logger.info({ userId, original: SUBSCRIPTION_PLANS[plan].amountCents, discounted: amountCents }, "[referral] referrer discount applied at checkout");
+      } else {
+        // Friend reward: referred users get a % off their first subscription
+        const friendDisc = await maybeApplyFriendDiscount(userId, amountCents);
+        if (friendDisc.discountApplied) {
+          amountCents = friendDisc.discountedAmount;
+          logger.info({ userId, original: SUBSCRIPTION_PLANS[plan].amountCents, discounted: amountCents }, "[referral] friend first-purchase discount applied");
+        }
       }
     } else {
       if (!tool) {
@@ -763,6 +770,31 @@ router.post("/payments/create", async (req: Request, res: Response) => {
   }
 });
 
+// ── Subscription activation (shared by verify + webhooks) ────────────────────
+// Normalises a checkout plan id (e.g. "student_pro_monthly", "pro_annual") to the
+// user_subscriptions.plan key that PLAN_LIMITS understands, and upserts the row.
+export async function activateSubscription(userId: string, checkoutPlan: string, gateway: string, ref: string): Promise<void> {
+  const billing = checkoutPlan.endsWith("annual") ? "annual" : "monthly";
+  const planName = (checkoutPlan.startsWith("campus") || checkoutPlan.startsWith("institution")) ? "institution"
+    : checkoutPlan.startsWith("student_pro") ? "student_pro_monthly"
+    : checkoutPlan.startsWith("starter") ? "starter"
+    : checkoutPlan.startsWith("ebooks") ? "ebooks_subscriber"
+    : "pro";
+  const periodEnd = billing === "annual"
+    ? new Date(Date.now() + 365 * 86400000)
+    : new Date(Date.now() + 31 * 86400000);
+
+  await pool.query(
+    `INSERT INTO user_subscriptions (user_id, plan, billing, gateway, gateway_subscription_id, status, current_period_end)
+     VALUES ($1,$2,$3,$4,$5,'active',$6)
+     ON CONFLICT (user_id) DO UPDATE SET
+       plan=EXCLUDED.plan, billing=EXCLUDED.billing, gateway=EXCLUDED.gateway,
+       gateway_subscription_id=EXCLUDED.gateway_subscription_id,
+       status='active', current_period_end=EXCLUDED.current_period_end, updated_at=NOW()`,
+    [userId, planName, billing, gateway, ref, periodEnd]
+  );
+}
+
 // ── Route: verify payment (polling after redirect) ────────────────────────────
 
 router.get("/payments/verify", async (req: Request, res: Response) => {
@@ -824,21 +856,7 @@ router.get("/payments/verify", async (req: Request, res: Response) => {
       const payment = row.rows[0];
 
       if (payment?.type === "subscription" && payment.plan) {
-        const billing = payment.plan.endsWith("annual") ? "annual" : "monthly";
-        const planName = (payment.plan.startsWith("campus") || payment.plan.startsWith("institution")) ? "institution" : payment.plan.startsWith("starter") ? "starter" : "pro";
-        const periodEnd = billing === "annual"
-          ? new Date(Date.now() + 365 * 86400000)
-          : new Date(Date.now() + 31 * 86400000);
-
-        await pool.query(
-          `INSERT INTO user_subscriptions (user_id, plan, billing, gateway, gateway_subscription_id, status, current_period_end)
-           VALUES ($1,$2,$3,$4,$5,'active',$6)
-           ON CONFLICT (user_id) DO UPDATE SET
-             plan=EXCLUDED.plan, billing=EXCLUDED.billing, gateway=EXCLUDED.gateway,
-             gateway_subscription_id=EXCLUDED.gateway_subscription_id,
-             status='active', current_period_end=EXCLUDED.current_period_end, updated_at=NOW()`,
-          [userId, planName, billing, gateway, ref, periodEnd]
-        );
+        await activateSubscription(userId, payment.plan, gateway, ref);
         await markFirstPendingDiscountApplied(userId);
       }
     }
@@ -952,6 +970,15 @@ router.post("/payments/webhook/stripe", async (req: Request, res: Response) => {
            WHERE gateway_session_id=$1`,
           [session.id]
         );
+        // Activate subscription even if the buyer never returns to the success page
+        const payRow = await pool.query<{ type: string; plan: string | null }>(
+          "SELECT type, plan FROM payments WHERE gateway_session_id=$1",
+          [session.id]
+        );
+        const pay = payRow.rows[0];
+        if (pay?.type === "subscription" && pay.plan) {
+          await activateSubscription(userId, pay.plan, "stripe", session.id);
+        }
         await maybeRecordReferralCommission(userId, session.amount_total ?? 0);
         await markFirstPendingDiscountApplied(userId);
       }
