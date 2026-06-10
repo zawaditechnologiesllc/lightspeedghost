@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { useGetDocumentStats } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/apiFetch";
-import { useSubscription } from "@/hooks/useSubscription";
 import { ManageFundsModal } from "@/components/ManageFundsModal";
 
 const quickActions = [
@@ -78,8 +77,6 @@ interface ReferralInfo {
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useGetDocumentStats();
-  const { plan, planDisplayName } = useSubscription();
-  const [plansOpen, setPlansOpen] = useState(false);
   const [referral, setReferral] = useState<ReferralInfo | null>(null);
   const [copied, setCopied] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -350,8 +347,6 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
-
-      <ManageFundsModal open={plansOpen} onClose={() => setPlansOpen(false)} />
 
       {/* Recent documents */}
       {stats && stats.recentDocuments.length > 0 && (
