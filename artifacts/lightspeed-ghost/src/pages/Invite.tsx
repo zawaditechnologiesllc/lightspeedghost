@@ -16,9 +16,17 @@ export default function Invite() {
   const params = useParams<{ code?: string }>();
   const [, setLocation] = useLocation();
   const [saved, setSaved] = useState(false);
-  const { user, loading } = useAuth();
+  const { session } = useAuth();
 
   const code = params.code?.toUpperCase().trim() ?? null;
+
+  // Logged-in users go straight to the app (store the code first so Dashboard records it)
+  useEffect(() => {
+    if (session) {
+      if (code) localStorage.setItem("lsg_ref", code);
+      setLocation("/app");
+    }
+  }, [session, code, setLocation]);
 
   useEffect(() => {
     if (code) {

@@ -6,9 +6,6 @@ export type ToolName = "paper" | "revision" | "humanizer" | "stem" | "study" | "
 const DAILY_TOOLS = new Set<ToolName>([]);
 
 export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
-  // No free plan exists. Users without an active paid subscription (never
-  // subscribed, expired, or cancelled) get zero included quota on every tool —
-  // they can still use Pay-As-You-Go or credits for any single job.
   none: {
     paper:      0,
     revision:   0,
@@ -32,7 +29,7 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     ebook:      0,   // not included — requires ebooks_monthly add-on
   },
   student_pro_monthly: {
-    paper:      8,
+    paper:      8,   // ≤3,500 words only; larger papers go PAYG
     revision:   4,
     humanizer:  6,
     stem:       40,
@@ -142,27 +139,29 @@ export function quotaExceededMessage(
 // subscription resolves to "none" (zero included quota — PAYG/credits only).
 export async function getUserPlan(userId: string): Promise<string> {
   try {
-    const { rows } = await pool.query<{ plan: string; status: string; expired: boolean }>(
-      `SELECT plan, status,
-              (current_period_end IS NOT NULL AND current_period_end < NOW()) AS expired
-       FROM user_subscriptions WHERE user_id = $1`,
+    const { rows } = await pool.query<{ plan: string; status: string; current_period_end: string | null }>(
+      `SELECT plan, status, current_period_end FROM user_subscriptions WHERE user_id = $1`,
       [userId],
     );
     const sub = rows[0];
-    if (!sub || sub.status !== "active") return "none";
-    if (sub.expired) {
-      // Lazily flip expired subscriptions so billing UI reflects reality
-      pool.query(
-        `UPDATE user_subscriptions SET status='expired', updated_at=NOW()
-         WHERE user_id=$1 AND status='active' AND current_period_end < NOW()`,
+    if (!sub) return "none";
+
+    // Lazily expire subscriptions whose period has ended
+    if (sub.status === "active" && sub.current_period_end && new Date(sub.current_period_end) < new Date()) {
+      await pool.query(
+        `UPDATE user_subscriptions SET status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'active'`,
         [userId],
-      ).catch(() => {});
+      );
       return "none";
     }
-    // Normalise legacy plan keys
+
+    if (sub.status !== "active") return "none";
+
     const plan = sub.plan ?? "none";
-    if (plan === "free") return "none";
+    // Normalise legacy / alternate plan keys
     if (plan === "campus" || plan === "campus_annual") return "institution";
+    if (plan === "student_pro") return "student_pro_monthly";
+    if (plan === "free" || plan === "starter_monthly") return "starter";
     return plan;
   } catch {
     return "none";

@@ -573,6 +573,17 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
   const heartbeat = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* ignore */ } }, 10_000);
 
   try {
+    const quota = await enforceLimit(req.userId!, "paper");
+    if (!quota.allowed) {
+      send("error", {
+        type: "quota",
+        message: quotaExceededMessage(quota, "paper generations"),
+      });
+      res.end();
+      clearInterval(heartbeat);
+      return;
+    }
+
     const body = req.body as {
       topic: string;
       subject: string;
@@ -594,38 +605,13 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
 
     const requestedWords = body.wordCount ?? 1500;
 
-    // 3,500-word gate: subscription plans cover papers up to 3,500 words.
-    // Longer papers require a PAYG credit spend (the frontend spends credits
-    // before calling this endpoint — we confirm via a recent credit_transactions row).
+    // Student Pro plan: papers >3,500 words must go PAYG (subscription only covers ≤3,500 words)
     if (requestedWords > 3500) {
       const userPlan = await getUserPlan(req.userId!);
-      if (userPlan !== "institution") {
-        const { rows: paygRows } = await pool.query<{ count: string }>(
-          `SELECT COUNT(*) as count FROM credit_transactions
-           WHERE user_id = $1 AND type = 'spend'
-           AND description LIKE 'Paper Generation%'
-           AND created_at > NOW() - INTERVAL '15 minutes'`,
-          [req.userId!]
-        );
-        if (parseInt(paygRows[0]?.count ?? "0", 10) === 0) {
-          send("error", {
-            type: "payg_required",
-            message: "Papers over 3,500 words require a Pay-As-You-Go purchase. Your subscription plan covers papers up to 3,500 words.",
-          });
-          res.end();
-          clearInterval(heartbeat);
-          return;
-        }
-      }
-      // PAYG confirmed (or institution) — track without enforcing quota
-      await trackUsage(req.userId!, "paper");
-    } else {
-      // Standard subscription quota for papers ≤ 3,500 words
-      const quota = await enforceLimit(req.userId!, "paper");
-      if (!quota.allowed) {
+      if (userPlan === "student_pro_monthly") {
         send("error", {
           type: "quota",
-          message: quotaExceededMessage(quota, "paper generations"),
+          message: `Student Pro includes papers up to 3,500 words. For longer papers, please use Pay-As-You-Go credits — they never expire.`,
         });
         res.end();
         clearInterval(heartbeat);
@@ -999,22 +985,21 @@ After all entries, write a 1-2 paragraph Conclusion synthesising what the litera
 DO NOT write a generic paper body — the entire body IS the annotated entries.
 ` : "";
 
-    // Empirical paper types with no uploaded data: every number must trace to
-    // a verified source — fabricated "primary data" is the #1 hallucination risk.
-    const needsDataGrounding =
-      !datasetAnalysis && !financialContext &&
+    // Anti-hallucination grounding for empirical papers without uploaded primary data
+    const needsDataGrounding = !datasetAnalysis && !financialContext &&
       /research|dissertation|thesis|report|proposal|case stud|lab/i.test(body.paperType);
     const dataGroundingBlock = needsDataGrounding
-      ? `\nDATA GROUNDING (no primary dataset was provided):
-• Do NOT fabricate primary data, survey results, experiment outcomes, or statistics.
-• Every figure, percentage, or statistic MUST come from the verified citations/background reading below, attributed to its source in-text.
-• If the paper type expects primary research, frame the methodology as proposed/secondary-data analysis and present findings as synthesis of published evidence.
-• Where evidence is unavailable, state the gap explicitly rather than inventing numbers.\n`
+      ? `DATA INTEGRITY RULES (no primary dataset was uploaded — these are MANDATORY):
+• Do NOT fabricate primary data, survey results, experiment outcomes, specific percentages, or numerical statistics unless they come from a verified citation.
+• Every specific figure, percentage, mean, or quantitative finding MUST come from one of the verified citations listed below — cite it immediately inline.
+• If the paper type expects primary research (e.g. original survey, experiment), frame the methodology as "proposed" or "secondary-data analysis" — do not invent results.
+• Use qualitative language where quantitative data is unavailable: "Studies suggest…", "Research indicates…", "Evidence points to…"
+• If a citation is needed but none is available, write [citation needed] — do not invent a source.`
       : "";
 
     const systemPrompt = `${WRITER_SOUL}
-${dataGroundingBlock}
-${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${financialContext ? `FINANCIAL STATEMENTS ANALYSIS (PRIMARY DATA — cite specific figures, ratios, and trends from this analysis in your paper. Do NOT present raw data tables; interpret and cite the metrics):\n${financialContext}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
+
+${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${financialContext ? `FINANCIAL STATEMENTS ANALYSIS (PRIMARY DATA — cite specific figures, ratios, and trends from this analysis in your paper. Do NOT present raw data tables; interpret and cite the metrics):\n${financialContext}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${dataGroundingBlock ? `${dataGroundingBlock}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
 
 ${stemBlock ? `${stemBlock}\n` : ""}${aGradeCriteria ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GRADING TARGET — ${aGradeCriteria}

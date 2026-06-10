@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   PenLine, BookOpen, Files, ShieldCheck, FlaskConical,
   GraduationCap, TrendingUp, Clock, ArrowRight, Sparkles, Zap, Wand2,
-  Share2, Copy, Check, Gift, CheckCircle2, X,
+  Copy, Check, Gift, Wallet,
 } from "lucide-react";
 import { useGetDocumentStats } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/apiFetch";
@@ -304,6 +304,26 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Plan / credits nudge */}
+      {(plan === "none" || plan === "starter") && (
+        <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Wallet size={14} className="text-primary" />
+            <span className="text-sm text-muted-foreground">
+              {plan === "none"
+                ? "No active plan — save money with a subscription."
+                : <><span className="text-foreground font-medium">Starter</span> plan active — upgrade to unlock humanizer &amp; more.</>}
+            </span>
+          </div>
+          <button
+            onClick={() => setPlansOpen(true)}
+            className="shrink-0 text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+          >
+            See plans <ArrowRight size={11} />
+          </button>
+        </div>
+      )}
 
       {/* Quick actions */}
       <div>

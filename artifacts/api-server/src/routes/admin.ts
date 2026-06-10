@@ -55,9 +55,9 @@ async function initAdminTables() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE TABLE IF NOT EXISTS announcement_reads (
-      user_id         TEXT    NOT NULL,
+      user_id TEXT NOT NULL,
       announcement_id INTEGER NOT NULL,
-      read_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (user_id, announcement_id)
     );
     CREATE TABLE IF NOT EXISTS tool_feedback (
@@ -107,6 +107,10 @@ async function initAdminTables() {
       ('campus_study',            '75'),
       ('campus_plagiarism',       '10'),
       ('campus_outline',          '10'),
+      ('referral_referrer_pct',          '10'),
+      ('referral_friend_pct',            '10'),
+      ('referral_commission_pct',        '10'),
+      ('export_expiry_days',             '30'),
       ('tool_write_enabled',      'true'),
       ('tool_outline_enabled',    'true'),
       ('tool_revision_enabled',   'true'),
@@ -116,10 +120,7 @@ async function initAdminTables() {
       ('tool_study_enabled',      'true'),
       ('tool_ebooks_enabled',     'true'),
       ('scheduler_enabled',       'false'),
-      ('scheduler_time',          '02:00'),
-      ('referral_referrer_discount_pct', '20'),
-      ('referral_friend_discount_pct',   '10'),
-      ('referral_commission_pct',        '10')
+      ('scheduler_time',          '02:00')
     ON CONFLICT (key) DO NOTHING;
   `);
 }
@@ -536,11 +537,11 @@ router.patch("/admin/users/:id/plan", async (req: Request, res: Response) => {
     // Manual grants always reactivate: clear any expired/cancelled status and
     // remove the period end (NULL = no auto-expiry for admin-granted plans).
     await pool.query(`
-      INSERT INTO user_subscriptions (user_id, plan, billing, gateway, status)
-      VALUES ($1, $2, $3, 'manual', 'active')
-      ON CONFLICT (user_id) DO UPDATE SET
-        plan = $2, billing = $3, gateway = 'manual',
-        status = 'active', current_period_end = NULL, updated_at = NOW()
+      INSERT INTO user_subscriptions (user_id, plan, billing, gateway, status, current_period_end)
+      VALUES ($1, $2, $3, 'manual', 'active', NULL)
+      ON CONFLICT (user_id) DO UPDATE
+        SET plan = $2, billing = $3, gateway = 'manual',
+            status = 'active', current_period_end = NULL, updated_at = NOW()
     `, [id, plan, billing ?? null]);
     res.json({ ok: true });
   } catch {
@@ -712,6 +713,28 @@ router.post("/admin/settings", async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /admin/exports — document export audit log ───────────────────────────
+
+router.get("/admin/exports", async (req: Request, res: Response) => {
+  if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const { rows } = await pool.query(
+      `SELECT e.id, e.user_id, e.document_id, e.format, e.exported_at::text as exported_at,
+              d.title, d.type
+       FROM document_exports e
+       LEFT JOIN documents d ON d.id::text = e.document_id
+       ORDER BY e.exported_at DESC
+       LIMIT 100`
+    );
+    const { rows: countRows } = await pool.query<{ cnt: string }>(
+      "SELECT COUNT(*) as cnt FROM document_exports"
+    );
+    res.json({ exports: rows, total: parseInt(countRows[0]?.cnt ?? "0", 10) });
+  } catch {
+    res.json({ exports: [], total: 0 });
+  }
+});
+
 // ── GET /admin/ping ───────────────────────────────────────────────────────────
 
 router.get("/admin/ping", (req: Request, res: Response) => {
@@ -851,66 +874,67 @@ router.get("/admin/logs", async (req: Request, res: Response) => {
   }
 });
 
-// ── GET /api/announcements (PUBLIC — no auth) ─────────────────────────────────
-// Logged-in users never see announcements they've already marked read —
-// reads are persisted server-side so they survive devices and reinstalls.
+// ── GET /api/announcements (PUBLIC — filters already-read when user is authed) ──
 
 router.get("/announcements", async (req: Request, res: Response) => {
   try {
-    const rows = req.userId
-      ? await pool.query(
-          `SELECT a.id, a.title, a.message, a.link, a.link_text, a.color
-           FROM announcements a
-           WHERE a.is_active = true
-             AND NOT EXISTS (
-               SELECT 1 FROM announcement_reads r
-               WHERE r.announcement_id = a.id AND r.user_id = $1
-             )
-           ORDER BY a.created_at DESC`,
-          [req.userId]
-        )
-      : await pool.query(
-          `SELECT id, title, message, link, link_text, color
-           FROM announcements WHERE is_active = true ORDER BY created_at DESC`
-        );
+    const userId = (req as Request & { userId?: string }).userId;
+    let query: string;
+    let params: unknown[];
+    if (userId) {
+      query = `SELECT id, title, message, link, link_text, color
+               FROM announcements
+               WHERE is_active = true
+                 AND id NOT IN (
+                   SELECT announcement_id FROM announcement_reads WHERE user_id = $1
+                 )
+               ORDER BY created_at DESC`;
+      params = [userId];
+    } else {
+      query = `SELECT id, title, message, link, link_text, color
+               FROM announcements WHERE is_active = true ORDER BY created_at DESC`;
+      params = [];
+    }
+    const rows = await pool.query(query, params);
     res.json({ announcements: rows.rows });
   } catch {
     res.json({ announcements: [] });
   }
 });
 
-// ── POST /api/announcements/:id/read — persist a single read ─────────────────
+// ── POST /api/announcements/:id/read ─────────────────────────────────────────
 
 router.post("/announcements/:id/read", async (req: Request, res: Response) => {
-  if (!req.userId) { res.status(401).json({ error: "Authentication required" }); return; }
-  const id = parseInt(req.params["id"] ?? "", 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid announcement id" }); return; }
+  const userId = (req as Request & { userId?: string }).userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { id } = req.params;
   try {
     await pool.query(
       `INSERT INTO announcement_reads (user_id, announcement_id)
        VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-      [req.userId, id]
+      [userId, id],
     );
     res.json({ ok: true });
   } catch {
-    res.status(500).json({ error: "Failed to mark read" });
+    res.status(500).json({ error: "Failed to mark as read" });
   }
 });
 
-// ── POST /api/announcements/read-all — persist all current reads ─────────────
+// ── POST /api/announcements/read-all ─────────────────────────────────────────
 
 router.post("/announcements/read-all", async (req: Request, res: Response) => {
-  if (!req.userId) { res.status(401).json({ error: "Authentication required" }); return; }
+  const userId = (req as Request & { userId?: string }).userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     await pool.query(
       `INSERT INTO announcement_reads (user_id, announcement_id)
        SELECT $1, id FROM announcements WHERE is_active = true
        ON CONFLICT DO NOTHING`,
-      [req.userId]
+      [userId],
     );
     res.json({ ok: true });
   } catch {
-    res.status(500).json({ error: "Failed to mark all read" });
+    res.status(500).json({ error: "Failed to mark all as read" });
   }
 });
 

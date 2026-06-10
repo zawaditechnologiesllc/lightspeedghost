@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { eq, desc, and, isNull } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
@@ -13,6 +13,80 @@ import {
 } from "@workspace/api-zod";
 
 const router = Router();
+
+// ── Export tracking ───────────────────────────────────────────────────────────
+
+async function ensureExportsTable(): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS document_exports (
+      id          BIGSERIAL PRIMARY KEY,
+      user_id     TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      format      TEXT NOT NULL DEFAULT 'doc',
+      exported_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_doc_exports_user ON document_exports (user_id);
+    CREATE INDEX IF NOT EXISTS idx_doc_exports_time ON document_exports (exported_at DESC);
+  `);
+}
+ensureExportsTable().catch(() => {});
+
+async function getExportExpiryDays(): Promise<number> {
+  try {
+    const { rows } = await pool.query<{ value: string }>(
+      "SELECT value FROM system_settings WHERE key = 'export_expiry_days'",
+    );
+    const n = parseInt(rows[0]?.value ?? "30", 10);
+    return Number.isFinite(n) && n > 0 ? n : 30;
+  } catch {
+    return 30;
+  }
+}
+
+// POST /documents/:id/export — returns content for download if the document is
+// still within the export window (export_expiry_days after last update), and
+// logs the export so admin can audit activity.
+router.post("/documents/:id/export", requireAuth, async (req, res) => {
+  try {
+    const { id } = GetDocumentParams.parse(req.params);
+    const format = (req.body as { format?: string })?.format === "md" ? "md" : "doc";
+
+    const [doc] = await db
+      .select()
+      .from(documentsTable)
+      .where(and(eq(documentsTable.id, id), eq(documentsTable.userId, req.userId!)));
+
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+
+    const expiryDays = await getExportExpiryDays();
+    const ageMs = Date.now() - doc.updatedAt.getTime();
+    const expired = ageMs > expiryDays * 24 * 60 * 60 * 1000;
+    if (expired) {
+      return res.status(410).json({
+        error: `Export window closed — documents can be exported for ${expiryDays} days after their last edit. Open and re-save the document to refresh the window.`,
+        expiryDays,
+      });
+    }
+
+    await pool.query(
+      `INSERT INTO document_exports (user_id, document_id, format) VALUES ($1, $2, $3)`,
+      [req.userId!, id, format],
+    );
+
+    res.json({
+      ok: true,
+      title: doc.title,
+      content: doc.content ?? "",
+      format,
+      expiresAt: new Date(doc.updatedAt.getTime() + expiryDays * 24 * 60 * 60 * 1000).toISOString(),
+    });
+  } catch (err) {
+    req.log.error({ err }, "Error exporting document");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.get("/documents/stats", requireAuth, async (req, res) => {
   try {

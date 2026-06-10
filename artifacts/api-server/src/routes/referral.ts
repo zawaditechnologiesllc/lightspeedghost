@@ -77,17 +77,16 @@ interface ReferralSettings {
 }
 
 export async function getReferralSettings(): Promise<ReferralSettings> {
-  const defaults: ReferralSettings = { referrerDiscountPct: 20, friendDiscountPct: 10, commissionPct: 10 };
+  const defaults: ReferralSettings = { referrerDiscountPct: 10, friendDiscountPct: 10, commissionPct: 10 };
   try {
-    const rows = await pool.query<{ key: string; value: string }>(
-      `SELECT key, value FROM system_settings
-       WHERE key IN ('referral_referrer_discount_pct','referral_friend_discount_pct','referral_commission_pct')`,
+    const { rows } = await pool.query<{ key: string; value: string }>(
+      `SELECT key, value FROM system_settings WHERE key IN ('referral_referrer_pct','referral_friend_pct','referral_commission_pct')`,
     );
-    const map = Object.fromEntries(rows.rows.map((r) => [r.key, parseInt(r.value, 10)]));
+    const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     return {
-      referrerDiscountPct: map.referral_referrer_discount_pct || defaults.referrerDiscountPct,
-      friendDiscountPct:   map.referral_friend_discount_pct   || defaults.friendDiscountPct,
-      commissionPct:       map.referral_commission_pct        || defaults.commissionPct,
+      referrerDiscountPct: parseInt(map.referral_referrer_pct ?? "", 10) || defaults.referrerDiscountPct,
+      friendDiscountPct:   parseInt(map.referral_friend_pct   ?? "", 10) || defaults.friendDiscountPct,
+      commissionPct:       parseInt(map.referral_commission_pct ?? "", 10) || defaults.commissionPct,
     };
   } catch {
     return defaults;
@@ -107,9 +106,9 @@ export async function maybeRecordReferralCommission(
     );
     if (res.rows.length === 0) return;
 
-    const settings = await getReferralSettings();
     const code = res.rows[0].referral_code;
-    const commissionCents = Math.round(amountCents * (settings.commissionPct / 100));
+    const { commissionPct, referrerDiscountPct } = await getReferralSettings();
+    const commissionCents = Math.round(amountCents * (commissionPct / 100));
 
     await pool.query(
       `INSERT INTO referral_conversions (referral_code, referred_user_id, amount_cents, commission_cents, status)
@@ -129,10 +128,10 @@ export async function maybeRecordReferralCommission(
       `INSERT INTO referral_discounts (referrer_user_id, referral_code, referred_user_id, discount_pct, status)
        VALUES ($1, $2, $3, $4, 'pending')
        ON CONFLICT (referred_user_id) DO NOTHING`,
-      [referrerUserId, code, userId, settings.referrerDiscountPct],
+      [referrerUserId, code, userId, referrerDiscountPct],
     );
 
-    logger.info({ code, referrerUserId, userId, pct: settings.referrerDiscountPct }, "[referral] discount granted to referrer");
+    logger.info({ code, referrerUserId, userId, referrerDiscountPct }, "[referral] discount granted to referrer");
   } catch (err) {
     logger.warn({ err }, "[referral] Failed to record — non-fatal");
   }
