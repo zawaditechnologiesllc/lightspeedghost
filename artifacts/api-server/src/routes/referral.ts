@@ -96,6 +96,28 @@ export async function getReferralSettings(): Promise<ReferralSettings> {
 
 // ── Called by payments webhook: record conversion + grant referrer a discount ──
 
+interface ReferralSettings {
+  referrerDiscountPct: number;
+  friendDiscountPct: number;
+  commissionPct: number;
+}
+
+async function getReferralSettings(): Promise<ReferralSettings> {
+  try {
+    const { rows } = await pool.query<{ key: string; value: string }>(
+      `SELECT key, value FROM system_settings WHERE key IN ('referral_referrer_pct','referral_friend_pct','referral_commission_pct')`,
+    );
+    const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+    return {
+      referrerDiscountPct: parseInt(map.referral_referrer_pct ?? "10", 10),
+      friendDiscountPct:   parseInt(map.referral_friend_pct   ?? "10", 10),
+      commissionPct:       parseInt(map.referral_commission_pct ?? "10", 10),
+    };
+  } catch {
+    return { referrerDiscountPct: 10, friendDiscountPct: 10, commissionPct: 10 };
+  }
+}
+
 export async function maybeRecordReferralCommission(
   userId: string,
   amountCents: number,
@@ -109,7 +131,8 @@ export async function maybeRecordReferralCommission(
 
     const settings = await getReferralSettings();
     const code = res.rows[0].referral_code;
-    const commissionCents = Math.round(amountCents * (settings.commissionPct / 100));
+    const { commissionPct, referrerDiscountPct } = await getReferralSettings();
+    const commissionCents = Math.round(amountCents * (commissionPct / 100));
 
     await pool.query(
       `INSERT INTO referral_conversions (referral_code, referred_user_id, amount_cents, commission_cents, status)
@@ -129,10 +152,10 @@ export async function maybeRecordReferralCommission(
       `INSERT INTO referral_discounts (referrer_user_id, referral_code, referred_user_id, discount_pct, status)
        VALUES ($1, $2, $3, $4, 'pending')
        ON CONFLICT (referred_user_id) DO NOTHING`,
-      [referrerUserId, code, userId, settings.referrerDiscountPct],
+      [referrerUserId, code, userId, referrerDiscountPct],
     );
 
-    logger.info({ code, referrerUserId, userId, pct: settings.referrerDiscountPct }, "[referral] discount granted to referrer");
+    logger.info({ code, referrerUserId, userId, referrerDiscountPct }, "[referral] discount granted to referrer");
   } catch (err) {
     logger.warn({ err }, "[referral] Failed to record — non-fatal");
   }

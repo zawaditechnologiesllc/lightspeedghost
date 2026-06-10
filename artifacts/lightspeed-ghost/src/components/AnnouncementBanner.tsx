@@ -1,8 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { X, Bell, ExternalLink, Megaphone } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
-
-const DISMISSED_KEY = "lsg_dismissed_announcements";
 
 export interface Announcement {
   id: number;
@@ -21,30 +19,27 @@ const COLOR_MAP: Record<string, { bg: string; border: string; text: string; acce
   violet:  { bg: "bg-violet-500/10",  border: "border-violet-500/20",  text: "text-violet-100",  accent: "text-violet-400" },
 };
 
-function getDismissed(): Set<number> {
-  try {
-    const raw = localStorage.getItem(DISMISSED_KEY);
-    return new Set(raw ? (JSON.parse(raw) as number[]) : []);
-  } catch { return new Set(); }
+// ── Module-level shared store (bell + banner share one list) ──────────────────
+
+interface Store {
+  items: Announcement[];
+  listeners: Set<() => void>;
 }
 
-function saveDismissed(ids: Set<number>) {
-  try { localStorage.setItem(DISMISSED_KEY, JSON.stringify([...ids])); } catch {}
+const store: Store = { items: [], listeners: new Set() };
+
+function notifyListeners() {
+  store.listeners.forEach((fn) => fn());
 }
 
-// ── Shared module-level store ───────────────────────────────────────────────
-// A single source of truth so the bell and the banner stay in sync — dismissing
-// in one immediately hides it in the other. Reads are persisted server-side for
-// logged-in users (announcement_reads table), localStorage is the offline fallback.
+function subscribe(fn: () => void) {
+  store.listeners.add(fn);
+  return () => { store.listeners.delete(fn); };
+}
 
-type Listener = () => void;
-const store = {
-  items: [] as Announcement[],
-  dismissed: getDismissed(),
-  listeners: new Set<Listener>(),
-  fetched: false,
-  notify() { this.listeners.forEach((l) => l()); },
-};
+function getSnapshot() {
+  return store.items;
+}
 
 async function fetchAnnouncements() {
   try {
@@ -52,48 +47,48 @@ async function fetchAnnouncements() {
     if (!res.ok) return;
     const data = await res.json() as { announcements: Announcement[] };
     store.items = data.announcements ?? [];
-    store.fetched = true;
-    store.notify();
+    notifyListeners();
   } catch {}
 }
 
-function persistRead(id: number | "all") {
-  const path = id === "all" ? "/announcements/read-all" : `/announcements/${id}/read`;
-  apiFetch(path, { method: "POST" }).catch(() => {});
+async function persistRead(id: number | "all") {
+  try {
+    if (id === "all") {
+      await apiFetch("/announcements/read-all", { method: "POST" });
+    } else {
+      await apiFetch(`/announcements/${id}/read`, { method: "POST" });
+    }
+  } catch {}
 }
 
-export function useAnnouncements() {
-  const [, forceRender] = useState(0);
+// Bootstrap and poll every 5 min
+let bootstrapped = false;
+function ensureBootstrapped() {
+  if (bootstrapped) return;
+  bootstrapped = true;
+  fetchAnnouncements();
+  setInterval(fetchAnnouncements, 5 * 60 * 1000);
+}
 
-  useEffect(() => {
-    const listener = () => forceRender((n) => n + 1);
-    store.listeners.add(listener);
-    if (!store.fetched) fetchAnnouncements();
-    const t = setInterval(fetchAnnouncements, 5 * 60 * 1000);
-    return () => {
-      store.listeners.delete(listener);
-      clearInterval(t);
-    };
-  }, []);
+// ── Hook ──────────────────────────────────────────────────────────────────────
+
+export function useAnnouncements() {
+  ensureBootstrapped();
+  const items = useSyncExternalStore(subscribe, getSnapshot);
 
   function dismiss(id: number) {
-    store.dismissed.add(id);
-    saveDismissed(store.dismissed);
     store.items = store.items.filter((a) => a.id !== id);
+    notifyListeners();
     persistRead(id);
-    store.notify();
   }
 
   function dismissAll() {
-    store.items.forEach((a) => store.dismissed.add(a.id));
-    saveDismissed(store.dismissed);
     store.items = [];
+    notifyListeners();
     persistRead("all");
-    store.notify();
   }
 
-  const visible = store.items.filter((a) => !store.dismissed.has(a.id));
-  return { visible, dismiss, dismissAll };
+  return { visible: items, dismiss, dismissAll };
 }
 
 // ── Bell icon for the header ───────────────────────────────────────────────────
@@ -130,7 +125,6 @@ export function NotificationBell() {
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 max-h-[70vh] overflow-y-auto bg-card border border-border rounded-xl shadow-2xl shadow-black/20 z-50 flex flex-col">
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
             <div className="flex items-center gap-2">
               <Bell size={13} className="text-muted-foreground" />
@@ -149,7 +143,6 @@ export function NotificationBell() {
             )}
           </div>
 
-          {/* Notifications list */}
           {visible.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
               <Bell size={24} className="text-muted-foreground/30 mb-3" />
@@ -165,15 +158,10 @@ export function NotificationBell() {
                     <div className="flex items-start gap-3 pr-6">
                       <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${c.accent.replace("text-", "bg-")}`} />
                       <div className="flex-1 min-w-0">
-                        {a.title && (
-                          <p className="text-xs font-semibold text-foreground mb-0.5">{a.title}</p>
-                        )}
+                        {a.title && <p className="text-xs font-semibold text-foreground mb-0.5">{a.title}</p>}
                         <p className="text-xs text-muted-foreground leading-relaxed">{a.message}</p>
                         {a.link && (
-                          <a
-                            href={a.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <a href={a.link} target="_blank" rel="noopener noreferrer"
                             onClick={() => dismiss(a.id)}
                             className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-primary hover:text-primary/80 transition-colors"
                           >
@@ -182,8 +170,7 @@ export function NotificationBell() {
                         )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => dismiss(a.id)}
+                    <button onClick={() => dismiss(a.id)}
                       className="absolute top-3 right-3 p-0.5 rounded text-muted-foreground/40 hover:text-muted-foreground transition-colors"
                       aria-label="Dismiss"
                     >
@@ -200,7 +187,7 @@ export function NotificationBell() {
   );
 }
 
-// ── Banner strip below header (for high-visibility announcements) ──────────────
+// ── Banner strip below header ─────────────────────────────────────────────────
 
 export function AnnouncementBanner() {
   const { visible, dismiss } = useAnnouncements();
@@ -211,27 +198,20 @@ export function AnnouncementBanner() {
       {visible.slice(0, 2).map((a) => {
         const c = COLOR_MAP[a.color] ?? COLOR_MAP.blue;
         return (
-          <div
-            key={a.id}
-            className={`flex items-center gap-3 px-4 py-2 border-b ${c.bg} ${c.border} ${c.text}`}
-          >
+          <div key={a.id} className={`flex items-center gap-3 px-4 py-2 border-b ${c.bg} ${c.border} ${c.text}`}>
             <Megaphone size={12} className={`shrink-0 ${c.accent}`} />
             <p className="flex-1 text-xs leading-relaxed">
               {a.title && <span className="font-semibold mr-1.5">{a.title}:</span>}
               {a.message}
             </p>
             {a.link && (
-              <a
-                href={a.link}
-                target="_blank"
-                rel="noopener noreferrer"
+              <a href={a.link} target="_blank" rel="noopener noreferrer"
                 className="shrink-0 text-[10px] font-semibold underline underline-offset-2 hover:opacity-70 transition-opacity flex items-center gap-1"
               >
                 {a.link_text} <ExternalLink size={9} />
               </a>
             )}
-            <button
-              onClick={() => dismiss(a.id)}
+            <button onClick={() => dismiss(a.id)}
               className="shrink-0 opacity-40 hover:opacity-80 transition-opacity"
               aria-label="Dismiss"
             >

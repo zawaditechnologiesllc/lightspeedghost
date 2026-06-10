@@ -16,7 +16,6 @@ export interface UsageData {
 }
 
 const PLAN_LIMITS: Record<string, Partial<Record<keyof UsageData, number | null>>> = {
-  // No free plan — without an active subscription every tool is PAYG-only
   none: {
     paper:      0,
     revision:   0,
@@ -29,14 +28,14 @@ const PLAN_LIMITS: Record<string, Partial<Record<keyof UsageData, number | null>
   starter: {
     paper:      3,
     revision:   1,
-    humanizer:  0,   // locked on Starter — requires Pro or PAYG
+    humanizer:  0,
     stem:       15,
     study:      20,
     plagiarism: 5,
     outline:    5,
   },
   student_pro_monthly: {
-    paper:      8,   // up to 3,500 words each — longer papers via PAYG
+    paper:      8,
     revision:   4,
     humanizer:  6,
     stem:       40,
@@ -134,11 +133,11 @@ export function useSubscription() {
   }
 
   function planDisplayName(): string {
-    if (!plan || plan === "none") return "No plan";
+    if (!plan || plan === "none") return "No active plan";
     if (plan === "starter") return "Starter";
     if (plan === "student_pro_monthly") return "Student Pro";
     if (plan === "pro") return "Pro";
-    if (plan === "campus") return "Institution";
+    if (plan === "campus" || plan === "institution") return "Institution";
     if (plan === "payg") return "Pay As You Go";
     return plan;
   }

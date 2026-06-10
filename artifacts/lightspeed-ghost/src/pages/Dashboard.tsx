@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import {
   PenLine, BookOpen, Files, ShieldCheck, FlaskConical,
   GraduationCap, TrendingUp, Clock, ArrowRight, Sparkles, Zap, Wand2,
-  Share2, Copy, Check, Gift, CheckCircle2, X,
+  Copy, Check, Gift, Wallet,
 } from "lucide-react";
 import { useGetDocumentStats } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/apiFetch";
+import { useSubscription } from "@/hooks/useSubscription";
 import { ManageFundsModal } from "@/components/ManageFundsModal";
 
 const quickActions = [
@@ -77,6 +78,8 @@ interface ReferralInfo {
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useGetDocumentStats();
+  const { plan, planDisplayName } = useSubscription();
+  const [plansOpen, setPlansOpen] = useState(false);
   const [referral, setReferral] = useState<ReferralInfo | null>(null);
   const [copied, setCopied] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -305,6 +308,26 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Plan / credits nudge */}
+      {(plan === "none" || plan === "starter") && (
+        <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Wallet size={14} className="text-primary" />
+            <span className="text-sm text-muted-foreground">
+              {plan === "none"
+                ? "No active plan — save money with a subscription."
+                : <><span className="text-foreground font-medium">Starter</span> plan active — upgrade to unlock humanizer &amp; more.</>}
+            </span>
+          </div>
+          <button
+            onClick={() => setPlansOpen(true)}
+            className="shrink-0 text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+          >
+            See plans <ArrowRight size={11} />
+          </button>
+        </div>
+      )}
+
       {/* Quick actions */}
       <div>
         <h2 className="text-base font-semibold mb-3 text-foreground">Quick Actions</h2>
@@ -327,6 +350,8 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      <ManageFundsModal open={plansOpen} onClose={() => setPlansOpen(false)} />
 
       {/* Recent documents */}
       {stats && stats.recentDocuments.length > 0 && (

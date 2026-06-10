@@ -201,6 +201,9 @@ interface SystemSettings {
   student_pro_monthly_study: string;
   student_pro_monthly_plagiarism: string;
   student_pro_monthly_outline: string;
+  referral_referrer_pct: string;
+  referral_friend_pct: string;
+  referral_commission_pct: string;
 }
 
 interface TrafficData {
@@ -258,6 +261,7 @@ function countryName(code: string): string {
 }
 
 const PLAN_COLORS: Record<string, string> = {
+  none:                "bg-muted/20 text-muted-foreground border-border",
   starter:             "bg-blue-500/12 text-blue-300 border-blue-500/20",
   student_pro_monthly: "bg-violet-500/12 text-violet-300 border-violet-500/20",
   pro:                 "bg-amber-500/12 text-amber-300 border-amber-500/20",
@@ -266,8 +270,11 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 function planDisplayName(plan: string): string {
+  if (plan === "none" || plan === "free") return "No Plan";
+  if (plan === "student_pro_monthly" || plan === "student_pro") return "Student Pro";
   if (plan === "campus" || plan === "campus_annual" || plan === "institution" || plan === "institution_annual") return "Institution";
-  if (plan === "student_pro_monthly") return "Student Pro";
+  if (plan === "starter" || plan === "starter_monthly") return "Starter";
+  if (plan === "pro" || plan === "pro_monthly") return "Pro";
   return plan.charAt(0).toUpperCase() + plan.slice(1);
 }
 
@@ -2223,13 +2230,13 @@ export default function Admin() {
                         <p className="text-[10px] text-white/30 mb-3">Changes take effect within 30 seconds across all active sessions.</p>
                         <div className="grid grid-cols-2 gap-3">
                           {([
-                            { key: `${plan === "institution" ? "institution" : plan}_paper`,      label: "Papers" },
-                            { key: `${plan === "institution" ? "institution" : plan}_revision`,   label: "Revisions" },
-                            { key: `${plan === "institution" ? "institution" : plan}_humanizer`,  label: "Humanizer" },
-                            { key: `${plan === "institution" ? "institution" : plan}_stem`,       label: "STEM Solves" },
-                            { key: `${plan === "institution" ? "institution" : plan}_study`,      label: "Study Sessions" },
-                            { key: `${plan === "institution" ? "institution" : plan}_plagiarism`, label: "Plagiarism" },
-                            { key: `${plan === "institution" ? "institution" : plan}_outline`,    label: "Outlines" },
+                            { key: `${plan}_paper`,      label: "Papers" },
+                            { key: `${plan}_revision`,   label: "Revisions" },
+                            { key: `${plan}_humanizer`,  label: "Humanizer" },
+                            { key: `${plan}_stem`,       label: "STEM Solves" },
+                            { key: `${plan}_study`,      label: "Study Sessions" },
+                            { key: `${plan}_plagiarism`, label: "Plagiarism" },
+                            { key: `${plan}_outline`,    label: "Outlines" },
                           ] as { key: string; label: string }[]).map(({ key, label }) => (
                             <div key={key}>
                               <label className="block text-xs text-white/40 mb-1.5">{label} / month</label>
@@ -2243,22 +2250,22 @@ export default function Admin() {
                       </SettingsCard>
                     ))}
 
-                    {/* Referral program */}
+                    {/* Referral Program */}
                     <SettingsCard title="Referral Program">
-                      <p className="text-[10px] text-white/30 mb-3">Discount percentages applied automatically at checkout. Changes take effect within 30 seconds.</p>
+                      <p className="text-[10px] text-white/30 mb-3">Percentage-based incentives for the referral program.</p>
                       <div className="grid grid-cols-3 gap-3">
                         {([
-                          { key: "referral_referrer_discount_pct", label: "Referrer discount %", hint: "Off referrer's next sub per converted referral" },
-                          { key: "referral_friend_discount_pct",   label: "Friend discount %",   hint: "Off referred friend's first subscription" },
-                          { key: "referral_commission_pct",        label: "Commission %",        hint: "Tracked per conversion for payouts/reporting" },
-                        ] as { key: string; label: string; hint: string }[]).map(({ key, label, hint }) => (
+                          { key: "referral_referrer_pct",    label: "Referrer Discount %",   placeholder: "10" },
+                          { key: "referral_friend_pct",      label: "Friend (Referred) %",    placeholder: "10" },
+                          { key: "referral_commission_pct",  label: "Commission %",           placeholder: "10" },
+                        ] as { key: string; label: string; placeholder: string }[]).map(({ key, label, placeholder }) => (
                           <div key={key}>
                             <label className="block text-xs text-white/40 mb-1.5">{label}</label>
-                            <input type="number" min="0" max="100" value={(settings as unknown as Record<string, string>)[key] ?? ""}
+                            <input type="number" min="0" max="100" placeholder={placeholder}
+                              value={(settings as unknown as Record<string, string>)[key] ?? ""}
                               onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
                               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
                             />
-                            <p className="text-[9px] text-white/25 mt-1 leading-snug">{hint}</p>
                           </div>
                         ))}
                       </div>
@@ -2310,6 +2317,7 @@ export default function Admin() {
               <label className="block text-xs text-white/40 mb-1.5">Plan</label>
               <select value={planEditValue} onChange={(e) => setPlanEditValue(e.target.value)}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
+                <option value="none">No Plan</option>
                 <option value="starter">Starter</option>
                 <option value="student_pro_monthly">Student Pro</option>
                 <option value="pro">Pro</option>
