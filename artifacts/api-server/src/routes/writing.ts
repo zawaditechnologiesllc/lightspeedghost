@@ -16,7 +16,7 @@ import { trackUsage, enforceLimit, getUserPlan, quotaExceededMessage } from "../
 import { recordSearchResults, recordQualitySignal } from "../lib/learningEngine";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
-import { buildFinancialStatementsContext, isFinanceSubject } from "../lib/financialStatements";
+import { buildFinancialStatementsContext } from "../lib/financialStatements";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -792,8 +792,11 @@ Return JSON:
     });
 
     // ── Step 1.5: Dataset analysis (if student provided quantitative data) ────
+    // If the student uploaded financial statements, ALWAYS analyse them — the
+    // upload itself is explicit intent, regardless of how the subject is worded
+    // (e.g. "Business Strategy" or "Case Study" papers still need the ratios).
     let financialContext = "";
-    if (body.financialStatementText?.trim() && isFinanceSubject(body.subject ?? "")) {
+    if (body.financialStatementText?.trim()) {
       send("step", { id: "financial-analysis", message: "Parsing financial statements — extracting ratios, trends, and red flags…", status: "running" });
       financialContext = buildFinancialStatementsContext(body.financialStatementText, body.financialStatementType ?? "all");
       send("step", { id: "financial-analysis", message: "Financial statement analysis complete — ratios and trends injected into paper context.", status: "done" });
@@ -996,8 +999,21 @@ After all entries, write a 1-2 paragraph Conclusion synthesising what the litera
 DO NOT write a generic paper body — the entire body IS the annotated entries.
 ` : "";
 
-    const systemPrompt = `${WRITER_SOUL}
+    // Empirical paper types with no uploaded data: every number must trace to
+    // a verified source — fabricated "primary data" is the #1 hallucination risk.
+    const needsDataGrounding =
+      !datasetAnalysis && !financialContext &&
+      /research|dissertation|thesis|report|proposal|case stud|lab/i.test(body.paperType);
+    const dataGroundingBlock = needsDataGrounding
+      ? `\nDATA GROUNDING (no primary dataset was provided):
+• Do NOT fabricate primary data, survey results, experiment outcomes, or statistics.
+• Every figure, percentage, or statistic MUST come from the verified citations/background reading below, attributed to its source in-text.
+• If the paper type expects primary research, frame the methodology as proposed/secondary-data analysis and present findings as synthesis of published evidence.
+• Where evidence is unavailable, state the gap explicitly rather than inventing numbers.\n`
+      : "";
 
+    const systemPrompt = `${WRITER_SOUL}
+${dataGroundingBlock}
 ${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${financialContext ? `FINANCIAL STATEMENTS ANALYSIS (PRIMARY DATA — cite specific figures, ratios, and trends from this analysis in your paper. Do NOT present raw data tables; interpret and cite the metrics):\n${financialContext}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
 
 ${stemBlock ? `${stemBlock}\n` : ""}${aGradeCriteria ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

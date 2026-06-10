@@ -533,10 +533,14 @@ router.patch("/admin/users/:id/plan", async (req: Request, res: Response) => {
   const { id } = req.params;
   const { plan, billing } = req.body as { plan: string; billing?: string };
   try {
+    // Manual grants always reactivate: clear any expired/cancelled status and
+    // remove the period end (NULL = no auto-expiry for admin-granted plans).
     await pool.query(`
-      INSERT INTO user_subscriptions (user_id, plan, billing, gateway)
-      VALUES ($1, $2, $3, 'manual')
-      ON CONFLICT (user_id) DO UPDATE SET plan = $2, billing = $3
+      INSERT INTO user_subscriptions (user_id, plan, billing, gateway, status)
+      VALUES ($1, $2, $3, 'manual', 'active')
+      ON CONFLICT (user_id) DO UPDATE SET
+        plan = $2, billing = $3, gateway = 'manual',
+        status = 'active', current_period_end = NULL, updated_at = NOW()
     `, [id, plan, billing ?? null]);
     res.json({ ok: true });
   } catch {
