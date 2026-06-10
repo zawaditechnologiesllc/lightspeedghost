@@ -14,9 +14,14 @@ router.get("/auth/me", (req: Request, res: Response) => {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  if (req.userEmail) {
-    const firstName = req.userEmail.split("@")[0];
-    sendEmail({ to: req.userEmail, subject: "Welcome to LightSpeed Ghost", html: welcomeEmail({ firstName }) }).catch(() => {});
+  const userEmail = req.userEmail;
+  // Fire-and-forget welcome email — non-blocking
+  if (userEmail) {
+    sendEmail({
+      to: userEmail,
+      subject: "Welcome to LightSpeed Ghost 🚀",
+      html: welcomeEmail({ firstName: userEmail.split("@")[0] }),
+    }).catch(() => {/* non-fatal */});
   }
   res.json({ user: { id: req.userId, email: req.userEmail } });
 });
