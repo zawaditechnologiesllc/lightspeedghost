@@ -17,56 +17,6 @@
     </image:image>
   </url>
 
-  <!-- ── Tool pages (highest conversion value) ────────────────────────────── -->
-  <url>
-    <loc>https://lightspeedghost.com/write</loc>
-    <lastmod>2026-06-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
-  </url>
-  <url>
-    <loc>https://lightspeedghost.com/humanizer</loc>
-    <lastmod>2026-06-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
-  </url>
-  <url>
-    <loc>https://lightspeedghost.com/plagiarism</loc>
-    <lastmod>2026-06-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.93</priority>
-  </url>
-  <url>
-    <loc>https://lightspeedghost.com/revision</loc>
-    <lastmod>2026-06-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.92</priority>
-  </url>
-  <url>
-    <loc>https://lightspeedghost.com/stem</loc>
-    <lastmod>2026-06-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.92</priority>
-  </url>
-  <url>
-    <loc>https://lightspeedghost.com/study</loc>
-    <lastmod>2026-06-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.90</priority>
-  </url>
-  <url>
-    <loc>https://lightspeedghost.com/outline</loc>
-    <lastmod>2026-06-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.90</priority>
-  </url>
-  <url>
-    <loc>https://lightspeedghost.com/ebooks</loc>
-    <lastmod>2026-06-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.88</priority>
-  </url>
-
   <!-- ── Authentication / Pricing ─────────────────────────────────────────── -->
   <url>
     <loc>https://lightspeedghost.com/auth</loc>
