@@ -176,7 +176,20 @@ export default function Dashboard() {
               { step: "1", title: "Write your first paper", desc: "Upload a rubric for best results", href: "/write", color: "text-blue-400 border-blue-500/20 bg-blue-500/5" },
               { step: "2", title: "Check for AI & plagiarism", desc: "See your similarity and AI score", href: "/plagiarism", color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" },
               { step: "3", title: "Share & earn discounts", desc: "Refer a friend, get 20% off", href: "#refer", color: "text-purple-400 border-purple-500/20 bg-purple-500/5" },
-            ].map(({ step, title, desc, href, color }) => (
+            ].map(({ step, title, desc, href, color }) => href.startsWith("#") ? (
+              // In-page target — scroll to the Refer & Earn section below
+              <div key={step} onClick={() => document.getElementById(href.slice(1))?.scrollIntoView({ behavior: "smooth", block: "center" })}>
+                <div className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-80 transition-opacity ${color}`}>
+                  <div className="w-6 h-6 rounded-full bg-current/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-[10px] font-bold">{step}</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">{title}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{desc}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
               <Link key={step} href={href}>
                 <div className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-80 transition-opacity ${color}`}>
                   <div className="w-6 h-6 rounded-full bg-current/10 flex items-center justify-center shrink-0 mt-0.5">
@@ -241,7 +254,7 @@ export default function Dashboard() {
       )}
 
       {/* Refer & Earn */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500/8 via-emerald-500/4 to-transparent border border-emerald-500/20 rounded-2xl p-4 sm:p-5">
+      <div id="refer" className="relative overflow-hidden bg-gradient-to-br from-emerald-500/8 via-emerald-500/4 to-transparent border border-emerald-500/20 rounded-2xl p-4 sm:p-5 scroll-mt-20">
         <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/4 pointer-events-none" />
         <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1 min-w-0">
@@ -253,8 +266,8 @@ export default function Dashboard() {
               Get <span className="text-foreground font-semibold">20% off your next subscription</span> for every student you refer who pays. They get 10% off too. Share your unique link below.
             </p>
             {/* Referral link */}
-            <div className="mt-3 flex items-center gap-2 max-w-sm">
-              <div className="flex-1 min-w-0 bg-background/60 border border-border rounded-lg px-3 py-2 text-xs font-mono text-muted-foreground truncate">
+            <div className="mt-3 flex items-center gap-2 max-w-sm flex-wrap">
+              <div className="w-full sm:w-auto sm:flex-1 min-w-0 bg-background/60 border border-border rounded-lg px-3 py-2 text-xs font-mono text-muted-foreground truncate">
                 {referral ? `${window.location.origin}/ref/${referral.code}` : "Loading…"}
               </div>
               <button
