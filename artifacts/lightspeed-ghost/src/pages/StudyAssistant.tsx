@@ -484,60 +484,61 @@ export default function StudyAssistant() {
 
           {/* ── 2. UPLOAD NOTES ───────────────────────────────────────── */}
           <div className="mt-4 space-y-3">
-            {/* Hidden inputs */}
-            <input ref={fileInputRef} type="file" multiple className="sr-only"
+            {/* Hidden inputs — `hidden` (not sr-only) so no browser ever paints
+                the native "No file chosen" text */}
+            <input ref={fileInputRef} type="file" multiple className="hidden"
               accept=".pdf,.docx,.doc,.txt,.md" onChange={handleFileInput} />
-            <input ref={imageInputRef} type="file" multiple className="sr-only"
+            <input ref={imageInputRef} type="file" multiple className="hidden"
               accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleFileInput} />
-            <input ref={datasetInputRef} type="file" className="sr-only"
+            <input ref={datasetInputRef} type="file" className="hidden"
               accept=".csv,.tsv,.txt" onChange={handleDatasetFile} />
-            <input ref={financialStmtRef} type="file" className="sr-only"
+            <input ref={financialStmtRef} type="file" className="hidden"
               accept=".pdf,.docx,.doc,.txt,.xlsx,.xls" onChange={handleFinancialStmtFile} />
 
-            {/* Upload row */}
-            <div className="flex gap-2">
+            {/* Upload row — 2-col grid on mobile (notes spans both), single row on sm+ */}
+            <div className="grid grid-cols-2 sm:flex gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-primary/40 hover:bg-muted/20 text-sm text-muted-foreground hover:text-foreground transition-all disabled:opacity-50"
+                className="col-span-2 sm:flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-primary/40 hover:bg-muted/20 text-sm text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 min-w-0"
               >
                 {uploading
                   ? <Loader2 size={14} className="animate-spin text-primary shrink-0" />
                   : <Upload size={14} className="shrink-0 text-muted-foreground/60" />}
-                <span className="text-xs">{uploading ? "Uploading…" : "Upload notes"}</span>
-                <span className="ml-auto text-[10px] text-muted-foreground/30">PDF · DOCX · TXT</span>
+                <span className="text-xs whitespace-nowrap">{uploading ? "Uploading…" : "Upload notes"}</span>
+                <span className="ml-auto text-[10px] text-muted-foreground/30 whitespace-nowrap">PDF · DOCX · TXT</span>
               </button>
               <button
                 onClick={() => imageInputRef.current?.click()}
                 disabled={uploading}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-blue-400/40 hover:bg-blue-50/5 text-sm text-muted-foreground hover:text-blue-400 transition-all disabled:opacity-50"
+                className="flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2.5 rounded-xl border border-dashed border-border hover:border-blue-400/40 hover:bg-blue-50/5 text-sm text-muted-foreground hover:text-blue-400 transition-all disabled:opacity-50 min-w-0"
               >
                 <ImageIcon size={14} className="shrink-0" />
-                <span className="text-xs">Screenshot</span>
+                <span className="text-xs truncate">Screenshot</span>
               </button>
               <button
                 onClick={() => setShowDataset(v => !v)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
+                  "flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all min-w-0",
                   showDataset || datasetText
                     ? "border-violet-400/60 text-violet-600 dark:text-violet-400 bg-violet-50/10 dark:bg-violet-900/20"
                     : "border-border text-muted-foreground hover:border-violet-400/40 hover:text-violet-500"
                 )}
               >
                 <Database size={14} className="shrink-0" />
-                <span className="text-xs">{datasetText ? "Dataset ✓" : "Dataset"}</span>
+                <span className="text-xs truncate">{datasetText ? "Dataset ✓" : "Dataset"}</span>
               </button>
               <button
                 onClick={() => setShowFinancialStmt(v => !v)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all",
+                  "col-span-2 sm:col-span-1 flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2.5 rounded-xl border border-dashed text-sm transition-all min-w-0",
                   showFinancialStmt || financialStmtText
                     ? "border-emerald-400/60 text-emerald-600 dark:text-emerald-400 bg-emerald-50/10 dark:bg-emerald-900/20"
                     : "border-border text-muted-foreground hover:border-emerald-400/40 hover:text-emerald-500"
                 )}
               >
                 <FileText size={14} className="shrink-0" />
-                <span className="text-xs">{financialStmtText ? "Financials ✓" : "Financials"}</span>
+                <span className="text-xs truncate">{financialStmtText ? "Financials ✓" : "Financials"}</span>
               </button>
             </div>
 
@@ -672,13 +673,14 @@ export default function StudyAssistant() {
           {/* ── 3. OUTPUT TYPE SELECTOR ───────────────────────────────── */}
           <div className="mt-6 space-y-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Generate</p>
-            <div className="grid grid-cols-5 gap-2">
+            {/* 2-up on mobile (last card spans the full row), 5-up from sm */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {OUTPUT_TYPES.map(({ key, label, icon, desc }) => (
                 <button
                   key={key}
                   onClick={() => setSelectedType(key)}
                   className={cn(
-                    "flex flex-col items-center gap-2 px-2 py-3.5 rounded-2xl border text-center transition-all",
+                    "flex flex-col items-center gap-2 px-2 py-3.5 rounded-2xl border text-center transition-all min-w-0 last:col-span-2 sm:last:col-span-1",
                     selectedType === key
                       ? "border-primary bg-primary/5 text-foreground shadow-sm"
                       : "border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground hover:bg-muted/30"
@@ -686,7 +688,7 @@ export default function StudyAssistant() {
                 >
                   <span className={selectedType === key ? "text-primary" : ""}>{icon}</span>
                   <span className="text-[11px] font-semibold leading-tight">{label}</span>
-                  <span className="text-[9px] text-muted-foreground/50 leading-tight hidden sm:block">{desc}</span>
+                  <span className="text-[9px] text-muted-foreground/50 leading-tight">{desc}</span>
                 </button>
               ))}
             </div>
