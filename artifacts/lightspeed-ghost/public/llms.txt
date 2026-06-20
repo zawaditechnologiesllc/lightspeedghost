@@ -6,7 +6,7 @@
 
 Light Speed Ghost (lightspeedghost.com) is an AI-powered academic writing and publishing platform for college and university students. It combines eight specialized tools in one platform: AI paper writing, outline generation, paper revision, LightSpeed Humanizer (AI text rewriting), AI and plagiarism detection, STEM problem solving, a long-term memory AI study assistant, and an AI ebook writer for publishing to Amazon KDP and 40+ platforms.
 
-It is available at https://lightspeedghost.com and works in any modern browser with no installation required. Also available as a PWA (installable on iOS, Android, and desktop).
+It is available at [lightspeedghost.com](https://lightspeedghost.com) and works in any modern browser with no installation required. Also available as a PWA (installable on iOS, Android, and desktop).
 
 ## Who it is for
 
@@ -26,35 +26,35 @@ Generates full academic papers grounded in 25+ live academic databases (10B+ pap
 Supports all major citation formats: APA 7th, MLA 9th, Chicago, Harvard, IEEE.
 Upload an assignment rubric PDF to automatically extract A-grade criteria and lock them as paper requirements before generation starts.
 A plagiarism gate enforces below 8% cosine similarity before delivery.
-Available at: https://lightspeedghost.com/write
+Available at: [lightspeedghost.com/write](https://lightspeedghost.com/write)
 
 ### 2. LightSpeed Humanizer
 Rewrites AI-generated text to read as human-authored. Runs a real AI detection scan first, then rewrites with varied sentence rhythm, natural academic hedging, and authentic voice. Targets below 5% AI detection score. Tone options: academic, conversational, professional.
-Available at: https://lightspeedghost.com/humanizer
+Available at: [lightspeedghost.com/humanizer](https://lightspeedghost.com/humanizer)
 
 ### 3. Outline Builder
 Generates a structured hierarchical outline (Roman numeral / lettered sub-points) for any paper topic and subject. Upload a brief or describe the assignment — output in seconds.
-Available at: https://lightspeedghost.com/outline
+Available at: [lightspeedghost.com/outline](https://lightspeedghost.com/outline)
 
 ### 4. Paper Revision
 Takes a student's existing draft and revises it toward a target grade (e.g. First, A, Distinction). Upload a grading rubric to align every revision with assessed criteria. Explains every change so students learn from it.
-Available at: https://lightspeedghost.com/revision
+Available at: [lightspeedghost.com/revision](https://lightspeedghost.com/revision)
 
 ### 5. AI and Plagiarism Checker
 Detects AI-generated content patterns using lexical diversity analysis. Detects plagiarism using cosine similarity against academic sources. Highlights flagged sections.
-Available at: https://lightspeedghost.com/plagiarism
+Available at: [lightspeedghost.com/plagiarism](https://lightspeedghost.com/plagiarism)
 
 ### 6. STEM Solver
 Accepts typed problems, pasted text, or photographs of homework sheets (OCR-powered). Returns step-by-step worked solutions with KaTeX-rendered equations, data visualizations, molecule diagrams (Chemistry), and linked research papers. Supports: Mathematics, Physics, Chemistry, Biology, Computer Science, Engineering, Statistics.
-Available at: https://lightspeedghost.com/stem
+Available at: [lightspeedghost.com/stem](https://lightspeedghost.com/stem)
 
 ### 7. AI Study Assistant
 A conversational AI tutor with persistent long-term memory. Builds a per-student profile of strengths, struggles, and past topics across every session. Supports file upload (PDF, DOCX, images) for lecture notes or textbook excerpts as context.
-Available at: https://lightspeedghost.com/study
+Available at: [lightspeedghost.com/study](https://lightspeedghost.com/study)
 
 ### 8. AI Ebook Writer
 Writes professional ebooks from 8,000 to 25,000 words (5–12 chapters) for publication on Amazon KDP, Apple Books, Google Play Books, Kobo Writing Life, Barnes & Noble Press, Draft2Digital, IngramSpark, and 40+ platforms. Grounded in verified academic and industry sources (Harvard Business Review, McKinsey Global Institute, MIT Sloan Management Review, and 10+ databases). Each chapter opens with a curated expert quote (Warren Buffett, Simon Sinek, etc.). Output includes a full Amazon KDP publishing guide with title, subtitle, description, keywords, and category paths ready to paste. Supports 15+ languages. 15 ebooks per month.
-Available at: https://lightspeedghost.com/ebooks
+Available at: [lightspeedghost.com/ebooks](https://lightspeedghost.com/ebooks)
 
 ## Academic database coverage
 
@@ -88,13 +88,13 @@ Total coverage: 1B+ papers. Wikipedia is excluded. All sources require DOI or ve
 
 ## Contact and links
 
-- Website: https://lightspeedghost.com
-- Sign up: https://lightspeedghost.com/auth
-- Ebook Writer: https://lightspeedghost.com/ebooks
-- Blog: https://lightspeedghost.com/blog
-- Contact: https://lightspeedghost.com/contact
-- Privacy: https://lightspeedghost.com/privacy
-- Terms: https://lightspeedghost.com/terms
+- [Website](https://lightspeedghost.com): The main Light Speed Ghost platform
+- [Sign up](https://lightspeedghost.com/auth): Create an account and get started
+- [Ebook Writer](https://lightspeedghost.com/ebooks): AI ebook writing for Amazon KDP and 40+ platforms
+- [Blog](https://lightspeedghost.com/blog): Academic writing guides and product updates
+- [Contact](https://lightspeedghost.com/contact): Support and general enquiries
+- [Privacy Policy](https://lightspeedghost.com/privacy): How user data is handled
+- [Terms of Service](https://lightspeedghost.com/terms): Terms of use
 
 
 ## Pricing (2026)
@@ -108,8 +108,8 @@ Total coverage: 1B+ papers. Wikipedia is excluded. All sources require DOI or ve
 
 ## Audience pages
 
-- African students (M-Pesa, MTN MoMo, Airtel Money payments): https://lightspeedghost.com/africa
-- Universities and institutions (bulk seats, single invoice): https://lightspeedghost.com/enterprise
+- [For African students](https://lightspeedghost.com/africa): M-Pesa, MTN MoMo, and Airtel Money payments
+- [For universities and institutions](https://lightspeedghost.com/enterprise): Bulk seats, single invoice
 
 ## Platform scale
 
