@@ -621,9 +621,9 @@
     <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM context file" />
     <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLM full context file" />
 
-    <!-- Fonts — async load with display=swap so text renders immediately in fallback font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Fonts — async load with display=swap so text renders immediately in fallback font.
+         fonts.googleapis.com / fonts.gstatic.com are already preconnected once near the top of
+         <head>; don't repeat the preconnect here (keeps total preconnects <= 4). -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
     <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
 
