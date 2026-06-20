@@ -732,7 +732,7 @@ export default function Landing() {
               <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
               <span className="w-3 h-3 rounded-full bg-green-500/70" />
               <span
-                className="ml-3 text-xs text-white/50 font-mono hidden sm:block transition-opacity duration-300"
+                className="ml-3 text-xs text-white/75 font-mono hidden sm:block transition-opacity duration-300"
                 style={{ opacity: fading ? 0 : 1 }}
               >
                 lightspeedghost.com/{previewUrls[previewIdx]}
@@ -749,7 +749,7 @@ export default function Landing() {
                   <div
                     key={label}
                     className={`px-3 py-2 rounded-lg text-xs mb-0.5 font-medium transition-all duration-300 ${
-                      i === previewIdx + 1 ? "bg-blue-600 text-white" : "text-white/55"
+                      i === previewIdx + 1 ? "bg-blue-600 text-white" : "text-white/75"
                     }`}
                   >
                     {label}
@@ -785,7 +785,7 @@ export default function Landing() {
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                       <div className="h-2 w-28 bg-blue-400/50 rounded" />
                     </div>
-                    <div className="text-[9px] text-white/54 mt-1">APA 7th · 1,500 words · Streaming…</div>
+                    <div className="text-[9px] text-white/75 mt-1">APA 7th · 1,500 words · Streaming…</div>
                   </div>
                 )}
 
@@ -809,8 +809,8 @@ export default function Landing() {
                         { depth: 0, marker: "IV.", text: "Conclusion & Implications" },
                       ].map(({ depth, marker, text }, i) => (
                         <div key={i} className={`flex items-center gap-2 ${depth === 1 ? "pl-5" : ""}`}>
-                          <span className={`font-mono text-[9px] shrink-0 ${depth === 0 ? "text-indigo-300" : "text-white/54"}`}>{marker}</span>
-                          <span className={`text-[10px] ${depth === 0 ? "text-white/70 font-medium" : "text-white/60"}`}>{text}</span>
+                          <span className={`font-mono text-[9px] shrink-0 ${depth === 0 ? "text-indigo-300" : "text-white/75"}`}>{marker}</span>
+                          <span className={`text-[10px] ${depth === 0 ? "text-white/70 font-medium" : "text-white/75"}`}>{text}</span>
                         </div>
                       ))}
                     </div>
@@ -827,7 +827,7 @@ export default function Landing() {
                       </div>
                       <span className="text-[9px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-400 border border-violet-500/20">Target: A</span>
                     </div>
-                    <p className="text-[10px] text-white/55 leading-relaxed">
+                    <p className="text-[10px] text-white/75 leading-relaxed">
                       The results{" "}
                       <span className="line-through text-red-400/60">shows</span>{" "}
                       <span className="text-emerald-400">demonstrate</span>{" "}
@@ -857,7 +857,7 @@ export default function Landing() {
                       <span className="text-[11px] font-semibold text-white/80">LightSpeed Humanizer</span>
                     </div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[9px] text-white/60">AI score before</span>
+                      <span className="text-[9px] text-white/75">AI score before</span>
                       <span className="text-[9px] font-mono font-bold text-red-400">73%</span>
                     </div>
                     <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-3">
@@ -868,13 +868,13 @@ export default function Landing() {
                       <span className="text-emerald-300 not-italic font-medium">"What emerges from this data is…"</span>
                     </div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[9px] text-white/60">AI score after</span>
+                      <span className="text-[9px] text-white/75">AI score after</span>
                       <span className="text-[9px] font-mono font-bold text-emerald-400">0%</span>
                     </div>
                     <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-500 rounded-full" style={{ width: "2%" }} />
                     </div>
-                    <div className="mt-1.5 text-[9px] text-white/55 flex items-center gap-1.5">
+                    <div className="mt-1.5 text-[9px] text-white/75 flex items-center gap-1.5">
                       <CheckCircle size={10} className="text-emerald-400" />
                       Passes Turnitin · GPTZero · Originality.ai
                     </div>
@@ -896,7 +896,7 @@ export default function Landing() {
                     ].map(({ label, pct, color, txt }) => (
                       <div key={label}>
                         <div className="flex justify-between text-[9px] mb-1">
-                          <span className="text-white/60">{label}</span>
+                          <span className="text-white/75">{label}</span>
                           <span className={`font-mono font-semibold ${txt}`}>{pct}%</span>
                         </div>
                         <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -904,7 +904,7 @@ export default function Landing() {
                         </div>
                       </div>
                     ))}
-                    <div className="mt-2 text-[9px] text-white/55 flex items-center gap-1.5">
+                    <div className="mt-2 text-[9px] text-white/75 flex items-center gap-1.5">
                       <CheckCircle size={10} className="text-emerald-400" />
                       Safe to submit — humanization not required
                     </div>
@@ -920,14 +920,14 @@ export default function Landing() {
                     </div>
                     <div className="flex gap-1.5 flex-wrap mb-3">
                       {["Math", "Physics", "Chemistry", "Biology", "CS"].map((s, i) => (
-                        <span key={s} className={`text-[9px] px-2 py-0.5 rounded-full border font-medium ${i === 1 ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" : "bg-white/5 text-white/55 border-white/8"}`}>{s}</span>
+                        <span key={s} className={`text-[9px] px-2 py-0.5 rounded-full border font-medium ${i === 1 ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" : "bg-white/5 text-white/75 border-white/8"}`}>{s}</span>
                       ))}
                     </div>
                     <div className="space-y-1.5">
                       {["Identify all forces acting on the body", "Apply Newton's 2nd law: F = ma", "Solve for acceleration: a = 4 m/s²"].map((step, i) => (
                         <div key={step} className="flex items-center gap-2">
                           <div className="w-4 h-4 rounded-full bg-cyan-600/25 border border-cyan-500/25 text-cyan-300 text-[8px] flex items-center justify-center shrink-0">{i + 1}</div>
-                          <span className="text-[10px] text-white/50">{step}</span>
+                          <span className="text-[10px] text-white/75">{step}</span>
                         </div>
                       ))}
                     </div>
@@ -954,14 +954,14 @@ export default function Landing() {
                         <div className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
                           <Zap size={9} className="text-amber-400" />
                         </div>
-                        <div className="bg-white/5 border border-white/8 rounded-xl rounded-tl-sm px-3 py-1.5 text-[10px] text-white/55 leading-relaxed">
+                        <div className="bg-white/5 border border-white/8 rounded-xl rounded-tl-sm px-3 py-1.5 text-[10px] text-white/75 leading-relaxed">
                           The Krebs cycle runs in the mitochondria, breaking down acetyl-CoA to produce ATP, NADH, and CO₂ across 8 enzymatic steps…
                         </div>
                       </div>
                     </div>
                     <div className="flex gap-1.5 mt-1 flex-wrap">
                       {["Quiz me", "Simplify more", "Key takeaways"].map(s => (
-                        <span key={s} className="text-[8px] px-2 py-0.5 rounded-full bg-white/5 border border-white/8 text-white/58 cursor-pointer">{s}</span>
+                        <span key={s} className="text-[8px] px-2 py-0.5 rounded-full bg-white/5 border border-white/8 text-white/75 cursor-pointer">{s}</span>
                       ))}
                     </div>
                   </div>
