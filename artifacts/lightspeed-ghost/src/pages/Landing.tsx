@@ -308,7 +308,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
       >
         <span className="text-white font-medium group-hover:text-blue-300 transition-colors">{q}</span>
         <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }}>
-          <ChevronDown size={18} className={`${open ? "text-blue-400" : "text-white/40 group-hover:text-blue-400"} shrink-0 transition-colors`} />
+          <ChevronDown size={18} className={`${open ? "text-blue-400" : "text-white/55 group-hover:text-blue-400"} shrink-0 transition-colors`} />
         </motion.div>
       </button>
       <AnimatePresence initial={false}>
@@ -462,7 +462,7 @@ export default function Landing() {
           <div className="bg-[#0d1426] border border-white/12 rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center" onClick={e => e.stopPropagation()}>
             <img src="/icon-192.png" alt="Light Speed" className="w-16 h-16 rounded-2xl mx-auto mb-3" />
             <p className="text-base font-bold text-white mb-1">Install Light Speed</p>
-            <p className="text-xs text-white/40 mb-5">Add to your home screen for the full app experience</p>
+            <p className="text-xs text-white/55 mb-5">Add to your home screen for the full app experience</p>
             <button
               onClick={() => setShowIOSModal(false)}
               className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors text-sm"
@@ -470,7 +470,7 @@ export default function Landing() {
               <Share size={15} />
               Tap Share then "Add to Home Screen"
             </button>
-            <button onClick={() => setShowIOSModal(false)} className="mt-3 text-xs text-white/30 hover:text-white/50 transition-colors">
+            <button onClick={() => setShowIOSModal(false)} className="mt-3 text-xs text-white/55 hover:text-white/50 transition-colors">
               Not now
             </button>
           </div>
@@ -483,7 +483,7 @@ export default function Landing() {
           <div className="bg-[#0d1426] border border-white/12 rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center" onClick={e => e.stopPropagation()}>
             <img src="/icon-192.png" alt="Light Speed" className="w-16 h-16 rounded-2xl mx-auto mb-3" />
             <p className="text-base font-bold text-white mb-1">Install Light Speed</p>
-            <p className="text-xs text-white/40 mb-5">Add to your home screen for the full app experience</p>
+            <p className="text-xs text-white/55 mb-5">Add to your home screen for the full app experience</p>
             <button
               onClick={() => {
                 if (installState.type === "android") { installState.prompt(); }
@@ -493,8 +493,8 @@ export default function Landing() {
             >
               Install App
             </button>
-            <p className="mt-3 text-[10px] text-white/25">Tap ⋮ menu → "Add to Home Screen" if the button above doesn't work</p>
-            <button onClick={() => setShowAndroidModal(false)} className="mt-2 text-xs text-white/30 hover:text-white/50 transition-colors">
+            <p className="mt-3 text-[10px] text-white/55">Tap ⋮ menu → "Add to Home Screen" if the button above doesn't work</p>
+            <button onClick={() => setShowAndroidModal(false)} className="mt-2 text-xs text-white/55 hover:text-white/50 transition-colors">
               Not now
             </button>
           </div>
@@ -661,28 +661,28 @@ export default function Landing() {
             </a>
           </div>
 
-          <p className="mt-4 text-xs text-white/30">Starter at $9.99/mo · Or pay per use · No expiry on PAYG charges</p>
+          <p className="mt-4 text-xs text-white/55">Starter at $9.99/mo · Or pay per use · No expiry on PAYG charges</p>
 
           {/* Grade proof micro-strip */}
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/8 border border-emerald-500/15 text-xs">
-              <span className="font-mono text-white/40 line-through">61%</span>
+              <span className="font-mono text-white/55 line-through">61%</span>
               <span className="text-emerald-400 font-bold">→ 94%</span>
-              <span className="text-white/30">Priya · UCL Biochemistry</span>
+              <span className="text-white/55">Priya · UCL Biochemistry</span>
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/8 border border-emerald-500/15 text-xs">
-              <span className="font-mono text-white/40 line-through">D</span>
+              <span className="font-mono text-white/55 line-through">D</span>
               <span className="text-emerald-400 font-bold">→ 93%</span>
-              <span className="text-white/30">Marcus · Georgia Tech CS</span>
+              <span className="text-white/55">Marcus · Georgia Tech CS</span>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/4 border border-white/8 text-[11px] text-white/30">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/4 border border-white/8 text-[11px] text-white/55">
               92%+ average grade across all papers
             </div>
           </div>
 
           {/* ── App Store Badges ── */}
           <div className="mt-8 flex flex-col items-center gap-3">
-            <p className="text-[10px] text-white/25 uppercase tracking-[0.18em] font-medium">Also available as an app</p>
+            <p className="text-[10px] text-white/55 uppercase tracking-[0.18em] font-medium">Also available as an app</p>
             <div className="flex flex-wrap items-center justify-center gap-3">
 
               {/* iOS – App Store */}
@@ -694,7 +694,7 @@ export default function Landing() {
                   <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
                 </svg>
                 <div className="text-left leading-tight">
-                  <div className="text-[9px] text-white/40 uppercase tracking-wider font-medium group-hover:text-white/60 transition-colors">Download on the</div>
+                  <div className="text-[9px] text-white/55 uppercase tracking-wider font-medium group-hover:text-white/60 transition-colors">Download on the</div>
                   <div className="text-sm font-bold text-white">App Store</div>
                 </div>
               </button>
@@ -712,7 +712,7 @@ export default function Landing() {
                   <path d="M16.5 14.62l-13.32 9.14c.39.12.75.21 1.08.15L16.5 14.62z" fill="#EA4335"/>
                 </svg>
                 <div className="text-left leading-tight">
-                  <div className="text-[9px] text-white/40 uppercase tracking-wider font-medium group-hover:text-white/60 transition-colors">Get it on</div>
+                  <div className="text-[9px] text-white/55 uppercase tracking-wider font-medium group-hover:text-white/60 transition-colors">Get it on</div>
                   <div className="text-sm font-bold text-white">Google Play</div>
                 </div>
               </button>
@@ -732,7 +732,7 @@ export default function Landing() {
               <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
               <span className="w-3 h-3 rounded-full bg-green-500/70" />
               <span
-                className="ml-3 text-xs text-white/20 font-mono hidden sm:block transition-opacity duration-300"
+                className="ml-3 text-xs text-white/55 font-mono hidden sm:block transition-opacity duration-300"
                 style={{ opacity: fading ? 0 : 1 }}
               >
                 lightspeedghost.com/{previewUrls[previewIdx]}
@@ -749,7 +749,7 @@ export default function Landing() {
                   <div
                     key={label}
                     className={`px-3 py-2 rounded-lg text-xs mb-0.5 font-medium transition-all duration-300 ${
-                      i === previewIdx + 1 ? "bg-blue-600 text-white" : "text-white/30"
+                      i === previewIdx + 1 ? "bg-blue-600 text-white" : "text-white/55"
                     }`}
                   >
                     {label}
@@ -785,7 +785,7 @@ export default function Landing() {
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                       <div className="h-2 w-28 bg-blue-400/50 rounded" />
                     </div>
-                    <div className="text-[9px] text-white/25 mt-1">APA 7th · 1,500 words · Streaming…</div>
+                    <div className="text-[9px] text-white/55 mt-1">APA 7th · 1,500 words · Streaming…</div>
                   </div>
                 )}
 
@@ -809,8 +809,8 @@ export default function Landing() {
                         { depth: 0, marker: "IV.", text: "Conclusion & Implications" },
                       ].map(({ depth, marker, text }, i) => (
                         <div key={i} className={`flex items-center gap-2 ${depth === 1 ? "pl-5" : ""}`}>
-                          <span className={`font-mono text-[9px] shrink-0 ${depth === 0 ? "text-indigo-400/70" : "text-white/25"}`}>{marker}</span>
-                          <span className={`text-[10px] ${depth === 0 ? "text-white/70 font-medium" : "text-white/40"}`}>{text}</span>
+                          <span className={`font-mono text-[9px] shrink-0 ${depth === 0 ? "text-indigo-300" : "text-white/55"}`}>{marker}</span>
+                          <span className={`text-[10px] ${depth === 0 ? "text-white/70 font-medium" : "text-white/55"}`}>{text}</span>
                         </div>
                       ))}
                     </div>
@@ -857,7 +857,7 @@ export default function Landing() {
                       <span className="text-[11px] font-semibold text-white/80">LightSpeed Humanizer</span>
                     </div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[9px] text-white/40">AI score before</span>
+                      <span className="text-[9px] text-white/55">AI score before</span>
                       <span className="text-[9px] font-mono font-bold text-red-400">73%</span>
                     </div>
                     <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-3">
@@ -868,13 +868,13 @@ export default function Landing() {
                       <span className="text-emerald-300 not-italic font-medium">"What emerges from this data is…"</span>
                     </div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[9px] text-white/40">AI score after</span>
+                      <span className="text-[9px] text-white/55">AI score after</span>
                       <span className="text-[9px] font-mono font-bold text-emerald-400">0%</span>
                     </div>
                     <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-500 rounded-full" style={{ width: "2%" }} />
                     </div>
-                    <div className="mt-1.5 text-[9px] text-white/30 flex items-center gap-1.5">
+                    <div className="mt-1.5 text-[9px] text-white/55 flex items-center gap-1.5">
                       <CheckCircle size={10} className="text-emerald-400" />
                       Passes Turnitin · GPTZero · Originality.ai
                     </div>
@@ -896,7 +896,7 @@ export default function Landing() {
                     ].map(({ label, pct, color, txt }) => (
                       <div key={label}>
                         <div className="flex justify-between text-[9px] mb-1">
-                          <span className="text-white/40">{label}</span>
+                          <span className="text-white/55">{label}</span>
                           <span className={`font-mono font-semibold ${txt}`}>{pct}%</span>
                         </div>
                         <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -904,7 +904,7 @@ export default function Landing() {
                         </div>
                       </div>
                     ))}
-                    <div className="mt-2 text-[9px] text-white/30 flex items-center gap-1.5">
+                    <div className="mt-2 text-[9px] text-white/55 flex items-center gap-1.5">
                       <CheckCircle size={10} className="text-emerald-400" />
                       Safe to submit — humanization not required
                     </div>
@@ -920,7 +920,7 @@ export default function Landing() {
                     </div>
                     <div className="flex gap-1.5 flex-wrap mb-3">
                       {["Math", "Physics", "Chemistry", "Biology", "CS"].map((s, i) => (
-                        <span key={s} className={`text-[9px] px-2 py-0.5 rounded-full border font-medium ${i === 1 ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" : "bg-white/5 text-white/30 border-white/8"}`}>{s}</span>
+                        <span key={s} className={`text-[9px] px-2 py-0.5 rounded-full border font-medium ${i === 1 ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" : "bg-white/5 text-white/55 border-white/8"}`}>{s}</span>
                       ))}
                     </div>
                     <div className="space-y-1.5">
@@ -961,7 +961,7 @@ export default function Landing() {
                     </div>
                     <div className="flex gap-1.5 mt-1 flex-wrap">
                       {["Quiz me", "Simplify more", "Key takeaways"].map(s => (
-                        <span key={s} className="text-[8px] px-2 py-0.5 rounded-full bg-white/5 border border-white/8 text-white/35 cursor-pointer">{s}</span>
+                        <span key={s} className="text-[8px] px-2 py-0.5 rounded-full bg-white/5 border border-white/8 text-white/55 cursor-pointer">{s}</span>
                       ))}
                     </div>
                   </div>
@@ -998,13 +998,13 @@ export default function Landing() {
       <section className="border-y border-white/5 bg-white/[0.015] py-4 sm:py-5 overflow-hidden">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-5 text-center">
-            <span className="text-[10px] font-semibold text-white/22 uppercase tracking-[0.2em] shrink-0">Used by students at</span>
+            <span className="text-[10px] font-semibold text-white/55 uppercase tracking-[0.2em] shrink-0">Used by students at</span>
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5">
               {["MIT","UCL","Georgia Tech","Edinburgh","Columbia","Nairobi","Witwatersrand","Makerere","Lagos","Melbourne","Toronto"].map(uni => (
-                <span key={uni} className="text-[11px] font-medium text-white/38 hover:text-white/60 transition-colors cursor-default">{uni}</span>
+                <span key={uni} className="text-[11px] font-medium text-white/55 hover:text-white/60 transition-colors cursor-default">{uni}</span>
               ))}
             </div>
-            <span className="text-[10px] font-medium text-blue-400/50 shrink-0 whitespace-nowrap">+ 200 more</span>
+            <span className="text-[10px] font-medium text-blue-300 shrink-0 whitespace-nowrap">+ 200 more</span>
           </div>
         </div>
       </section>
@@ -1021,7 +1021,7 @@ export default function Landing() {
               <div key={label} className="flex flex-col items-center gap-1">
                 <div className={`text-3xl sm:text-4xl md:text-5xl font-bold ${color}`}>{value}</div>
                 <div className="text-xs sm:text-sm font-semibold text-white/70 mt-1">{label}</div>
-                <div className="text-[10px] sm:text-xs text-white/30 leading-snug max-w-[140px]">{sub}</div>
+                <div className="text-[10px] sm:text-xs text-white/55 leading-snug max-w-[140px]">{sub}</div>
               </div>
             ))}
           </div>
@@ -1055,7 +1055,7 @@ export default function Landing() {
       {/* ─── QUALITY COMMITMENT STRIP ─── */}
       <section className="border-y border-white/5 bg-white/[0.02] py-8 sm:py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <p className="text-center text-[11px] font-semibold text-white/25 uppercase tracking-widest mb-6 sm:mb-8">Quality guarantees — enforced on every output</p>
+          <p className="text-center text-[11px] font-semibold text-white/55 uppercase tracking-widest mb-6 sm:mb-8">Quality guarantees — enforced on every output</p>
           <StaggerGrid className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
             {[
               {
@@ -1090,7 +1090,7 @@ export default function Landing() {
               <motion.div key={label} variants={cardVariant} className={`rounded-xl border p-4 sm:p-5 text-center ${border}`}>
                 <div className={`text-2xl sm:text-3xl font-bold mb-1 ${color}`}>{value}</div>
                 <div className="text-xs sm:text-sm font-semibold text-white mb-1.5">{label}</div>
-                <div className="text-[10px] sm:text-[11px] text-white/35 leading-relaxed">{sub}</div>
+                <div className="text-[10px] sm:text-[11px] text-white/55 leading-relaxed">{sub}</div>
               </motion.div>
             ))}
           </StaggerGrid>
@@ -1126,7 +1126,7 @@ export default function Landing() {
                     </div>
                     <h3 className="font-semibold text-white mb-2 group-hover:text-white transition-colors">{name}</h3>
                     <p className="text-sm text-white/50 leading-relaxed group-hover:text-white/60 transition-colors">{desc}</p>
-                    <div className="mt-4 flex items-center gap-1 text-[11px] text-white/25 group-hover:text-white/40 transition-colors font-medium">
+                    <div className="mt-4 flex items-center gap-1 text-[11px] text-white/55 group-hover:text-white/55 transition-colors font-medium">
                       Open tool <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </div>
@@ -1230,7 +1230,7 @@ export default function Landing() {
             ].map(({ icon, title, desc, color, tag }) => (
               <div key={title} className={`p-5 sm:p-6 rounded-2xl border ${color} hover:bg-white/[0.04] transition-all`}>
                 <div className="text-2xl mb-3">{icon}</div>
-                <div className="text-[10px] font-semibold text-white/30 uppercase tracking-widest mb-2">{tag}</div>
+                <div className="text-[10px] font-semibold text-white/55 uppercase tracking-widest mb-2">{tag}</div>
                 <h3 className="font-semibold text-white text-sm mb-2">{title}</h3>
                 <p className="text-xs text-white/50 leading-relaxed">{desc}</p>
               </div>
@@ -1245,23 +1245,23 @@ export default function Landing() {
           <div className="text-center mb-10 sm:mb-14">
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">Why LightSpeed Ghost</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3">Built for academics. Not a chatbot wrapper.</h2>
-            <p className="text-white/40 text-sm max-w-xl mx-auto">ChatGPT hallucinates citations. QuillBot doesn't write papers. Grammarly checks grammar. We do all of it — purpose-built for student deadlines.</p>
+            <p className="text-white/55 text-sm max-w-xl mx-auto">ChatGPT hallucinates citations. QuillBot doesn't write papers. Grammarly checks grammar. We do all of it — purpose-built for student deadlines.</p>
           </div>
 
           <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="text-left py-3 pr-4 text-white/40 font-medium text-xs uppercase tracking-wider w-44">Feature</th>
+                  <th className="text-left py-3 pr-4 text-white/55 font-medium text-xs uppercase tracking-wider w-44">Feature</th>
                   <th className="py-3 px-3 text-center">
                     <div className="inline-flex flex-col items-center gap-1">
                       <span className="text-white font-bold text-sm">LightSpeed Ghost</span>
                       <span className="text-blue-400 text-[10px] font-semibold">from $3.99</span>
                     </div>
                   </th>
-                  <th className="py-3 px-3 text-center text-white/40 font-medium text-xs">ChatGPT Plus<br/><span className="text-[10px] font-normal text-white/25">$20/mo</span></th>
-                  <th className="py-3 px-3 text-center text-white/40 font-medium text-xs">QuillBot<br/><span className="text-[10px] font-normal text-white/25">$19.95/mo</span></th>
-                  <th className="py-3 px-3 text-center text-white/40 font-medium text-xs">Grammarly<br/><span className="text-[10px] font-normal text-white/25">$30/mo</span></th>
+                  <th className="py-3 px-3 text-center text-white/55 font-medium text-xs">ChatGPT Plus<br/><span className="text-[10px] font-normal text-white/55">$20/mo</span></th>
+                  <th className="py-3 px-3 text-center text-white/55 font-medium text-xs">QuillBot<br/><span className="text-[10px] font-normal text-white/55">$19.95/mo</span></th>
+                  <th className="py-3 px-3 text-center text-white/55 font-medium text-xs">Grammarly<br/><span className="text-[10px] font-normal text-white/55">$30/mo</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -1279,7 +1279,7 @@ export default function Landing() {
                 ].map(({ feature, lsg, gpt, qb, gr }) => {
                   const cell = (val: boolean | string) => {
                     if (val === true) return <span className="text-emerald-400 text-base">✓</span>;
-                    if (val === false) return <span className="text-white/20 text-base">✕</span>;
+                    if (val === false) return <span className="text-white/55 text-base">✕</span>;
                     return <span className="text-amber-400/70 text-[10px] font-medium">Partial</span>;
                   };
                   return (
@@ -1347,7 +1347,7 @@ export default function Landing() {
                   <ArrowRight size={15} />
                 </span>
               </Link>
-              <p className="text-white/25 text-xs mt-3">$29.99/month · Cancel anytime · Completely separate from Starter &amp; Pro academic plans · Not included in any academic subscription</p>
+              <p className="text-white/55 text-xs mt-3">$29.99/month · Cancel anytime · Completely separate from Starter &amp; Pro academic plans · Not included in any academic subscription</p>
             </div>
 
             {/* Right: feature cards */}
@@ -1363,7 +1363,7 @@ export default function Landing() {
                 <div key={card.title} className="p-4 rounded-xl bg-white/[0.03] border border-purple-500/10 hover:border-purple-500/20 hover:bg-white/[0.05] transition-all">
                   <div className="text-xl mb-2">{card.icon}</div>
                   <h3 className="font-semibold text-white text-xs mb-1">{card.title}</h3>
-                  <p className="text-[11px] text-white/40 leading-relaxed">{card.desc}</p>
+                  <p className="text-[11px] text-white/55 leading-relaxed">{card.desc}</p>
                 </div>
               ))}
             </div>
@@ -1377,7 +1377,7 @@ export default function Landing() {
           <div className="text-center mb-10 sm:mb-16">
             <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4">How it works</p>
             <h2 className="text-3xl sm:text-4xl font-bold">Two ways to get started</h2>
-            <p className="text-white/40 text-sm mt-3 max-w-xl mx-auto">Subscribe for ongoing use, or pay once for exactly what you need right now. No lock-in either way.</p>
+            <p className="text-white/55 text-sm mt-3 max-w-xl mx-auto">Subscribe for ongoing use, or pay once for exactly what you need right now. No lock-in either way.</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 sm:gap-12">
@@ -1389,7 +1389,7 @@ export default function Landing() {
                 </div>
                 <div>
                   <p className="text-white font-semibold text-sm">Subscribe</p>
-                  <p className="text-blue-400/70 text-[11px]">From $9.99 / month</p>
+                  <p className="text-blue-300 text-[11px]">From $9.99 / month</p>
                 </div>
               </div>
               <div className="space-y-6">
@@ -1399,7 +1399,7 @@ export default function Landing() {
                   { num: "03", title: "Generate, revise, humanize, and submit", body: "Run any tool in sequence — paper → plagiarism check → LightSpeed Humanizer → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
                 ].map(({ num, title, body }) => (
                   <div key={num} className="flex gap-4">
-                    <div className="text-3xl font-bold text-white/6 leading-none shrink-0 w-10 select-none">{num}</div>
+                    <div className="text-3xl font-bold text-white/45 leading-none shrink-0 w-10 select-none">{num}</div>
                     <div>
                       <h3 className="font-semibold text-white mb-1.5 text-sm">{title}</h3>
                       <p className="text-white/45 text-xs leading-relaxed">{body}</p>
@@ -1422,7 +1422,7 @@ export default function Landing() {
                 </div>
                 <div>
                   <p className="text-white font-semibold text-sm">Pay as you go</p>
-                  <p className="text-orange-400/70 text-[11px]">From $1.99 per use · no subscription</p>
+                  <p className="text-orange-300 text-[11px]">From $1.99 per use · no subscription</p>
                 </div>
               </div>
               <div className="space-y-6">
@@ -1432,7 +1432,7 @@ export default function Landing() {
                   { num: "03", title: "Use it, download it, done", body: "No account required beyond signup. Your PAYG purchase never expires — come back whenever you need it. No recurring charge, ever." },
                 ].map(({ num, title, body }) => (
                   <div key={num} className="flex gap-4">
-                    <div className="text-3xl font-bold text-white/6 leading-none shrink-0 w-10 select-none">{num}</div>
+                    <div className="text-3xl font-bold text-white/45 leading-none shrink-0 w-10 select-none">{num}</div>
                     <div>
                       <h3 className="font-semibold text-white mb-1.5 text-sm">{title}</h3>
                       <p className="text-white/45 text-xs leading-relaxed">{body}</p>
@@ -1480,7 +1480,7 @@ export default function Landing() {
             </div>
             <div className="rounded-2xl border border-white/10 bg-[#0b1120] p-5 sm:p-6 shadow-xl overflow-hidden">
               <div className="flex items-center justify-between mb-4">
-                <div className="text-xs text-white/30 uppercase tracking-widest font-medium">Generated output</div>
+                <div className="text-xs text-white/55 uppercase tracking-widest font-medium">Generated output</div>
                 <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Writing…
@@ -1503,20 +1503,20 @@ export default function Landing() {
 
               {/* References preview */}
               <div className="border-t border-white/5 pt-3 space-y-1.5">
-                <p className="text-[9px] text-white/30 uppercase tracking-widest font-medium mb-2">References</p>
-                <p className="text-[10px] text-white/40 leading-relaxed">
+                <p className="text-[9px] text-white/55 uppercase tracking-widest font-medium mb-2">References</p>
+                <p className="text-[10px] text-white/55 leading-relaxed">
                   Maas, A. I. R., et al. (2022). Traumatic brain injury: integrated approaches.{" "}
                   <span className="italic">Nature Reviews Neurology, 18</span>(4), 207–224.{" "}
-                  <span className="text-blue-400/60 text-[9px]">doi:10.1038/s41582-021-00568-6 ↗</span>
+                  <span className="text-blue-300 text-[9px]">doi:10.1038/s41582-021-00568-6 ↗</span>
                 </p>
-                <p className="text-[10px] text-white/40 leading-relaxed">
+                <p className="text-[10px] text-white/55 leading-relaxed">
                   Chen, H., &amp; Park, J. (2023). Cortical plasticity post-TBI.{" "}
                   <span className="italic">Brain, 146</span>(2), 489–503.{" "}
-                  <span className="text-blue-400/60 text-[9px]">doi:10.1093/brain/awac391 ↗</span>
+                  <span className="text-blue-300 text-[9px]">doi:10.1093/brain/awac391 ↗</span>
                 </p>
               </div>
 
-              <div className="mt-4 text-xs text-white/25 flex items-center gap-2 border-t border-white/5 pt-3">
+              <div className="mt-4 text-xs text-white/55 flex items-center gap-2 border-t border-white/5 pt-3">
                 <BarChart3 size={11} />
                 1,247 words · 6 citations · APA 7th edition
               </div>
@@ -1526,7 +1526,7 @@ export default function Landing() {
           {/* Feature 2: STEM Solver */}
           <div className="grid md:grid-cols-2 gap-10 sm:gap-16 items-center">
             <div className="order-2 md:order-1 rounded-2xl border border-white/10 bg-[#0b1120] p-5 sm:p-6 shadow-xl">
-              <div className="text-xs text-white/30 uppercase tracking-widest mb-4 font-medium">Step-by-step solution</div>
+              <div className="text-xs text-white/55 uppercase tracking-widest mb-4 font-medium">Step-by-step solution</div>
               <div className="space-y-3">
                 {["Step 1 — Identify the knowns", "Step 2 — Apply Newton's second law", "Step 3 — Solve for acceleration", "Step 4 — Calculate displacement"].map((step, i) => (
                   <div key={step} className="flex items-start gap-3">
@@ -1594,7 +1594,7 @@ export default function Landing() {
                   </div>
                   <div>
                     <div className="font-semibold text-white text-sm">{name}</div>
-                    <div className="text-white/35 text-xs mt-0.5">{role}</div>
+                    <div className="text-white/55 text-xs mt-0.5">{role}</div>
                   </div>
                 </div>
               </div>
@@ -1616,7 +1616,7 @@ export default function Landing() {
               Starter at $9.99/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done.
             </p>
             <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
-              <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-white" : "text-white/35"}`}>Monthly</span>
+              <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-white" : "text-white/55"}`}>Monthly</span>
               <button
                 type="button"
                 role="switch"
@@ -1627,10 +1627,10 @@ export default function Landing() {
               >
                 <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200 ${billingAnnual ? "left-6" : "left-1"}`} />
               </button>
-              <span className={`text-sm font-medium transition-colors ${billingAnnual ? "text-white" : "text-white/35"}`}>Annual</span>
+              <span className={`text-sm font-medium transition-colors ${billingAnnual ? "text-white" : "text-white/55"}`}>Annual</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-semibold">Save 25%</span>
             </div>
-            <p className="text-[11px] text-white/30 mt-2 max-w-sm mx-auto">
+            <p className="text-[11px] text-white/55 mt-2 max-w-sm mx-auto">
               Best value: lock in a full semester at the annual rate — most students upgrade in August or January.
             </p>
           </div>
@@ -1654,7 +1654,7 @@ export default function Landing() {
                     <div className="flex items-end gap-1.5">
                       <span className="text-3xl sm:text-4xl font-bold text-white">{price}</span>
                     </div>
-                    <p className="text-white/30 text-[11px] mt-1 leading-relaxed">{per}</p>
+                    <p className="text-white/55 text-[11px] mt-1 leading-relaxed">{per}</p>
                     <p className="text-white/50 text-xs mt-3 leading-relaxed">{desc}</p>
                   </div>
 
@@ -1666,7 +1666,7 @@ export default function Landing() {
                       </li>
                     ))}
                     {locked.map(feat => (
-                      <li key={feat} className="flex items-start gap-2.5 text-sm text-white/22 line-through decoration-white/15">
+                      <li key={feat} className="flex items-start gap-2.5 text-sm text-white/55 line-through decoration-white/15">
                         <div className="w-3 h-3 rounded-full border border-white/12 shrink-0 mt-0.5" />
                         {feat}
                       </li>
@@ -1674,7 +1674,7 @@ export default function Landing() {
                   </ul>
 
                   {isInstitution && (
-                    <p className="text-[10px] text-white/30 italic mb-3">Custom pricing — we'll get back to you within 1 business day.</p>
+                    <p className="text-[10px] text-white/55 italic mb-3">Custom pricing — we'll get back to you within 1 business day.</p>
                   )}
 
                   {name === "Pro" ? (
@@ -1716,7 +1716,7 @@ export default function Landing() {
                 No subscription required
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3">Pay-As-You-Go</h3>
-              <p className="text-white/40 text-sm max-w-lg mx-auto">
+              <p className="text-white/55 text-sm max-w-lg mx-auto">
                 Pick exactly what you need. Pay once. No expiry. Ideal for a one-off deadline — paper, check, or STEM problem.
               </p>
             </div>
@@ -1738,7 +1738,7 @@ export default function Landing() {
                         <div key={label} className="flex items-center gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-[11px] text-white/60 font-medium leading-tight truncate">{label}</p>
-                            <p className="text-[10px] text-white/28">{words}</p>
+                            <p className="text-[10px] text-white/55">{words}</p>
                           </div>
                           <span className={`text-xs font-bold shrink-0 ${iconCls[color]}`}>{price}</span>
                           <button
@@ -1766,9 +1766,9 @@ export default function Landing() {
                     <p className="text-xs font-semibold text-white mb-1.5">{tool}</p>
                     <div className="flex items-end gap-1 mb-2">
                       <span className={`text-xl font-bold ${iconCls[color]}`}>{price}</span>
-                      <span className="text-white/30 text-[10px] mb-0.5">{unit}</span>
+                      <span className="text-white/55 text-[10px] mb-0.5">{unit}</span>
                     </div>
-                    <p className="text-[10px] text-white/35 leading-relaxed flex-1">{note}</p>
+                    <p className="text-[10px] text-white/55 leading-relaxed flex-1">{note}</p>
                     <button
                       onClick={() => handleBuyPayg(toolId)}
                       className={`mt-3 w-full py-1.5 text-[11px] font-semibold rounded-xl border transition-all ${btnBg[color] ?? "bg-white/10 text-white border-white/15"}`}
@@ -1780,7 +1780,7 @@ export default function Landing() {
               })}
             </div>
 
-            <p className="text-center text-white/20 text-xs mt-6 sm:mt-8">
+            <p className="text-center text-white/55 text-xs mt-6 sm:mt-8">
               PAYG charges never expire · Billed at time of use · No subscription required
             </p>
           </div>
@@ -1799,7 +1799,7 @@ export default function Landing() {
             {faqs.map(faq => <FAQItem key={faq.q} {...faq} />)}
           </div>
           <div className="mt-10 text-center">
-            <p className="text-white/40 text-sm">Still have questions? <a href="mailto:info@lightspeedghost.com" className="text-blue-400 hover:text-blue-300">Email us</a> or <Link href="/contact"><span className="text-blue-400 hover:text-blue-300 cursor-pointer">visit our contact page</span></Link>.</p>
+            <p className="text-white/55 text-sm">Still have questions? <a href="mailto:info@lightspeedghost.com" className="text-blue-400 hover:text-blue-300">Email us</a> or <Link href="/contact"><span className="text-blue-400 hover:text-blue-300 cursor-pointer">visit our contact page</span></Link>.</p>
           </div>
         </div>
       </section>
@@ -1832,10 +1832,10 @@ export default function Landing() {
             </a>
           </div>
           <div className="mt-5 flex flex-col items-center gap-2">
-            <p className="text-xs text-white/25">
+            <p className="text-xs text-white/55">
               Trusted by 4M+ students at UCL, Georgia Tech, Edinburgh, UT Austin, and 200+ universities worldwide
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/20">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/55">
               <span className="flex items-center gap-1"><ShieldCheck size={10} className="text-emerald-400/60" /> 7-day money-back guarantee</span>
               <span>·</span>
               <span>Cancel anytime</span>
@@ -1866,26 +1866,26 @@ export default function Landing() {
 
             <div className="col-span-2">
               <Logo size={30} className="mb-4" />
-              <p className="text-white/35 text-sm leading-relaxed max-w-xs mb-4">
+              <p className="text-white/55 text-sm leading-relaxed max-w-xs mb-4">
                 Academic writing tools for students who have deadlines and standards.
               </p>
-              <div className="space-y-2 text-xs text-white/30">
+              <div className="space-y-2 text-xs text-white/55">
                 <div className="flex items-start gap-2">
-                  <MapPin size={12} className="shrink-0 mt-0.5 text-white/20" />
+                  <MapPin size={12} className="shrink-0 mt-0.5 text-white/55" />
                   <span>500 Oracle Pkwy, Redwood City, CA 94065</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Mail size={12} className="shrink-0 text-white/20" />
+                  <Mail size={12} className="shrink-0 text-white/55" />
                   <a href="mailto:info@lightspeedghost.com" className="hover:text-white/60 transition-colors">info@lightspeedghost.com</a>
                 </div>
               </div>
               <div className="flex items-center gap-3 mt-4">
                 <a href="https://twitter.com/lightspeedghost" target="_blank" rel="noreferrer" aria-label="Light Speed Ghost on X (Twitter)"
-                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/30 hover:text-white/70 transition-all">
+                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/55 hover:text-white/70 transition-all">
                   <Twitter size={13} aria-hidden="true" />
                 </a>
                 <a href="https://linkedin.com/company/lightspeedghost" target="_blank" rel="noreferrer" aria-label="Light Speed Ghost on LinkedIn"
-                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/30 hover:text-white/70 transition-all">
+                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/55 hover:text-white/70 transition-all">
                   <Linkedin size={13} aria-hidden="true" />
                 </a>
               </div>
@@ -1906,7 +1906,7 @@ export default function Landing() {
                 ].map(({ label, href }) => (
                   <li key={label}>
                     <Link href={href}>
-                      <span className="text-white/35 hover:text-white/65 text-sm transition-colors cursor-pointer">{label}</span>
+                      <span className="text-white/55 hover:text-white/65 text-sm transition-colors cursor-pointer">{label}</span>
                     </Link>
                   </li>
                 ))}
@@ -1928,10 +1928,10 @@ export default function Landing() {
                 ].map(({ label, href }) => (
                   <li key={label}>
                     {href.startsWith("#") ? (
-                      <a href={href} className="text-white/35 hover:text-white/65 text-sm transition-colors">{label}</a>
+                      <a href={href} className="text-white/55 hover:text-white/65 text-sm transition-colors">{label}</a>
                     ) : (
                       <Link href={href}>
-                        <span className="text-white/35 hover:text-white/65 text-sm transition-colors cursor-pointer">{label}</span>
+                        <span className="text-white/55 hover:text-white/65 text-sm transition-colors cursor-pointer">{label}</span>
                       </Link>
                     )}
                   </li>
@@ -1952,7 +1952,7 @@ export default function Landing() {
                 ].map(({ label, href }) => (
                   <li key={label}>
                     <Link href={href}>
-                      <span className="text-white/35 hover:text-white/65 text-sm transition-colors cursor-pointer">{label}</span>
+                      <span className="text-white/55 hover:text-white/65 text-sm transition-colors cursor-pointer">{label}</span>
                     </Link>
                   </li>
                 ))}
@@ -1965,7 +1965,7 @@ export default function Landing() {
 
             {/* Payment method logos row */}
             <div className="text-center">
-              <p className="text-[10px] font-semibold text-white/20 uppercase tracking-widest mb-3">Accepted payment methods</p>
+              <p className="text-[10px] font-semibold text-white/55 uppercase tracking-widest mb-3">Accepted payment methods</p>
               <div className="flex flex-wrap gap-2 items-center justify-center">
 
                 {/* Visa */}
@@ -2060,8 +2060,8 @@ export default function Landing() {
 
                 {/* Bank Transfer */}
                 <div className="h-8 px-3 rounded-md border border-white/8 bg-white/4 flex items-center gap-1.5">
-                  <Building2 size={11} className="text-white/35" />
-                  <span className="text-white/40 font-medium" style={{ fontSize: "10px" }}>Bank Transfer</span>
+                  <Building2 size={11} className="text-white/55" />
+                  <span className="text-white/55 font-medium" style={{ fontSize: "10px" }}>Bank Transfer</span>
                 </div>
 
               </div>
@@ -2069,22 +2069,22 @@ export default function Landing() {
 
             {/* Security trust badges */}
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              <div className="flex items-center gap-1.5 text-white/25">
+              <div className="flex items-center gap-1.5 text-white/55">
                 <Lock size={11} />
                 <span style={{ fontSize: "10px" }} className="font-medium">256-bit SSL Encrypted</span>
               </div>
               <div className="hidden sm:block w-px h-3 bg-white/10" />
-              <div className="flex items-center gap-1.5 text-white/25">
+              <div className="flex items-center gap-1.5 text-white/55">
                 <ShieldCheck size={11} />
                 <span style={{ fontSize: "10px" }} className="font-medium">PCI DSS Level 1 Compliant</span>
               </div>
               <div className="hidden sm:block w-px h-3 bg-white/10" />
-              <div className="flex items-center gap-1.5 text-white/25">
+              <div className="flex items-center gap-1.5 text-white/55">
                 <CheckCircle size={11} />
                 <span style={{ fontSize: "10px" }} className="font-medium">Secure Checkout</span>
               </div>
               <div className="hidden sm:block w-px h-3 bg-white/10" />
-              <div className="flex items-center gap-1.5 text-white/25">
+              <div className="flex items-center gap-1.5 text-white/55">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
                 </svg>
@@ -2095,8 +2095,8 @@ export default function Landing() {
           </div>
 
           <div className="border-t border-white/5 pt-6 sm:pt-7 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-white/25 text-xs">© {new Date().getFullYear()} Light Speed Ghost. All rights reserved.</p>
-            <p className="text-white/20 text-xs text-center sm:text-right">Built for students who have too much to do and too little time.</p>
+            <p className="text-white/55 text-xs">© {new Date().getFullYear()} Light Speed Ghost. All rights reserved.</p>
+            <p className="text-white/55 text-xs text-center sm:text-right">Built for students who have too much to do and too little time.</p>
           </div>
         </div>
       </footer>
@@ -2131,7 +2131,7 @@ export default function Landing() {
             >
               <button
                 onClick={() => setShowExitIntent(false)}
-                className="absolute top-4 right-4 p-1.5 text-white/30 hover:text-white/70 rounded-lg hover:bg-white/5 transition-all"
+                className="absolute top-4 right-4 p-1.5 text-white/55 hover:text-white/70 rounded-lg hover:bg-white/5 transition-all"
               >
                 <X size={16} />
               </button>
@@ -2178,7 +2178,7 @@ export default function Landing() {
                   Or subscribe from $9.99/mo
                 </span>
               </Link>
-              <p className="text-center text-white/20 text-xs mt-3">No credit card required to create an account</p>
+              <p className="text-center text-white/55 text-xs mt-3">No credit card required to create an account</p>
             </motion.div>
           </motion.div>
         )}
