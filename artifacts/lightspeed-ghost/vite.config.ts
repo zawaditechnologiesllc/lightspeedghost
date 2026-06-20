@@ -63,6 +63,10 @@ export default defineConfig({
         // unused JavaScript / avoid enormous network payloads).
         manualChunks(id: string) {
           if (!id.includes("node_modules")) return undefined;
+          // Keep the tiny className helpers (clsx / cva / tailwind-merge) out of
+          // the recharts "charts" chunk. Otherwise Rollup traps clsx inside it and
+          // the entry imports the whole ~360 KB charts chunk just to get clsx.
+          if (id.includes("clsx") || id.includes("class-variance-authority") || id.includes("tailwind-merge")) return "react";
           if (id.includes("katex")) return "katex";
           if (id.includes("framer-motion")) return "motion";
           if (id.includes("recharts") || id.includes("d3-")) return "charts";
