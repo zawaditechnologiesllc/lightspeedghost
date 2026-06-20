@@ -5,7 +5,7 @@
 //    with an inline offline screen as the only fallback.
 //  • /assets/* (content-hashed, immutable) are cache-first.
 //  • Everything else same-origin is network-first with cache fallback.
-const CACHE_NAME = "lsg-v3";
+const CACHE_NAME = "lsg-v4";
 const STATIC_URLS = [
   "/manifest.json",
   "/favicon.svg",
