@@ -610,7 +610,7 @@ export default function Landing() {
 
         <motion.div
           className="relative max-w-4xl mx-auto"
-          initial={{ opacity: 0, y: 32 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
@@ -732,7 +732,7 @@ export default function Landing() {
               <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
               <span className="w-3 h-3 rounded-full bg-green-500/70" />
               <span
-                className="ml-3 text-xs text-white/20 font-mono hidden sm:block transition-opacity duration-300"
+                className="ml-3 text-xs text-white/50 font-mono hidden sm:block transition-opacity duration-300"
                 style={{ opacity: fading ? 0 : 1 }}
               >
                 lightspeedghost.com/{previewUrls[previewIdx]}
@@ -749,7 +749,7 @@ export default function Landing() {
                   <div
                     key={label}
                     className={`px-3 py-2 rounded-lg text-xs mb-0.5 font-medium transition-all duration-300 ${
-                      i === previewIdx + 1 ? "bg-blue-600 text-white" : "text-white/30"
+                      i === previewIdx + 1 ? "bg-blue-600 text-white" : "text-white/55"
                     }`}
                   >
                     {label}
@@ -785,7 +785,7 @@ export default function Landing() {
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                       <div className="h-2 w-28 bg-blue-400/50 rounded" />
                     </div>
-                    <div className="text-[9px] text-white/25 mt-1">APA 7th · 1,500 words · Streaming…</div>
+                    <div className="text-[9px] text-white/54 mt-1">APA 7th · 1,500 words · Streaming…</div>
                   </div>
                 )}
 
@@ -809,8 +809,8 @@ export default function Landing() {
                         { depth: 0, marker: "IV.", text: "Conclusion & Implications" },
                       ].map(({ depth, marker, text }, i) => (
                         <div key={i} className={`flex items-center gap-2 ${depth === 1 ? "pl-5" : ""}`}>
-                          <span className={`font-mono text-[9px] shrink-0 ${depth === 0 ? "text-indigo-400/70" : "text-white/25"}`}>{marker}</span>
-                          <span className={`text-[10px] ${depth === 0 ? "text-white/70 font-medium" : "text-white/40"}`}>{text}</span>
+                          <span className={`font-mono text-[9px] shrink-0 ${depth === 0 ? "text-indigo-300" : "text-white/54"}`}>{marker}</span>
+                          <span className={`text-[10px] ${depth === 0 ? "text-white/70 font-medium" : "text-white/60"}`}>{text}</span>
                         </div>
                       ))}
                     </div>
@@ -857,7 +857,7 @@ export default function Landing() {
                       <span className="text-[11px] font-semibold text-white/80">LightSpeed Humanizer</span>
                     </div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[9px] text-white/40">AI score before</span>
+                      <span className="text-[9px] text-white/60">AI score before</span>
                       <span className="text-[9px] font-mono font-bold text-red-400">73%</span>
                     </div>
                     <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-3">
@@ -868,13 +868,13 @@ export default function Landing() {
                       <span className="text-emerald-300 not-italic font-medium">"What emerges from this data is…"</span>
                     </div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[9px] text-white/40">AI score after</span>
+                      <span className="text-[9px] text-white/60">AI score after</span>
                       <span className="text-[9px] font-mono font-bold text-emerald-400">0%</span>
                     </div>
                     <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-500 rounded-full" style={{ width: "2%" }} />
                     </div>
-                    <div className="mt-1.5 text-[9px] text-white/30 flex items-center gap-1.5">
+                    <div className="mt-1.5 text-[9px] text-white/55 flex items-center gap-1.5">
                       <CheckCircle size={10} className="text-emerald-400" />
                       Passes Turnitin · GPTZero · Originality.ai
                     </div>
@@ -896,7 +896,7 @@ export default function Landing() {
                     ].map(({ label, pct, color, txt }) => (
                       <div key={label}>
                         <div className="flex justify-between text-[9px] mb-1">
-                          <span className="text-white/40">{label}</span>
+                          <span className="text-white/60">{label}</span>
                           <span className={`font-mono font-semibold ${txt}`}>{pct}%</span>
                         </div>
                         <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -904,7 +904,7 @@ export default function Landing() {
                         </div>
                       </div>
                     ))}
-                    <div className="mt-2 text-[9px] text-white/30 flex items-center gap-1.5">
+                    <div className="mt-2 text-[9px] text-white/55 flex items-center gap-1.5">
                       <CheckCircle size={10} className="text-emerald-400" />
                       Safe to submit — humanization not required
                     </div>
@@ -920,7 +920,7 @@ export default function Landing() {
                     </div>
                     <div className="flex gap-1.5 flex-wrap mb-3">
                       {["Math", "Physics", "Chemistry", "Biology", "CS"].map((s, i) => (
-                        <span key={s} className={`text-[9px] px-2 py-0.5 rounded-full border font-medium ${i === 1 ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" : "bg-white/5 text-white/30 border-white/8"}`}>{s}</span>
+                        <span key={s} className={`text-[9px] px-2 py-0.5 rounded-full border font-medium ${i === 1 ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" : "bg-white/5 text-white/55 border-white/8"}`}>{s}</span>
                       ))}
                     </div>
                     <div className="space-y-1.5">
@@ -961,7 +961,7 @@ export default function Landing() {
                     </div>
                     <div className="flex gap-1.5 mt-1 flex-wrap">
                       {["Quiz me", "Simplify more", "Key takeaways"].map(s => (
-                        <span key={s} className="text-[8px] px-2 py-0.5 rounded-full bg-white/5 border border-white/8 text-white/35 cursor-pointer">{s}</span>
+                        <span key={s} className="text-[8px] px-2 py-0.5 rounded-full bg-white/5 border border-white/8 text-white/58 cursor-pointer">{s}</span>
                       ))}
                     </div>
                   </div>
@@ -1399,7 +1399,7 @@ export default function Landing() {
                   { num: "03", title: "Generate, revise, humanize, and submit", body: "Run any tool in sequence — paper → plagiarism check → LightSpeed Humanizer → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
                 ].map(({ num, title, body }) => (
                   <div key={num} className="flex gap-4">
-                    <div className="text-3xl font-bold text-white/6 leading-none shrink-0 w-10 select-none">{num}</div>
+                    <div className="text-3xl font-bold text-white/40 leading-none shrink-0 w-10 select-none">{num}</div>
                     <div>
                       <h3 className="font-semibold text-white mb-1.5 text-sm">{title}</h3>
                       <p className="text-white/45 text-xs leading-relaxed">{body}</p>
@@ -1432,7 +1432,7 @@ export default function Landing() {
                   { num: "03", title: "Use it, download it, done", body: "No account required beyond signup. Your PAYG purchase never expires — come back whenever you need it. No recurring charge, ever." },
                 ].map(({ num, title, body }) => (
                   <div key={num} className="flex gap-4">
-                    <div className="text-3xl font-bold text-white/6 leading-none shrink-0 w-10 select-none">{num}</div>
+                    <div className="text-3xl font-bold text-white/40 leading-none shrink-0 w-10 select-none">{num}</div>
                     <div>
                       <h3 className="font-semibold text-white mb-1.5 text-sm">{title}</h3>
                       <p className="text-white/45 text-xs leading-relaxed">{body}</p>
@@ -1480,7 +1480,7 @@ export default function Landing() {
             </div>
             <div className="rounded-2xl border border-white/10 bg-[#0b1120] p-5 sm:p-6 shadow-xl overflow-hidden">
               <div className="flex items-center justify-between mb-4">
-                <div className="text-xs text-white/30 uppercase tracking-widest font-medium">Generated output</div>
+                <div className="text-xs text-white/55 uppercase tracking-widest font-medium">Generated output</div>
                 <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Writing…
@@ -1503,20 +1503,20 @@ export default function Landing() {
 
               {/* References preview */}
               <div className="border-t border-white/5 pt-3 space-y-1.5">
-                <p className="text-[9px] text-white/30 uppercase tracking-widest font-medium mb-2">References</p>
-                <p className="text-[10px] text-white/40 leading-relaxed">
+                <p className="text-[9px] text-white/55 uppercase tracking-widest font-medium mb-2">References</p>
+                <p className="text-[10px] text-white/60 leading-relaxed">
                   Maas, A. I. R., et al. (2022). Traumatic brain injury: integrated approaches.{" "}
                   <span className="italic">Nature Reviews Neurology, 18</span>(4), 207–224.{" "}
-                  <span className="text-blue-400/60 text-[9px]">doi:10.1038/s41582-021-00568-6 ↗</span>
+                  <span className="text-blue-300 text-[9px]">doi:10.1038/s41582-021-00568-6 ↗</span>
                 </p>
-                <p className="text-[10px] text-white/40 leading-relaxed">
+                <p className="text-[10px] text-white/60 leading-relaxed">
                   Chen, H., &amp; Park, J. (2023). Cortical plasticity post-TBI.{" "}
                   <span className="italic">Brain, 146</span>(2), 489–503.{" "}
-                  <span className="text-blue-400/60 text-[9px]">doi:10.1093/brain/awac391 ↗</span>
+                  <span className="text-blue-300 text-[9px]">doi:10.1093/brain/awac391 ↗</span>
                 </p>
               </div>
 
-              <div className="mt-4 text-xs text-white/25 flex items-center gap-2 border-t border-white/5 pt-3">
+              <div className="mt-4 text-xs text-white/54 flex items-center gap-2 border-t border-white/5 pt-3">
                 <BarChart3 size={11} />
                 1,247 words · 6 citations · APA 7th edition
               </div>
@@ -1526,7 +1526,7 @@ export default function Landing() {
           {/* Feature 2: STEM Solver */}
           <div className="grid md:grid-cols-2 gap-10 sm:gap-16 items-center">
             <div className="order-2 md:order-1 rounded-2xl border border-white/10 bg-[#0b1120] p-5 sm:p-6 shadow-xl">
-              <div className="text-xs text-white/30 uppercase tracking-widest mb-4 font-medium">Step-by-step solution</div>
+              <div className="text-xs text-white/55 uppercase tracking-widest mb-4 font-medium">Step-by-step solution</div>
               <div className="space-y-3">
                 {["Step 1 — Identify the knowns", "Step 2 — Apply Newton's second law", "Step 3 — Solve for acceleration", "Step 4 — Calculate displacement"].map((step, i) => (
                   <div key={step} className="flex items-start gap-3">
@@ -2006,7 +2006,7 @@ export default function Landing() {
                 {/* PayPal */}
                 <div className="h-8 px-3 rounded-md border border-white/10 bg-white/5 flex items-center gap-0.5">
                   <span className="font-bold text-sm" style={{ color: "#009cde" }}>Pay</span>
-                  <span className="font-bold text-sm" style={{ color: "#003087" }}>Pal</span>
+                  <span className="font-bold text-sm" style={{ color: "#ffffff" }}>Pal</span>
                 </div>
 
                 {/* Apple Pay */}
