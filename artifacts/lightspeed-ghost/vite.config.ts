@@ -1,7 +1,38 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+
+// Inline the built stylesheet into index.html so the CSS is no longer a
+// separate render-blocking request. This is a client-rendered SPA (empty
+// #root), so there's no meaningful "critical" subset to extract — inlining
+// the whole sheet removes the blocking round-trip with no FOUC. Fails safe:
+// if the asset can't be matched it leaves the normal <link> untouched.
+function inlineEntryCss(): Plugin {
+  return {
+    name: "inline-entry-css",
+    apply: "build",
+    enforce: "post",
+    generateBundle(_options, bundle) {
+      const htmlKey = Object.keys(bundle).find((k) => k.endsWith(".html"));
+      if (!htmlKey) return;
+      const html = bundle[htmlKey];
+      if (html.type !== "asset") return;
+      let source = html.source.toString();
+      const links = source.match(/<link\b[^>]*rel="stylesheet"[^>]*>/g) ?? [];
+      for (const link of links) {
+        const href = link.match(/href="([^"]+)"/)?.[1];
+        if (!href) continue;
+        const key = href.replace(/^\.?\//, "");
+        const asset = bundle[key];
+        if (!asset || asset.type !== "asset") continue;
+        source = source.replace(link, `<style>${asset.source.toString()}</style>`);
+        delete bundle[key];
+      }
+      html.source = source;
+    },
+  };
+}
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -26,6 +57,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    inlineEntryCss(),
     ...(!isProd
       ? [
           (await import("@replit/vite-plugin-runtime-error-modal")).default(),
