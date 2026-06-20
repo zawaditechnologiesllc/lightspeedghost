@@ -31,6 +31,10 @@
     <meta name="geo.placename" content="United States" />
     <meta name="ICBM" content="37.7749,-122.4194" />
 
+    <!-- Preconnect to the API backend so the first data request (live stats) starts sooner. Keep in sync with VITE_API_URL. -->
+    <link rel="preconnect" href="https://lightspeedghost-5szz.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://lightspeedghost-5szz.onrender.com" />
+
     <!-- Handwritten font for STEM + Study math rendering — loaded async so it never blocks first paint -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />

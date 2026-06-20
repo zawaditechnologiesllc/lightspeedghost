@@ -583,13 +583,14 @@ export default function Landing() {
         </AnimatePresence>
       </header>
 
+      <main>
       {/* ─── HERO ─── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 pt-20 pb-12 sm:pt-24 sm:pb-16 text-center overflow-hidden">
         {/* Hero background photo */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            backgroundImage: "url('/hero-student-bg.png')",
+            backgroundImage: "url('/hero-student-bg.webp')",
             backgroundSize: "cover",
             backgroundPosition: "center top",
             backgroundRepeat: "no-repeat",
@@ -974,13 +975,20 @@ export default function Landing() {
             {Array.from({ length: 7 }).map((_, i) => (
               <button
                 key={i}
+                type="button"
+                aria-label={`Show ${previewNavItems[i + 1]} preview`}
+                aria-current={i === previewIdx ? "true" : undefined}
                 onClick={() => { setFading(true); setTimeout(() => { setPreviewIdx(i); setFading(false); }, 200); }}
-                className={`rounded-full transition-all duration-300 ${
-                  i === previewIdx
-                    ? "w-6 h-1.5 bg-blue-400"
-                    : "w-1.5 h-1.5 bg-white/20 hover:bg-white/40"
-                }`}
-              />
+                className="flex items-center justify-center p-2 group"
+              >
+                <span
+                  className={`block rounded-full transition-all duration-300 ${
+                    i === previewIdx
+                      ? "w-6 h-1.5 bg-blue-400"
+                      : "w-1.5 h-1.5 bg-white/20 group-hover:bg-white/40"
+                  }`}
+                />
+              </button>
             ))}
           </div>
         </div>
@@ -1610,6 +1618,10 @@ export default function Landing() {
             <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
               <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-white" : "text-white/35"}`}>Monthly</span>
               <button
+                type="button"
+                role="switch"
+                aria-checked={billingAnnual}
+                aria-label="Bill annually"
                 onClick={() => setBillingAnnual(b => !b)}
                 className={`relative w-11 h-6 rounded-full transition-colors ${billingAnnual ? "bg-blue-600" : "bg-white/15"}`}
               >
@@ -1845,6 +1857,8 @@ export default function Landing() {
         />
       )}
 
+      </main>
+
       {/* ─── FOOTER ─── */}
       <footer className="border-t border-white/5 py-12 sm:py-14 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
@@ -1866,20 +1880,20 @@ export default function Landing() {
                 </div>
               </div>
               <div className="flex items-center gap-3 mt-4">
-                <a href="https://twitter.com/lightspeedghost" target="_blank" rel="noreferrer"
+                <a href="https://twitter.com/lightspeedghost" target="_blank" rel="noreferrer" aria-label="Light Speed Ghost on X (Twitter)"
                   className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/30 hover:text-white/70 transition-all">
-                  <Twitter size={13} />
+                  <Twitter size={13} aria-hidden="true" />
                 </a>
-                <a href="https://linkedin.com/company/lightspeedghost" target="_blank" rel="noreferrer"
+                <a href="https://linkedin.com/company/lightspeedghost" target="_blank" rel="noreferrer" aria-label="Light Speed Ghost on LinkedIn"
                   className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/30 hover:text-white/70 transition-all">
-                  <Linkedin size={13} />
+                  <Linkedin size={13} aria-hidden="true" />
                 </a>
               </div>
             </div>
 
             {/* Product links */}
             <div>
-              <h4 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-4">Product</h4>
+              <h3 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-4">Product</h3>
               <ul className="space-y-2.5">
                 {[
                   { label: "Paper Writer", href: "/auth" },
@@ -1901,7 +1915,7 @@ export default function Landing() {
 
             {/* Company links */}
             <div>
-              <h4 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-4">Company</h4>
+              <h3 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-4">Company</h3>
               <ul className="space-y-2.5">
                 {[
                   { label: "About", href: "/about" },
@@ -1927,7 +1941,7 @@ export default function Landing() {
 
             {/* Legal links */}
             <div>
-              <h4 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-4">Legal</h4>
+              <h3 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-4">Legal</h3>
               <ul className="space-y-2.5">
                 {[
                   { label: "Privacy Policy", href: "/privacy" },
