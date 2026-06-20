@@ -198,17 +198,21 @@ function MaintenanceScreen({ onRetry }: { onRetry: () => void }) {
 }
 
 function MaintenanceGate({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<"loading" | "ok" | "maintenance">("loading");
+  // Render the app immediately and probe maintenance status in the background.
+  // Blocking first paint on a network round-trip gated the whole site (and would
+  // defeat the pre-rendered landing). Maintenance is rare, so an optimistic
+  // render with a late swap is the right trade-off.
+  const [maintenance, setMaintenance] = useState(false);
   const [path] = useLocation();
 
   const check = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/status`, { credentials: "include" });
-      if (!res.ok) { setStatus("ok"); return; }
+      if (!res.ok) { setMaintenance(false); return; }
       const data = await res.json() as { maintenance?: boolean };
-      setStatus(data.maintenance ? "maintenance" : "ok");
+      setMaintenance(Boolean(data.maintenance));
     } catch {
-      setStatus("ok");
+      setMaintenance(false);
     }
   }, []);
 
@@ -216,15 +220,7 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
 
   if (path.startsWith("/mwaramuriuki-login")) return <>{children}</>;
 
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (status === "maintenance") {
+  if (maintenance) {
     return <MaintenanceScreen onRetry={check} />;
   }
 
