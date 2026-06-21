@@ -1039,9 +1039,10 @@ function SettingsTab() {
   };
 
   const staticConfig = [
-    { label: "Primary LLM", value: "Gemini 2.5 Flash", note: "gemini-2.5-flash-preview-05-20 · $0.075/M input" },
-    { label: "Pillar LLM", value: "Claude Haiku 4.5", note: "claude-haiku-4-5 · max 15 pillar pages/month · $3 budget" },
-    { label: "Monthly budget", value: "$8.00", note: "$5 Gemini + $3 Claude Haiku · override via SEO_BUDGET_LIMIT" },
+    { label: "Generation LLM", value: "Gemini 2.5 Flash", note: "research, topic, outline, content, clusters · free tier · override via SEO_GEMINI_MODEL" },
+    { label: "Monthly budget", value: "$25.00", note: "Gemini-only spend cap · override via SEO_BUDGET_LIMIT" },
+    { label: "Topic data", value: "GSC + GA4 + catalog", note: "Search Console quick-wins & GA4 revenue if configured, else catalog gaps" },
+    { label: "Community research", value: "Reddit (OAuth)", note: "needs REDDIT_CLIENT_ID/SECRET · falls back to AI knowledge" },
     { label: "Min word count", value: "800 words", note: "per page minimum · override via SEO_MIN_WORD_COUNT" },
     { label: "Daily page limit", value: "30 pages", note: "per batch run · override via SEO_DAILY_PAGE_LIMIT" },
     { label: "Robots.txt", value: "Dynamic", note: "served by Express · training crawlers blocked" },
@@ -1053,9 +1054,14 @@ function SettingsTab() {
   ];
 
   const envVars = [
-    { name: "GEMINI_API_KEY", desc: "Google AI Studio key — primary LLM for all catalog + cluster generation" },
-    { name: "ANTHROPIC_API_KEY", desc: "Anthropic key — Claude Haiku 4.5 for pillar pages only (max 15/month)" },
-    { name: "SEO_BUDGET_LIMIT", desc: "Monthly USD budget cap (default: 8.00)" },
+    { name: "GEMINI_API_KEY", desc: "Google AI Studio key — required; powers all research, topic selection & generation" },
+    { name: "SEO_GEMINI_MODEL", desc: "Optional model override (default gemini-2.5-flash; use gemini-2.5-pro with billing)" },
+    { name: "GOOGLE_SERVICE_ACCOUNT_JSON", desc: "GCP service-account JSON — enables Search Console + GA4 data-driven topics" },
+    { name: "GSC_SITE_URL", desc: "Exact Search Console property URL, e.g. https://lightspeedghost.com/" },
+    { name: "GA4_PROPERTY_ID", desc: "Numeric GA4 property ID — weights topics by tool-page revenue" },
+    { name: "REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET", desc: "Reddit app creds — real community research signal (else AI-knowledge fallback)" },
+    { name: "SEO_CRON_TOKEN", desc: "Secret guarding the external daily cron at /api/seo/cron/run" },
+    { name: "SEO_BUDGET_LIMIT", desc: "Monthly USD budget cap (default: 25.00)" },
     { name: "SEO_DAILY_PAGE_LIMIT", desc: "Max catalog pages per batch run (default: 30)" },
   ];
 

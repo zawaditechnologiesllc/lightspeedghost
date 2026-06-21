@@ -18,6 +18,43 @@ const REDDIT_SUBS = [
   "studytips", "writing", "ChatGPT", "AIToolsTech", "Teachers",
 ].join("+");
 
+const REDDIT_UA = "LightspeedGhostSEO/1.0 (academic-research-bot; contact@lightspeedghost.com)";
+
+// Reddit's public *.json endpoints now 403 from datacenter IPs — authenticated
+// OAuth (application-only) is required to read public posts reliably. Register a
+// "script" app at reddit.com/prefs/apps and set REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET.
+let redditToken: { token: string; expires: number } | null = null;
+
+async function getRedditToken(): Promise<string | null> {
+  const id = process.env.REDDIT_CLIENT_ID;
+  const secret = process.env.REDDIT_CLIENT_SECRET;
+  if (!id || !secret) return null;
+  if (redditToken && redditToken.expires > Date.now() + 60_000) return redditToken.token;
+  try {
+    const res = await fetch("https://www.reddit.com/api/v1/access_token", {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString("base64")}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": REDDIT_UA,
+      },
+      body: "grant_type=client_credentials",
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) {
+      logger.warn({ status: res.status }, "[seo-research] Reddit OAuth token request failed");
+      return null;
+    }
+    const body = (await res.json()) as { access_token?: string; expires_in?: number };
+    if (!body.access_token) return null;
+    redditToken = { token: body.access_token, expires: Date.now() + (body.expires_in ?? 3600) * 1000 };
+    return redditToken.token;
+  } catch (err) {
+    logger.warn({ err }, "[seo-research] Reddit OAuth token request errored");
+    return null;
+  }
+}
+
 export interface ResearchData {
   painPoints: string[];
   topQuestions: string[];
@@ -40,21 +77,28 @@ interface RedditPost {
 
 async function fetchRedditPosts(topic: string): Promise<RedditPost[]> {
   const encoded = encodeURIComponent(topic);
-  const url =
-    `https://www.reddit.com/r/${REDDIT_SUBS}/search.json` +
-    `?q=${encoded}&sort=top&t=year&limit=15&restrict_sr=false`;
+  const query = `?q=${encoded}&sort=top&t=year&limit=15&restrict_sr=false`;
+
+  // Prefer authenticated OAuth (oauth.reddit.com) — the only path that reliably
+  // works from a server. Fall back to the public endpoint (best-effort) if no
+  // Reddit app credentials are configured.
+  const token = await getRedditToken();
+  const url = token
+    ? `https://oauth.reddit.com/r/${REDDIT_SUBS}/search${query}`
+    : `https://www.reddit.com/r/${REDDIT_SUBS}/search.json${query}`;
 
   try {
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "LightspeedGhostSEO/1.0 (academic-research-bot; contact@lightspeedghost.com)",
+        "User-Agent": REDDIT_UA,
         Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       signal: AbortSignal.timeout(12_000),
     });
 
     if (!res.ok) {
-      logger.warn({ status: res.status, topic }, "[seo-research] Reddit API returned non-200");
+      logger.warn({ status: res.status, topic, authenticated: Boolean(token) }, "[seo-research] Reddit API returned non-200 — set REDDIT_CLIENT_ID/SECRET if unauthenticated");
       return [];
     }
 

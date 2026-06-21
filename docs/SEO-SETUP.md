@@ -38,19 +38,85 @@ specs the automated engine can generate from.
 
 ## 2. Environment variables (Render → your service → Environment)
 
+**Required** (the engine runs on just these):
+
 | Var | Needed for | Notes |
 |-----|-----------|-------|
 | `ADMIN_PASSWORD` | admin access | the super-admin password |
 | `DATABASE_URL` | everything | Postgres connection string |
-| `GEMINI_API_KEY` | **automated engine** | free at aistudio.google.com — required or AI generation does nothing |
-| `SEO_GEMINI_MODEL` | optional | defaults to `gemini-2.5-flash` (has a free tier); set to `gemini-2.5-pro` only if you've enabled billing |
-| `SEO_CRON_TOKEN` | the external cron | a long random secret that guards the cron URL |
-| `SEO_BUDGET_LIMIT` | automated engine | monthly USD cap (default `25.00`) — generation pauses when hit |
-| `SEO_DAILY_PAGE_LIMIT` | automated engine | max catalog pages per batch (default `10`) |
+| `GEMINI_API_KEY` | **all AI generation** | free at aistudio.google.com — required, or the automated engine does nothing |
+
+**Recommended / optional** (each one switches on more of the engine):
+
+| Var | Switches on | Notes |
+|-----|-------------|-------|
+| `SEO_CRON_TOKEN` | the external daily cron | a long random secret guarding the cron URL (see §3) |
+| `SEO_GEMINI_MODEL` | model override | defaults to `gemini-2.5-flash` (free tier); set `gemini-2.5-pro` only with billing |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | **Search Console + GA4** | full GCP service-account JSON (one line). Powers data-driven topic selection |
+| `GSC_SITE_URL` | Search Console | exact property URL, e.g. `https://lightspeedghost.com/` |
+| `GA4_PROPERTY_ID` | Google Analytics 4 | numeric property id — weights topics toward revenue-driving tools |
+| `REDDIT_CLIENT_ID` | **Reddit research** | from reddit.com/prefs/apps (see §2a). Real community signal in the research step |
+| `REDDIT_CLIENT_SECRET` | Reddit research | the app secret paired with the id above |
+| `SEO_BUDGET_LIMIT` | spend cap | monthly USD cap (default `25.00`) — generation pauses when hit |
+| `SEO_DAILY_PAGE_LIMIT` | batch size | max catalog pages per batch run (default `30`) |
+| `SEO_MIN_WORD_COUNT` | quality gate | per-page minimum (default `800`) |
 | `RESEND_API_KEY`, `EMAIL_FROM` | email notifications | see `docs/EMAIL-SETUP.md` |
 
-The **manual engine needs none of these** beyond `ADMIN_PASSWORD` + `DATABASE_URL` —
-it's always available in the Write tab.
+> The engine **degrades gracefully**: without the Google/Reddit vars it still
+> works, just using catalog-gap topic selection + the model's own knowledge
+> instead of live Search Console / GA4 / Reddit data. Set them to unlock the
+> full, data-driven behaviour. **The manual Write engine needs none of this** —
+> only `ADMIN_PASSWORD` + `DATABASE_URL`.
+
+---
+
+## 2a. What the automated engine actually does (and the data behind each step)
+
+When the scheduler/cron fires, the pipeline runs these steps — each uses the data
+source in brackets:
+
+1. **Topic selection** (`topic-selector.ts`) — picks the highest-opportunity
+   cluster topic from, in priority order: **Google Search Console** quick-wins
+   (high-impression, low-CTR queries) → **GA4** revenue by tool page → **catalog
+   gaps** (un-generated `PAGE_CATALOG` slugs) → AI-only. *Needs
+   `GOOGLE_SERVICE_ACCOUNT_JSON` + `GSC_SITE_URL` / `GA4_PROPERTY_ID` for the first
+   two; works on catalog gaps without them.*
+2. **Research** (`researcher.ts`) — pulls real discussions from academic
+   subreddits and synthesises pain points, questions, keywords and the best
+   competitor to compare against. *Needs `REDDIT_CLIENT_ID/SECRET`; falls back to
+   the model's own knowledge if absent.*
+3. **Outline** (`outliner.ts`) — builds the 5-page cluster structure (hook,
+   comparison, breakdown, alternative, trust) with Gemini.
+4. **Generation** (`content-generator.ts`, `five-page-cluster.ts`) — writes each
+   page with Gemini, with FAQ + schema.org structured data (`schema-engine.ts`).
+5. **Compliance** (`compliance-checker.ts`) — academic-integrity sanitising +
+   EU AI Act disclosure + word-count/data-point gates.
+6. **Review** — pages land in the **Review** queue at status `review`; you
+   approve → published, server-rendered at `/seo/<slug>`, and added to
+   `sitemap.xml` automatically.
+
+Budget is tracked per run (`budget-tracker.ts`) against `SEO_BUDGET_LIMIT`, and a
+sitemap ping notifies Google + Bing on publish.
+
+### Setting up Google Search Console + GA4 (optional but high-value)
+1. In Google Cloud, create a **service account** and download its JSON key.
+2. Enable the **Search Console API** and **Google Analytics Data API** for the project.
+3. In **Search Console → Settings → Users**, add the service-account email as a
+   user. In **GA4 → Admin → Property Access**, add it as a Viewer.
+4. Put the *entire* JSON (minified to one line) in `GOOGLE_SERVICE_ACCOUNT_JSON`,
+   set `GSC_SITE_URL` to your exact property URL, and `GA4_PROPERTY_ID` to the
+   numeric id.
+
+### Setting up Reddit research (optional)
+Reddit's public API now blocks server/datacenter requests (you'll see `403` in the
+logs), so the research step needs an app token:
+1. Go to **reddit.com/prefs/apps → Create another app → "script"**. Set the
+   redirect URI to `http://localhost` (unused for app-only auth).
+2. Copy the **client id** (under the app name) and **secret** into
+   `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET`.
+3. Redeploy. The research step now reads real subreddit discussions; without the
+   creds it logs a warning and falls back to the model's own knowledge (the
+   pipeline still completes).
 
 ---
 
