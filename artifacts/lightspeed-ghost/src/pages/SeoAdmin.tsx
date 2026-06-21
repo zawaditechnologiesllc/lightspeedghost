@@ -1767,7 +1767,9 @@ const TABS = [
 ];
 
 export default function SeoAdmin() {
-  const [activeTab, setActiveTab] = useState("write");
+  // Open on the Dashboard — it shows the whole system (manual + AI-generated
+  // pages, budget, scheduler) so neither engine looks "switched off".
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   const renderTab = () => {
     switch (activeTab) {
@@ -1797,7 +1799,7 @@ export default function SeoAdmin() {
                 SEO Engine
               </h1>
               <p className="text-sm text-slate-500 mt-1">
-                Manual posting via the Write tab · AI generation available on demand · server-rendered for search &amp; AI engines
+                Two engines, one pipeline — write pages by hand in <span className="text-slate-300">Write</span>, and/or let the AI auto-generate clusters (Gemini 2.5 Flash) via <span className="text-slate-300">Pipeline</span> &amp; the daily scheduler. Both publish server-rendered to <span className="text-slate-300">/seo/&lt;slug&gt;</span>.
               </p>
             </div>
             <a
