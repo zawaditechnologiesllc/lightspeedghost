@@ -197,7 +197,7 @@ export function renderFullPage(opts: {
       <a href="${BASE_URL}/contact">Contact</a>
       <a href="${BASE_URL}/about">About</a>
     </div>
-    <p>&copy; ${new Date().getFullYear()} LightspeedGhost. All rights reserved.</p>
+    <p>&copy; ${new Date().getFullYear()} LightspeedGhost. All rights reserved. A product of Zawadi Technologies LLC.</p>
     <p style="margin-top:8px;font-size:0.78rem;color:#5a6478">
       LightspeedGhost is an AI writing assistance platform. All content is for educational support purposes only.
       Users are responsible for ensuring compliance with their institution's academic integrity policies.
