@@ -1,6 +1,29 @@
 import React, { useState, useEffect, useCallback } from "react";
+import MarkdownIt from "markdown-it";
 
 const API = "/api";
+
+// Markdown → HTML for the manual page author. `html:false` keeps writers from
+// pasting raw markup; linkify turns bare URLs into links. The rendered HTML is
+// injected into the SEO page <main>, which is styled by /seo-page.css.
+const mdRenderer = new MarkdownIt({ html: false, linkify: true, typographer: true });
+
+// The 15 page_type values accepted by the seo_pages CHECK constraint.
+const MANUAL_PAGE_TYPES = [
+  "how-to", "tool", "service", "paper-type", "subject", "software-specific",
+  "method-specific", "financial-analysis", "use-case", "problem-solution",
+  "comparison", "academic-level", "citation-guide", "ebook-type", "ebook-platform",
+];
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
 
 function adminHeaders() {
   const pw = sessionStorage.getItem("admin_token") ?? "";
@@ -104,6 +127,187 @@ function Btn({ children, onClick, disabled, variant = "primary", size = "sm", cl
     >
       {children}
     </button>
+  );
+}
+
+// ── Tab: Write (manual page authoring) ────────────────────────────────────────
+const inputCls =
+  "w-full bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/60";
+
+function FieldLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
+  return (
+    <label className="block text-xs font-medium text-slate-300 mb-1.5">
+      {children}
+      {hint && <span className="text-slate-500 font-normal"> — {hint}</span>}
+    </label>
+  );
+}
+
+function CheckRow({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+  return (
+    <div className={`flex items-center gap-2 text-xs ${ok ? "text-emerald-300" : "text-slate-400"}`}>
+      <span>{ok ? "✓" : "○"}</span> {children}
+    </div>
+  );
+}
+
+function WriteTab() {
+  const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [metaDescription, setMetaDescription] = useState("");
+  const [keywords, setKeywords] = useState("");
+  const [pageType, setPageType] = useState("how-to");
+  const [body, setBody] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; variant: "success" | "error" }>({ msg: "", variant: "success" });
+  const [lastUrl, setLastUrl] = useState("");
+
+  // Keep slug auto-derived from the title until the writer edits it themselves.
+  useEffect(() => {
+    if (!slugEdited) setSlug(slugify(title));
+  }, [title, slugEdited]);
+
+  const previewHtml = body.trim() ? mdRenderer.render(body) : "";
+  const wordCount = body.trim() ? body.trim().split(/\s+/).length : 0;
+  const hasFaq = /frequently asked questions|\bfaq\b|common questions/i.test(body);
+  const hasH1 = /^#\s|<h1/i.test(body);
+
+  async function save(status: "draft" | "published") {
+    if (!title.trim()) { setToast({ msg: "Add a title first", variant: "error" }); return; }
+    if (wordCount < 50) { setToast({ msg: "Write some body content first", variant: "error" }); return; }
+    setSaving(true);
+    setToast({ msg: "", variant: "success" });
+    try {
+      const r = await apiFetch("/seo/page/manual", {
+        method: "POST",
+        body: JSON.stringify({ slug, title, metaDescription, keywords, pageType, contentHtml: previewHtml, status }),
+      });
+      setLastUrl(r.url ?? `/seo/${slug}`);
+      setToast({
+        msg: status === "published" ? `Published live at ${r.url}` : `Saved as draft (${r.wordCount} words)`,
+        variant: "success",
+      });
+    } catch (e) {
+      setToast({ msg: e instanceof Error ? e.message : "Save failed", variant: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function resetForm() {
+    setTitle(""); setSlug(""); setSlugEdited(false); setMetaDescription("");
+    setKeywords(""); setPageType("how-to"); setBody(""); setLastUrl(""); setToast({ msg: "", variant: "success" });
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <CardTitle>✍️ Write a page</CardTitle>
+            <p className="text-xs text-slate-400 -mt-2 max-w-2xl">
+              You do the keyword research; write the page here in Markdown and publish it yourself. No AI generation,
+              no budget used. The page is served server-rendered at <code className="text-blue-300">/seo/&lt;slug&gt;</code>{" "}
+              so Google, Bing and AI answer engines can read it.
+            </p>
+          </div>
+          <Btn variant="secondary" onClick={resetForm}>New / clear</Btn>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* ── Left: the form ── */}
+        <div className="space-y-4">
+          <Card>
+            <div className="space-y-3">
+              <div>
+                <FieldLabel hint="aim for 50–60 characters">Title</FieldLabel>
+                <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)}
+                  placeholder="AI Lab Report Writer for Chemistry Students" />
+              </div>
+              <div>
+                <FieldLabel hint="the URL — auto-filled from the title, editable">Slug</FieldLabel>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 whitespace-nowrap">/seo/</span>
+                  <input className={inputCls} value={slug}
+                    onChange={(e) => { setSlugEdited(true); setSlug(slugify(e.target.value)); }}
+                    placeholder="ai-lab-report-writer-chemistry" />
+                </div>
+              </div>
+              <div>
+                <FieldLabel hint="aim for 140–160 characters">Meta description</FieldLabel>
+                <textarea className={`${inputCls} resize-none`} rows={2} value={metaDescription}
+                  onChange={(e) => setMetaDescription(e.target.value)}
+                  placeholder="Write clean, structured chemistry lab reports faster with AI assistance…" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <FieldLabel>Page type</FieldLabel>
+                  <select className={inputCls} value={pageType} onChange={(e) => setPageType(e.target.value)}>
+                    {MANUAL_PAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel hint="comma-separated">Keywords</FieldLabel>
+                  <input className={inputCls} value={keywords} onChange={(e) => setKeywords(e.target.value)}
+                    placeholder="lab report writer, chemistry" />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <FieldLabel hint="Markdown — start with “# Heading”, use ## for sections, add a FAQ section">Page body</FieldLabel>
+            <textarea
+              className={`${inputCls} font-mono leading-relaxed`}
+              rows={18}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder={"# AI Lab Report Writer for Chemistry Students\n\nOpening paragraph that answers the search intent directly…\n\n## How it works\n\n1. Paste your data\n2. …\n\n## Frequently asked questions\n\n**Is this allowed by my university?**\nYes — it is a writing-support tool…"}
+            />
+          </Card>
+        </div>
+
+        {/* ── Right: checklist + live preview ── */}
+        <div className="space-y-4">
+          <Card>
+            <CardTitle>SEO checklist</CardTitle>
+            <div className="space-y-2">
+              <CheckRow ok={title.length >= 30 && title.length <= 65}>Title length ({title.length} chars)</CheckRow>
+              <CheckRow ok={metaDescription.length >= 120 && metaDescription.length <= 165}>Meta description ({metaDescription.length} chars)</CheckRow>
+              <CheckRow ok={hasH1}>Body starts with an H1 (<code className="text-slate-500"># …</code>)</CheckRow>
+              <CheckRow ok={wordCount >= 800}>Word count ({wordCount}) — aim for 800+</CheckRow>
+              <CheckRow ok={hasFaq}>Has a FAQ section</CheckRow>
+              <CheckRow ok={keywords.trim().length > 0}>Keywords added</CheckRow>
+            </div>
+            <div className="flex items-center gap-2 mt-4">
+              <Btn variant="secondary" onClick={() => save("draft")} disabled={saving}>
+                {saving ? "Saving…" : "Save as draft"}
+              </Btn>
+              <Btn variant="success" onClick={() => save("published")} disabled={saving}>
+                {saving ? "Saving…" : "Publish now"}
+              </Btn>
+              {lastUrl && (
+                <a href={lastUrl} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-blue-400 hover:text-blue-300 ml-auto">↗ View page</a>
+              )}
+            </div>
+            <div className="mt-3"><Toast msg={toast.msg} variant={toast.variant} /></div>
+          </Card>
+
+          <Card>
+            <CardTitle>Live preview</CardTitle>
+            {previewHtml ? (
+              <div className="bg-white text-slate-900 rounded-lg p-5 max-h-[460px] overflow-auto prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            ) : (
+              <p className="text-xs text-slate-500">Start typing in the body field to see the rendered page here.</p>
+            )}
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1441,6 +1645,7 @@ function PipelineTab() {
 // ── Main SeoAdmin component ───────────────────────────────────────────────────
 
 const TABS = [
+  { id: "write",     label: "Write",     icon: "✍️" },
   { id: "review",    label: "Review",    icon: "✅" },
   { id: "pipeline",  label: "Pipeline",  icon: "🚀" },
   { id: "dashboard", label: "Dashboard", icon: "⚡" },
@@ -1453,10 +1658,11 @@ const TABS = [
 ];
 
 export default function SeoAdmin() {
-  const [activeTab, setActiveTab] = useState("review");
+  const [activeTab, setActiveTab] = useState("write");
 
   const renderTab = () => {
     switch (activeTab) {
+      case "write":      return <WriteTab />;
       case "review":     return <ReviewTab />;
       case "pipeline":   return <PipelineTab />;
       case "dashboard":  return <DashboardTab />;
@@ -1482,7 +1688,7 @@ export default function SeoAdmin() {
                 SEO Engine
               </h1>
               <p className="text-sm text-slate-500 mt-1">
-                Gemini 2.5 Flash · $8/month budget · AI-driven topic + competitor selection · daily scheduler
+                Manual posting via the Write tab · AI generation available on demand · server-rendered for search &amp; AI engines
               </p>
             </div>
             <a

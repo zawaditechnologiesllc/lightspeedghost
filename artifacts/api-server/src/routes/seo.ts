@@ -30,7 +30,8 @@ import { getSchedulerStatus, restartScheduler, triggerNow } from "../seo-engine/
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { renderRobotsTxt } from "../seo-engine/html-renderer";
 import { PAGE_CATALOG } from "../seo-engine/page-catalog";
-import { checkAcademicIntegrity, sanitizeContent } from "../seo-engine/compliance-checker";
+import { checkAcademicIntegrity, sanitizeContent, validatePage } from "../seo-engine/compliance-checker";
+import { buildPageSchemas } from "../seo-engine/schema-engine";
 
 // Admin guard helpers — req.adminAuth is resolved by the admin router middleware
 // which runs before seoRouter because adminRouter is registered first in routes/index.ts
@@ -152,6 +153,111 @@ router.put("/seo/page/:slug", async (req: Request, res: Response) => {
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Update failed" });
+  }
+});
+
+// ── Manual page authoring — POST /api/seo/page/manual ────────────────────────
+// Lets an admin write and post their OWN SEO page (human-authored) without the
+// AI generator. `contentHtml` is the inner HTML for <main> (the renderer wraps
+// it with the site header/footer, meta, schema and styles). Upserts by slug so
+// "save draft" then "publish" from the editor is idempotent; refuses to clobber
+// an existing AI-generated page that happens to share the slug.
+const MANUAL_PAGE_TYPES = new Set([
+  "tool", "service", "paper-type", "subject", "software-specific", "method-specific",
+  "financial-analysis", "use-case", "problem-solution", "comparison", "academic-level",
+  "citation-guide", "ebook-type", "ebook-platform", "how-to",
+]);
+const MANUAL_STATUSES = new Set(["draft", "review", "published", "archived"]);
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+router.post("/seo/page/manual", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const {
+    slug: rawSlug, title, metaDescription = "", keywords = "",
+    pageType = "how-to", contentHtml, status = "draft", faqs = [],
+  } = req.body as {
+    slug?: string; title?: string; metaDescription?: string;
+    keywords?: string | string[]; pageType?: string; contentHtml?: string;
+    status?: string; faqs?: Array<{ question: string; answer: string }>;
+  };
+
+  const slug = slugify(String(rawSlug ?? title ?? ""));
+  if (!slug) { res.status(400).json({ error: "A slug or title is required" }); return; }
+  if (!title || !title.trim()) { res.status(400).json({ error: "A title is required" }); return; }
+  if (!contentHtml || contentHtml.trim().length < 50) {
+    res.status(400).json({ error: "Page body is required — write some content first" });
+    return;
+  }
+
+  const type = MANUAL_PAGE_TYPES.has(pageType) ? pageType : "how-to";
+  const finalStatus = MANUAL_STATUSES.has(status) ? status : "draft";
+  const published = finalStatus === "published";
+  const keywordList = (Array.isArray(keywords) ? keywords : String(keywords).split(","))
+    .map((k) => k.trim()).filter(Boolean);
+
+  try {
+    // Guard: don't let a manual save overwrite an AI-generated page by slug collision.
+    const existing = await pool.query(
+      `SELECT llm_used FROM seo_pages WHERE slug = $1`, [slug],
+    );
+    if (existing.rows.length > 0 && existing.rows[0].llm_used && existing.rows[0].llm_used !== "manual") {
+      res.status(409).json({
+        error: `The slug "${slug}" already belongs to an AI-generated page. Edit it from the Pages tab, or pick a different slug.`,
+      });
+      return;
+    }
+
+    const sanitized = sanitizeContent(contentHtml);
+    const v = validatePage(sanitized);
+    const schemaJson = JSON.stringify(
+      buildPageSchemas({
+        pageType: type, title, description: metaDescription, slug,
+        faqs: Array.isArray(faqs) ? faqs : [],
+      }),
+    );
+
+    await pool.query(
+      `INSERT INTO seo_pages (
+        slug, title, meta_description, content_html, schema_json, keywords, page_type,
+        word_count, unique_data_points, has_faq_schema, has_ai_disclosure, integrity_check,
+        llm_used, llm_cost_usd, status, published
+      ) VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,true,$11,'manual',0,$12,$13)
+      ON CONFLICT (slug) DO UPDATE SET
+        title = EXCLUDED.title,
+        meta_description = EXCLUDED.meta_description,
+        content_html = EXCLUDED.content_html,
+        schema_json = EXCLUDED.schema_json,
+        keywords = EXCLUDED.keywords,
+        page_type = EXCLUDED.page_type,
+        word_count = EXCLUDED.word_count,
+        unique_data_points = EXCLUDED.unique_data_points,
+        has_faq_schema = EXCLUDED.has_faq_schema,
+        integrity_check = EXCLUDED.integrity_check,
+        status = EXCLUDED.status,
+        published = EXCLUDED.published,
+        updated_at = now()`,
+      [
+        slug, title, metaDescription, sanitized, schemaJson, keywordList, type,
+        v.wordCount, v.uniqueDataPoints, v.hasFAQ, v.integrityCheck,
+        finalStatus, published,
+      ],
+    );
+
+    logger.info({ slug, status: finalStatus, wordCount: v.wordCount }, "[seo-api] Manual page saved");
+    res.json({ ok: true, slug, status: finalStatus, published, wordCount: v.wordCount, url: `/seo/${slug}` });
+  } catch (err) {
+    logger.error({ err }, "[seo-api] POST /seo/page/manual failed");
+    res.status(500).json({ error: "Failed to save page" });
   }
 });
 
