@@ -20,6 +20,18 @@ async function ensureTable(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_enterprise_leads_status  ON enterprise_leads (status);
     CREATE INDEX IF NOT EXISTS idx_enterprise_leads_created ON enterprise_leads (created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id          SERIAL PRIMARY KEY,
+      email       TEXT NOT NULL,
+      subject     TEXT NOT NULL DEFAULT '',
+      message     TEXT NOT NULL,
+      source      TEXT NOT NULL DEFAULT 'contact',
+      status      TEXT NOT NULL DEFAULT 'new',
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_contact_messages_status  ON contact_messages (status);
+    CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages (created_at DESC);
   `);
 }
 
@@ -175,6 +187,101 @@ router.patch("/contact/enterprise/:id/status", async (req: Request, res: Respons
     res.json({ ok: true });
   } catch (err) {
     logger.error({ err }, "[contact] Failed to update lead status");
+    res.status(500).json({ error: "Failed to update status" });
+  }
+});
+
+// ── POST /contact/message — general enquiry from the contact form ────────────
+router.post("/contact/message", async (req: Request, res: Response) => {
+  const { email, subject, message, source } = req.body as {
+    email?: string; subject?: string; message?: string; source?: string;
+  };
+
+  if (!email?.trim() || !message?.trim()) {
+    res.status(400).json({ error: "email and message are required" });
+    return;
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.trim())) {
+    res.status(400).json({ error: "Invalid email address" });
+    return;
+  }
+
+  try {
+    const { rows } = await pool.query<{ id: number }>(
+      `INSERT INTO contact_messages (email, subject, message, source)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [email.trim(), (subject ?? "").trim(), message.trim(), (source ?? "contact").trim().slice(0, 40)],
+    );
+    const msgId = rows[0]?.id;
+
+    const adminEmail = process.env["ADMIN_EMAIL"] ?? process.env["EMAIL_FROM"] ?? "hello@lightspeedghost.com";
+    sendEmail({
+      to: adminEmail,
+      subject: `New message — ${(subject ?? "").trim() || "(no subject)"}`,
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0a12;font-family:sans-serif;color:#e2e8f0">
+  <div style="max-width:560px;margin:40px auto;padding:0 20px">
+    <div style="background:#111827;border:1px solid #1e293b;border-radius:16px;padding:36px 32px">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#3b82f6;text-transform:uppercase;letter-spacing:0.1em">New message #${msgId}</p>
+      <p style="margin:8px 0 4px;font-size:13px;color:#64748b">From <a href="mailto:${email.trim()}" style="color:#3b82f6">${email.trim()}</a></p>
+      <h1 style="margin:6px 0 16px;font-size:18px;font-weight:700;color:#f1f5f9">${(subject ?? "").trim() || "(no subject)"}</h1>
+      <div style="padding:14px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;font-size:13px;color:#94a3b8;white-space:pre-wrap">${message.trim()}</div>
+    </div>
+  </div>
+</body></html>`,
+    }).catch(() => {});
+
+    logger.info({ msgId, email: email.trim() }, "[contact] Message saved");
+    res.json({ ok: true, id: msgId });
+  } catch (err) {
+    logger.error({ err }, "[contact] Failed to save message");
+    res.status(500).json({ error: "Failed to send message. Please email info@lightspeedghost.com directly." });
+  }
+});
+
+// ── GET /contact/messages — admin only ───────────────────────────────────────
+router.get("/contact/messages", async (req: Request, res: Response) => {
+  if (!req.adminAuth?.authorized) { res.status(403).json({ error: "Forbidden" }); return; }
+  const { status, limit = "50", offset = "0" } = req.query as Record<string, string>;
+  try {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    if (status) { params.push(status); conditions.push(`status = $${params.length}`); }
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    params.push(Math.min(Number(limit) || 50, 200));
+    params.push(Math.max(Number(offset) || 0, 0));
+    const { rows } = await pool.query(
+      `SELECT * FROM contact_messages ${where} ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params,
+    );
+    const { rows: countRows } = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM contact_messages ${where}`,
+      conditions.length > 0 ? params.slice(0, -2) : [],
+    );
+    res.json({ messages: rows, total: parseInt(countRows[0]?.count ?? "0", 10) });
+  } catch (err) {
+    logger.error({ err }, "[contact] Failed to list messages");
+    res.status(500).json({ error: "Failed to load messages" });
+  }
+});
+
+// ── PATCH /contact/messages/:id/status — admin only ──────────────────────────
+router.patch("/contact/messages/:id/status", async (req: Request, res: Response) => {
+  if (!req.adminAuth?.authorized) { res.status(403).json({ error: "Forbidden" }); return; }
+  const id = parseInt(req.params["id"] ?? "", 10);
+  const { status } = req.body as { status?: string };
+  const VALID = ["new", "read", "replied", "closed"];
+  if (isNaN(id) || !status || !VALID.includes(status)) {
+    res.status(400).json({ error: `status must be one of: ${VALID.join(", ")}` });
+    return;
+  }
+  try {
+    const { rowCount } = await pool.query(`UPDATE contact_messages SET status = $1 WHERE id = $2`, [status, id]);
+    if (!rowCount) { res.status(404).json({ error: "Message not found" }); return; }
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "[contact] Failed to update message status");
     res.status(500).json({ error: "Failed to update status" });
   }
 });

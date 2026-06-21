@@ -5,10 +5,18 @@ import { desc, sql, eq, ilike, and } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { invalidateSettingsCache } from "../lib/systemSettings";
 import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
 
 const router = Router();
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+// Tabs/areas a sector admin can be granted. Super admin always has all of them.
+const VALID_SECTORS = [
+  "overview", "users", "tools", "documents", "gateways", "payments", "credits",
+  "finance", "analytics", "logs", "announcements", "referrals", "messages",
+  "settings", "seo",
+];
 
 function timingSafeCompare(a: string, b: string): boolean {
   const aBuf = Buffer.from(a, "utf8");
@@ -21,11 +29,28 @@ function timingSafeCompare(a: string, b: string): boolean {
   return crypto.timingSafeEqual(aPadded, bPadded) && aBuf.length === bBuf.length;
 }
 
+// Authorized = super admin (env password) OR an active sector admin resolved by
+// the app-level adminAuth middleware into req.adminAuth.
 function verifyAdminToken(req: Request): boolean {
-  if (!ADMIN_PASSWORD) return false;
-  const token = req.headers["x-admin-password"] as string | undefined;
-  if (!token) return false;
-  return timingSafeCompare(token, ADMIN_PASSWORD);
+  if (ADMIN_PASSWORD) {
+    const token = req.headers["x-admin-password"] as string | undefined;
+    if (token && timingSafeCompare(token, ADMIN_PASSWORD)) return true;
+  }
+  return req.adminAuth?.authorized ?? false;
+}
+
+function isSuperAdmin(req: Request): boolean {
+  if (ADMIN_PASSWORD) {
+    const token = req.headers["x-admin-password"] as string | undefined;
+    if (token && timingSafeCompare(token, ADMIN_PASSWORD)) return true;
+  }
+  return req.adminAuth?.isSuperAdmin ?? false;
+}
+
+// Sector access for the current request. Super admin → all sectors.
+function adminSectors(req: Request): string[] | "all" {
+  if (isSuperAdmin(req)) return "all";
+  return req.adminAuth?.sectorAdmin?.sectors ?? [];
 }
 
 // ── Bootstrap admin tables ───────────────────────────────────────────────────
@@ -74,6 +99,15 @@ async function initAdminTables() {
       detail TEXT,
       cluster_id TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS admin_users (
+      id            SERIAL PRIMARY KEY,
+      name          TEXT NOT NULL,
+      email         TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      sectors       TEXT[] NOT NULL DEFAULT '{}',
+      active        BOOLEAN NOT NULL DEFAULT true,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     INSERT INTO system_settings (key, value) VALUES
       ('maintenance_mode',        'false'),
@@ -140,16 +174,147 @@ async function getSettings(): Promise<Record<string, string>> {
 
 // ── POST /admin/verify ────────────────────────────────────────────────────────
 
-router.post("/admin/verify", (req, res) => {
-  const { password } = req.body as { password?: string };
+router.post("/admin/verify", async (req, res) => {
+  const { password, email } = req.body as { password?: string; email?: string };
+
+  // 1. Super admin — env password
+  if (ADMIN_PASSWORD && timingSafeCompare(password ?? "", ADMIN_PASSWORD)) {
+    res.json({ ok: true, role: "super", sectors: VALID_SECTORS, name: "Super Admin" });
+    return;
+  }
+
+  // 2. Sector admin — email + password against admin_users
+  const adminEmail = email?.trim().toLowerCase();
+  if (adminEmail && password) {
+    try {
+      const { rows } = await pool.query<{ name: string; sectors: string[]; password_hash: string }>(
+        "SELECT name, sectors, password_hash FROM admin_users WHERE email = $1 AND active = true LIMIT 1",
+        [adminEmail],
+      );
+      if (rows.length > 0 && await bcrypt.compare(password, rows[0].password_hash)) {
+        res.json({ ok: true, role: "sector", sectors: rows[0].sectors ?? [], name: rows[0].name });
+        return;
+      }
+    } catch { /* fall through */ }
+  }
+
   if (!ADMIN_PASSWORD) {
     res.status(503).json({ error: "Admin not configured. Set ADMIN_PASSWORD environment variable." });
     return;
   }
-  if (timingSafeCompare(password ?? "", ADMIN_PASSWORD)) {
+  res.status(401).json({ ok: false, error: "Invalid admin credentials" });
+});
+
+// ── Sector access enforcement ─────────────────────────────────────────────────
+// Super admin bypasses. Sector admins may only touch endpoints mapped to a sector
+// they hold. Anything not mapped here is treated as super-admin-only.
+const SECTOR_ROUTES: Array<{ test: RegExp; sector: string }> = [
+  { test: /^\/admin\/users/,                                      sector: "users" },
+  { test: /^\/admin\/(tools)/,                                    sector: "tools" },
+  { test: /^\/admin\/documents/,                                  sector: "documents" },
+  { test: /^\/admin\/gateways/,                                   sector: "gateways" },
+  { test: /^\/admin\/(payments|subscriptions)/,                  sector: "payments" },
+  { test: /^\/admin\/credits/,                                    sector: "credits" },
+  { test: /^\/admin\/(revenue|finance)/,                          sector: "finance" },
+  { test: /^\/admin\/(stats|traffic|pwa|feedback)/,               sector: "analytics" },
+  { test: /^\/admin\/logs/,                                       sector: "logs" },
+  { test: /^\/admin\/announcements/,                              sector: "announcements" },
+  { test: /^\/admin\/settings/,                                   sector: "settings" },
+];
+
+function requireSectorAccess(req: Request, res: Response, next: () => void): void {
+  // Only guard authenticated admin requests; unauth requests are rejected by the
+  // per-route verifyAdminToken checks anyway.
+  const sectors = adminSectors(req);
+  if (sectors === "all") return next();              // super admin
+  const match = SECTOR_ROUTES.find((r) => r.test.test(req.path));
+  if (!match) return next();                          // unmapped → per-route guard decides
+  if (sectors.includes(match.sector)) return next();
+  res.status(403).json({ error: "Forbidden — your admin account doesn't have access to this section" });
+}
+
+router.use(requireSectorAccess);
+
+// ── Admin user management — super admin only ─────────────────────────────────
+router.get("/admin/admins", async (req: Request, res: Response) => {
+  if (!isSuperAdmin(req)) { res.status(403).json({ error: "Super admin only" }); return; }
+  try {
+    const { rows } = await pool.query(
+      "SELECT id, name, email, sectors, active, created_at FROM admin_users ORDER BY created_at DESC",
+    );
+    res.json({ admins: rows, validSectors: VALID_SECTORS });
+  } catch {
+    res.status(500).json({ error: "Failed to load admins" });
+  }
+});
+
+router.post("/admin/admins", async (req: Request, res: Response) => {
+  if (!isSuperAdmin(req)) { res.status(403).json({ error: "Super admin only" }); return; }
+  const { name, email, password, sectors } = req.body as {
+    name?: string; email?: string; password?: string; sectors?: string[];
+  };
+  const cleanEmail = email?.trim().toLowerCase();
+  if (!name?.trim() || !cleanEmail || !password || password.length < 8) {
+    res.status(400).json({ error: "name, email and a password of at least 8 characters are required" });
+    return;
+  }
+  const cleanSectors = Array.isArray(sectors) ? sectors.filter((s) => VALID_SECTORS.includes(s)) : [];
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    const { rows } = await pool.query<{ id: number }>(
+      "INSERT INTO admin_users (name, email, password_hash, sectors) VALUES ($1,$2,$3,$4) RETURNING id",
+      [name.trim(), cleanEmail, hash, cleanSectors],
+    );
+    res.json({ ok: true, id: rows[0].id });
+  } catch (err) {
+    if ((err as { code?: string })?.code === "23505") {
+      res.status(409).json({ error: "An admin with that email already exists" });
+      return;
+    }
+    res.status(500).json({ error: "Failed to create admin" });
+  }
+});
+
+router.patch("/admin/admins/:id", async (req: Request, res: Response) => {
+  if (!isSuperAdmin(req)) { res.status(403).json({ error: "Super admin only" }); return; }
+  const id = parseInt(req.params.id ?? "", 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const { name, sectors, active, password } = req.body as {
+    name?: string; sectors?: string[]; active?: boolean; password?: string;
+  };
+  const updates: string[] = [];
+  const params: unknown[] = [];
+  let p = 1;
+  if (name !== undefined) { updates.push(`name = $${p++}`); params.push(String(name).trim()); }
+  if (sectors !== undefined) {
+    updates.push(`sectors = $${p++}`);
+    params.push(Array.isArray(sectors) ? sectors.filter((s) => VALID_SECTORS.includes(s)) : []);
+  }
+  if (active !== undefined) { updates.push(`active = $${p++}`); params.push(Boolean(active)); }
+  if (password) {
+    if (password.length < 8) { res.status(400).json({ error: "Password must be at least 8 characters" }); return; }
+    updates.push(`password_hash = $${p++}`); params.push(await bcrypt.hash(password, 10));
+  }
+  if (updates.length === 0) { res.json({ ok: true }); return; }
+  params.push(id);
+  try {
+    const { rowCount } = await pool.query(`UPDATE admin_users SET ${updates.join(", ")} WHERE id = $${p}`, params);
+    if (!rowCount) { res.status(404).json({ error: "Admin not found" }); return; }
     res.json({ ok: true });
-  } else {
-    res.status(401).json({ ok: false, error: "Invalid admin password" });
+  } catch {
+    res.status(500).json({ error: "Failed to update admin" });
+  }
+});
+
+router.delete("/admin/admins/:id", async (req: Request, res: Response) => {
+  if (!isSuperAdmin(req)) { res.status(403).json({ error: "Super admin only" }); return; }
+  const id = parseInt(req.params.id ?? "", 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  try {
+    await pool.query("DELETE FROM admin_users WHERE id = $1", [id]);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to delete admin" });
   }
 });
 

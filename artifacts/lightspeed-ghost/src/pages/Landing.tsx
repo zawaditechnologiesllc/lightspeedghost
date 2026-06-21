@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 // LazyMotion + `m` ships only the DOM-animation feature set instead of all of
 // framer-motion, cutting ~17 KB of JS off the landing's critical path and
 // reducing the main-thread work (forced reflows) flagged by PageSpeed.
-import { m, LazyMotion, domAnimation, useInView, AnimatePresence } from "framer-motion";
+import { m, LazyMotion, domAnimation, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -334,47 +334,46 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 const previewNavItems = ["Dashboard", "Write Paper", "Outline", "Revision", "Humanizer", "AI & Plagiarism", "STEM Solver", "Study Assistant"];
 const previewUrls = ["write", "outline", "revision", "humanizer", "plagiarism", "stem", "study"];
 
-// ── Scroll-triggered reveal ────────────────────────────────────────────────────
+// ── Scroll-triggered reveal (CSS + IntersectionObserver, no framer-motion) ─────
+// The reveal class is added in an effect (not in render), so content is always
+// visible if JS fails, and the styles only hide-then-reveal once observed.
+// Pure CSS transitions are GPU-composited — no forced reflow (which is what
+// PageSpeed flagged when these used framer-motion).
 function FadeUp({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
-  return (
-    <m.div
-      ref={ref}
-      className={className}
-      initial={{ opacity: 0, y: 28 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {children}
-    </m.div>
-  );
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.classList.add("lsg-reveal");
+    if (delay) el.style.transitionDelay = `${delay}s`;
+    const io = new IntersectionObserver((entries, obs) => {
+      for (const e of entries) {
+        if (e.isIntersecting) { el.classList.add("lsg-in"); obs.disconnect(); }
+      }
+    }, { rootMargin: "0px 0px -60px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [delay]);
+  return <div ref={ref} className={className}>{children}</div>;
 }
 
 function StaggerGrid({ children, className = "", id }: { children: React.ReactNode; className?: string; id?: string }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
-  return (
-    <m.div
-      ref={ref}
-      id={id}
-      className={className}
-      initial="hidden"
-      animate={inView ? "visible" : "hidden"}
-      variants={{
-        visible: { transition: { staggerChildren: 0.08 } },
-        hidden: {},
-      }}
-    >
-      {children}
-    </m.div>
-  );
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const kids = Array.from(el.children) as HTMLElement[];
+    kids.forEach((k, i) => { k.classList.add("lsg-reveal"); k.style.transitionDelay = `${i * 0.08}s`; });
+    const io = new IntersectionObserver((entries, obs) => {
+      for (const e of entries) {
+        if (e.isIntersecting) { kids.forEach((k) => k.classList.add("lsg-in")); obs.disconnect(); }
+      }
+    }, { rootMargin: "0px 0px -40px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return <div ref={ref} id={id} className={className}>{children}</div>;
 }
-
-const cardVariant = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-};
 
 export default function Landing() {
   const scrolled = useScrolled();
@@ -1091,7 +1090,7 @@ export default function Landing() {
                 border: "border-amber-500/20 bg-amber-500/5",
               },
             ].map(({ value, label, sub, color, border }) => (
-              <m.div key={label} variants={cardVariant} className={`rounded-xl border p-4 sm:p-5 text-center ${border}`}>
+              <m.div key={label} className={`rounded-xl border p-4 sm:p-5 text-center ${border}`}>
                 <div className={`text-2xl sm:text-3xl font-bold mb-1 ${color}`}>{value}</div>
                 <div className="text-xs sm:text-sm font-semibold text-white mb-1.5">{label}</div>
                 <div className="text-[10px] sm:text-[11px] text-white/58 leading-relaxed">{sub}</div>
@@ -1117,7 +1116,7 @@ export default function Landing() {
 
           <StaggerGrid id="features" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {tools.map(({ icon: Icon, name, desc, badge, color, href }) => (
-              <m.div key={name} variants={cardVariant}>
+              <m.div key={name}>
                 <Link href={href}>
                   <div className="group relative p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/18 hover:bg-white/[0.055] transition-all cursor-pointer h-full hover:-translate-y-1 hover:shadow-xl hover:shadow-black/30">
                     {badge && (
@@ -1647,7 +1646,7 @@ export default function Landing() {
               const per   = showAnnual ? perAnnual   : perMonthly;
               const isInstitution = name === "Institution";
               return (
-                <m.div key={name} variants={cardVariant} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col hover:-translate-y-1 transition-all duration-300 ${highlight ? "bg-gradient-to-b from-blue-600/15 to-blue-900/10 border-blue-500/40 shadow-2xl shadow-blue-900/30" : "bg-white/[0.02] border-white/8 hover:border-white/14 hover:bg-white/[0.04]"}`}>
+                <m.div key={name} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col hover:-translate-y-1 transition-all duration-300 ${highlight ? "bg-gradient-to-b from-blue-600/15 to-blue-900/10 border-blue-500/40 shadow-2xl shadow-blue-900/30" : "bg-white/[0.02] border-white/8 hover:border-white/14 hover:bg-white/[0.04]"}`}>
                   {badge && (
                     <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${highlight ? "bg-blue-600 text-white" : "bg-white/10 text-white/55 border border-white/15"}`}>
                       {badge}
