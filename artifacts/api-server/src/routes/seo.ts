@@ -261,6 +261,31 @@ router.post("/seo/page/manual", async (req: Request, res: Response) => {
   }
 });
 
+// ── Rule check (no save) — POST /api/seo/page/check ──────────────────────────
+// Runs the SAME compliance + quality validation used at save time, so the Write
+// tab can show a live pass/fail report the moment you paste a blog. Pure regex,
+// no LLM, no cost — safe to call on every keystroke (debounced client-side).
+router.post("/seo/page/check", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  const { contentHtml } = req.body as { contentHtml?: string };
+  if (typeof contentHtml !== "string") { res.status(400).json({ error: "contentHtml required" }); return; }
+
+  const integrity = checkAcademicIntegrity(contentHtml);
+  const v = validatePage(contentHtml);
+
+  res.json({
+    passed:           integrity.passed && v.wordCount >= 800 && v.uniqueDataPoints >= 8 && v.hasFAQ,
+    wordCount:        v.wordCount,
+    uniqueDataPoints: v.uniqueDataPoints,
+    hasFAQ:           v.hasFAQ,
+    hasAIDisclosure:  v.hasAIDisclosure,
+    integrityPassed:  integrity.passed,
+    violations:       integrity.violations,   // prohibited phrases/patterns detected
+    issues:           v.issues,               // quality gaps (word count, data points, FAQ…)
+    willRewrite:      integrity.sanitized !== contentHtml, // sanitiser will edit on publish
+  });
+});
+
 // ── Publish / unpublish ───────────────────────────────────────────────────────
 router.post("/seo/page/:slug/publish", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
@@ -631,5 +656,54 @@ router.post("/seo/scheduler/trigger", async (req: Request, res: Response) => {
     triggerNow().catch((err) => logger.error({ err }, "[seo-api] Manual trigger failed"));
   });
 });
+
+// ── External cron trigger — GET|POST /api/seo/cron/run ───────────────────────
+// Token-authenticated so an external pinger (UptimeRobot, cron-job.org, a Render
+// Cron Job…) can run the daily AI pipeline WITHOUT admin credentials. The pipeline
+// is idempotent per day (it skips if a cluster already ran in the last ~20h), so
+// even a 5-minute UptimeRobot monitor generates only once/day — and each ping also
+// keeps the free-tier backend awake. Set SEO_CRON_TOKEN in the backend env, then
+// point a monitor at /api/seo/cron/run?token=<that value>.
+let cronInFlight = false;
+
+async function handleSeoCron(req: Request, res: Response): Promise<void> {
+  const secret = process.env.SEO_CRON_TOKEN;
+  if (!secret) {
+    res.status(503).json({ ok: false, error: "SEO_CRON_TOKEN is not configured on the server" });
+    return;
+  }
+  const provided =
+    (req.query.token as string | undefined) ??
+    (req.headers["x-cron-token"] as string | undefined) ?? "";
+  if (provided !== secret) {
+    res.status(403).json({ ok: false, error: "Invalid or missing cron token" });
+    return;
+  }
+  if (!process.env.GEMINI_API_KEY) {
+    res.status(200).json({ ok: false, skipped: "GEMINI_API_KEY not set — nothing to generate" });
+    return;
+  }
+  if (cronInFlight) {
+    res.status(200).json({ ok: true, skipped: "A generation run is already in progress" });
+    return;
+  }
+
+  // Respond immediately so the pinger never times out; generate in the background.
+  res.status(202).json({ ok: true, message: "SEO cron accepted — generating if due (skips if it already ran today)" });
+  cronInFlight = true;
+  setImmediate(async () => {
+    try {
+      const result = await triggerNow();
+      logger.info({ result }, "[seo-api] Cron trigger complete");
+    } catch (err) {
+      logger.error({ err }, "[seo-api] Cron trigger failed");
+    } finally {
+      cronInFlight = false;
+    }
+  });
+}
+
+router.get("/seo/cron/run", handleSeoCron);
+router.post("/seo/cron/run", handleSeoCron);
 
 export default router;
