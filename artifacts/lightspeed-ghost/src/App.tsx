@@ -304,6 +304,9 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/auth" component={Auth} />
+      {/* OAuth return URL — Supabase parses the session from the URL, then
+          AppRedirect sends the user to /app (or back to /auth on failure). */}
+      <Route path="/auth/callback" component={AppRedirect} />
       <Route path="/mwaramuriuki-login" component={Admin} />
       <Route path="/mwaramuriuki-login/:tab" component={Admin} />
       <Route path="/reset-password" component={ResetPassword} />
