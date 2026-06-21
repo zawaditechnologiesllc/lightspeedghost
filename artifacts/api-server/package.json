@@ -23,6 +23,7 @@
     "@google/generative-ai": "^0.24.0",
     "bcryptjs": "^3.0.3",
     "bottleneck": "^2.19.5",
+    "cheerio": "^1.0.0",
     "compromise": "^14.15.0",
     "connect-pg-simple": "^10.0.0",
     "cookie-parser": "^1.4.7",

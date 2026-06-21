@@ -1041,7 +1041,7 @@ function SettingsTab() {
     { label: "Generation LLM", value: "Gemini 2.5 Flash", note: "research, topic, outline, content, clusters · free tier · override via SEO_GEMINI_MODEL" },
     { label: "Monthly budget", value: "$25.00", note: "Gemini-only spend cap · override via SEO_BUDGET_LIMIT" },
     { label: "Topic data", value: "GSC + GA4 + catalog", note: "Search Console quick-wins & GA4 revenue if configured, else catalog gaps" },
-    { label: "Community research", value: "Reddit (OAuth)", note: "needs REDDIT_CLIENT_ID/SECRET · falls back to AI knowledge" },
+    { label: "Community research", value: "Reddit (scraping)", note: "scrapes old.reddit.com public HTML · no key needed · falls back to AI knowledge" },
     { label: "Min word count", value: "800 words", note: "per page minimum · override via SEO_MIN_WORD_COUNT" },
     { label: "Daily page limit", value: "30 pages", note: "per batch run · override via SEO_DAILY_PAGE_LIMIT" },
     { label: "Robots.txt", value: "Dynamic", note: "served by Express · training crawlers blocked" },
@@ -1058,7 +1058,6 @@ function SettingsTab() {
     { name: "GOOGLE_SERVICE_ACCOUNT_JSON", desc: "GCP service-account JSON — enables Search Console + GA4 data-driven topics" },
     { name: "GSC_SITE_URL", desc: "Exact Search Console property URL, e.g. https://lightspeedghost.com/" },
     { name: "GA4_PROPERTY_ID", desc: "Numeric GA4 property ID — weights topics by tool-page revenue" },
-    { name: "REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET", desc: "Reddit app creds — real community research signal (else AI-knowledge fallback)" },
     { name: "SEO_CRON_TOKEN", desc: "Secret guarding the external daily cron at /api/seo/cron/run" },
     { name: "SEO_BUDGET_LIMIT", desc: "Monthly USD budget cap (default: 25.00)" },
     { name: "SEO_DAILY_PAGE_LIMIT", desc: "Max catalog pages per batch run (default: 30)" },
@@ -1184,7 +1183,7 @@ function SettingsTab() {
                 { label: "Gemini (generation)", on: scheduler?.geminiKeySet, env: "GEMINI_API_KEY", required: true },
                 { label: "Search Console", on: scheduler?.gscConfigured, env: "GOOGLE_SERVICE_ACCOUNT_JSON + GSC_SITE_URL" },
                 { label: "Google Analytics 4", on: scheduler?.ga4Configured, env: "GOOGLE_SERVICE_ACCOUNT_JSON + GA4_PROPERTY_ID" },
-                { label: "Reddit research", on: scheduler?.redditConfigured, env: "REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET" },
+                { label: "Reddit research", on: scheduler?.redditConfigured, env: "public HTML scraping — no key needed" },
                 { label: "Daily cron", on: scheduler?.cronTokenSet, env: "SEO_CRON_TOKEN" },
               ].map((it) => (
                 <div key={it.label} className="bg-slate-900/60 border border-slate-700/40 rounded-xl p-3">
