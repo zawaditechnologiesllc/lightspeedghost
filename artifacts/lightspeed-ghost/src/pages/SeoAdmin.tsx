@@ -162,6 +162,8 @@ function WriteTab() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; variant: "success" | "error" }>({ msg: "", variant: "success" });
   const [lastUrl, setLastUrl] = useState("");
+  const [check, setCheck] = useState<any>(null);
+  const [checking, setChecking] = useState(false);
 
   // Keep slug auto-derived from the title until the writer edits it themselves.
   useEffect(() => {
@@ -172,6 +174,23 @@ function WriteTab() {
   const wordCount = body.trim() ? body.trim().split(/\s+/).length : 0;
   const hasFaq = /frequently asked questions|\bfaq\b|common questions/i.test(body);
   const hasH1 = /^#\s|<h1/i.test(body);
+
+  // Auto rule-check: whenever the body changes, run it (debounced) through the
+  // same server-side validation that publish enforces, so the report can't drift.
+  useEffect(() => {
+    const html = body.trim() ? mdRenderer.render(body) : "";
+    if (html.length < 30) { setCheck(null); setChecking(false); return; }
+    setChecking(true);
+    const t = setTimeout(async () => {
+      try {
+        const r = await apiFetch("/seo/page/check", { method: "POST", body: JSON.stringify({ contentHtml: html }) });
+        setCheck(r);
+      } catch { /* transient — keep the last good report */ } finally {
+        setChecking(false);
+      }
+    }, 700);
+    return () => clearTimeout(t);
+  }, [body]);
 
   async function save(status: "draft" | "published") {
     if (!title.trim()) { setToast({ msg: "Add a title first", variant: "error" }); return; }
@@ -269,8 +288,52 @@ function WriteTab() {
           </Card>
         </div>
 
-        {/* ── Right: checklist + live preview ── */}
+        {/* ── Right: rule check + checklist + live preview ── */}
         <div className="space-y-4">
+          <Card>
+            <CardTitle>
+              🔎 Rule check
+              <span className="text-[10px] font-normal text-slate-500 ml-1">
+                {checking ? "checking…" : "automatic"}
+              </span>
+            </CardTitle>
+            {!check ? (
+              <p className="text-xs text-slate-500">
+                Paste or write your blog — it’s checked automatically against the publishing rules
+                (prohibited phrasing, length, data points, FAQ) as you go.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <div className={`text-xs font-semibold ${check.passed ? "text-emerald-300" : "text-amber-300"}`}>
+                  {check.passed ? "✓ Passes all publishing rules" : "⚠ Review before publishing"}
+                </div>
+                <CheckRow ok={check.integrityPassed}>No prohibited / academic-integrity phrasing</CheckRow>
+                <CheckRow ok={check.wordCount >= 800}>Word count {check.wordCount} (≥ 800)</CheckRow>
+                <CheckRow ok={check.uniqueDataPoints >= 8}>Data points {check.uniqueDataPoints} (≥ 8)</CheckRow>
+                <CheckRow ok={check.hasFAQ}>Has a FAQ section</CheckRow>
+
+                {check.violations?.length > 0 && (
+                  <div className="text-[11px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg p-2.5">
+                    <div className="font-semibold mb-1">Prohibited content detected:</div>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      {check.violations.map((vv: string, i: number) => <li key={i}>{vv}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {check.willRewrite && (
+                  <div className="text-[11px] text-amber-300/90">
+                    ⓘ On publish, flagged phrases are auto-rewritten to compliant wording.
+                  </div>
+                )}
+                {check.issues?.length > 0 && (
+                  <ul className="text-[11px] text-slate-400 list-disc pl-4 space-y-0.5 pt-1">
+                    {check.issues.map((it: string, i: number) => <li key={i}>{it}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+          </Card>
+
           <Card>
             <CardTitle>SEO checklist</CardTitle>
             <div className="space-y-2">
