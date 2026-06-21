@@ -307,32 +307,41 @@ router.delete("/seo/page/:slug", async (req: Request, res: Response) => {
 });
 
 // ── Generate single page — POST /api/seo/generate-page ───────────────────────
+// Responds instantly; the Gemini generation (10–30s) runs in the background and
+// the page shows up in Pages/Review when done.
 router.post("/seo/generate-page", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   const { slug, autoPublish = false } = req.body;
   if (!slug) { res.status(400).json({ error: "slug required" }); return; }
-
-  try {
-    const result = await generatePage(slug, { autoPublish });
-    res.json(result);
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ success: false, slug, error });
-  }
+  res.status(202).json({ ok: true, slug, message: "Generating — the page appears in Pages/Review when it's done" });
+  setImmediate(() => {
+    generatePage(slug, { autoPublish }).catch((err) => logger.error({ err, slug }, "[seo-api] generate-page failed"));
+  });
 });
 
 // ── Batch generate — POST /api/seo/generate-batch ────────────────────────────
+// Responds instantly; the batch (a series of Gemini calls — minutes) runs in the
+// background. Guarded so a second click doesn't start an overlapping batch.
+let batchInFlight = false;
 router.post("/seo/generate-batch", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   const { slugs, type, limit = 10, autoPublish = false } = req.body;
-
-  try {
-    const result = await generateBatch({ slugs, type, limit, autoPublish });
-    res.json(result);
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ error });
+  if (batchInFlight) {
+    res.status(200).json({ ok: true, started: false, message: "A batch is already generating — refresh Pages/Review for progress" });
+    return;
   }
+  res.status(202).json({ ok: true, started: true, message: "Batch started — pages appear in Pages/Review as they finish" });
+  batchInFlight = true;
+  setImmediate(async () => {
+    try {
+      const result = await generateBatch({ slugs, type, limit, autoPublish });
+      logger.info({ generated: result.results.filter((r) => r.success).length, cost: result.totalCost }, "[seo-api] generate-batch complete");
+    } catch (err) {
+      logger.error({ err }, "[seo-api] generate-batch failed");
+    } finally {
+      batchInFlight = false;
+    }
+  });
 });
 
 // ── Seed catalog — POST /api/seo/catalog/seed ────────────────────────────────
