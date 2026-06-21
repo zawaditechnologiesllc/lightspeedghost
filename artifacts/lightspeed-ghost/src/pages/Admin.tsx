@@ -209,6 +209,9 @@ interface SystemSettings {
   referral_friend_pct: string;
   referral_commission_pct: string;
   export_expiry_days: string;
+  hero_headline: string;
+  hero_subtext: string;
+  footer_tagline: string;
 }
 
 interface EnterpriseLead {
@@ -2599,6 +2602,37 @@ export default function Admin() {
                       <SettingsToggle label="Maintenance Mode" sub="Block all user access while you deploy" value={settings.maintenance_mode === "true"} onChange={(v) => { const val = String(v); setSettings((s) => s ? { ...s, maintenance_mode: val } : s); setSettingsDirty(true); quickSaveSetting("maintenance_mode", val); }} />
                       <SettingsToggle label="Allow New Signups" sub="Let new users create accounts" value={settings.allow_signups === "true"} onChange={(v) => { const val = String(v); setSettings((s) => s ? { ...s, allow_signups: val } : s); setSettingsDirty(true); quickSaveSetting("allow_signups", val); }} />
                       <SettingsToggle label="PAYG Enabled" sub="Allow pay-per-use purchases (all tools)" value={settings.payg_enabled === "true"} onChange={(v) => { const val = String(v); setSettings((s) => s ? { ...s, payg_enabled: val } : s); setSettingsDirty(true); quickSaveSetting("payg_enabled", val); }} />
+                    </SettingsCard>
+
+                    {/* Site content — landing hero & footer */}
+                    <SettingsCard title="Site Content — Landing Hero & Footer">
+                      <p className="text-[10px] text-white/30 mb-3">Leave a field blank to use the built-in default. Saves on blur; the live landing updates within ~a minute.</p>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-white/50 mb-1.5">Hero headline</label>
+                          <input value={settings.hero_headline ?? ""}
+                            onChange={(e) => setSettings((s) => s ? { ...s, hero_headline: e.target.value } : s)}
+                            onBlur={(e) => quickSaveSetting("hero_headline", e.target.value)}
+                            placeholder="Your deadline is tonight. Your notes are chaos."
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/50 mb-1.5">Hero subtext</label>
+                          <textarea rows={3} value={settings.hero_subtext ?? ""}
+                            onChange={(e) => setSettings((s) => s ? { ...s, hero_subtext: e.target.value } : s)}
+                            onBlur={(e) => quickSaveSetting("hero_subtext", e.target.value)}
+                            placeholder="Eight specialized AI tools for everything academics throw at you…"
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50 resize-none" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/50 mb-1.5">Footer tagline</label>
+                          <input value={settings.footer_tagline ?? ""}
+                            onChange={(e) => setSettings((s) => s ? { ...s, footer_tagline: e.target.value } : s)}
+                            onBlur={(e) => quickSaveSetting("footer_tagline", e.target.value)}
+                            placeholder="Built for students who have too much to do and too little time."
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50" />
+                        </div>
+                      </div>
                     </SettingsCard>
 
                     {/* Plan limits */}

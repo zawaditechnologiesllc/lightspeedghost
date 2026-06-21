@@ -391,6 +391,14 @@ export default function Landing() {
   const [showExitIntent, setShowExitIntent] = useState(false);
   const exitIntentFiredRef = useRef(false);
   const [liveStats, setLiveStats] = useState<{ documentsThisWeek: number; signupsThisWeek: number } | null>(null);
+  // Admin-editable hero/footer copy. Defaults to "" so the built-in marketing
+  // copy below renders unchanged (and the build-time prerender is unaffected);
+  // an override only applies once an admin saves one in Settings → Site Content.
+  const [siteContent, setSiteContent] = useState<{ heroHeadline: string; heroSubtext: string; footerTagline: string }>({
+    heroHeadline: "",
+    heroSubtext: "",
+    footerTagline: "",
+  });
 
   useEffect(() => {
     const apiBase = (import.meta.env.VITE_API_URL ?? "") + "/api";
@@ -399,6 +407,18 @@ export default function Landing() {
       .then((d: { documentsThisWeek?: number; signupsThisWeek?: number } | null) => {
         if (d && (d.documentsThisWeek || d.signupsThisWeek)) {
           setLiveStats({ documentsThisWeek: d.documentsThisWeek ?? 0, signupsThisWeek: d.signupsThisWeek ?? 0 });
+        }
+      })
+      .catch(() => {});
+    fetch(`${apiBase}/site-content`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d: { heroHeadline?: string; heroSubtext?: string; footerTagline?: string } | null) => {
+        if (d) {
+          setSiteContent({
+            heroHeadline: d.heroHeadline ?? "",
+            heroSubtext: d.heroSubtext ?? "",
+            footerTagline: d.footerTagline ?? "",
+          });
         }
       })
       .catch(() => {});
@@ -639,16 +659,23 @@ export default function Landing() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-5 sm:mb-6">
-            Your deadline is{" "}
-            <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-300 bg-clip-text text-transparent">
-              tonight.
-            </span>
-            <br />
-            Your notes are chaos.
+            {siteContent.heroHeadline ? (
+              siteContent.heroHeadline
+            ) : (
+              <>
+                Your deadline is{" "}
+                <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-300 bg-clip-text text-transparent">
+                  tonight.
+                </span>
+                <br />
+                Your notes are chaos.
+              </>
+            )}
           </h1>
 
           <p className="text-base sm:text-lg md:text-xl text-white/55 max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10">
-            Eight specialized AI tools for everything academics throw at you — write papers with real citations, humanize AI text to 0% detection, solve STEM step-by-step, check plagiarism, and get 24/7 tutoring. Stop staring at a blank screen and actually sleep.
+            {siteContent.heroSubtext ||
+              "Eight specialized AI tools for everything academics throw at you — write papers with real citations, humanize AI text to 0% detection, solve STEM step-by-step, check plagiarism, and get 24/7 tutoring. Stop staring at a blank screen and actually sleep."}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
@@ -2099,7 +2126,7 @@ export default function Landing() {
 
           <div className="border-t border-white/5 pt-6 sm:pt-7 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-white/54 text-xs">© {new Date().getFullYear()} Light Speed Ghost. All rights reserved. A product of <span className="text-white/70 font-medium">Zawadi Technologies LLC</span>.</p>
-            <p className="text-white/50 text-xs text-center sm:text-right">Built for students who have too much to do and too little time.</p>
+            <p className="text-white/50 text-xs text-center sm:text-right">{siteContent.footerTagline || "Built for students who have too much to do and too little time."}</p>
           </div>
         </div>
       </footer>
