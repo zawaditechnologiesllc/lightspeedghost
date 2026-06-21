@@ -432,7 +432,10 @@ export default function Admin() {
       });
       const data = await res.json() as { ok: boolean; error?: string; role?: "super" | "sector"; sectors?: string[] };
       if (data.ok) {
-        const role = data.role ?? "super";
+        // Never silently escalate: if an email was entered this is a sector
+        // login, so default to "sector" when the backend omits a role (e.g. an
+        // older deploy). Only a blank-email login defaults to super.
+        const role = data.role ?? (inputEmail.trim() ? "sector" : "super");
         const sectors = data.sectors ?? [];
         setPassword(inputPassword);
         setAdminRole(role);

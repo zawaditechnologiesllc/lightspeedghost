@@ -6,6 +6,13 @@ import MarkdownIt from "markdown-it";
 // (405 on POST, HTML on GET) instead of the Express backend on Render.
 const API = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
+// Public SEO pages are server-rendered by the Express backend at /seo/<slug>
+// (NOT under /api). On the Vercel-hosted admin a relative "/seo/<slug>" link
+// would hit the SPA rewrite and bounce to the app shell, so preview links must
+// point at the backend origin directly.
+const SEO_ORIGIN = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+const seoPageUrl = (slug: string) => `${SEO_ORIGIN}/seo/${slug}`;
+
 // Markdown → HTML for the manual page author. `html:false` keeps writers from
 // pasting raw markup; linkify turns bare URLs into links. The rendered HTML is
 // injected into the SEO page <main>, which is styled by /seo-page.css.
@@ -205,9 +212,10 @@ function WriteTab() {
         method: "POST",
         body: JSON.stringify({ slug, title, metaDescription, keywords, pageType, contentHtml: previewHtml, status }),
       });
-      setLastUrl(r.url ?? `/seo/${slug}`);
+      const liveUrl = seoPageUrl(r.slug ?? slug);
+      setLastUrl(liveUrl);
       setToast({
-        msg: status === "published" ? `Published live at ${r.url}` : `Saved as draft (${r.wordCount} words)`,
+        msg: status === "published" ? `Published live at ${liveUrl}` : `Saved as draft (${r.wordCount} words)`,
         variant: "success",
       });
     } catch (e) {
@@ -439,9 +447,9 @@ function DashboardTab() {
           <CardTitle>Quick Actions</CardTitle>
           <div className="space-y-2 mb-4">
             {[
-              { href: "/seo/ai-paper-writer", label: "↗ Preview: AI Paper Writer" },
-              { href: "/sitemap.xml", label: "↗ View sitemap.xml" },
-              { href: "/robots.txt", label: "↗ View robots.txt" },
+              { href: seoPageUrl("ai-paper-writer"), label: "↗ Preview: AI Paper Writer" },
+              { href: `${SEO_ORIGIN}/sitemap.xml`, label: "↗ View sitemap.xml (live, with SEO pages)" },
+              { href: `${SEO_ORIGIN}/robots.txt`, label: "↗ View robots.txt (live)" },
             ].map((l) => (
               <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer"
                 className="block text-xs text-blue-400 hover:text-blue-300 transition-colors py-0.5">
@@ -716,8 +724,14 @@ function PagesTab() {
                 {pages.map((p, i) => (
                   <tr key={p.slug} className={`border-b border-slate-800/60 hover:bg-slate-800/40 transition-colors ${i % 2 === 0 ? "" : "bg-slate-900/20"}`}>
                     <td className="py-2 px-3">
-                      <a href={`/seo/${p.slug}`} target="_blank" rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300 font-mono text-[10px] transition-colors">{p.slug}</a>
+                      {p.published || p.word_count ? (
+                        <a href={seoPageUrl(p.slug)} target="_blank" rel="noopener noreferrer"
+                          title={p.published ? "View live page" : "Preview (not published yet)"}
+                          className="text-blue-400 hover:text-blue-300 font-mono text-[10px] transition-colors">{p.slug}</a>
+                      ) : (
+                        <span title="Placeholder — no content generated yet"
+                          className="text-slate-500 font-mono text-[10px]">{p.slug}</span>
+                      )}
                     </td>
                     <td className="py-2 px-3 text-slate-400">{p.page_type}</td>
                     <td className="py-2 px-3 text-slate-300">{p.word_count ?? <span className="text-slate-600">—</span>}</td>
@@ -1372,7 +1386,7 @@ function ReviewTab() {
                     <span className="text-xs text-slate-300 flex-1 min-w-0 truncate">{page.title ?? page.slug}</span>
                     <span className="text-[10px] text-slate-500 shrink-0">{page.wordCount ? `${page.wordCount.toLocaleString()}w` : "—"}</span>
                     <a
-                      href={`/seo/${page.slug}`}
+                      href={seoPageUrl(page.slug)}
                       target="_blank"
                       rel="noreferrer"
                       className="text-[10px] text-blue-400 hover:text-blue-300 shrink-0"
@@ -1445,20 +1459,25 @@ function PipelineTab() {
   };
 
   const load = useCallback(async () => {
-    try {
-      const [lim, cls, sched] = await Promise.all([
-        apiFetch("/seo/pipeline/daily-limit"),
-        apiFetch("/seo/pipeline/clusters"),
-        apiFetch("/seo/scheduler/status").catch(() => null),
-      ]);
-      setDailyLimit(lim);
-      setClusters(cls.clusters ?? []);
-      if (sched) setScheduler(sched);
-    } catch {
-      showToast("Failed to load pipeline data", true);
-    } finally {
-      setLoading(false);
+    // Load each piece independently so a single failing call (e.g. the Render
+    // free tier still cold-starting) doesn't blank the whole tab. The pipeline
+    // *start* can succeed and this reload still race a waking backend — that's
+    // what produced the misleading "Failed to load pipeline data" after a
+    // successful start.
+    const [lim, cls, sched] = await Promise.all([
+      apiFetch("/seo/pipeline/daily-limit").catch(() => null),
+      apiFetch("/seo/pipeline/clusters").catch(() => null),
+      apiFetch("/seo/scheduler/status").catch(() => null),
+    ]);
+    if (lim) setDailyLimit(lim);
+    if (cls) setClusters(cls.clusters ?? []);
+    if (sched) setScheduler(sched);
+    // Only warn if BOTH core calls failed — that means the backend is truly
+    // unreachable (waking up), not just a transient single-call hiccup.
+    if (!lim && !cls) {
+      showToast("SEO backend didn't respond — it may be waking up. Retry in ~30s.", true);
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -1731,7 +1750,7 @@ function PipelineTab() {
                         return (
                           <a
                             key={p.slug}
-                            href={`/seo/${p.slug}`}
+                            href={seoPageUrl(p.slug)}
                             target="_blank"
                             rel="noopener noreferrer"
                             title={`${info.label} — ${p.wordCount ?? "?"}w · ${p.published ? "published" : p.status}`}
@@ -1840,7 +1859,7 @@ export default function SeoAdmin() {
               </p>
             </div>
             <a
-              href="/seo/ai-paper-writer"
+              href={seoPageUrl("ai-paper-writer")}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-blue-400 hover:text-blue-300 border border-blue-500/20 hover:border-blue-400/40 rounded-lg px-3 py-1.5 transition-all"
