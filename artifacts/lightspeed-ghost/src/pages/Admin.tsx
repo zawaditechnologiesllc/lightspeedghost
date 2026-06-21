@@ -1038,9 +1038,16 @@ export default function Admin() {
           <div className="px-4 py-5 border-b border-white/8">
             <Logo size={24} textSize="text-xs" className="opacity-80" />
             <div className="mt-2 flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-              <span className="text-[10px] text-white/35 font-medium uppercase tracking-widest">Admin</span>
+              <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${adminRole === "super" ? "bg-red-400" : "bg-emerald-400"}`} />
+              <span className="text-[10px] text-white/35 font-medium uppercase tracking-widest">
+                {adminRole === "super" ? "Super Admin" : "Sector Admin"}
+              </span>
             </div>
+            {adminRole === "sector" && (
+              <p className="mt-1.5 text-[9px] text-white/30 leading-snug capitalize">
+                Access: {adminSectors.length ? adminSectors.join(", ") : "none assigned yet"}
+              </p>
+            )}
           </div>
           <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
             {visibleTabs.map((t) => (

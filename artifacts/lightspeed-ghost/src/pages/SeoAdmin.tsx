@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import MarkdownIt from "markdown-it";
 
-const API = "/api";
+// Call the backend directly (VITE_API_URL), NOT a relative /api — Vercel rewrites
+// every path to index.html, so a relative /api call would hit the static frontend
+// (405 on POST, HTML on GET) instead of the Express backend on Render.
+const API = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
 // Markdown → HTML for the manual page author. `html:false` keeps writers from
 // pasting raw markup; linkify turns bare URLs into links. The rendered HTML is

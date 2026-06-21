@@ -13,10 +13,22 @@ import { logger } from "../lib/logger";
 // use a paid model such as gemini-2.5-pro once billing is enabled.
 export const GEMINI_PRO_MODEL = process.env.SEO_GEMINI_MODEL ?? "gemini-2.5-flash";
 
-// Subreddits with strong edtech/academic traffic — restricted-searched on old.reddit
+// Subreddits with strong edtech/academic/AI-writing traffic — restricted-searched
+// on old.reddit (a site-wide search runs as a fallback if these return little).
 const REDDIT_SUBS = [
-  "college", "AcademicHelp", "GradSchool", "HomeworkHelp",
-  "studytips", "writing", "ChatGPT", "AIToolsTech", "Teachers",
+  // Students & academia
+  "college", "GradSchool", "AskAcademia", "ApplyingToCollege", "gradadmissions",
+  "Professors", "students", "APStudents", "PhD", "highschool",
+  // Homework & subject help
+  "HomeworkHelp", "AcademicHelp", "studytips", "GetStudying",
+  "learnmath", "cheatatmathhomework", "chemhelp", "AskPhysics", "statistics",
+  "EngineeringStudents", "nursing", "Mcat", "lawschool", "medicalschool",
+  // Writing & self-publishing
+  "writing", "EssayWriting", "selfpublish", "PubTips", "writers",
+  // AI tools
+  "ChatGPT", "OpenAI", "artificial", "AIToolsTech",
+  // Educators
+  "Teachers",
 ].join("+");
 
 // We scrape Reddit's public HTML directly (no API, no OAuth, no credentials), so

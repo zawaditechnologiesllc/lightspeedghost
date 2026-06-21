@@ -432,18 +432,25 @@ router.get("/seo/budget/log", async (req: Request, res: Response) => {
   res.json({ log: rows });
 });
 
-// ── Sitemap ping — POST /api/seo/sitemap/ping ────────────────────────────────
+// ── Sitemap check — POST /api/seo/sitemap/ping ───────────────────────────────
+// Google (Jun 2023) and Bing (2022) BOTH retired the sitemap "ping" endpoint, so
+// hitting those URLs just 404s. Sitemaps are now auto-discovered via the
+// robots.txt reference and submitted once in Search Console. Instead of pinging
+// dead endpoints, verify the sitemap is actually live and report how to submit it.
 router.post("/seo/sitemap/ping", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
-    const sitemapUrl = encodeURIComponent("https://lightspeedghost.com/sitemap.xml");
-    await Promise.allSettled([
-      fetch(`https://www.google.com/ping?sitemap=${sitemapUrl}`),
-      fetch(`https://www.bing.com/ping?sitemap=${sitemapUrl}`),
-    ]);
-    res.json({ ok: true, pinged: ["google", "bing"] });
+    const r = await fetch("https://lightspeedghost.com/sitemap.xml", { signal: AbortSignal.timeout(10_000) });
+    const reachable = r.ok;
+    res.json({
+      ok: true,
+      reachable,
+      message: reachable
+        ? "Sitemap is live and linked from robots.txt, so search engines auto-discover it. The old Google/Bing 'ping' URLs were retired — submit it once in Google & Bing Search Console for instant pickup."
+        : "Sitemap couldn't be fetched — check that the backend is serving /sitemap.xml.",
+    });
   } catch {
-    res.json({ ok: false, error: "Ping failed" });
+    res.json({ ok: true, reachable: false, message: "Couldn't verify the sitemap, but it's still linked from robots.txt for auto-discovery." });
   }
 });
 

@@ -2098,7 +2098,7 @@ export default function Landing() {
           </div>
 
           <div className="border-t border-white/5 pt-6 sm:pt-7 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-white/54 text-xs">© {new Date().getFullYear()} Light Speed Ghost. All rights reserved.</p>
+            <p className="text-white/54 text-xs">© {new Date().getFullYear()} Light Speed Ghost. All rights reserved. A product of <span className="text-white/70 font-medium">Zawadi Technologies LLC</span>.</p>
             <p className="text-white/50 text-xs text-center sm:text-right">Built for students who have too much to do and too little time.</p>
           </div>
         </div>
