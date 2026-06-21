@@ -1286,7 +1286,7 @@ export default function Landing() {
                   <th className="py-3 px-3 text-center">
                     <div className="inline-flex flex-col items-center gap-1">
                       <span className="text-white font-bold text-sm">LightSpeed Ghost</span>
-                      <span className="text-blue-400 text-[10px] font-semibold">from $3.99</span>
+                      <span className="text-blue-400 text-[10px] font-semibold">from $1.99</span>
                     </div>
                   </th>
                   <th className="py-3 px-3 text-center text-white/60 font-medium text-xs">ChatGPT Plus<br/><span className="text-[10px] font-normal text-white/54">$20/mo</span></th>
