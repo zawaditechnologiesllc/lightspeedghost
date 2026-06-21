@@ -59,8 +59,7 @@ export function renderFullPage(opts: {
   <!-- Structured Data -->
   ${schemaBlocks}
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="${BASE_URL}/seo-page.css" />
+  <!-- Styles (fully inlined below; no external stylesheet to fetch) -->
   <link rel="icon" href="${BASE_URL}/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
 

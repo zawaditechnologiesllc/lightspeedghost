@@ -3,7 +3,11 @@
   "outputDirectory": "artifacts/lightspeed-ghost/dist/public",
   "installCommand": "pnpm install",
   "framework": null,
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    { "source": "/seo/:path*", "destination": "https://lightspeedghost-5szz.onrender.com/seo/:path*" },
+    { "source": "/seo-sitemap.xml", "destination": "https://lightspeedghost-5szz.onrender.com/sitemap.xml" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",

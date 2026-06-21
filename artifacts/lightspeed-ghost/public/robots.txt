@@ -164,6 +164,7 @@ Crawl-delay: 5
 
 # ── Sitemaps ──────────────────────────────────────────────────────────────────
 Sitemap: https://lightspeedghost.com/sitemap.xml
+Sitemap: https://lightspeedghost.com/seo-sitemap.xml
 
 # ── AI context files ──────────────────────────────────────────────────────────
 # Structured AI-readable documentation is available at:

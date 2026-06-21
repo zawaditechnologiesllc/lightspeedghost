@@ -1,5 +1,7 @@
 {
   "rewrites": [
+    { "source": "/seo/:path*", "destination": "https://lightspeedghost-5szz.onrender.com/seo/:path*" },
+    { "source": "/seo-sitemap.xml", "destination": "https://lightspeedghost-5szz.onrender.com/sitemap.xml" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [

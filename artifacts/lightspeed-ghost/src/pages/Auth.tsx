@@ -25,6 +25,7 @@ export default function Auth() {
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [error, setError] = useState("");
+  const [forgot, setForgot] = useState(false);
   const [, navigate] = useLocation();
 
   const reset = () => {
@@ -35,9 +36,13 @@ export default function Auth() {
 
   const switchTab = (t: Tab) => {
     setTab(t);
+    setForgot(false);
     reset();
     setPassword("");
   };
+
+  const openForgot = () => { setForgot(true); reset(); };
+  const closeForgot = () => { setForgot(false); reset(); };
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -93,6 +98,24 @@ export default function Auth() {
     }
   }
 
+  async function handleForgot(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setStatus("loading");
+    // Supabase sends the reset email; the link returns the user to
+    // /reset-password (a recovery session is established there) where the
+    // existing ResetPassword page lets them set a new password.
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      setError(error.message);
+      setStatus("error");
+    } else {
+      setStatus("done");
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#04080f] flex flex-col items-center justify-center px-6 py-16">
       {/* Background glow */}
@@ -133,47 +156,72 @@ export default function Auth() {
                   <CheckCircle size={28} className="text-green-400" />
                 </div>
                 <h2 className="text-xl font-bold text-white mb-2">
-                  {tab === "login" ? "Welcome back!" : "Account created!"}
+                  {forgot ? "Check your email" : tab === "login" ? "Welcome back!" : "Account created!"}
                 </h2>
-                <p className="text-white/50 text-sm mb-6">Redirecting you to the app…</p>
+                <p className="text-white/50 text-sm mb-6">
+                  {forgot
+                    ? `If an account exists for ${email}, a password reset link is on its way. The link opens a page where you can set a new password.`
+                    : "Redirecting you to the app…"}
+                </p>
+                {forgot && (
+                  <button onClick={closeForgot} className="text-blue-400 hover:text-blue-300 text-sm transition-colors">
+                    ← Back to sign in
+                  </button>
+                )}
               </div>
             ) : (
               <>
                 <h2 className="text-2xl font-bold text-white mb-1">
-                  {tab === "login" ? "Welcome back" : "Create your account"}
+                  {forgot ? "Reset your password" : tab === "login" ? "Welcome back" : "Create your account"}
                 </h2>
                 <p className="text-white/40 text-sm mb-6">
-                  {tab === "login"
+                  {forgot
+                    ? "Enter your account email and we'll send you a link to set a new password."
+                    : tab === "login"
                     ? "Sign in to your Light Speed Ghost account"
                     : "Starter plan from $9.99/month — cancel any time"}
                 </p>
 
-                {/* Google OAuth */}
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={status === "loading"}
-                  className="w-full flex items-center justify-center gap-3 py-2.5 mb-5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {GOOGLE_ICON}
-                  Continue with Google
-                </button>
+                {/* Google OAuth — hidden during password reset */}
+                {!forgot && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleGoogleLogin}
+                      disabled={status === "loading"}
+                      className="w-full flex items-center justify-center gap-3 py-2.5 mb-5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {GOOGLE_ICON}
+                      Continue with Google
+                    </button>
 
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="flex-1 h-px bg-white/10" />
-                  <span className="text-xs text-white/25">or</span>
-                  <div className="flex-1 h-px bg-white/10" />
-                </div>
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="flex-1 h-px bg-white/10" />
+                      <span className="text-xs text-white/25">or</span>
+                      <div className="flex-1 h-px bg-white/10" />
+                    </div>
+                  </>
+                )}
 
                 <form
-                  onSubmit={tab === "login" ? handleLogin : handleSignup}
+                  onSubmit={forgot ? handleForgot : tab === "login" ? handleLogin : handleSignup}
                   className="space-y-4"
                 >
                   <EmailInput email={email} setEmail={setEmail} />
 
-                  {/* Password */}
+                  {/* Password — hidden during password reset */}
+                  {!forgot && (
+                  <>
                   <div>
-                    <label className="block text-sm text-white/60 mb-1.5">Password</label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-sm text-white/60">Password</label>
+                      {tab === "login" && (
+                        <button type="button" onClick={openForgot}
+                          className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
                     <div className="relative">
                       <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
                       <input
@@ -233,17 +281,25 @@ export default function Auth() {
                       )}
                     </div>
                   )}
+                  </>
+                  )}
 
                   {error && <ErrorMsg text={error} />}
 
                   <SubmitBtn
                     status={status}
-                    label={tab === "login" ? "Sign In" : "Create Free Account"}
+                    label={forgot ? "Send reset link" : tab === "login" ? "Sign In" : "Create Free Account"}
                   />
                 </form>
 
                 <p className="text-center text-xs text-white/30 mt-6">
-                  {tab === "login" ? (
+                  {forgot ? (
+                    <>Remembered your password?{" "}
+                      <button onClick={closeForgot} className="text-blue-400 hover:text-blue-300 transition-colors">
+                        Back to sign in
+                      </button>
+                    </>
+                  ) : tab === "login" ? (
                     <>No account?{" "}
                       <button onClick={() => switchTab("signup")} className="text-blue-400 hover:text-blue-300 transition-colors">
                         Create one free

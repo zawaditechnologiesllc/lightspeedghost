@@ -594,9 +594,9 @@ export default function Africa() {
 
           <FadeUp delay={0.1} className="mt-8 text-center">
             <p className="text-sm text-white/35">
-              Need a single paper without a subscription?{" "}
+              Need just one tool without a subscription?{" "}
               <Link href="/auth">
-                <span className="text-emerald-400 hover:text-emerald-300 cursor-pointer underline underline-offset-2">Pay-as-you-go from $3.99</span>
+                <span className="text-emerald-400 hover:text-emerald-300 cursor-pointer underline underline-offset-2">Pay-as-you-go from $1.99</span>
               </Link>
               {" "}— credits never expire.
             </p>
