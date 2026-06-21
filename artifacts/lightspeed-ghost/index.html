@@ -35,6 +35,10 @@
          cold DNS+TLS handshake (Lighthouse: ~310 ms LCP saving on mobile). -->
     <link rel="preconnect" href="https://lightspeedghost-5szz.onrender.com" crossorigin="anonymous" />
 
+    <!-- Preload the hero background (LCP element) so it starts downloading immediately
+         instead of after the CSS is parsed — improves LCP and Speed Index on mobile. -->
+    <link rel="preload" as="image" href="/hero-student-bg.webp" fetchpriority="high" />
+
     <!-- Handwritten font for STEM + Study math rendering — loaded async so it never blocks first paint -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
