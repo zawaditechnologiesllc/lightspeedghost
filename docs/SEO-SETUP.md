@@ -55,18 +55,17 @@ specs the automated engine can generate from.
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | **Search Console + GA4** | full GCP service-account JSON (one line). Powers data-driven topic selection |
 | `GSC_SITE_URL` | Search Console | exact property URL, e.g. `https://lightspeedghost.com/` |
 | `GA4_PROPERTY_ID` | Google Analytics 4 | numeric property id — weights topics toward revenue-driving tools |
-| `REDDIT_CLIENT_ID` | **Reddit research** | from reddit.com/prefs/apps (see §2a). Real community signal in the research step |
-| `REDDIT_CLIENT_SECRET` | Reddit research | the app secret paired with the id above |
+| _(none)_ | **Reddit research** | works out of the box — the research step scrapes Reddit's public HTML with Cheerio (no API, no keys) |
 | `SEO_BUDGET_LIMIT` | spend cap | monthly USD cap (default `25.00`) — generation pauses when hit |
 | `SEO_DAILY_PAGE_LIMIT` | batch size | max catalog pages per batch run (default `30`) |
 | `SEO_MIN_WORD_COUNT` | quality gate | per-page minimum (default `800`) |
 | `RESEND_API_KEY`, `EMAIL_FROM` | email notifications | see `docs/EMAIL-SETUP.md` |
 
-> The engine **degrades gracefully**: without the Google/Reddit vars it still
-> works, just using catalog-gap topic selection + the model's own knowledge
-> instead of live Search Console / GA4 / Reddit data. Set them to unlock the
-> full, data-driven behaviour. **The manual Write engine needs none of this** —
-> only `ADMIN_PASSWORD` + `DATABASE_URL`.
+> The engine **degrades gracefully**: Reddit research works with no config (it
+> scrapes public HTML), and without the Google vars topic selection falls back to
+> catalog gaps + the model's own knowledge instead of live Search Console / GA4
+> data. Set the Google vars to unlock the full, data-driven behaviour. **The
+> manual Write engine needs none of this** — only `ADMIN_PASSWORD` + `DATABASE_URL`.
 
 ---
 
@@ -83,8 +82,8 @@ source in brackets:
    two; works on catalog gaps without them.*
 2. **Research** (`researcher.ts`) — pulls real discussions from academic
    subreddits and synthesises pain points, questions, keywords and the best
-   competitor to compare against. *Needs `REDDIT_CLIENT_ID/SECRET`; falls back to
-   the model's own knowledge if absent.*
+   competitor to compare against. *Scrapes old.reddit.com public HTML with Cheerio
+   — no API or keys; falls back to the model's own knowledge if Reddit throttles.*
 3. **Outline** (`outliner.ts`) — builds the 5-page cluster structure (hook,
    comparison, breakdown, alternative, trust) with Gemini.
 4. **Generation** (`content-generator.ts`, `five-page-cluster.ts`) — writes each
@@ -107,16 +106,13 @@ sitemap ping notifies Google + Bing on publish.
    set `GSC_SITE_URL` to your exact property URL, and `GA4_PROPERTY_ID` to the
    numeric id.
 
-### Setting up Reddit research (optional)
-Reddit's public API now blocks server/datacenter requests (you'll see `403` in the
-logs), so the research step needs an app token:
-1. Go to **reddit.com/prefs/apps → Create another app → "script"**. Set the
-   redirect URI to `http://localhost` (unused for app-only auth).
-2. Copy the **client id** (under the app name) and **secret** into
-   `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET`.
-3. Redeploy. The research step now reads real subreddit discussions; without the
-   creds it logs a warning and falls back to the model's own knowledge (the
-   pipeline still completes).
+### Reddit research — nothing to set up
+The Reddit API (even with OAuth) is a hassle and still IP-blocks datacenters, so
+the research step **skips the API entirely** and scrapes Reddit's public search
+pages (`old.reddit.com`) with **Cheerio** — no app, no keys, no config. It tries
+the academic-subreddit search first, then a site-wide search. If Reddit throttles
+the request it logs a warning and the pipeline continues on the model's own
+knowledge.
 
 ---
 

@@ -175,7 +175,7 @@ export async function getSchedulerStatus(): Promise<{
   const hasGoogleSA  = Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
   const gscConfigured = hasGoogleSA && Boolean(process.env.GSC_SITE_URL);
   const ga4Configured = hasGoogleSA && Boolean(process.env.GA4_PROPERTY_ID);
-  const redditConfigured = Boolean(process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET);
+  const redditConfigured = true; // research scrapes Reddit's public HTML — no API keys needed
 
   let lastRuns: Array<{ status: string; detail: string; createdAt: string; clusterId: string | null }> = [];
   try {

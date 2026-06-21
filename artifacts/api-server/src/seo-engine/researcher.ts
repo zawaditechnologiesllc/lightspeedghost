@@ -4,6 +4,7 @@
  * then synthesizes insights with Gemini 2.5 Flash (has a real free tier).
  */
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import * as cheerio from "cheerio";
 import { logger } from "../lib/logger";
 
 // Model used for ALL SEO-engine Gemini calls (research, topic selection,
@@ -12,47 +13,21 @@ import { logger } from "../lib/logger";
 // use a paid model such as gemini-2.5-pro once billing is enabled.
 export const GEMINI_PRO_MODEL = process.env.SEO_GEMINI_MODEL ?? "gemini-2.5-flash";
 
-// Subreddits with strong edtech/academic traffic
+// Subreddits with strong edtech/academic traffic — restricted-searched on old.reddit
 const REDDIT_SUBS = [
   "college", "AcademicHelp", "GradSchool", "HomeworkHelp",
   "studytips", "writing", "ChatGPT", "AIToolsTech", "Teachers",
 ].join("+");
 
-const REDDIT_UA = "LightspeedGhostSEO/1.0 (academic-research-bot; contact@lightspeedghost.com)";
+// We scrape Reddit's public HTML directly (no API, no OAuth, no credentials), so
+// we present a normal browser User-Agent. old.reddit.com is server-rendered HTML,
+// which Cheerio parses cleanly.
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-// Reddit's public *.json endpoints now 403 from datacenter IPs — authenticated
-// OAuth (application-only) is required to read public posts reliably. Register a
-// "script" app at reddit.com/prefs/apps and set REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET.
-let redditToken: { token: string; expires: number } | null = null;
-
-async function getRedditToken(): Promise<string | null> {
-  const id = process.env.REDDIT_CLIENT_ID;
-  const secret = process.env.REDDIT_CLIENT_SECRET;
-  if (!id || !secret) return null;
-  if (redditToken && redditToken.expires > Date.now() + 60_000) return redditToken.token;
-  try {
-    const res = await fetch("https://www.reddit.com/api/v1/access_token", {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString("base64")}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": REDDIT_UA,
-      },
-      body: "grant_type=client_credentials",
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) {
-      logger.warn({ status: res.status }, "[seo-research] Reddit OAuth token request failed");
-      return null;
-    }
-    const body = (await res.json()) as { access_token?: string; expires_in?: number };
-    if (!body.access_token) return null;
-    redditToken = { token: body.access_token, expires: Date.now() + (body.expires_in ?? 3600) * 1000 };
-    return redditToken.token;
-  } catch (err) {
-    logger.warn({ err }, "[seo-research] Reddit OAuth token request errored");
-    return null;
-  }
+function parseLeadingInt(text: string): number {
+  const m = text.replace(/,/g, "").match(/-?\d+/);
+  return m ? parseInt(m[0], 10) : 0;
 }
 
 export interface ResearchData {
@@ -76,48 +51,61 @@ interface RedditPost {
 }
 
 async function fetchRedditPosts(topic: string): Promise<RedditPost[]> {
+  // Scrape Reddit's public search page directly — no API, no OAuth, no keys.
+  // old.reddit.com returns server-rendered HTML; we parse it with Cheerio. If a
+  // page can't be fetched (Reddit throttling), we return [] and the synthesis
+  // step falls back to the model's own knowledge, so the pipeline still completes.
   const encoded = encodeURIComponent(topic);
-  const query = `?q=${encoded}&sort=top&t=year&limit=15&restrict_sr=false`;
+  // Try the academic-subreddit restricted search first, then a site-wide search.
+  const urls = [
+    `https://old.reddit.com/r/${REDDIT_SUBS}/search?q=${encoded}&restrict_sr=on&sort=top&t=year`,
+    `https://old.reddit.com/search?q=${encoded}&sort=top&t=year`,
+  ];
 
-  // Prefer authenticated OAuth (oauth.reddit.com) — the only path that reliably
-  // works from a server. Fall back to the public endpoint (best-effort) if no
-  // Reddit app credentials are configured.
-  const token = await getRedditToken();
-  const url = token
-    ? `https://oauth.reddit.com/r/${REDDIT_SUBS}/search${query}`
-    : `https://www.reddit.com/r/${REDDIT_SUBS}/search.json${query}`;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": BROWSER_UA,
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+        signal: AbortSignal.timeout(12_000),
+      });
 
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": REDDIT_UA,
-        Accept: "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      signal: AbortSignal.timeout(12_000),
-    });
+      if (!res.ok) {
+        logger.warn({ status: res.status, topic, url }, "[seo-research] Reddit scrape returned non-200 — trying next");
+        continue;
+      }
 
-    if (!res.ok) {
-      logger.warn({ status: res.status, topic, authenticated: Boolean(token) }, "[seo-research] Reddit API returned non-200 — set REDDIT_CLIENT_ID/SECRET if unauthenticated");
-      return [];
+      const html = await res.text();
+      const $ = cheerio.load(html);
+      const posts: RedditPost[] = [];
+
+      $(".search-result-link").each((_i, el) => {
+        const $el = $(el);
+        const title = $el.find("a.search-title").first().text().trim();
+        if (title.length < 10) return;
+        posts.push({
+          title,
+          selftext:    $el.find(".search-result-body").first().text().trim().slice(0, 600),
+          score:       parseLeadingInt($el.find(".search-score").first().text()),
+          numComments: parseLeadingInt($el.find(".search-comments").first().text()),
+          subreddit:   $el.find(".search-subreddit-link").first().text().replace(/^\/?r\//i, "").trim(),
+        });
+      });
+
+      const filtered = posts.filter((p) => p.score > 1 && p.title.length > 10).slice(0, 15);
+      if (filtered.length > 0) {
+        logger.info({ topic, found: filtered.length }, "[seo-research] Reddit scrape succeeded");
+        return filtered;
+      }
+    } catch (err) {
+      logger.warn({ err, topic, url }, "[seo-research] Reddit scrape failed — trying next");
     }
-
-    const body = (await res.json()) as { data?: { children?: Array<{ data: Record<string, unknown> }> } };
-    const children = body?.data?.children ?? [];
-
-    return children
-      .map((c) => ({
-        title:       String(c.data.title ?? ""),
-        selftext:    String(c.data.selftext ?? "").slice(0, 600),
-        score:       Number(c.data.score ?? 0),
-        numComments: Number(c.data.num_comments ?? 0),
-        subreddit:   String(c.data.subreddit ?? ""),
-      }))
-      .filter((p) => p.score > 1 && p.title.length > 10);
-  } catch (err) {
-    logger.warn({ err, topic }, "[seo-research] Reddit fetch failed — continuing without it");
-    return [];
   }
+
+  return [];
 }
 
 export async function researchTopic(
