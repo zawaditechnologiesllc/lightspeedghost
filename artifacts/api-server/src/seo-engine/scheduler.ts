@@ -158,17 +158,24 @@ export async function triggerNow(): Promise<{ ok: boolean; error?: string }> {
 }
 
 export async function getSchedulerStatus(): Promise<{
-  enabled:      boolean;
-  time:         string;
-  nextRunAt:    string | null;
-  geminiKeySet: boolean;
-  cronTokenSet: boolean;
-  lastRuns:     Array<{ status: string; detail: string; createdAt: string; clusterId: string | null }>;
+  enabled:        boolean;
+  time:           string;
+  nextRunAt:      string | null;
+  geminiKeySet:   boolean;
+  cronTokenSet:   boolean;
+  gscConfigured:  boolean;
+  ga4Configured:  boolean;
+  redditConfigured: boolean;
+  lastRuns:       Array<{ status: string; detail: string; createdAt: string; clusterId: string | null }>;
 }> {
   const { enabled, time } = await getSchedulerSettings();
   const nextRunAt = enabled ? new Date(Date.now() + msUntilNextRun(time)).toISOString() : null;
   const geminiKeySet = Boolean(process.env.GEMINI_API_KEY);
   const cronTokenSet = Boolean(process.env.SEO_CRON_TOKEN);
+  const hasGoogleSA  = Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  const gscConfigured = hasGoogleSA && Boolean(process.env.GSC_SITE_URL);
+  const ga4Configured = hasGoogleSA && Boolean(process.env.GA4_PROPERTY_ID);
+  const redditConfigured = Boolean(process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET);
 
   let lastRuns: Array<{ status: string; detail: string; createdAt: string; clusterId: string | null }> = [];
   try {
@@ -183,5 +190,5 @@ export async function getSchedulerStatus(): Promise<{
     }));
   } catch { /* table may not exist yet */ }
 
-  return { enabled, time, nextRunAt, geminiKeySet, cronTokenSet, lastRuns };
+  return { enabled, time, nextRunAt, geminiKeySet, cronTokenSet, gscConfigured, ga4Configured, redditConfigured, lastRuns };
 }

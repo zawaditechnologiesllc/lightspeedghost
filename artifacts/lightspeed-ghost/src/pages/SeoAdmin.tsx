@@ -542,11 +542,10 @@ function CatalogTab() {
         method: "POST",
         body: JSON.stringify({ type: batchType, limit: batchLimit, autoPublish: false }),
       });
-      const succeeded = r.results?.filter((x: any) => x.success).length ?? 0;
-      const failed = (r.results?.length ?? 0) - succeeded;
-      setMsg(`Generated ${succeeded} pages${failed > 0 ? `, ${failed} failed` : ""} · cost $${r.totalCost?.toFixed(6) ?? "0"}`);
-      setMsgVariant(failed === 0 ? "success" : "error");
-      await load();
+      setMsg(r.message ?? "Batch started — pages appear in Pages/Review as they finish.");
+      setMsgVariant("success");
+      // Generation runs in the background; refresh the catalog as pages land.
+      setTimeout(() => { load(); }, 8000);
     } catch (e: any) {
       setMsg(`Generation error: ${e.message}`);
       setMsgVariant("error");
@@ -997,7 +996,7 @@ function SitemapTab() {
 
 // ── Tab: Settings ─────────────────────────────────────────────────────────────
 function SettingsTab() {
-  const [scheduler, setScheduler] = useState<{ enabled: boolean; time: string; nextRunAt: string | null; geminiKeySet?: boolean; cronTokenSet?: boolean; lastRuns: any[] } | null>(null);
+  const [scheduler, setScheduler] = useState<{ enabled: boolean; time: string; nextRunAt: string | null; geminiKeySet?: boolean; cronTokenSet?: boolean; gscConfigured?: boolean; ga4Configured?: boolean; redditConfigured?: boolean; lastRuns: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
@@ -1167,6 +1166,36 @@ function SettingsTab() {
             ) : (
               <p className="text-[10px] text-slate-500">No automated runs recorded yet.</p>
             )}
+          </div>
+        )}
+      </Card>
+
+      {/* Data-source integrations */}
+      <Card>
+        <CardTitle>🔌 Integrations</CardTitle>
+        {loading ? <Spinner /> : (
+          <div className="space-y-3">
+            <p className="text-[11px] text-slate-400 -mt-2">
+              These power the automated engine's research and topic selection. All optional — the engine
+              falls back to catalog gaps + AI knowledge without them. See <code className="text-blue-300">docs/SEO-SETUP.md</code>.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { label: "Gemini (generation)", on: scheduler?.geminiKeySet, env: "GEMINI_API_KEY", required: true },
+                { label: "Search Console", on: scheduler?.gscConfigured, env: "GOOGLE_SERVICE_ACCOUNT_JSON + GSC_SITE_URL" },
+                { label: "Google Analytics 4", on: scheduler?.ga4Configured, env: "GOOGLE_SERVICE_ACCOUNT_JSON + GA4_PROPERTY_ID" },
+                { label: "Reddit research", on: scheduler?.redditConfigured, env: "REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET" },
+                { label: "Daily cron", on: scheduler?.cronTokenSet, env: "SEO_CRON_TOKEN" },
+              ].map((it) => (
+                <div key={it.label} className="bg-slate-900/60 border border-slate-700/40 rounded-xl p-3">
+                  <div className={`text-sm font-semibold ${it.on ? "text-emerald-400" : it.required ? "text-red-400" : "text-slate-500"}`}>
+                    {it.on ? "✓ Connected" : it.required ? "✗ Required" : "✗ Not set"}
+                  </div>
+                  <div className="text-[11px] text-slate-300 mt-0.5">{it.label}</div>
+                  <div className="text-[9px] text-slate-500 mt-0.5 break-all">{it.env}</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </Card>
