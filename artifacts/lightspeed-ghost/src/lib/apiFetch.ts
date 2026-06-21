@@ -1,9 +1,9 @@
-import { supabase } from "./supabase";
-
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
 async function getAuthHeader(): Promise<Record<string, string>> {
   try {
+    // Lazy import keeps the ~50 KB Supabase chunk off the initial critical path.
+    const { supabase } = await import("./supabase");
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (token) return { Authorization: `Bearer ${token}` };

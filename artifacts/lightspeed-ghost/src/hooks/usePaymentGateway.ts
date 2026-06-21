@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import type { PaygTool, DocumentTier, PlanId } from "@/lib/pricing";
-import { supabase } from "@/lib/supabase";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
@@ -24,6 +23,9 @@ export interface PaymentSession {
 }
 
 async function getAuthHeaders(): Promise<HeadersInit> {
+  // Imported lazily so this payment hook (pulled in by the landing's CheckoutModal)
+  // doesn't drag the ~50 KB Supabase chunk onto the initial critical path.
+  const { supabase } = await import("@/lib/supabase");
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   return token ? { Authorization: `Bearer ${token}` } : {};

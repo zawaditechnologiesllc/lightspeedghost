@@ -6,15 +6,16 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/Layout";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SplashScreen } from "@/components/SplashScreen";
-// Eager: the two first-paint paths. Everything else is code-split so the
-// entry bundle stays small (Google PageSpeed: reduce unused JavaScript).
+// Eager: only the landing (first-paint path). Everything else — including Auth —
+// is code-split so the entry bundle stays small and Supabase stays off the
+// critical path (Google PageSpeed: reduce unused JavaScript).
 import Landing from "@/pages/Landing";
-import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
 import { Loader2, Wrench } from "lucide-react";
 import { useEffect, useState, useCallback, lazy, Suspense, Component, type ReactNode } from "react";
 import { Logo } from "@/components/Logo";
 
+const Auth = lazy(() => import("@/pages/Auth"));
 const Admin = lazy(() => import("@/pages/Admin"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const WritePaper = lazy(() => import("@/pages/WritePaper"));

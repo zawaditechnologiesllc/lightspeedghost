@@ -997,7 +997,7 @@ function SitemapTab() {
 
 // ── Tab: Settings ─────────────────────────────────────────────────────────────
 function SettingsTab() {
-  const [scheduler, setScheduler] = useState<{ enabled: boolean; time: string; nextRunAt: string | null; lastRuns: any[] } | null>(null);
+  const [scheduler, setScheduler] = useState<{ enabled: boolean; time: string; nextRunAt: string | null; geminiKeySet?: boolean; cronTokenSet?: boolean; lastRuns: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
@@ -1114,6 +1114,52 @@ function SettingsTab() {
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* Automation / external cron status */}
+      <Card>
+        <CardTitle>⏱ Automation status (external cron)</CardTitle>
+        {loading ? <Spinner /> : (
+          <div className="space-y-3">
+            <p className="text-[11px] text-slate-400 -mt-2">
+              The reliable way to run the AI engine on the free hosting tier: point an UptimeRobot
+              (or cron-job.org) monitor at the URL below. It self-throttles to once/day and keeps the
+              server awake. Manual posting via the Write tab needs none of this.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-900/60 border border-slate-700/40 rounded-xl p-3">
+                <div className={`text-sm font-semibold ${scheduler?.geminiKeySet ? "text-emerald-400" : "text-red-400"}`}>
+                  {scheduler?.geminiKeySet ? "✓ Detected" : "✗ Not set"}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">GEMINI_API_KEY — required to generate</div>
+              </div>
+              <div className="bg-slate-900/60 border border-slate-700/40 rounded-xl p-3">
+                <div className={`text-sm font-semibold ${scheduler?.cronTokenSet ? "text-emerald-400" : "text-amber-400"}`}>
+                  {scheduler?.cronTokenSet ? "✓ Detected" : "✗ Not set"}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">SEO_CRON_TOKEN — guards the cron URL</div>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">UptimeRobot URL</p>
+              <code className="block text-[10px] text-blue-300 bg-slate-900/70 border border-slate-700/50 rounded-lg px-2.5 py-2 break-all">
+                https://lightspeedghost-5szz.onrender.com/api/seo/cron/run?token=&lt;SEO_CRON_TOKEN&gt;
+              </code>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {scheduler?.cronTokenSet
+                  ? "Replace <SEO_CRON_TOKEN> with the value you set in Render. Last automated run shown above."
+                  : "Set SEO_CRON_TOKEN in Render → Environment, then use it in place of the placeholder."}
+              </p>
+            </div>
+            {scheduler?.lastRuns?.length ? (
+              <p className="text-[10px] text-slate-400">
+                Last automated run: {new Date(scheduler.lastRuns[0].createdAt).toLocaleString()} — {scheduler.lastRuns[0].status}
+              </p>
+            ) : (
+              <p className="text-[10px] text-slate-500">No automated runs recorded yet.</p>
             )}
           </div>
         )}

@@ -31,6 +31,10 @@
     <meta name="geo.placename" content="United States" />
     <meta name="ICBM" content="37.7749,-122.4194" />
 
+    <!-- Warm the API origin early so the first auth/status request isn't blocked on a
+         cold DNS+TLS handshake (Lighthouse: ~310 ms LCP saving on mobile). -->
+    <link rel="preconnect" href="https://lightspeedghost-5szz.onrender.com" crossorigin="anonymous" />
+
     <!-- Handwritten font for STEM + Study math rendering — loaded async so it never blocks first paint -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />

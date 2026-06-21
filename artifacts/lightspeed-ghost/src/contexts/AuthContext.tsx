@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+// Supabase is imported dynamically (not at module top level) so its ~50 KB chunk
+// loads after first paint instead of blocking the initial render.
 
 interface AuthContextValue {
   session: Session | null;
@@ -21,22 +22,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
+    import("@/lib/supabase")
+      .then(({ supabase }) => {
+        if (!active) return;
+        // Get initial session
+        supabase.auth.getSession().then(({ data }) => {
+          if (!active) return;
+          setSession(data.session);
+          setLoading(false);
+        });
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          setSession(session);
+          setLoading(false);
+        });
+        unsubscribe = () => subscription.unsubscribe();
+      })
+      .catch(() => {
+        // Fail open: never leave the app stuck on the loading spinner if the
+        // auth chunk can't load — treat the visitor as logged-out.
+        if (active) setLoading(false);
+      });
 
-    return () => subscription.unsubscribe();
+    return () => { active = false; unsubscribe?.(); };
   }, []);
 
   const signOut = async () => {
+    const { supabase } = await import("@/lib/supabase");
     await supabase.auth.signOut();
     setSession(null);
   };
