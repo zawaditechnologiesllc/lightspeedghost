@@ -227,11 +227,11 @@ export async function generatePageContent(spec: PageSpec, retryCount = 0): Promi
   });
 
   const wordCount = html.split(/\s+/).filter(Boolean).length;
-  const costUsd   = computeCost("gemini-2.5-pro", inputTokens, outputTokens);
+  const costUsd   = computeCost(GEMINI_PRO_MODEL, inputTokens, outputTokens);
 
   await logLLMCost({
     taskType:  `seo-page-${spec.type}`,
-    model:     "gemini-2.5-pro",
+    model:     GEMINI_PRO_MODEL,
     inputTokens,
     outputTokens,
     costUsd,
@@ -244,7 +244,7 @@ export async function generatePageContent(spec: PageSpec, retryCount = 0): Promi
     html,
     schemaJson:  JSON.stringify(schemas),
     wordCount,
-    model:       "gemini-2.5-pro",
+    model:       GEMINI_PRO_MODEL,
     costUsd,
     inputTokens,
     outputTokens,

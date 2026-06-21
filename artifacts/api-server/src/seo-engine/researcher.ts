@@ -1,12 +1,16 @@
 /**
  * SEO Research Engine — Step 1 of 3-step pipeline
  * Fetches community discussions from edtech Reddit communities,
- * then synthesizes insights with Gemini 2.5 Pro (free tier: 50 req/24hr).
+ * then synthesizes insights with Gemini 2.5 Flash (has a real free tier).
  */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../lib/logger";
 
-export const GEMINI_PRO_MODEL = "gemini-2.5-pro";
+// Model used for ALL SEO-engine Gemini calls (research, topic selection,
+// outlining, content + cluster generation). Defaults to Flash because Gemini
+// 2.5 Pro has no free tier (free quota = 0). Override with SEO_GEMINI_MODEL to
+// use a paid model such as gemini-2.5-pro once billing is enabled.
+export const GEMINI_PRO_MODEL = process.env.SEO_GEMINI_MODEL ?? "gemini-2.5-flash";
 
 // Subreddits with strong edtech/academic traffic
 const REDDIT_SUBS = [

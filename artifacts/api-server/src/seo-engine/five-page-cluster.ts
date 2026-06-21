@@ -383,11 +383,11 @@ export async function generateClusterPage(
   });
 
   const wordCount = html.split(/\s+/).filter(Boolean).length;
-  const costUsd   = computeCost("gemini-2.5-pro", inputTokens, outputTokens);
+  const costUsd   = computeCost(GEMINI_PRO_MODEL, inputTokens, outputTokens);
 
   await logLLMCost({
     taskType:  `seo-cluster-${outline.pageType}`,
-    model:     "gemini-2.5-pro",
+    model:     GEMINI_PRO_MODEL,
     inputTokens,
     outputTokens,
     costUsd,
@@ -464,7 +464,7 @@ export async function saveClusterPage(
       validation.hasFAQ,
       validation.hasAIDisclosure,
       validation.integrityCheck,
-      "gemini-2.5-pro",
+      GEMINI_PRO_MODEL,
       page.costUsd,
       autoPublish ? "published" : "review",
       autoPublish,
