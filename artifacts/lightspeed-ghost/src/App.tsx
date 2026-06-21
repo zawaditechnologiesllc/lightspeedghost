@@ -208,7 +208,10 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
 
   const check = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/status`, { credentials: "include" });
+      // No credentials: this is a public probe, and an anonymous request lets
+      // the browser reuse the <link rel="preconnect"> connection to the API
+      // origin (a credentialed request would open a separate socket).
+      const res = await fetch(`${API_BASE}/status`);
       if (!res.ok) { setMaintenance(false); return; }
       const data = await res.json() as { maintenance?: boolean };
       setMaintenance(Boolean(data.maintenance));

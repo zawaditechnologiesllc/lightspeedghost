@@ -1,312 +1,598 @@
-# LightspeedGhost — 6-Month Manual SEO Content Plan (Jul–Dec 2026)
+# LightspeedGhost — Manual SEO Playbook & 12-Month Content Plan
 
-This is your operating manual for posting SEO pages **by hand** through the
-**Write** tab in the SEO Engine admin (`/admin` → SEO → **✍️ Write**). You do the
-keyword research; you write and publish the page. No AI generation, no monthly
-budget spent, full control over every word.
+A complete, do-it-yourself system for ranking, getting read by AI engines, and —
+the part that actually matters — **turning that traffic into signups and paid
+subscriptions**. You do the keyword research and write; you publish by hand
+through **SEO Engine → ✍️ Write**. No AI generation, no budget burned, full
+control of every word. Every page is served **server-rendered** at
+`https://lightspeedghost.com/seo/<slug>`, so Google, Bing, ChatGPT Search,
+Perplexity, and Google AI Overviews can all read it.
 
-Every page you publish here is served **server-rendered** at
-`https://lightspeedghost.com/seo/<slug>` — which means Google, Bing, and the AI
-answer engines (ChatGPT Search, Perplexity, Google AI Overviews, Claude) can read
-the full content without running JavaScript. That is what actually makes your
-site "readable by LLMs" (see the last section).
-
----
-
-## 0. The golden rule: quality over volume
-
-Be honest with yourself about this, because it decides whether the whole plan
-works or backfires:
-
-> **Google actively penalises "scaled content abuse."** Posting large numbers of
-> thin, near-identical pages every day is the single fastest way to get the whole
-> domain suppressed (this is exactly what the March 2024 core update targeted).
-
-So the cadence below is built around **clusters of genuinely useful pages**, not
-a daily page-count quota. The target is:
-
-- **Ceiling: 1 page/day** (≈ 20–22/month). Never feel you *must* hit it.
-- **Sustainable sweet spot: 3–5 strong pages/week**, grouped into a weekly
-  **pillar + cluster**.
-- **6-month total: ~100–120 pages** — substantial, and all human-checked.
-
-One excellent 1,200-word page that answers a real question beats five 400-word
-pages every single time.
-
-### What "a strong page" means (your checklist — the Write tab shows it live)
-- **800+ words** (1,500+ for a pillar page).
-- A real **H1** that matches the search query, and `##` sub-sections.
-- **A FAQ section** (3–6 questions people actually ask) — this wins AI Overviews
-  and "People also ask" slots, and the engine adds FAQ structured data.
-- **8+ concrete data points** (numbers, comparisons, steps, examples).
-- **One clear call-to-action** to the relevant tool (`/write`, `/stem`, etc.).
-- Written for a **student solving a problem**, not for a search engine.
+> **How to read this doc:** Sections 1–3 are the strategy (goals, research,
+> architecture). Section 4 is the month-by-month calendar. Section 5 is
+> copy-paste templates. Sections 6–9 are conversion, workflow, and tracking.
+> Start with Section 9 ("First 30 days") if you want to begin today.
 
 ---
 
-## 1. The weekly rhythm (use this every week)
+## 1. The goal: traffic → signups → paid (the funnel)
 
-Think in **clusters of 5**: one **pillar** page that owns a broad topic, plus
-**3–4 supporting** pages that each target one specific long-tail query and link
-back up to the pillar. This is the structure Google rewards and the structure the
-existing AI pipeline already uses — you're just doing it by hand.
+SEO is not the goal. **Paid subscriptions are the goal.** Traffic is just the top
+of a funnel, and every page you publish has to move a reader down it:
 
-| Day | What to post | Length | Page type |
-|-----|--------------|--------|-----------|
-| **Mon** | **Pillar** for the week's theme | 1,500–2,000 w | `tool` / `service` / `subject` |
-| **Tue** | Supporting: a "how-to" angle | 900–1,200 w | `how-to` |
-| **Wed** | Supporting: a comparison angle | 900–1,200 w | `comparison` |
-| **Thu** | Supporting: a use-case / audience angle | 900–1,200 w | `use-case` / `academic-level` |
-| **Fri** | Supporting: a problem→solution angle | 800–1,000 w | `problem-solution` |
-| Sat/Sun | Rest, or buffer to finish a page | — | — |
-
-**Every supporting page links to the pillar** (and the pillar links to each
-supporting page). In Markdown that's just `[anchor text](/seo/pillar-slug)`.
-
-> If 5/week is too much, drop to **3/week (Mon/Wed/Fri)** and run each theme over
-> two weeks. Consistency beats intensity.
-
----
-
-## 2. The 6-month calendar (aligned to the academic year)
-
-The calendar below tracks the Northern-Hemisphere academic year (your biggest
-market) plus key Southern-Hemisphere moments. Each month has a **theme**, the
-**tools to push**, and **ready-to-write cluster ideas**.
-
-### JULY 2026 — Dissertation & summer-session season
-Grad students write theses over the summer; summer-school students need fast
-help; Southern Hemisphere hits mid-year exams.
-- **Push:** AI Paper Writer (long-form), STEM Solver, AI Refinement.
-- **Pillar:** *AI Dissertation & Thesis Writing Assistant* (`service`)
-- **Cluster:**
-  - How to structure a dissertation chapter by chapter (`how-to`)
-  - Literature review writing with AI assistance (`paper-type`)
-  - Methodology section: qualitative vs quantitative (`comparison`)
-  - Summer-school essay help for retake students (`use-case`)
-- **Seed keywords:** `ai dissertation help`, `thesis writing assistant`,
-  `literature review generator`, `how to write a methodology section`,
-  `summer school essay help`.
-
-### AUGUST 2026 — Back-to-school & college applications
-US Common App opens **Aug 1**. Application essays, syllabus prep, freshman intake.
-- **Push:** AI Paper Writer (admissions/personal statements), Outline tool.
-- **Pillar:** *College Application Essay Assistant* (`service`)
-- **Cluster:**
-  - How to write a personal statement that stands out (`how-to`)
-  - Common App essay prompts, broken down (`paper-type`)
-  - Scholarship essay writing help (`use-case`)
-  - Personal statement vs statement of purpose (`comparison`)
-- **Seed keywords:** `college application essay help`, `personal statement writer`,
-  `common app essay prompts 2026`, `scholarship essay help`,
-  `how to start a college essay`.
-
-### SEPTEMBER 2026 — Semester start (PEAK TRAFFIC)
-The single highest-intent month. New courses, first essays, citation panic.
-Front-load your best work here.
-- **Push:** AI Paper Writer, Plagiarism Checker, citation guides.
-- **Pillar:** *AI Essay Writer for College Students* (`tool`)
-- **Cluster:**
-  - How to write a 5-paragraph essay (`how-to`)
-  - APA vs MLA vs Chicago citation guide (`citation-guide`)
-  - Argumentative essay structure (`paper-type`)
-  - Plagiarism checker for students (`tool`)
-  - Essay help for first-year / freshman students (`academic-level`)
-- **Seed keywords:** `ai essay writer`, `apa citation guide`, `mla format essay`,
-  `how to avoid plagiarism`, `argumentative essay examples`,
-  `essay writing tool for students`.
-
-### OCTOBER 2026 — Midterms & STEM crunch
-Midterm exams, lab reports, problem sets. STEM intent spikes.
-- **Push:** STEM Solver, AI Paper Writer (lab reports), Study tools.
-- **Pillar:** *AI STEM Problem Solver — Math, Physics, Chemistry* (`tool`)
-- **Cluster:**
-  - How to write a lab report (`how-to` / `paper-type`)
-  - Step-by-step calculus problem solver (`subject`)
-  - Physics homework help with worked steps (`subject`)
-  - Chemistry equation balancer & explainer (`method-specific`)
-  - Statistics homework: hypothesis testing explained (`subject`)
-- **Seed keywords:** `physics problem solver`, `calculus solver with steps`,
-  `how to write a lab report`, `chemistry homework help`,
-  `statistics homework solver`, `engineering problem solver`.
-
-### NOVEMBER 2026 — Term papers, finals ramp & NaNoWriMo
-Term-paper deadlines, finals prep begins, and National Novel Writing Month opens
-an ebook/creative angle.
-- **Push:** AI Paper Writer (research papers), AI Refinement, Ebook creator.
-- **Pillar:** *AI Research Paper Writer* (`service`)
-- **Cluster:**
-  - How to write a research paper outline (`how-to`)
-  - Annotated bibliography generator (`paper-type`)
-  - Make AI writing sound human / natural (`tool` — AI Refinement)
-  - Write and self-publish an ebook (`ebook-type`)
-  - Publish a book on Amazon KDP (`ebook-platform`)
-- **Seed keywords:** `research paper writer`, `annotated bibliography example`,
-  `how to humanize ai text`, `make ai writing undetectable to teachers`
-  *(note: the system auto-rewrites risky phrasing — keep it on the "writing
-  quality" side)*, `how to write an ebook`, `self-publish on amazon kdp`.
-
-### DECEMBER 2026 — Finals, end-of-term papers & New-Year planning
-Finals week, last papers, winter-break projects, January application deadlines.
-- **Push:** AI Paper Writer, Study/Revision tools, STEM Solver.
-- **Pillar:** *Final Exam Revision & Study Assistant* (`service`)
-- **Cluster:**
-  - How to revise for final exams (study schedule) (`how-to`)
-  - End-of-term essay checklist (`problem-solution`)
-  - Last-minute term paper help (`use-case`)
-  - January university application deadline guide (`how-to`)
-  - New-year study-routine planner (`use-case`)
-- **Seed keywords:** `final exam revision tips`, `how to study for finals`,
-  `last minute essay help`, `term paper help`, `study planner template`,
-  `january application deadlines`.
-
----
-
-## 3. Keyword clusters by tool (your research starting points)
-
-Use these as seed lists. For each, check **search intent** (informational vs
-commercial) and **difficulty** in your tool of choice (Google Search Console,
-Ahrefs, Semrush, or even Google autocomplete + "People also ask"). Target the
-long-tail variants — they convert and rank far more easily than head terms.
-
-**AI Paper Writer (`/write`)** — `paper-type`, `service`, `academic-level`
-`essay writer`, `research paper writer`, `term paper help`, `thesis assistant`,
-`lab report writer`, `case study writer`, `book report generator`,
-`reflective essay help`, `compare and contrast essay`, `narrative essay help`.
-
-**STEM Solver (`/stem`)** — `subject`, `method-specific`, `problem-solution`
-`math problem solver`, `physics solver with steps`, `chemistry homework help`,
-`statistics solver`, `calculus help`, `algebra solver`, `engineering statics`,
-`accounting problem solver`, `economics homework help`, `actuarial exam help`.
-
-**AI Refinement / Humanizer (`/humanizer`)** — `tool`, `how-to`
-`humanize ai text`, `ai text refiner`, `improve essay flow`,
-`make writing sound natural`, `paraphrasing tool`, `reword my essay`,
-`ai writing improver`.
-
-**Plagiarism Checker (`/plagiarism`)** — `tool`, `how-to`, `comparison`
-`plagiarism checker for students`, `free plagiarism check`,
-`how to check for plagiarism`, `plagiarism checker vs turnitin`,
-`citation checker`, `originality report`.
-
-**Financial / Statistical Analysis** — `financial-analysis`
-`financial statement analysis tool`, `ratio analysis explained`,
-`interpret a balance sheet`, `regression analysis help`,
-`spss alternative for students`, `data analysis for dissertation`.
-
-**Ebook Creator** — `ebook-type`, `ebook-platform`
-`how to write an ebook`, `ebook outline generator`,
-`self-publish on amazon kdp`, `publish on apple books`, `ebook formatting`.
-
-**Software-specific & comparisons** (high-converting) — `software-specific`, `comparison`
-`lightspeedghost vs chatgpt`, `lightspeedghost vs jenni ai`,
-`best ai essay writer 2026`, `grammarly alternative for students`,
-`quillbot alternative`, `chatgpt vs claude for essays`.
-
----
-
-## 4. How to post a page (the 7-step loop)
-
-1. **Pick one keyword** from a cluster above. Confirm real search intent
-   (Google it — what do the top results look like? Match that format).
-2. **Outline** in `##` sections that cover the question fully.
-3. Open **SEO Engine → ✍️ Write**.
-4. Fill **Title** (50–60 chars, include the keyword), **Slug** (auto-fills),
-   **Meta description** (140–160 chars, include the keyword + a benefit),
-   **Page type**, **Keywords**.
-5. **Write the body in Markdown** (`#` H1 first, `##` sections, a
-   `## Frequently asked questions` block). Watch the live **SEO checklist** turn
-   green and use the **Live preview** to see the real page.
-6. **Save as draft** to come back later, or **Publish now** to go live at
-   `/seo/<slug>`.
-7. After publishing a batch, go to **Sitemap** tab → **Ping search engines**, and
-   submit the URL in **Google Search Console** for faster indexing.
-
-> **Editing later:** the **Pages** tab lists everything; you can edit, unpublish,
-> or archive any page (manual or AI) from there.
-
-### Markdown quick-reference
-```markdown
-# Page Title (this becomes the H1)
-
-Opening paragraph that answers the query in the first 2 sentences.
-
-## A clear section heading
-
-- bullet point
-- another point
-
-1. step one
-2. step two
-
-| Feature | Us | Them |
-|---------|----|----- |
-| Price   | $  | $$   |
-
-> A callout / quote.
-
-## Frequently asked questions
-
-**Is this allowed by my university?**
-Yes — LightspeedGhost is a writing-support tool, like a tutor or Grammarly…
+```
+   Organic search / AI answer
+            │  (impressions → clicks)
+            ▼
+   /seo/<slug> content page            ← you publish these
+            │  (read → trust → click a CTA)
+            ▼
+   Tool page: /write /stem /humanizer …  ← the "money" pages
+            │  (try it → hit a limit)
+            ▼
+   Signup (free)  →  Paid plan ($9.99–$29.99/mo)
 ```
 
+### Conversion math (set your own numbers, then work backwards)
+
+Plug your real targets in; these are realistic education-SaaS benchmarks to start:
+
+| Funnel step | Benchmark | Why |
+|-------------|-----------|-----|
+| Click-through from search (CTR) | 2–5% of impressions | depends on rank + title |
+| Page → signup (free account) | **1–3%** of visitors | strong CTA + free tool |
+| Signup → paid | **4–8%** | hitting the free-tier limits |
+| Blended ARPU | **~$15/mo** | mix of $9.99 / $19.99 / $29.99 |
+
+**Worked example — what "good" looks like by month 12:**
+
+| | Monthly organic sessions | Signups (2%) | New paid (5% of signups) | Added MRR (~$15) |
+|---|---|---|---|---|
+| Target | 30,000 | 600 | 30 | ~$450/mo **new** |
+
+Thirty new paid users *every month* from content compounds fast — and unlike
+ads, it keeps paying after you stop. The ramp to get there:
+
+| Phase | Months | Pages live (cumulative) | Realistic sessions/mo | Focus |
+|-------|--------|------------------------|----------------------|-------|
+| **Foundation** | 1–3 | 60–90 | 200 → 2,000 | publish, get indexed, internal links |
+| **Traction** | 4–6 | 120–160 | 2,000 → 10,000 | double down on what ranks |
+| **Growth** | 7–12 | 200–280 | 10,000 → 30,000+ | scale winners, refresh, convert |
+
+> SEO has a **3–6 month lag**. Months 1–3 will look flat in traffic but are
+> building the asset. Do not quit in month 2 — that is the single most common
+> failure.
+
+### Every page gets a job (funnel stage)
+
+Tag each page you write with one stage. It decides the CTA and the keyword:
+
+- **TOFU (top / awareness)** — "how to write a lab report", "apa vs mla". High
+  volume, low intent. Job: capture the search, build trust, soft-CTA to a free tool.
+- **MOFU (middle / consideration)** — "best ai essay writer", "quillbot
+  alternative". Job: position LightspeedGhost, hard-CTA to the tool.
+- **BOFU (bottom / decision)** — "lightspeedghost pricing", "lightspeedghost vs
+  chatgpt". Lower volume, highest intent. Job: convert — pricing, proof, signup.
+
+A healthy plan is roughly **60% TOFU, 30% MOFU, 10% BOFU.** TOFU brings the
+volume; MOFU/BOFU bring the money.
+
 ---
 
-## 5. Compliance guardrails (already built in — don't fight them)
+## 2. Keyword research — methodology + researched seed banks
 
-The backend automatically **sanitises** academic-dishonesty phrasing on save
-(e.g. "bypass Turnitin", "do my homework", "undetectable") and rewrites it toward
-writing-quality language. This protects the domain from being flagged as a
-contract-cheating site, which would tank rankings. So:
+### 2.1 How to research a keyword (repeat for every page)
 
-- **Frame everything as writing *support / assistance / quality*,** not "cheating"
-  or "getting away with it."
-- Every served page already carries the **EU AI Act disclosure** meta + footer and
-  WCAG-compliant markup — you don't need to add those yourself.
-- Keep a **clear CTA** to the matching tool; pages that only chase keywords with no
-  user value are the ones that get demoted.
+1. **Start from a seed** (Section 2.3 gives you hundreds). e.g. `lab report writer`.
+2. **Expand it** — type it into Google and harvest:
+   - **Autocomplete** (the dropdown) — real queries people type.
+   - **"People also ask"** — each question is a future H2 or FAQ.
+   - **"Related searches"** at the bottom of the results page.
+   - **Google Search Console** (once you have traffic) → Performance → Queries:
+     these are terms you *already* rank for — the fastest wins.
+3. **Read the intent** — Google the term and look at page 1. If it's all
+   tutorials, write a tutorial. If it's tool/landing pages, write a tool page. If
+   it's comparison posts, write a comparison. **Match the format that already ranks.**
+4. **Judge difficulty** (no paid tool needed):
+   - Page 1 is big brands (Grammarly, Scribbr, Quillbot) only → **hard**, skip for now.
+   - Page 1 has forums, weak blogs, thin pages → **easy**, target it.
+   - Long, specific phrases (4+ words) → almost always easier and convert better.
+5. **Pick ONE primary keyword per page** + 2–4 close variants for the H2s/FAQ.
+
+### 2.2 Intent → page type → funnel stage (the mapping)
+
+| Search looks like | Use page type | Funnel | Primary CTA |
+|-------------------|--------------|--------|-------------|
+| "how to / guide / format / examples" | `how-to`, `citation-guide` | TOFU | "Try the free tool" |
+| "tool / generator / writer / solver" | `tool`, `service` | MOFU | "Start free" |
+| "best / top / alternatives" | `comparison`, `use-case` | MOFU | "See why students pick us" |
+| "X vs Y" | `comparison` | BOFU | "Compare plans / Start free" |
+| "for [subject/level]" | `subject`, `academic-level` | TOFU/MOFU | tool CTA |
+| "price / review / is X legit" | `problem-solution` | BOFU | pricing + proof |
+
+### 2.3 Researched seed banks (by tool)
+
+Volumes are **monthly-search estimates to verify in your own tool** — directional,
+not gospel. `KD` = rough difficulty (Low/Med/High). Prioritise **Low-KD, long-tail,
+MOFU/BOFU** first; they rank fastest and convert best.
+
+**AI Paper Writer — `/write`** (page types: `tool`, `paper-type`, `academic-level`)
+
+| Keyword | Est. vol | Intent | KD | Page type | Stage |
+|---|---|---|---|---|---|
+| ai essay writer | 40k | tool | High | tool | MOFU |
+| research paper writer | 8k | tool | Med | service | MOFU |
+| ai lab report writer | 1k | tool | Low | tool | MOFU |
+| how to write a thesis statement | 18k | how-to | Med | how-to | TOFU |
+| argumentative essay examples | 12k | info | Med | paper-type | TOFU |
+| how to write a literature review | 9k | how-to | Med | how-to | TOFU |
+| case study writing help | 1.5k | tool | Low | paper-type | MOFU |
+| essay writer for college students | 2.5k | tool | Low | academic-level | MOFU |
+| reflective essay help | 900 | tool | Low | paper-type | MOFU |
+
+**LightSpeed Humanizer — `/humanizer`** (`tool`, `how-to`, `comparison`)
+
+| Keyword | Est. vol | Intent | KD | Page type | Stage |
+|---|---|---|---|---|---|
+| ai humanizer | 30k | tool | High | tool | MOFU |
+| humanize ai text | 22k | tool | High | tool | MOFU |
+| how to humanize ai text | 6k | how-to | Med | how-to | TOFU |
+| make ai writing sound human | 3k | how-to | Low | how-to | TOFU |
+| quillbot alternative | 4k | comparison | Med | comparison | BOFU |
+| ai to human text converter free | 5k | tool | Med | tool | MOFU |
+| bypass ai detection *(frame as "reduce AI-detection flags")* | 8k | tool | Med | how-to | MOFU |
+
+> ⚠️ On detector/"bypass" terms: the system auto-rewrites dishonest phrasing on
+> save. Keep the page on the **writing-quality** side ("reduce false AI flags",
+> "sound natural") — that protects your whole domain from being demoted.
+
+**STEM Solver — `/stem`** (`subject`, `method-specific`, `problem-solution`)
+
+| Keyword | Est. vol | Intent | KD | Page type | Stage |
+|---|---|---|---|---|---|
+| math problem solver | 60k | tool | High | tool | MOFU |
+| physics problem solver with steps | 4k | tool | Low | subject | MOFU |
+| chemistry homework help | 9k | tool | Med | subject | MOFU |
+| statistics homework solver | 2k | tool | Low | subject | MOFU |
+| how to solve calculus problems | 3k | how-to | Med | how-to | TOFU |
+| free body diagram solver | 1k | tool | Low | method-specific | MOFU |
+| accounting equation solver | 800 | tool | Low | subject | MOFU |
+
+**Plagiarism / AI Checker — `/plagiarism`** (`tool`, `comparison`, `how-to`)
+
+| Keyword | Est. vol | Intent | KD | Page type | Stage |
+|---|---|---|---|---|---|
+| plagiarism checker for students | 14k | tool | High | tool | MOFU |
+| free plagiarism checker | 90k | tool | High | tool | MOFU |
+| how to check for plagiarism | 8k | how-to | Med | how-to | TOFU |
+| ai content detector | 33k | tool | High | tool | MOFU |
+| turnitin alternative for students | 1.2k | comparison | Low | comparison | BOFU |
+
+**Ebook Writer — `/ebooks`** (`ebook-type`, `ebook-platform`, `how-to`)
+
+| Keyword | Est. vol | Intent | KD | Page type | Stage |
+|---|---|---|---|---|---|
+| how to write an ebook | 12k | how-to | Med | how-to | TOFU |
+| how to self publish on amazon kdp | 9k | how-to | Med | ebook-platform | TOFU |
+| ai ebook writer | 6k | tool | Med | tool | MOFU |
+| ebook outline generator | 1k | tool | Low | ebook-type | MOFU |
+| best ai for writing books | 5k | comparison | Med | comparison | MOFU |
+
+**Comparison / brand (highest-converting BOFU)** (`comparison`, `problem-solution`)
+
+| Keyword | Est. vol | Intent | KD | Page type | Stage |
+|---|---|---|---|---|---|
+| lightspeedghost vs chatgpt | new | comparison | Low | comparison | BOFU |
+| lightspeedghost vs jenni ai | new | comparison | Low | comparison | BOFU |
+| best ai essay writer 2027 | 6k | listicle | Med | comparison | MOFU |
+| grammarly alternative for students | 3k | comparison | Med | comparison | BOFU |
+| is using ai for essays allowed | 2k | info | Low | problem-solution | BOFU |
 
 ---
 
-## 6. "Can LLMs read my site?" — what's really going on (re: Brave)
+## 3. Content architecture — pillars, clusters, page types
 
-Quick, honest clarification: **Brave isn't the mechanism, and no tool "browses
-your site so LLMs can read it" on a schedule.** Here's what actually makes you
-visible to AI answer engines, and where you already stand:
+### The pillar + cluster model (do this every week)
 
-| Mechanism | Status on your site |
-|-----------|---------------------|
-| **Server-rendered HTML** (content visible without running JS) | ✅ Every `/seo/<slug>` page is fully server-rendered. The homepage gets the same treatment via the new build-time pre-render (pending your preview test). |
-| **robots.txt allows the *answer* bots** | ✅ Googlebot, Bingbot, **OAI-SearchBot** (ChatGPT Search), **PerplexityBot**, **Claude-User**, Applebot are all **allowed**. Only *training-only* scrapers (GPTBot, ClaudeBot, CCBot, Google-Extended, Bytespider) are blocked — by design, so you get cited without donating your content to model training. |
-| **sitemap.xml** lists every published page | ✅ Auto-generated, includes all your `/seo/` pages; ping search engines from the Sitemap tab. |
-| **Structured data (schema.org)** | ✅ Each page emits Article/FAQ/Breadcrumb/Organization JSON-LD — this is what powers rich results and AI citations. |
-| **llms.txt / llms-full.txt** | ✅ Present at the site root as an AI-readable index. |
-| **Quality, indexable content** | ⬅️ **This is your job** — that's what this whole plan is for. |
+- **1 Pillar page** — broad, 1,500–2,500 words, targets the head term, links out
+  to every supporting page (e.g. *AI Essay Writer for College Students*).
+- **3–4 Cluster pages** — 800–1,200 words each, one long-tail angle each, every
+  one links **back up** to the pillar.
 
-**How AI engines actually find you:** ChatGPT Search and Perplexity lean heavily
-on the **Bing and Google indexes** plus their own allowed crawlers. So the highest-
-leverage actions are: (1) keep publishing genuinely useful, server-rendered pages,
-(2) get them indexed in Google/Bing (Search Console + sitemap ping), and (3) earn
-the FAQ/structured-data rich slots. Do that and you'll show up in AI answers — no
-Brave required.
+Google rewards this "topical authority" structure, and it's the same shape the
+internal AI engine already uses — you're just doing it deliberately by hand.
 
-> **One optional lever:** if you decide you *want* your content used for model
-> training too (not just citations), you can open up `GPTBot` / `ClaudeBot` in the
-> dynamic robots policy. The current setup deliberately keeps them blocked. Tell me
-> if you'd like that changed.
+### The 15 page types and when to reach for each
+
+`tool` / `service` → a tool landing page (MOFU money page) ·
+`how-to` → tutorials (TOFU volume) ·
+`comparison` → "X vs Y" / alternatives (BOFU) ·
+`paper-type` → essay/report/thesis specific ·
+`subject` → maths/chemistry/etc. ·
+`academic-level` → "for college / high school / grad students" ·
+`use-case` → "for nursing students", "for ESL writers" ·
+`citation-guide` → APA/MLA/Chicago ·
+`method-specific` → a technique (e.g. free-body diagrams) ·
+`software-specific` → "alternative to X" ·
+`problem-solution` → "is X allowed / X not working" ·
+`ebook-type` / `ebook-platform` → ebook + KDP/Apple Books.
+
+### Internal linking rules (this is where most people leave money on the table)
+
+1. Every cluster page links **up** to its pillar (keyword-rich anchor).
+2. Every page links to **at least one money page** (`/write`, `/stem`, …) in-context.
+3. Pillars link **down** to each cluster page.
+4. New page → add 1–2 links to it from older related pages (spreads ranking power).
+5. Link to your **pricing** page from BOFU pages.
 
 ---
 
-## 7. Quick-start: your first two weeks
+## 4. The 12-month editorial calendar (January → December)
 
-- **Week 1 (this week):** Build the September pillar early — *AI Essay Writer for
-  College Students*. Then add the APA/MLA citation guide, a "how to write a
-  5-paragraph essay" how-to, and a "plagiarism checker for students" page.
-- **Week 2:** Start the STEM cluster — *AI STEM Problem Solver* pillar + a
-  "physics problem solver with steps" and a "how to write a lab report" page.
-- Publish, ping the sitemap, submit each URL in Search Console, and watch
-  impressions in the **Dashboard** tab over the following 2–4 weeks.
+This is an **annual, repeatable** cycle aligned to the (Northern-Hemisphere)
+academic year — your largest market. Start at the current month now; the calendar
+loops every year, so each January you refresh and re-run it. Each month: a
+**theme**, the **pillar**, a **cluster**, the **conversion focus**, and the
+**cadence**.
 
-Consistency for six months is what wins. Pick the keyword, write the honest
-answer, publish, repeat.
+**Default cadence:** 1 pillar + 3–4 cluster pages per week (~16–20 pages/month).
+Drop to 3 pages/week (Mon/Wed/Fri) if that's more sustainable — **consistency beats
+volume, and thin mass-produced pages get the whole domain demoted.**
+
+---
+
+### JANUARY — New term, new-year intent, application results
+Spring semester begins; "new year, better grades" searches spike; US early-decision
+results drive transfer/essay activity.
+- **Pillar:** *AI Essay Writer for the New Semester* (`tool`, MOFU)
+- **Cluster:** how to start an essay (`how-to`) · spring-semester study plan
+  (`use-case`) · how to write a 5-paragraph essay (`how-to`) · scholarship essay
+  help (`use-case`)
+- **Keywords:** `ai essay writer`, `how to start an essay`, `scholarship essay help`,
+  `study plan template`
+- **Conversion focus:** push the free paper-writer trial; CTA "Start your first
+  essay free."
+
+### FEBRUARY — First essays & midterm build-up
+First major assignments land; citation panic begins.
+- **Pillar:** *Citation Generator & Guide (APA, MLA, Chicago)* (`citation-guide`, TOFU)
+- **Cluster:** apa format guide (`citation-guide`) · mla works cited (`citation-guide`)
+  · how to avoid plagiarism (`how-to`) · annotated bibliography example (`paper-type`)
+- **Keywords:** `apa citation guide`, `mla format`, `how to avoid plagiarism`,
+  `annotated bibliography`
+- **Conversion:** link citation guides → free plagiarism checker → paper writer.
+
+### MARCH — Research papers & spring break catch-up
+Research-paper season; spring break = binge catch-up.
+- **Pillar:** *AI Research Paper Writer with Real Citations* (`service`, MOFU)
+- **Cluster:** how to write a research paper (`how-to`) · literature review guide
+  (`how-to`) · how to write a methodology (`how-to`) · research question examples
+  (`paper-type`)
+- **Keywords:** `research paper writer`, `how to write a research paper`,
+  `literature review`, `methodology section`
+- **Conversion:** emphasise the 25+ databases / real citations differentiator.
+
+### APRIL — Finals approach & STEM crunch
+Problem sets, lab reports, exam revision begin.
+- **Pillar:** *AI STEM Problem Solver (Math, Physics, Chemistry)* (`tool`, MOFU)
+- **Cluster:** physics solver with steps (`subject`) · how to write a lab report
+  (`paper-type`) · chemistry homework help (`subject`) · statistics help (`subject`)
+- **Keywords:** `physics problem solver`, `lab report`, `chemistry homework help`,
+  `statistics solver`
+- **Conversion:** free STEM queries; CTA "Solve your first problem free."
+
+### MAY — Finals & AP exams (peak academic stress)
+Highest assignment + revision intent of spring. Front-load quality.
+- **Pillar:** *Final Exam Revision & Study Assistant* (`service`, MOFU)
+- **Cluster:** how to study for finals (`how-to`) · last-minute essay help
+  (`use-case`) · how to revise effectively (`how-to`) · paper revision tool
+  (`tool`)
+- **Keywords:** `how to study for finals`, `last minute essay help`,
+  `revise for exams`, `paper revision`
+- **Conversion:** Revision tool + Study Assistant; bundle CTA to Student Pro.
+
+### JUNE — Summer school, dissertations, ebook side-projects
+Grad students write theses; creators start ebooks over summer.
+- **Pillar:** *AI Dissertation & Thesis Writing Assistant* (`service`, MOFU)
+- **Cluster:** how to structure a dissertation (`how-to`) · how to write an ebook
+  (`how-to`) · summer school essay help (`use-case`) · self-publish on KDP
+  (`ebook-platform`)
+- **Keywords:** `dissertation help`, `how to write an ebook`, `self publish amazon kdp`,
+  `thesis assistant`
+- **Conversion:** introduce the Ebooks add-on ($29.99) to the creator audience.
+
+### JULY — Thesis season + early back-to-school prep
+- **Pillar:** *AI Ebook Writer for Amazon KDP* (`tool`, MOFU)
+- **Cluster:** ebook outline generator (`ebook-type`) · how to format an ebook
+  (`how-to`) · publish on apple books (`ebook-platform`) · best ai for writing books
+  (`comparison`)
+- **Keywords:** `ai ebook writer`, `ebook outline`, `publish apple books`,
+  `best ai for books`
+- **Conversion:** KDP guide as lead magnet → Ebooks add-on.
+
+### AUGUST — Back-to-school & college applications (Common App opens Aug 1)
+- **Pillar:** *College Application Essay Assistant* (`service`, MOFU)
+- **Cluster:** how to write a personal statement (`how-to`) · common app prompts
+  (`paper-type`) · statement of purpose vs personal statement (`comparison`) ·
+  scholarship essays (`use-case`)
+- **Keywords:** `college application essay help`, `personal statement writer`,
+  `common app essay prompts`, `statement of purpose`
+- **Conversion:** high-intent season — push signups hard; testimonials.
+
+### SEPTEMBER — Semester start (PEAK TRAFFIC MONTH)
+Single highest-intent month of the year. Publish your **best** pillars here.
+- **Pillar:** *The Complete AI Toolkit for College Students* (`tool`, MOFU)
+- **Cluster:** ai essay writer (`tool`) · best ai tools for students 2027
+  (`comparison`) · how to write a college essay (`how-to`) · plagiarism checker for
+  students (`tool`)
+- **Keywords:** `ai tools for students`, `best ai essay writer 2027`,
+  `plagiarism checker for students`, `college essay`
+- **Conversion:** everything points to free signup; run your strongest CTAs.
+
+### OCTOBER — Midterms & STEM peak
+- **Pillar:** *Homework Help for Every Subject* (`service`, MOFU)
+- **Cluster:** calculus solver (`subject`) · how to write a lab report (`paper-type`)
+  · biology homework help (`subject`) · engineering problem solver (`subject`)
+- **Keywords:** `calculus solver`, `lab report writer`, `biology homework help`,
+  `engineering problems`
+- **Conversion:** STEM free queries → Student Pro upgrade at the limit.
+
+### NOVEMBER — Term papers, finals ramp & NaNoWriMo
+- **Pillar:** *Term Paper Writer with Verified Sources* (`service`, MOFU)
+- **Cluster:** how to write a term paper (`how-to`) · how to humanize ai text
+  (`how-to`) · annotated bibliography (`paper-type`) · write a novel with ai
+  (`ebook-type`)
+- **Keywords:** `term paper writer`, `how to humanize ai text`, `write a book with ai`,
+  `annotated bibliography`
+- **Conversion:** Humanizer as the hook (high search), upsell Student Pro.
+
+### DECEMBER — Finals, end-of-term papers, New-Year planning
+- **Pillar:** *Last-Minute Essay & Exam Help* (`service`, MOFU)
+- **Cluster:** how to write an essay fast (`how-to`) · end-of-term checklist
+  (`problem-solution`) · how to study for finals (`how-to`) · new-year study planner
+  (`use-case`)
+- **Keywords:** `write an essay fast`, `study for finals`, `last minute essay`,
+  `study planner`
+- **Conversion:** urgency CTAs ("draft in minutes"); annual-plan promo for January.
+
+---
+
+## 5. Page templates (paste into the ✍️ Write tab)
+
+Each template is **Markdown** — paste it, replace the brackets, watch the Rule-check
+panel go green, Publish. The renderer adds the header, footer, schema, and styling.
+
+### Template A — Tool / service page (MOFU money page)
+
+```markdown
+# [Tool Name]: [Primary Keyword] for [Audience]
+
+[One sentence that answers the search and names the benefit. Put the keyword in
+the first sentence.] LightspeedGhost's [tool] helps [audience] [outcome] in [time].
+
+## What [Tool] does
+- [Benefit 1 — concrete, with a number]
+- [Benefit 2]
+- [Benefit 3]
+
+## How it works (3 steps)
+1. [Step] 2. [Step] 3. [Step]
+
+## Why students choose LightspeedGhost over [alternative]
+| | LightspeedGhost | [Alternative] |
+|---|---|---|
+| [Feature] | ✅ | ❌ |
+| Real citations from 25+ databases | ✅ | ❌ |
+| Price | from $9.99/mo | [x] |
+
+> **Try it free → [Start now](/write)**   ← primary CTA, in-context
+
+## Frequently asked questions
+**Is this allowed by my university?**
+LightspeedGhost is a writing-support tool, like a tutor or Grammarly. Always
+review and make the work your own.
+
+**How much does it cost?**
+Plans start at $9.99/month, with pay-as-you-go from $3.99. [Link to /pricing.]
+
+**[Question from "People also ask"]?**
+[Answer.]
+```
+*CTA: 1 in-body + the FAQ price answer → /pricing. Funnel: MOFU.*
+
+### Template B — How-to / tutorial (TOFU volume)
+
+```markdown
+# How to [Task]: A Step-by-Step Guide ([Year])
+
+[Answer the question in the first 2 sentences — this wins featured snippets and
+AI Overviews.]
+
+## What you'll need
+- [item] · [item]
+
+## Step 1 — [Action]
+[Detail. Add a real example.]
+
+## Step 2 — [Action]
+...
+
+## Common mistakes to avoid
+- [Mistake → fix]
+
+## Do it faster with AI
+You can do every step above manually, or [LightspeedGhost's [tool]](/write) does
+it in [time]. [Soft CTA — helpful, not pushy.]
+
+## Frequently asked questions
+**[PAA question]?** [Answer.]
+**[PAA question]?** [Answer.]
+```
+*CTA: 1 soft mid-article + 1 in FAQ. Funnel: TOFU → tool.*
+
+### Template C — Comparison / "X vs Y" (BOFU — highest converting)
+
+```markdown
+# [LightspeedGhost] vs [Competitor]: Which Is Better for [Audience] in [Year]?
+
+Short answer: [one-line verdict with a hedge]. Here's the full breakdown.
+
+## Quick verdict
+- **Choose LightspeedGhost if** [scenario].
+- **Choose [Competitor] if** [scenario].
+
+## Feature comparison
+| Feature | LightspeedGhost | [Competitor] |
+|---|---|---|
+| Real academic citations | ✅ 25+ databases | [x] |
+| Humanizer included | ✅ | [x] |
+| STEM solver | ✅ | [x] |
+| Price | from $9.99/mo | [x] |
+
+## Where LightspeedGhost wins
+[2–3 honest paragraphs.]
+
+## Where [Competitor] wins
+[Be fair — credibility converts. 1 paragraph.]
+
+> **See plans and start free → [/pricing](/pricing)**
+
+## FAQ
+**Is [Competitor] free?** [Answer.]
+**Can I switch easily?** [Answer.]
+```
+*CTA: → /pricing + free signup. Funnel: BOFU.*
+
+### Template D — Listicle / "best X for Y" (MOFU)
+
+```markdown
+# The [N] Best [Category] for [Audience] in [Year]
+
+[Intro: who this is for + how you ranked them.]
+
+## 1. LightspeedGhost — best for [specific strength]
+[Why #1. Be specific and honest. Link: [/write](/write).]
+
+## 2. [Competitor] — best for [their strength]
+...
+
+## How to choose
+[Decision guidance that favours your strengths.]
+
+## FAQ
+**What's the best free option?** [Answer that routes to your free tier.]
+```
+*Put yourself #1 but keep the list genuinely useful. Funnel: MOFU.*
+
+### Template E — Subject / citation guide (TOFU authority)
+
+```markdown
+# [Subject/Style] Guide for Students: [Primary Keyword]
+
+[Definition + why it matters, in the first paragraph.]
+
+## [Core concept 1]
+## [Core concept 2]
+## Examples
+[Worked examples — this is what students copy and what ranks.]
+
+## Get help with [subject]
+[Soft CTA to /stem or /write.]
+
+## FAQ
+**[PAA]?** [Answer.] **[PAA]?** [Answer.]
+```
+*Funnel: TOFU → builds topical authority + soft tool CTA.*
+
+---
+
+## 6. Conversion optimization — turning readers into paid users
+
+Writing the page is half the job. These mechanics are what make it pay:
+
+1. **The CTA ladder (soft → hard by funnel stage).**
+   - TOFU: one *soft* in-context link ("you can do this faster with [tool]").
+   - MOFU: one *primary* CTA button-style line + a comparison table.
+   - BOFU: pricing link + "Start free" + proof (numbers, testimonials).
+2. **Lead with the free tool, not the paywall.** "Start your first essay free" beats
+   "Subscribe." Let the **free-tier limits** do the selling — that's where the
+   Signup→Paid conversion happens.
+3. **Always link to a money page in-context.** A page with no link to `/write`,
+   `/stem`, `/humanizer`, or `/pricing` is a dead end. Never publish one.
+4. **Match CTA to intent.** A "how to write a lab report" reader wants the STEM/
+   paper tool — link *that*, not a generic "sign up."
+5. **Put one CTA above the fold and one in the FAQ.** Two is plenty; more feels spammy.
+6. **Use the FAQ to handle objections** ("Is it allowed?", "How much?", "Is it
+   detectable?") — these are the last doubts before signup.
+7. **Refresh winners quarterly.** When GSC shows a page ranking #5–15, improve it
+   (more depth, better CTA, fresher data) — that's the cheapest traffic you'll get.
+
+---
+
+## 7. Publishing workflow & weekly cadence
+
+**The weekly rhythm (pillar + cluster):**
+
+| Day | Post | Length | Type |
+|---|---|---|---|
+| Mon | Pillar for the month's theme | 1,500–2,500 w | tool/service |
+| Tue | How-to angle | 900–1,200 w | how-to |
+| Wed | Comparison angle | 900–1,200 w | comparison |
+| Thu | Use-case / audience angle | 900–1,200 w | use-case |
+| Fri | Problem→solution / subject angle | 800–1,000 w | problem-solution |
+
+**The 7-step publishing loop (per page):**
+1. Pick one keyword (Section 2). 2. Confirm intent (Google it). 3. Outline the H2s.
+4. Open **SEO → ✍️ Write**, fill Title (50–60 chars, keyword in it), Slug, Meta
+(140–160 chars), Page type, Keywords. 5. Write in Markdown from the matching
+template; get the **Rule check** green (800+ words, FAQ, no flagged phrasing).
+6. **Publish** → live at `/seo/<slug>`. 7. **Sitemap tab → ping**, then submit the
+URL in **Google Search Console**.
+
+---
+
+## 8. Tracking & KPIs (15-minute monthly review)
+
+Set up once: **Google Search Console** (verify the domain) and **GA4** (or Plausible)
+with a **signup conversion event**. Then each month, check:
+
+| Metric | Where | Target trend |
+|---|---|---|
+| Impressions & clicks | GSC → Performance | up every month |
+| Avg. position of target keywords | GSC → Queries | toward page 1 |
+| Pages in "striking distance" (pos 5–15) | GSC | refresh these first |
+| Organic sessions | GA4 | up (after the 3-mo lag) |
+| Signups from organic | GA4 conversion | the number that matters |
+| Signup→paid rate | your billing data | optimise CTAs if low |
+
+**The one rule:** judge the plan on **signups from organic**, not vanity traffic.
+A page with 200 visits and 6 signups beats one with 2,000 visits and 1.
+
+---
+
+## 9. First 30 days — exact action list
+
+**Week 1 — set up + first cluster (target September-style evergreen demand now):**
+- [ ] Verify the site in Google Search Console; submit `sitemap.xml`.
+- [ ] Add a GA4 signup conversion event.
+- [ ] Publish pillar: *AI Essay Writer for College Students* (Template A).
+- [ ] Publish 3 clusters: APA citation guide (E), how to write a 5-paragraph essay
+  (B), plagiarism checker for students (A). Internal-link them to the pillar.
+- [ ] Sitemap → ping; submit all 4 URLs in GSC.
+
+**Week 2 — STEM cluster:**
+- [ ] Pillar: *AI STEM Problem Solver* (A) + physics solver (A), how to write a lab
+  report (B), chemistry homework help (A). Link to pillar + `/stem`.
+
+**Week 3 — comparison/BOFU (start converting):**
+- [ ] *LightspeedGhost vs ChatGPT for essays* (C) · *best AI tools for students 2027*
+  (D) · *is using AI for essays allowed?* (problem-solution). Link to `/pricing`.
+
+**Week 4 — Humanizer + review:**
+- [ ] *AI Humanizer* (A) + how to humanize AI text (B) + quillbot alternative (C).
+- [ ] Open GSC: note which pages are getting impressions; plan next month around them.
+
+After 30 days you'll have ~15–18 interlinked, converting pages live. Keep the weekly
+rhythm, follow the calendar, and review monthly. **Consistency for 6–12 months is
+what wins** — pick the keyword, write the honest answer, link to the tool, publish,
+repeat.
