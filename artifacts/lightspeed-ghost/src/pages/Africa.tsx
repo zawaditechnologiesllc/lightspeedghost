@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { motion, useInView, AnimatePresence } from "framer-motion";
+import { m, LazyMotion, domAnimation, useInView, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import {
   Zap, ArrowRight, CheckCircle, Star, Menu, X,
@@ -22,7 +22,7 @@ function FadeUp({ children, delay = 0, className = "" }: { children: React.React
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
   return (
-    <motion.div
+    <m.div
       ref={ref}
       className={className}
       initial={{ opacity: 0, y: 28 }}
@@ -30,7 +30,7 @@ function FadeUp({ children, delay = 0, className = "" }: { children: React.React
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -38,7 +38,7 @@ function StaggerGrid({ children, className = "" }: { children: React.ReactNode; 
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   return (
-    <motion.div
+    <m.div
       ref={ref}
       className={className}
       initial="hidden"
@@ -46,7 +46,7 @@ function StaggerGrid({ children, className = "" }: { children: React.ReactNode; 
       variants={{ visible: { transition: { staggerChildren: 0.08 } }, hidden: {} }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -220,6 +220,7 @@ export default function Africa() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
+    <LazyMotion features={domAnimation}>
     <div className="min-h-screen bg-[#04080f] text-white antialiased overflow-x-hidden">
 
       {/* ─── NAV ─── */}
@@ -264,7 +265,7 @@ export default function Africa() {
 
         <AnimatePresence>
           {mobileOpen && (
-            <motion.div
+            <m.div
               className="md:hidden bg-[#04080f]/98 border-t border-white/8 px-4 py-4 space-y-1"
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -289,7 +290,7 @@ export default function Africa() {
                   <span className="block text-center px-4 py-2.5 text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg cursor-pointer transition-colors">Sign Up Free</span>
                 </Link>
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </header>
@@ -304,7 +305,7 @@ export default function Africa() {
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-emerald-900/25 rounded-full blur-[80px]" />
         </div>
 
-        <motion.div
+        <m.div
           className="relative max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 32 }}
           animate={{ opacity: 1, y: 0 }}
@@ -312,7 +313,7 @@ export default function Africa() {
         >
           {/* Badges */}
           <div className="flex flex-wrap items-center justify-center gap-3 mb-6 sm:mb-8">
-            <motion.div
+            <m.div
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -320,8 +321,8 @@ export default function Africa() {
             >
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Built for African students
-            </motion.div>
-            <motion.div
+            </m.div>
+            <m.div
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -329,7 +330,7 @@ export default function Africa() {
             >
               <Zap size={11} className="text-amber-400" />
               M-Pesa · MTN MoMo · Airtel Money accepted
-            </motion.div>
+            </m.div>
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-5 sm:mb-6">
@@ -371,7 +372,7 @@ export default function Africa() {
               <span className="text-white/40">Ronald · Kampala — works on mobile data</span>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </section>
 
       {/* ─── UNIVERSITY STRIP ─── */}
@@ -398,11 +399,11 @@ export default function Africa() {
               { value: "4M+",  label: "Students worldwide", sub: "Active on the platform right now", color: "text-blue-400" },
               { value: "3",    label: "Mobile money networks", sub: "M-Pesa, MTN MoMo, Airtel Money", color: "text-amber-400" },
             ].map(({ value, label, sub, color }) => (
-              <motion.div key={label} variants={cardVariant} className="flex flex-col items-center gap-1">
+              <m.div key={label} variants={cardVariant} className="flex flex-col items-center gap-1">
                 <div className={`text-3xl sm:text-4xl md:text-5xl font-bold ${color}`}>{value}</div>
                 <div className="text-xs sm:text-sm font-semibold text-white/70 mt-1">{label}</div>
                 <div className="text-[10px] sm:text-xs text-white/30 leading-snug max-w-[140px]">{sub}</div>
-              </motion.div>
+              </m.div>
             ))}
           </StaggerGrid>
         </div>
@@ -467,7 +468,7 @@ export default function Africa() {
 
           <StaggerGrid className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {tools.map(({ icon: Icon, name, desc, badge, color }) => (
-              <motion.div key={name} variants={cardVariant}>
+              <m.div key={name} variants={cardVariant}>
                 <Link href="/auth">
                   <div className="group relative p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/18 hover:bg-white/[0.055] transition-all cursor-pointer h-full hover:-translate-y-1 hover:shadow-xl hover:shadow-black/30">
                     {badge && (
@@ -485,7 +486,7 @@ export default function Africa() {
                     </div>
                   </div>
                 </Link>
-              </motion.div>
+              </m.div>
             ))}
           </StaggerGrid>
         </div>
@@ -506,11 +507,11 @@ export default function Africa() {
 
           <StaggerGrid className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {africanAdvantages.map(({ title, desc, color, icon }) => (
-              <motion.div key={title} variants={cardVariant} className={`rounded-xl border p-5 sm:p-6 ${color}`}>
+              <m.div key={title} variants={cardVariant} className={`rounded-xl border p-5 sm:p-6 ${color}`}>
                 <div className="text-2xl mb-3">{icon}</div>
                 <h3 className="font-semibold text-white mb-2">{title}</h3>
                 <p className="text-sm text-white/55 leading-relaxed">{desc}</p>
-              </motion.div>
+              </m.div>
             ))}
           </StaggerGrid>
 
@@ -558,7 +559,7 @@ export default function Africa() {
 
           <StaggerGrid className="grid md:grid-cols-3 gap-5 sm:gap-6">
             {pricingPlans.map(({ name, price, per, desc, features, cta, highlight, badge }) => (
-              <motion.div
+              <m.div
                 key={name}
                 variants={cardVariant}
                 className={`relative rounded-2xl border p-6 sm:p-7 flex flex-col ${highlight ? "border-emerald-500/40 bg-emerald-500/5 shadow-xl shadow-emerald-900/20" : "border-white/8 bg-white/[0.025]"}`}
@@ -587,7 +588,7 @@ export default function Africa() {
                     {cta}
                   </span>
                 </Link>
-              </motion.div>
+              </m.div>
             ))}
           </StaggerGrid>
 
@@ -616,7 +617,7 @@ export default function Africa() {
 
           <StaggerGrid className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {africanTestimonials.map(({ name, role, location, text, stars, flag }) => (
-              <motion.div key={name} variants={cardVariant} className="p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8 flex flex-col gap-4">
+              <m.div key={name} variants={cardVariant} className="p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8 flex flex-col gap-4">
                 <Quote size={16} className="text-emerald-400/50 shrink-0" />
                 <p className="text-sm text-white/65 leading-relaxed flex-1">{text}</p>
                 <div className="flex items-center gap-0.5 mb-1">
@@ -637,7 +638,7 @@ export default function Africa() {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             ))}
           </StaggerGrid>
         </div>
@@ -651,7 +652,7 @@ export default function Africa() {
         </div>
         <div className="relative max-w-2xl mx-auto text-center">
           <FadeUp>
-            <motion.div
+            <m.div
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium mb-6"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -659,7 +660,7 @@ export default function Africa() {
             >
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               200+ African universities · Mobile money accepted
-            </motion.div>
+            </m.div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-5 leading-tight">
               Start today.<br />
               <span className="bg-gradient-to-r from-emerald-400 to-cyan-300 bg-clip-text text-transparent">
@@ -708,5 +709,6 @@ export default function Africa() {
         </div>
       </footer>
     </div>
+    </LazyMotion>
   );
 }

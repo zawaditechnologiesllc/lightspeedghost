@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, useInView, AnimatePresence } from "framer-motion";
+// LazyMotion + `m` ships only the DOM-animation feature set instead of all of
+// framer-motion, cutting ~17 KB of JS off the landing's critical path and
+// reducing the main-thread work (forced reflows) flagged by PageSpeed.
+import { m, LazyMotion, domAnimation, useInView, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -307,13 +310,13 @@ function FAQItem({ q, a }: { q: string; a: string }) {
         className="w-full flex items-center justify-between py-5 text-left gap-4 group"
       >
         <span className="text-white font-medium group-hover:text-blue-300 transition-colors">{q}</span>
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }}>
+        <m.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }}>
           <ChevronDown size={18} className={`${open ? "text-blue-400" : "text-white/60 group-hover:text-blue-400"} shrink-0 transition-colors`} />
-        </motion.div>
+        </m.div>
       </button>
       <AnimatePresence initial={false}>
         {open && (
-          <motion.div
+          <m.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -321,7 +324,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
             style={{ overflow: "hidden" }}
           >
             <p className="pb-5 text-white/60 leading-relaxed text-sm">{a}</p>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
@@ -336,7 +339,7 @@ function FadeUp({ children, delay = 0, className = "" }: { children: React.React
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
   return (
-    <motion.div
+    <m.div
       ref={ref}
       className={className}
       initial={{ opacity: 0, y: 28 }}
@@ -344,7 +347,7 @@ function FadeUp({ children, delay = 0, className = "" }: { children: React.React
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -352,7 +355,7 @@ function StaggerGrid({ children, className = "", id }: { children: React.ReactNo
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   return (
-    <motion.div
+    <m.div
       ref={ref}
       id={id}
       className={className}
@@ -364,7 +367,7 @@ function StaggerGrid({ children, className = "", id }: { children: React.ReactNo
       }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -454,6 +457,7 @@ export default function Landing() {
   ];
 
   return (
+    <LazyMotion features={domAnimation}>
     <div className="min-h-screen bg-[#04080f] text-white antialiased overflow-x-hidden">
 
       {/* ── iOS Install Modal ──────────────────────────────────────────── */}
@@ -548,7 +552,7 @@ export default function Landing() {
         {/* Mobile menu */}
         <AnimatePresence>
           {mobileOpen && (
-            <motion.div
+            <m.div
               className="md:hidden bg-[#04080f]/98 border-t border-white/8 px-4 py-4 space-y-1"
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -578,7 +582,7 @@ export default function Landing() {
                   <span className="block text-center px-4 py-2.5 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg cursor-pointer transition-colors">Get Started</span>
                 </Link>
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </header>
@@ -608,14 +612,14 @@ export default function Landing() {
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-blue-900/30 rounded-full blur-[80px]" />
         </div>
 
-        <motion.div
+        <m.div
           className="relative max-w-4xl mx-auto"
           initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="flex flex-wrap items-center justify-center gap-3 mb-6 sm:mb-8">
-            <motion.div
+            <m.div
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -623,8 +627,8 @@ export default function Landing() {
             >
               <Zap size={11} className="text-blue-400" />
               8 AI tools. One platform. Actually works.
-            </motion.div>
-            <motion.div
+            </m.div>
+            <m.div
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -632,7 +636,7 @@ export default function Landing() {
             >
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               4M+ students worldwide
-            </motion.div>
+            </m.div>
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-5 sm:mb-6">
@@ -719,7 +723,7 @@ export default function Landing() {
 
             </div>
           </div>
-        </motion.div>
+        </m.div>
 
         {/* ── Animated product preview ── */}
         <div className="relative mt-12 sm:mt-20 w-full max-w-5xl mx-auto">
@@ -1087,11 +1091,11 @@ export default function Landing() {
                 border: "border-amber-500/20 bg-amber-500/5",
               },
             ].map(({ value, label, sub, color, border }) => (
-              <motion.div key={label} variants={cardVariant} className={`rounded-xl border p-4 sm:p-5 text-center ${border}`}>
+              <m.div key={label} variants={cardVariant} className={`rounded-xl border p-4 sm:p-5 text-center ${border}`}>
                 <div className={`text-2xl sm:text-3xl font-bold mb-1 ${color}`}>{value}</div>
                 <div className="text-xs sm:text-sm font-semibold text-white mb-1.5">{label}</div>
                 <div className="text-[10px] sm:text-[11px] text-white/58 leading-relaxed">{sub}</div>
-              </motion.div>
+              </m.div>
             ))}
           </StaggerGrid>
         </div>
@@ -1113,7 +1117,7 @@ export default function Landing() {
 
           <StaggerGrid id="features" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {tools.map(({ icon: Icon, name, desc, badge, color, href }) => (
-              <motion.div key={name} variants={cardVariant}>
+              <m.div key={name} variants={cardVariant}>
                 <Link href={href}>
                   <div className="group relative p-5 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/18 hover:bg-white/[0.055] transition-all cursor-pointer h-full hover:-translate-y-1 hover:shadow-xl hover:shadow-black/30">
                     {badge && (
@@ -1131,7 +1135,7 @@ export default function Landing() {
                     </div>
                   </div>
                 </Link>
-              </motion.div>
+              </m.div>
             ))}
           </StaggerGrid>
         </div>
@@ -1643,7 +1647,7 @@ export default function Landing() {
               const per   = showAnnual ? perAnnual   : perMonthly;
               const isInstitution = name === "Institution";
               return (
-                <motion.div key={name} variants={cardVariant} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col hover:-translate-y-1 transition-all duration-300 ${highlight ? "bg-gradient-to-b from-blue-600/15 to-blue-900/10 border-blue-500/40 shadow-2xl shadow-blue-900/30" : "bg-white/[0.02] border-white/8 hover:border-white/14 hover:bg-white/[0.04]"}`}>
+                <m.div key={name} variants={cardVariant} className={`relative p-6 sm:p-7 rounded-2xl border flex flex-col hover:-translate-y-1 transition-all duration-300 ${highlight ? "bg-gradient-to-b from-blue-600/15 to-blue-900/10 border-blue-500/40 shadow-2xl shadow-blue-900/30" : "bg-white/[0.02] border-white/8 hover:border-white/14 hover:bg-white/[0.04]"}`}>
                   {badge && (
                     <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${highlight ? "bg-blue-600 text-white" : "bg-white/10 text-white/55 border border-white/15"}`}>
                       {badge}
@@ -1703,7 +1707,7 @@ export default function Landing() {
                       </span>
                     </Link>
                   )}
-                </motion.div>
+                </m.div>
               );
             })}
           </StaggerGrid>
@@ -2114,14 +2118,14 @@ export default function Landing() {
       {/* ─── EXIT INTENT MODAL ─── */}
       <AnimatePresence>
         {showExitIntent && (
-          <motion.div
+          <m.div
             className="fixed inset-0 z-[400] flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setShowExitIntent(false)}
           >
-            <motion.div
+            <m.div
               className="bg-[#0b1120] border border-white/12 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative"
               initial={{ opacity: 0, scale: 0.92, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -2179,10 +2183,11 @@ export default function Landing() {
                 </span>
               </Link>
               <p className="text-center text-white/50 text-xs mt-3">No credit card required to create an account</p>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
+    </LazyMotion>
   );
 }

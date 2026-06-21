@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { motion, useInView, AnimatePresence } from "framer-motion";
+import { m, LazyMotion, domAnimation, useInView, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import {
   Zap, ArrowRight, CheckCircle, Menu, X,
@@ -22,7 +22,7 @@ function FadeUp({ children, delay = 0, className = "" }: { children: React.React
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
   return (
-    <motion.div
+    <m.div
       ref={ref}
       className={className}
       initial={{ opacity: 0, y: 28 }}
@@ -30,7 +30,7 @@ function FadeUp({ children, delay = 0, className = "" }: { children: React.React
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -38,7 +38,7 @@ function StaggerGrid({ children, className = "" }: { children: React.ReactNode; 
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   return (
-    <motion.div
+    <m.div
       ref={ref}
       className={className}
       initial="hidden"
@@ -46,7 +46,7 @@ function StaggerGrid({ children, className = "" }: { children: React.ReactNode; 
       variants={{ visible: { transition: { staggerChildren: 0.08 } }, hidden: {} }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -186,6 +186,7 @@ export default function Enterprise() {
   const inputClass = "w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.06] transition-all";
 
   return (
+    <LazyMotion features={domAnimation}>
     <div className="min-h-screen bg-[#04080f] text-white antialiased overflow-x-hidden">
 
       {/* ─── NAV ─── */}
@@ -226,7 +227,7 @@ export default function Enterprise() {
 
         <AnimatePresence>
           {mobileOpen && (
-            <motion.div
+            <m.div
               className="md:hidden bg-[#04080f]/98 border-t border-white/8 px-4 py-4 space-y-1"
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -247,7 +248,7 @@ export default function Enterprise() {
                 <a href="#contact" onClick={() => setMobileOpen(false)} className="block text-center px-4 py-2.5 text-sm border border-white/15 text-white rounded-lg hover:bg-white/5 transition-colors">Request a quote</a>
                 <a href="mailto:enterprise@lightspeedghost.com" className="block text-center px-4 py-2.5 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors">Talk to sales</a>
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </header>
@@ -261,14 +262,14 @@ export default function Enterprise() {
           <div className="absolute top-1/3 -right-20 w-[350px] h-[350px] bg-cyan-500/8 rounded-full blur-[100px]" />
         </div>
 
-        <motion.div
+        <m.div
           className="relative max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 32 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="flex flex-wrap items-center justify-center gap-3 mb-6 sm:mb-8">
-            <motion.div
+            <m.div
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -276,8 +277,8 @@ export default function Enterprise() {
             >
               <Building2 size={11} className="text-blue-400" />
               Institutional licensing
-            </motion.div>
-            <motion.div
+            </m.div>
+            <m.div
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -285,7 +286,7 @@ export default function Enterprise() {
             >
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               200+ universities already using LightSpeed Ghost
-            </motion.div>
+            </m.div>
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-5 sm:mb-6">
@@ -324,7 +325,7 @@ export default function Enterprise() {
               <span className="text-white/40">every seat</span>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </section>
 
       {/* ─── SOCIAL PROOF STRIP ─── */}
@@ -357,13 +358,13 @@ export default function Enterprise() {
 
           <StaggerGrid className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {valueProps.map(({ icon: Icon, title, desc, color }) => (
-              <motion.div key={title} variants={cardVariant} className={`rounded-xl border p-5 sm:p-6 ${color}`}>
+              <m.div key={title} variants={cardVariant} className={`rounded-xl border p-5 sm:p-6 ${color}`}>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 border border-white/10 bg-white/5">
                   <Icon size={18} className="text-white/60" />
                 </div>
                 <h3 className="font-semibold text-white mb-2">{title}</h3>
                 <p className="text-sm text-white/55 leading-relaxed">{desc}</p>
-              </motion.div>
+              </m.div>
             ))}
           </StaggerGrid>
         </div>
@@ -384,10 +385,10 @@ export default function Enterprise() {
 
           <StaggerGrid className="grid sm:grid-cols-2 gap-3">
             {toolList.map((tool) => (
-              <motion.div key={tool} variants={cardVariant} className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/8">
+              <m.div key={tool} variants={cardVariant} className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/8">
                 <CheckCircle size={15} className="text-blue-400 shrink-0 mt-0.5" />
                 <span className="text-sm text-white/70">{tool}</span>
-              </motion.div>
+              </m.div>
             ))}
           </StaggerGrid>
         </div>
@@ -408,7 +409,7 @@ export default function Enterprise() {
 
           <StaggerGrid className="grid md:grid-cols-3 gap-5 sm:gap-6">
             {tiers.map(({ name, seats, price, per, annual, desc, features, cta, highlight, badge, color }) => (
-              <motion.div
+              <m.div
                 key={name}
                 variants={cardVariant}
                 className={`relative rounded-2xl border p-6 sm:p-7 flex flex-col ${color} ${highlight ? "bg-blue-500/5 shadow-xl shadow-blue-900/20" : "bg-white/[0.025]"}`}
@@ -437,7 +438,7 @@ export default function Enterprise() {
                 <a href="#contact" className={`block text-center py-2.5 rounded-xl font-semibold text-sm transition-all ${highlight ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20" : "border border-white/15 text-white/70 hover:text-white hover:border-white/30 hover:bg-white/5"}`}>
                   {cta}
                 </a>
-              </motion.div>
+              </m.div>
             ))}
           </StaggerGrid>
 
@@ -475,7 +476,7 @@ export default function Enterprise() {
 
           <FadeUp delay={0.1}>
             {formState === "success" ? (
-              <motion.div
+              <m.div
                 className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-10 text-center"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -492,7 +493,7 @@ export default function Enterprise() {
                   In the meantime, email us directly at{" "}
                   <a href="mailto:enterprise@lightspeedghost.com" className="text-blue-400 hover:underline">enterprise@lightspeedghost.com</a>
                 </p>
-              </motion.div>
+              </m.div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/8 bg-white/[0.025] p-6 sm:p-8">
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -682,5 +683,6 @@ export default function Enterprise() {
         </div>
       </footer>
     </div>
+    </LazyMotion>
   );
 }
