@@ -161,10 +161,14 @@ export async function getSchedulerStatus(): Promise<{
   enabled:      boolean;
   time:         string;
   nextRunAt:    string | null;
+  geminiKeySet: boolean;
+  cronTokenSet: boolean;
   lastRuns:     Array<{ status: string; detail: string; createdAt: string; clusterId: string | null }>;
 }> {
   const { enabled, time } = await getSchedulerSettings();
   const nextRunAt = enabled ? new Date(Date.now() + msUntilNextRun(time)).toISOString() : null;
+  const geminiKeySet = Boolean(process.env.GEMINI_API_KEY);
+  const cronTokenSet = Boolean(process.env.SEO_CRON_TOKEN);
 
   let lastRuns: Array<{ status: string; detail: string; createdAt: string; clusterId: string | null }> = [];
   try {
@@ -179,5 +183,5 @@ export async function getSchedulerStatus(): Promise<{
     }));
   } catch { /* table may not exist yet */ }
 
-  return { enabled, time, nextRunAt, lastRuns };
+  return { enabled, time, nextRunAt, geminiKeySet, cronTokenSet, lastRuns };
 }
