@@ -17,6 +17,26 @@ router.get("/healthz", async (_req: Request, res: Response) => {
   });
 });
 
+// ── GET /site-content — admin-editable hero & footer copy for the landing ─────
+// Public (the landing fetches it on load). Returns only the overrides an admin
+// has set in system_settings; empty strings mean "use the built-in default".
+router.get("/site-content", async (_req: Request, res: Response) => {
+  try {
+    const { rows } = await pool.query<{ key: string; value: string }>(
+      "SELECT key, value FROM system_settings WHERE key IN ('hero_headline','hero_subtext','footer_tagline')",
+    );
+    const m = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+    res.setHeader("Cache-Control", "public, max-age=60");
+    res.json({
+      heroHeadline:  m.hero_headline ?? "",
+      heroSubtext:   m.hero_subtext ?? "",
+      footerTagline: m.footer_tagline ?? "",
+    });
+  } catch {
+    res.json({ heroHeadline: "", heroSubtext: "", footerTagline: "" });
+  }
+});
+
 // ── GET /public-stats — live counters for the landing page ───────────────────
 // Cached for 5 minutes; no auth. Until the cutover date the displayed numbers
 // are marketing baselines + real DB activity + a deterministic intra-week
