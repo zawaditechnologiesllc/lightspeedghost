@@ -1,12 +1,17 @@
-# LightspeedGhost — Manual SEO Playbook & 12-Month Content Plan
+# LightspeedGhost — SEO Content Playbook & 12-Month Plan (the hand-written half)
 
-A complete, do-it-yourself system for ranking, getting read by AI engines, and —
-the part that actually matters — **turning that traffic into signups and paid
-subscriptions**. You do the keyword research and write; you publish by hand
-through **SEO Engine → ✍️ Write**. No AI generation, no budget burned, full
-control of every word. Every page is served **server-rendered** at
-`https://lightspeedghost.com/seo/<slug>`, so Google, Bing, ChatGPT Search,
-Perplexity, and Google AI Overviews can all read it.
+A complete strategy for ranking, getting read by AI engines, and — the part that
+actually matters — **turning that traffic into signups and paid subscriptions**.
+
+> **This is the *manual* half of a two-engine system.** The SEO Engine also has an
+> **automated** side (the AI Pipeline + daily scheduler) that generates long-tail
+> clusters into your Review queue. The two run **side by side** — see
+> **`docs/SEO-SETUP.md`** to turn the automated engine on. This playbook is the
+> strategy for the pages **you write by hand** in **SEO Engine → ✍️ Write** (the
+> high-value pillars and comparisons worth doing yourself). Let the AI engine
+> cover breadth; do the depth here. Every page from either engine is served
+> **server-rendered** at `https://lightspeedghost.com/seo/<slug>`, so Google, Bing,
+> ChatGPT Search, Perplexity, and Google AI Overviews can all read it.
 
 > **How to read this doc:** Sections 1–3 are the strategy (goals, research,
 > architecture). Section 4 is the month-by-month calendar. Section 5 is
