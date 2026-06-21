@@ -9,8 +9,57 @@ import { logger } from "../lib/logger";
 import { renderFullPage, renderRobotsTxt, renderSitemapXml, STATIC_PAGES } from "../seo-engine/html-renderer";
 import { getPageSpec } from "../seo-engine/page-catalog";
 import { getPublishedPage } from "../seo-engine/orchestrator";
+import { triggerNow } from "../seo-engine/scheduler";
 
 const publicRouter = Router();
+
+// ── External cron trigger — GET|POST /api/seo/cron/run ───────────────────────
+// Lives here (in the pre-CORS public router) so UptimeRobot / cron-job.org —
+// which send no Origin header — aren't blocked by the browser CORS allowlist.
+// Token-authenticated; runs the daily AI pipeline without admin credentials.
+// Idempotent per day (skips if a cluster already ran in the last ~20h), responds
+// immediately and generates in the background, and each ping keeps the free-tier
+// server awake. Set SEO_CRON_TOKEN in the backend env to enable it.
+let cronInFlight = false;
+
+async function handleSeoCron(req: Request, res: Response): Promise<void> {
+  const secret = process.env.SEO_CRON_TOKEN;
+  if (!secret) {
+    res.status(503).json({ ok: false, error: "SEO_CRON_TOKEN is not configured on the server" });
+    return;
+  }
+  const provided =
+    (req.query.token as string | undefined) ??
+    (req.headers["x-cron-token"] as string | undefined) ?? "";
+  if (provided !== secret) {
+    res.status(403).json({ ok: false, error: "Invalid or missing cron token" });
+    return;
+  }
+  if (!process.env.GEMINI_API_KEY) {
+    res.status(200).json({ ok: false, skipped: "GEMINI_API_KEY not set — nothing to generate" });
+    return;
+  }
+  if (cronInFlight) {
+    res.status(200).json({ ok: true, skipped: "A generation run is already in progress" });
+    return;
+  }
+
+  res.status(202).json({ ok: true, message: "SEO cron accepted — generating if due (skips if it already ran today)" });
+  cronInFlight = true;
+  setImmediate(async () => {
+    try {
+      const result = await triggerNow();
+      logger.info({ result }, "[seo-cron] Cron trigger complete");
+    } catch (err) {
+      logger.error({ err }, "[seo-cron] Cron trigger failed");
+    } finally {
+      cronInFlight = false;
+    }
+  });
+}
+
+publicRouter.get("/api/seo/cron/run", handleSeoCron);
+publicRouter.post("/api/seo/cron/run", handleSeoCron);
 
 // ── robots.txt — served dynamically ──────────────────────────────────────────
 publicRouter.get("/robots.txt", async (_req: Request, res: Response) => {
