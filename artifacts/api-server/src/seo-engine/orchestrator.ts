@@ -257,14 +257,20 @@ export async function getDashboardSummary() {
     FROM seo_pages
   `);
 
-  const { rows: budget } = await pool.query(`
-    SELECT total_spend_usd, budget_limit_usd, pages_generated, upgraded
-    FROM seo_budget_status
-    WHERE month = to_char(now(), 'YYYY-MM')
-  `);
+  // Budget is queried separately so a budget-table problem can't zero out the
+  // page counts above (which previously made the whole dashboard read 0/0/0/0).
+  let budgetRow: Record<string, unknown> | null = null;
+  try {
+    const { rows: budget } = await pool.query(`
+      SELECT total_spend_usd, budget_limit_usd, pages_generated, upgraded
+      FROM seo_budget_status
+      WHERE month = to_char(now(), 'YYYY-MM')
+    `);
+    budgetRow = budget[0] ?? null;
+  } catch { /* budget unavailable — page counts still return */ }
 
   return {
     pages: counts[0],
-    budget: budget[0] ?? { total_spend_usd: 0, budget_limit_usd: 8, pages_generated: 0, upgraded: false },
+    budget: budgetRow ?? { total_spend_usd: 0, budget_limit_usd: 8, pages_generated: 0, upgraded: false },
   };
 }

@@ -69,10 +69,10 @@ export function renderFullPage(opts: {
       --brand-primary:#1d6ff4;
       --brand-dark:#0d1b35;
       --brand-accent:#38bdf8;
-      --text:#1a202c;
-      --text-muted:#4a5568;
+      --text:#161c26;
+      --text-muted:#3b4658;
       --bg:#fff;
-      --bg-alt:#f7f9fc;
+      --bg-alt:#eef2f8;
       --border:#e2e8f0;
       --radius:10px;
       --max-w:780px;
@@ -110,10 +110,10 @@ export function renderFullPage(opts: {
     tr:nth-child(even) td{background:#fbfcfd}
     blockquote{border-left:4px solid var(--brand-primary);margin:24px 0;padding:16px 20px;background:var(--bg-alt);border-radius:0 var(--radius) var(--radius) 0;font-style:italic;color:var(--text-muted)}
 
-    .seo-cta-block{background:linear-gradient(135deg,var(--brand-primary),#0d4fc7);color:#fff;border-radius:var(--radius);padding:28px 32px;margin:32px 0;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px}
+    .seo-cta-block{background:linear-gradient(135deg,#1559cc,#0a347f);color:#fff;border-radius:var(--radius);padding:28px 32px;margin:32px 0;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px}
     .seo-cta-block__text{flex:1;min-width:220px}
     .seo-cta-block__text h3{color:#fff;margin:0 0 8px;font-size:1.15rem}
-    .seo-cta-block__text p{color:rgba(255,255,255,0.85);margin:0;font-size:0.95rem}
+    .seo-cta-block__text p{color:rgba(255,255,255,0.94);margin:0;font-size:0.95rem}
     .seo-cta-block__btn{background:#fff;color:var(--brand-primary);padding:12px 24px;border-radius:6px;font-weight:700;font-size:0.95rem;white-space:nowrap;display:inline-block;flex-shrink:0}
     .seo-cta-block__btn:hover{background:#f0f4ff;text-decoration:none}
     .seo-cta-block__btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
