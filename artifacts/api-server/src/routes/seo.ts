@@ -128,7 +128,7 @@ router.get("/seo/page/:slug", async (req: Request, res: Response) => {
 // ── Update page (inline editing) — PUT /api/seo/page/:slug ───────────────────
 router.put("/seo/page/:slug", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
-  const { title, metaDescription, contentHtml, status: newStatus } = req.body;
+  const { title, metaDescription, contentHtml, status: newStatus, keywords, pageType } = req.body;
 
   try {
     const updates: string[] = [];
@@ -137,12 +137,24 @@ router.put("/seo/page/:slug", async (req: Request, res: Response) => {
 
     if (title !== undefined) { updates.push(`title = $${p++}`); params.push(title); }
     if (metaDescription !== undefined) { updates.push(`meta_description = $${p++}`); params.push(metaDescription); }
+    if (keywords !== undefined) {
+      const list = Array.isArray(keywords)
+        ? keywords
+        : String(keywords).split(",").map((k) => k.trim()).filter(Boolean);
+      updates.push(`keywords = $${p++}`);
+      params.push(list);
+    }
+    if (pageType !== undefined) { updates.push(`page_type = $${p++}`); params.push(pageType); }
     if (contentHtml !== undefined) {
       const sanitized = sanitizeContent(contentHtml);
       updates.push(`content_html = $${p++}`);
       params.push(sanitized);
     }
-    if (newStatus !== undefined) { updates.push(`status = $${p++}`); params.push(newStatus); }
+    if (newStatus !== undefined) {
+      updates.push(`status = $${p++}`); params.push(newStatus);
+      // Keep the published flag in sync with status so edits go live / unpublish.
+      updates.push(`published = $${p++}`); params.push(newStatus === "published");
+    }
     updates.push(`updated_at = now()`);
 
     params.push(req.params.slug);
