@@ -836,7 +836,7 @@ function BudgetTab() {
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-slate-900/60 border-b border-slate-700/60">
-                {["Task", "Model", "In", "Out", "Cost", "Time"].map((h) => (
+                {["Task", "Page", "Model", "In", "Out", "Cost", "Time"].map((h) => (
                   <th key={h} className="text-left py-2 px-3 text-slate-500 font-medium">{h}</th>
                 ))}
               </tr>
@@ -845,6 +845,12 @@ function BudgetTab() {
               {log.slice(0, 25).map((l) => (
                 <tr key={l.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
                   <td className="py-1.5 px-3 text-slate-300">{l.task_type}</td>
+                  <td className="py-1.5 px-3">
+                    {l.page_slug ? (
+                      <a href={seoPageUrl(l.page_slug)} target="_blank" rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 font-mono text-[10px]" title="Open page (404 = it was never saved)">{l.page_slug}</a>
+                    ) : <span className="text-slate-600 text-[10px]">—</span>}
+                  </td>
                   <td className="py-1.5 px-3 text-slate-500 font-mono text-[10px]">{l.model_used}</td>
                   <td className="py-1.5 px-3 text-right text-slate-400">{l.input_tokens?.toLocaleString()}</td>
                   <td className="py-1.5 px-3 text-right text-slate-400">{l.output_tokens?.toLocaleString()}</td>
