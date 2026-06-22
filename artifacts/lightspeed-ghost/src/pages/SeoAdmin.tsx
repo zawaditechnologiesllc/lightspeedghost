@@ -159,7 +159,7 @@ function CheckRow({ ok, children }: { ok: boolean; children: React.ReactNode }) 
   );
 }
 
-function WriteTab() {
+function WriteTab({ editSlug, onLoaded }: { editSlug?: string | null; onLoaded?: () => void }) {
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
@@ -172,21 +172,53 @@ function WriteTab() {
   const [lastUrl, setLastUrl] = useState("");
   const [check, setCheck] = useState<any>(null);
   const [checking, setChecking] = useState(false);
+  // Edit mode: when set, we're editing an existing page (loaded by slug) and the
+  // body holds its already-rendered HTML, not fresh Markdown.
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
+  const [htmlMode, setHtmlMode] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(false);
 
   // Keep slug auto-derived from the title until the writer edits it themselves.
   useEffect(() => {
     if (!slugEdited) setSlug(slugify(title));
   }, [title, slugEdited]);
 
-  const previewHtml = body.trim() ? mdRenderer.render(body) : "";
-  const wordCount = body.trim() ? body.trim().split(/\s+/).length : 0;
-  const hasFaq = /frequently asked questions|\bfaq\b|common questions/i.test(body);
+  // Load an existing page into the form when the Pages tab asks to edit one.
+  useEffect(() => {
+    if (!editSlug) return;
+    setLoadingPage(true);
+    apiFetch(`/seo/page/${editSlug}`)
+      .then((pg: any) => {
+        setTitle(pg.title ?? "");
+        setSlug(pg.slug ?? editSlug);
+        setSlugEdited(true);
+        setMetaDescription(pg.meta_description ?? "");
+        setKeywords(Array.isArray(pg.keywords) ? pg.keywords.join(", ") : (pg.keywords ?? ""));
+        setPageType(pg.page_type ?? "how-to");
+        setBody(pg.content_html ?? "");
+        setHtmlMode(true);
+        setEditingSlug(pg.slug ?? editSlug);
+        setLastUrl("");
+        setToast({ msg: "", variant: "success" });
+      })
+      .catch(() => setToast({ msg: "Couldn't load that page for editing", variant: "error" }))
+      .finally(() => { setLoadingPage(false); onLoaded?.(); });
+    // onLoaded intentionally omitted from deps — it clears editSlug, and we only
+    // want to (re)load when the requested slug changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editSlug]);
+
+  // In edit mode the body is raw HTML; otherwise it's Markdown we render.
+  const previewHtml = htmlMode ? body : (body.trim() ? mdRenderer.render(body) : "");
+  const plainText = htmlMode ? body.replace(/<[^>]+>/g, " ") : body;
+  const wordCount = plainText.trim() ? plainText.trim().split(/\s+/).filter(Boolean).length : 0;
+  const hasFaq = /frequently asked questions|\bfaq\b|common questions/i.test(plainText);
   const hasH1 = /^#\s|<h1/i.test(body);
 
   // Auto rule-check: whenever the body changes, run it (debounced) through the
   // same server-side validation that publish enforces, so the report can't drift.
   useEffect(() => {
-    const html = body.trim() ? mdRenderer.render(body) : "";
+    const html = htmlMode ? body : (body.trim() ? mdRenderer.render(body) : "");
     if (html.length < 30) { setCheck(null); setChecking(false); return; }
     setChecking(true);
     const t = setTimeout(async () => {
@@ -198,7 +230,7 @@ function WriteTab() {
       }
     }, 700);
     return () => clearTimeout(t);
-  }, [body]);
+  }, [body, htmlMode]);
 
   async function save(status: "draft" | "published") {
     if (!title.trim()) { setToast({ msg: "Add a title first", variant: "error" }); return; }
@@ -206,16 +238,31 @@ function WriteTab() {
     setSaving(true);
     setToast({ msg: "", variant: "success" });
     try {
-      const r = await apiFetch("/seo/page/manual", {
-        method: "POST",
-        body: JSON.stringify({ slug, title, metaDescription, keywords, pageType, contentHtml: previewHtml, status }),
-      });
-      const liveUrl = seoPageUrl(r.slug ?? slug);
-      setLastUrl(liveUrl);
-      setToast({
-        msg: status === "published" ? `Published live at ${liveUrl}` : `Saved as draft (${r.wordCount} words)`,
-        variant: "success",
-      });
+      if (editingSlug) {
+        // Editing an existing page — update it in place. Works for both
+        // AI-generated and hand-written pages.
+        await apiFetch(`/seo/page/${editingSlug}`, {
+          method: "PUT",
+          body: JSON.stringify({ title, metaDescription, keywords, pageType, contentHtml: previewHtml, status }),
+        });
+        const liveUrl = seoPageUrl(editingSlug);
+        setLastUrl(liveUrl);
+        setToast({
+          msg: status === "published" ? `Updated & live — ${liveUrl}` : "Saved changes (kept as draft)",
+          variant: "success",
+        });
+      } else {
+        const r = await apiFetch("/seo/page/manual", {
+          method: "POST",
+          body: JSON.stringify({ slug, title, metaDescription, keywords, pageType, contentHtml: previewHtml, status }),
+        });
+        const liveUrl = seoPageUrl(r.slug ?? slug);
+        setLastUrl(liveUrl);
+        setToast({
+          msg: status === "published" ? `Published live at ${liveUrl}` : `Saved as draft (${r.wordCount} words)`,
+          variant: "success",
+        });
+      }
     } catch (e) {
       setToast({ msg: e instanceof Error ? e.message : "Save failed", variant: "error" });
     } finally {
@@ -226,6 +273,7 @@ function WriteTab() {
   function resetForm() {
     setTitle(""); setSlug(""); setSlugEdited(false); setMetaDescription("");
     setKeywords(""); setPageType("how-to"); setBody(""); setLastUrl(""); setToast({ msg: "", variant: "success" });
+    setEditingSlug(null); setHtmlMode(false);
   }
 
   return (
@@ -233,15 +281,16 @@ function WriteTab() {
       <Card>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <CardTitle>✍️ Write a page</CardTitle>
+            <CardTitle>{editingSlug ? "✏️ Edit page" : "✍️ Write a page"}</CardTitle>
             <p className="text-xs text-slate-400 -mt-2 max-w-2xl">
-              You do the keyword research; write the page here in Markdown and publish it yourself. No AI generation,
-              no budget used. The page is served server-rendered at <code className="text-blue-300">/seo/&lt;slug&gt;</code>{" "}
-              so Google, Bing and AI answer engines can read it.
+              {editingSlug
+                ? <>Editing <code className="text-blue-300">/seo/{editingSlug}</code>. The body shows the page's current HTML — edit it and Save. Changes go live the moment you publish.</>
+                : <>You do the keyword research; write the page here in Markdown and publish it yourself. No AI generation, no budget used. The page is served server-rendered at <code className="text-blue-300">/seo/&lt;slug&gt;</code> so Google, Bing and AI answer engines can read it.</>}
             </p>
           </div>
-          <Btn variant="secondary" onClick={resetForm}>New / clear</Btn>
+          <Btn variant="secondary" onClick={resetForm}>{editingSlug ? "✕ Cancel edit" : "New / clear"}</Btn>
         </div>
+        {loadingPage && <p className="text-xs text-blue-300 mt-2">Loading page…</p>}
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -255,11 +304,12 @@ function WriteTab() {
                   placeholder="AI Lab Report Writer for Chemistry Students" />
               </div>
               <div>
-                <FieldLabel hint="the URL — auto-filled from the title, editable">Slug</FieldLabel>
+                <FieldLabel hint={editingSlug ? "fixed while editing this page" : "the URL — auto-filled from the title, editable"}>Slug</FieldLabel>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-500 whitespace-nowrap">/seo/</span>
-                  <input className={inputCls} value={slug}
-                    onChange={(e) => { setSlugEdited(true); setSlug(slugify(e.target.value)); }}
+                  <input className={`${inputCls} ${editingSlug ? "opacity-60 cursor-not-allowed" : ""}`} value={slug}
+                    readOnly={!!editingSlug}
+                    onChange={(e) => { if (!editingSlug) { setSlugEdited(true); setSlug(slugify(e.target.value)); } }}
                     placeholder="ai-lab-report-writer-chemistry" />
                 </div>
               </div>
@@ -273,7 +323,7 @@ function WriteTab() {
                 <div>
                   <FieldLabel>Page type</FieldLabel>
                   <select className={inputCls} value={pageType} onChange={(e) => setPageType(e.target.value)}>
-                    {MANUAL_PAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    {Array.from(new Set([...MANUAL_PAGE_TYPES, pageType])).map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
@@ -286,7 +336,7 @@ function WriteTab() {
           </Card>
 
           <Card>
-            <FieldLabel hint="Markdown — start with “# Heading”, use ## for sections, add a FAQ section">Page body</FieldLabel>
+            <FieldLabel hint={htmlMode ? "raw HTML of the existing page — edit directly" : "Markdown — start with “# Heading”, use ## for sections, add a FAQ section"}>Page body</FieldLabel>
             <textarea
               className={`${inputCls} font-mono leading-relaxed`}
               rows={18}
@@ -559,7 +609,7 @@ function CatalogTab() {
         method: "POST",
         body: JSON.stringify({ type: batchType, limit: batchLimit, autoPublish: false }),
       });
-      setMsg(r.message ?? "Batch started — pages appear in Pages/Review as they finish.");
+      setMsg(r.message ?? "Batch started — pages appear in the Pages tab as they finish.");
       setMsgVariant("success");
       // Generation runs in the background; refresh the catalog as pages land.
       setTimeout(() => { load(); }, 8000);
@@ -669,7 +719,7 @@ function CatalogTab() {
 }
 
 // ── Tab: Pages ────────────────────────────────────────────────────────────────
-function PagesTab() {
+function PagesTab({ onEdit }: { onEdit: (slug: string) => void }) {
   const [pages, setPages] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -677,6 +727,7 @@ function PagesTab() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [offset, setOffset] = useState(0);
   const [actionMsg, setActionMsg] = useState("");
+  const [deleting, setDeleting] = useState("");
   const limit = 20;
 
   const load = useCallback(async () => {
@@ -696,6 +747,20 @@ function PagesTab() {
     await apiFetch(`/seo/page/${slug}/${published ? "unpublish" : "publish"}`, { method: "POST" });
     setActionMsg(`${published ? "Unpublished" : "Published"}: ${slug}`);
     await load();
+  };
+
+  const deletePage = async (slug: string) => {
+    if (!window.confirm(`Delete "${slug}" permanently? This cannot be undone.`)) return;
+    setDeleting(slug);
+    try {
+      await apiFetch(`/seo/page/${slug}`, { method: "DELETE" });
+      setActionMsg(`Deleted: ${slug}`);
+      await load();
+    } catch (e) {
+      setActionMsg(e instanceof Error && /403/.test(e.message) ? "Only a super admin can delete pages." : "Delete failed");
+    } finally {
+      setDeleting("");
+    }
   };
 
   return (
@@ -751,10 +816,16 @@ function PagesTab() {
                       </div>
                     </td>
                     <td className="py-2 px-3">
-                      <Btn onClick={() => togglePublish(p.slug, p.published)}
-                        variant={p.published ? "danger" : "success"} size="xs">
-                        {p.published ? "Unpublish" : "Publish"}
-                      </Btn>
+                      <div className="flex items-center gap-1.5">
+                        <Btn onClick={() => togglePublish(p.slug, p.published)}
+                          variant={p.published ? "danger" : "success"} size="xs">
+                          {p.published ? "Unpublish" : "Publish"}
+                        </Btn>
+                        <Btn onClick={() => onEdit(p.slug)} variant="secondary" size="xs">Edit</Btn>
+                        <Btn onClick={() => deletePage(p.slug)} disabled={deleting === p.slug} variant="danger" size="xs">
+                          {deleting === p.slug ? "…" : "Delete"}
+                        </Btn>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1058,7 +1129,7 @@ function SettingsTab() {
   const triggerNow = async () => {
     try {
       await apiFetch("/seo/scheduler/trigger", { method: "POST", body: "{}" });
-      setToast("Pipeline triggered — check Review tab in ~3 minutes");
+      setToast("Pipeline triggered — new pages appear in the Pages tab (Review filter) in ~3 minutes");
       setTimeout(() => setToast(""), 5000);
     } catch {
       setToastErr("Trigger failed");
@@ -1260,162 +1331,6 @@ function SettingsTab() {
   );
 }
 
-// ── Tab: Review Queue ─────────────────────────────────────────────────────────
-
-const PAGE_TYPE_COLORS: Record<string, string> = {
-  hook:        "text-sky-400",
-  comparison:  "text-violet-400",
-  breakdown:   "text-amber-400",
-  alternative: "text-rose-400",
-  trust:       "text-emerald-400",
-};
-
-function ReviewTab() {
-  const [clusters, setClusters] = useState<any[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [busy, setBusy]         = useState<string | null>(null);
-  const [toast, setToast]       = useState("");
-  const [toastErr, setToastErr] = useState("");
-
-  const showToast = (msg: string, err = false) => {
-    if (err) { setToastErr(msg); setTimeout(() => setToastErr(""), 5000); }
-    else      { setToast(msg);   setTimeout(() => setToast(""), 5000); }
-  };
-
-  const load = useCallback(async () => {
-    try {
-      const data = await apiFetch("/seo/pipeline/review-queue");
-      setClusters(data.clusters ?? []);
-    } catch {
-      showToast("Failed to load review queue", true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const handlePublish = async (clusterId: string) => {
-    setBusy(clusterId);
-    try {
-      const res = await apiFetch(`/seo/pipeline/cluster/${clusterId}/publish-all`, { method: "POST", body: "{}" });
-      showToast(`Published ${res.published} pages`);
-      await load();
-    } catch (err: any) {
-      showToast(err.message ?? "Publish failed", true);
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleDiscard = async (clusterId: string) => {
-    if (!confirm("Move all 5 pages to draft? They won't be published.")) return;
-    setBusy(clusterId);
-    try {
-      await apiFetch(`/seo/pipeline/cluster/${clusterId}/discard`, { method: "POST", body: "{}" });
-      showToast("Pages moved to draft");
-      await load();
-    } catch (err: any) {
-      showToast(err.message ?? "Discard failed", true);
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  if (loading) return <Spinner />;
-
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-white">Review Queue</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Read each article below, then Publish All or Discard. Competitor was chosen by AI.</p>
-        </div>
-        <button onClick={load} className="text-xs text-slate-500 hover:text-white transition-colors">↻ Refresh</button>
-      </div>
-
-      {toast    && <Toast msg={toast} variant="success" />}
-      {toastErr && <Toast msg={toastErr} variant="error" />}
-
-      {clusters.length === 0 ? (
-        <Card>
-          <div className="text-center py-10">
-            <p className="text-3xl mb-3">📭</p>
-            <p className="text-sm font-medium text-white">Nothing to review</p>
-            <p className="text-xs text-slate-500 mt-1">Enable the daily scheduler or start a manual pipeline — articles appear here when complete.</p>
-          </div>
-        </Card>
-      ) : (
-        clusters.map((cluster) => {
-          const pages = cluster.pages ?? [];
-          const totalWords = pages.reduce((s: number, p: any) => s + (p.wordCount ?? 0), 0);
-          return (
-            <Card key={cluster.id}>
-              {/* Cluster header */}
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-white leading-snug">{cluster.topic}</h3>
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25">
-                      {cluster.toolFocus}
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-300 border border-slate-600/40">
-                      vs {cluster.competitor}
-                    </span>
-                    <span className="text-[10px] text-slate-500">
-                      {totalWords.toLocaleString()} words · {pages.length} pages · {new Date(cluster.completedAt ?? cluster.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => handleDiscard(cluster.id)}
-                    disabled={busy === cluster.id}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-slate-600 text-slate-300 hover:border-red-500/50 hover:text-red-400 transition-colors disabled:opacity-40"
-                  >
-                    Discard
-                  </button>
-                  <button
-                    onClick={() => handlePublish(cluster.id)}
-                    disabled={busy === cluster.id}
-                    className="text-xs px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors disabled:opacity-40"
-                  >
-                    {busy === cluster.id ? "Publishing…" : "Publish All 5"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Pages list */}
-              <div className="space-y-2">
-                {pages.map((page: any) => (
-                  <div key={page.slug} className="flex items-center gap-3 px-3 py-2 bg-slate-900/50 rounded-lg border border-slate-700/40">
-                    <span className={`text-[10px] font-bold w-2.5 ${PAGE_TYPE_COLORS[page.pageType] ?? "text-slate-400"}`}>
-                      {page.pageNumber}
-                    </span>
-                    <span className={`text-[10px] font-semibold uppercase tracking-wider w-20 shrink-0 ${PAGE_TYPE_COLORS[page.pageType] ?? "text-slate-400"}`}>
-                      {page.pageType}
-                    </span>
-                    <span className="text-xs text-slate-300 flex-1 min-w-0 truncate">{page.title ?? page.slug}</span>
-                    <span className="text-[10px] text-slate-500 shrink-0">{page.wordCount ? `${page.wordCount.toLocaleString()}w` : "—"}</span>
-                    <a
-                      href={seoPageUrl(page.slug)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[10px] text-blue-400 hover:text-blue-300 shrink-0"
-                    >
-                      Preview →
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          );
-        })
-      )}
-    </div>
-  );
-}
-
 // ── Tab: Pipeline ─────────────────────────────────────────────────────────────
 
 const TOOL_FOCUS_OPTIONS = [
@@ -1543,7 +1458,7 @@ function PipelineTab() {
   const triggerScheduler = async () => {
     try {
       await apiFetch("/seo/scheduler/trigger", { method: "POST", body: "{}" });
-      showToast("Scheduler triggered — pages will appear in Review tab in ~3 minutes");
+      showToast("Scheduler triggered — pages will appear in the Pages tab (Review filter) in ~3 minutes");
     } catch (err: any) {
       showToast(err.message ?? "Trigger failed", true);
     }
@@ -1823,7 +1738,6 @@ function PipelineTab() {
 
 const TABS = [
   { id: "write",     label: "Write",     icon: "✍️" },
-  { id: "review",    label: "Review",    icon: "✅" },
   { id: "pipeline",  label: "Pipeline",  icon: "🚀" },
   { id: "dashboard", label: "Dashboard", icon: "⚡" },
   { id: "catalog",   label: "Catalog",   icon: "📋" },
@@ -1838,20 +1752,24 @@ export default function SeoAdmin() {
   // Open on the Dashboard — it shows the whole system (manual + AI-generated
   // pages, budget, scheduler) so neither engine looks "switched off".
   const [activeTab, setActiveTab] = useState("dashboard");
+  // Slug to load into the Write tab for editing (set by the Pages tab's Edit
+  // button). Cleared once the Write tab has loaded it.
+  const [editSlug, setEditSlug] = useState<string | null>(null);
+
+  const openEditor = (slug: string) => { setEditSlug(slug); setActiveTab("write"); };
 
   const renderTab = () => {
     switch (activeTab) {
-      case "write":      return <WriteTab />;
-      case "review":     return <ReviewTab />;
+      case "write":      return <WriteTab editSlug={editSlug} onLoaded={() => setEditSlug(null)} />;
       case "pipeline":   return <PipelineTab />;
       case "dashboard":  return <DashboardTab />;
       case "catalog":   return <CatalogTab />;
-      case "pages":     return <PagesTab />;
+      case "pages":     return <PagesTab onEdit={openEditor} />;
       case "budget":    return <BudgetTab />;
       case "integrity":  return <IntegrityTab />;
       case "sitemap":    return <SitemapTab />;
       case "settings":   return <SettingsTab />;
-      default:           return <ReviewTab />;
+      default:           return <DashboardTab />;
     }
   };
 

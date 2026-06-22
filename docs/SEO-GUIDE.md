@@ -47,7 +47,7 @@ page in the end — they differ in **who writes it** and **how much it costs.**
 | **Speed** | As fast as you can write | ~2–3 min per cluster |
 | **Control** | Total — your words, your accuracy | You review/approve before publish |
 | **Best for** | Cornerstone pages, brand voice, claims that must be exact | Scale — covering many long-tail searches fast |
-| **Where it lands** | Saved as **draft**, you publish | Lands in **Review**, you publish |
+| **Where it lands** | Saved as **draft**, you publish | Appears in **Pages** as *Review*, you publish/edit |
 
 **Think of it like this:**
 - **Manual = hand-craft.** Use it for your most important, money pages and
@@ -74,8 +74,9 @@ The automatic system has two triggers for the **same** engine:
 
 - **draft** — created but not live. Catalog placeholders and manually-saved
   pages start here. (Placeholders have no content yet — they're just a to-do.)
-- **review** — finished content waiting for your approval (where automatic
-  clusters land).
+- **review** — finished content waiting for your approval. Automatic clusters
+  land here; find them in the **Pages** tab filtered by *Review*, then publish,
+  edit, or delete each.
 - **published** — **live** at `/seo/<slug>` and included in the sitemap.
 - **archived** — retired, no longer served.
 
@@ -85,44 +86,42 @@ The automatic system has two triggers for the **same** engine:
 
 ## 4. Tab-by-tab — what each one is and how to use it
 
-Your SEO panel has 10 tabs, in this order:
+Your SEO panel has 9 tabs, in this order:
 
-### ✍️ 1. Write — *the manual system*
-Write and publish your own page, no AI.
+### ✍️ 1. Write — *the manual system (and the editor for every page)*
+Write a brand-new page, **or edit any existing one** (the Pages tab's **Edit**
+button drops the page straight in here).
 1. Enter a **slug** (the URL ending, e.g. `ai-paper-writer-guide`) and **title**.
 2. Pick a **page type** (how-to, tool, comparison, etc.) and add a meta
    description + keywords.
-3. Write the body in **Markdown** (the editor renders it live).
+3. Write the body in **Markdown** (the editor renders it live). *When editing an
+   existing page the body shows that page's current HTML — edit it directly.*
 4. Click **Check** — the rule-checker scores it for word count, AI disclosure,
    FAQ schema, and integrity language. Fix anything it flags.
-5. **Save as draft** (review later) or **Publish** (go live now). The page is
-   served at `/seo/<slug>` instantly — no AI cost.
+5. **Save as draft** or **Publish** (go live now). The page is served at
+   `/seo/<slug>` instantly — no AI cost. Editing an AI-written page works the
+   same way; your changes overwrite it in place.
 
-### ✅ 2. Review — *approve automatic output*
-The queue of **completed AI clusters** waiting for you. Read each of the 5
-pages (use the Preview links), then **Publish All** or **Discard**. If it's
-empty after an automatic run, the run either hasn't finished (~2–3 min) or
-failed — check the Pipeline tab.
-
-### 🚀 3. Pipeline — *run the automatic system on demand*
+### 🚀 2. Pipeline — *run the automatic system on demand*
 Kick off one AI cluster.
 1. Optionally type a **topic** + pick a **tool focus** (or leave blank and the
    AI picks the best topic from your data).
 2. Click **Start**. It runs: **Research** (Reddit + AI) → **Outline** →
    **Write 5 pages**, pausing between steps to respect rate limits.
-3. Watch the status. When it's **complete**, the 5 pages appear in **Review**.
+3. Watch the status. When it's **complete**, the 5 pages appear in **Pages**
+   with status **Review** (filter the Pages tab by *Review*).
 4. If it says **failed**, the error message tells you why (usually a Gemini
    hiccup) — hit **Resume** to retry from where it stopped.
 
 > Each cluster = 5 pages. Daily limit: **5 pipeline pages / 24h** (one cluster
 > a day) to stay inside the free Gemini tier.
 
-### ⚡ 4. Dashboard — *health at a glance*
+### ⚡ 3. Dashboard — *health at a glance*
 KPI counts (Published / In Review / Draft / Total) and your monthly budget bar.
 This is your "is everything OK" view. (If it shows a "backend waking up" banner,
 the free-tier server is cold — refresh in ~30s.)
 
-### 📋 5. Catalog — *the master plan of pages to build*
+### 📋 4. Catalog — *the master plan of pages to build*
 A pre-built list of **130+ planned pages** across 15 types, each a real
 keyword target.
 - **Seed catalog** creates **placeholder drafts** for every planned page (titles
@@ -131,13 +130,19 @@ keyword target.
 - **Generate batch** fills empty placeholders with AI content (up to 30/run).
 - Use it as your roadmap: see the gaps, fill the highest-value ones first.
 
-### 📄 6. Pages — *every page in the database*
-The full table — filter by status (draft/review/published), search, and
-**Publish/Unpublish** any page. Click a slug to open the live page. **This is
-where you manage everything that exists.** (Grey, unlinked slugs are empty
-placeholders with nothing to view yet.)
+### 📄 5. Pages — *every page in the database (your control center)*
+The full table — filter by status (draft/**review**/published), search, and per
+row:
+- **Publish / Unpublish** — toggle whether it's live.
+- **Edit** — opens it in the Write tab, fully loaded, to change anything.
+- **Delete** — removes it permanently (super admin only; asks first).
 
-### 💰 7. Budget — *what the AI is spending*
+This is where **AI clusters land for approval** (filter by *Review*), and where
+you manage, edit, publish, or delete everything that exists — manual or
+AI-written alike. Click a slug to open the live page. (Grey, unlinked slugs are
+empty placeholders with nothing to view yet.)
+
+### 💰 6. Budget — *what the AI is spending*
 Monthly Gemini spend, a budget bar, and the **LLM Cost Log**.
 - **Each cost-log row is one AI call, not a finished blog.** A 5-page cluster
   makes several billed calls.
@@ -146,17 +151,17 @@ Monthly Gemini spend, a budget bar, and the **LLM Cost Log**.
 - Cost is logged the moment the AI replies, *before* the page is saved — so
   "spent" and "published" are never the same number.
 
-### 🛡 8. Integrity — *compliance & quality audit*
+### 🛡 7. Integrity — *compliance & quality audit*
 Checks every generated page for: AI-generated disclosure (EU AI Act), academic-
 integrity language, FAQ schema, 800+ word minimum, and WCAG 2.2 accessibility.
 Fix flagged pages with one click. Keeps you legally clean and Google-friendly.
 
-### 🗺 9. Sitemap — *what crawlers see*
+### 🗺 8. Sitemap — *what crawlers see*
 Preview your live `robots.txt` and `sitemap.xml`. The sitemap auto-includes
 every **published** SEO page. Use the links to verify, then submit your sitemap
 in Google Search Console (see §6).
 
-### ⚙ 10. Settings — *configuration*
+### ⚙ 9. Settings — *configuration*
 - **Integrations status** — green/red for Gemini (required), Search Console,
   GA4, Reddit (no key needed — it scrapes), and the daily cron token.
 - **Scheduler** — turn the daily automatic run on/off and set its UTC time.
@@ -180,9 +185,9 @@ in Google Search Console (see §6).
 1. **One-off:** SEO → **Pipeline** → (optional topic) → **Start**.
    **Hands-off:** SEO → **Settings** → enable the **Scheduler** + set a time.
 2. Wait ~2–3 minutes (or for the daily run).
-3. **SEO → Review** → read the 5 pages.
-4. **Publish All** (or Discard).
-5. Confirm in **Pages** / open the live URLs.
+3. **SEO → Pages**, filter by **Review** → open/read the new pages.
+4. **Publish** the good ones (or **Edit** to tweak, or **Delete** to discard).
+5. Open the live URLs to confirm.
 
 ### C) Filling the roadmap (catalog batch)
 1. **SEO → Catalog → Seed catalog** (creates the placeholder list — once).
@@ -211,7 +216,8 @@ in Google Search Console (see §6).
 - **Week 1:** Hand-write (Write tab) your 10–20 most important pages — your core
   tools and top comparisons. Publish them.
 - **Ongoing:** Turn on the **daily Scheduler**. Each day it drafts one cluster;
-  spend two minutes in **Review** approving or discarding.
+  spend two minutes in **Pages** (filtered by *Review*) publishing, editing, or
+  deleting them.
 - **Monthly:** Open **Catalog**, batch-generate a handful of the highest-value
   gaps, review, publish.
 - **Always:** Skim **Integrity** so everything stays compliant, and submit/
@@ -227,7 +233,8 @@ outperform 200 dumped at once.
 | Symptom | What it means / do |
 |---|---|
 | Dashboard shows all zeros | Backend cold (free tier) — refresh in ~30s. If it persists, the backend is still booting. |
-| Review queue empty after a run | Run not finished (~2–3 min) or it failed — check **Pipeline** status + error, hit **Resume**. |
+| No new pages after a run | Run not finished (~2–3 min) or it failed — check **Pipeline** status + error, hit **Resume**. New pages show in **Pages** under the *Review* filter. |
+| Want to change an AI page | **Pages → Edit** opens it in the Write tab; tweak the HTML and Save. **Delete** removes it (super admin). |
 | Cost log shows spend but no pages | The AI was billed but the page didn't save (a failed run). Click the **Page** column slug — a 404 confirms it. |
 | A draft slug isn't clickable | It's an empty **placeholder** — generate content for it first. |
 | Published page looks too plain | Pages are intentionally light-themed for readability/print; the content is server-rendered HTML. |
@@ -249,7 +256,9 @@ outperform 200 dumped at once.
 
 ### TL;DR
 - **Two systems:** **Write** (you write, free, full control) and **Pipeline/
-  Scheduler** (AI writes 5-page clusters, cheap, you approve in **Review**).
+  Scheduler** (AI writes 5-page clusters, cheap, you approve in **Pages**).
+- **Every page** lives in the **Pages** tab: Publish/Unpublish, **Edit** (opens
+  the Write tab), or **Delete** — for manual and AI pages alike.
 - **Every page:** draft → review → **published** at `/seo/<slug>`.
 - **You always approve before anything goes live.**
 - **Goal:** a compounding library of search-targeted pages that brings free
