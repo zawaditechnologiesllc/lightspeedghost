@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Light Speed Ghost — Testimonial Card Studio</title>
+<style>
+  :root{
+    --bg:#04080f; --panel:#0b1424; --panel2:#0e1a2e; --border:rgba(255,255,255,.09);
+    --text:#e8eef7; --muted:#8aa0bd; --accent:#3b82f6; --accent2:#38bdf8;
+    --radius:14px; --field:#0a1322;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 600px at 80% -10%,rgba(59,130,246,.10),transparent 60%),var(--bg);
+    color:var(--text);font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;line-height:1.5;
+  }
+  header{
+    padding:22px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px;letter-spacing:-.01em}
+  .logo svg{width:22px;height:22px;color:var(--accent2)}
+  .logo b{color:#fff}.logo span{color:var(--accent2)}
+  header .tag{margin-left:auto;font-size:12.5px;color:var(--muted)}
+  .honesty{
+    margin:16px 28px 0;padding:11px 15px;border:1px solid rgba(56,189,248,.22);
+    background:rgba(56,189,248,.06);border-radius:10px;font-size:12.5px;color:#bfe0f5;display:flex;gap:9px;align-items:flex-start;
+  }
+  .honesty svg{width:16px;height:16px;flex:0 0 auto;margin-top:1px;color:var(--accent2)}
+  main{display:grid;grid-template-columns:minmax(320px,380px) 1fr;gap:24px;padding:22px 28px 60px;align-items:start}
+  @media(max-width:900px){main{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+  .panel h2{margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+  .field{margin-top:16px}
+  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;font-weight:600}
+  .field .hint{color:#647b9c}
+  input[type=text],textarea{
+    width:100%;background:var(--field);border:1px solid var(--border);border-radius:10px;color:var(--text);
+    font:inherit;font-size:14px;padding:10px 12px;resize:vertical;transition:border-color .15s,background .15s;
+  }
+  input[type=text]:focus,textarea:focus{outline:none;border-color:rgba(59,130,246,.55);background:#0c1626}
+  textarea{min-height:92px}
+  .counter{font-size:11px;color:var(--muted);text-align:right;margin-top:4px}
+  .counter.over{color:#f87171}
+  .row{display:flex;gap:10px}.row>*{flex:1}
+  /* stars */
+  .stars{display:flex;gap:6px}
+  .stars button{background:none;border:none;cursor:pointer;padding:0;font-size:26px;line-height:1;color:rgba(255,255,255,.2);transition:color .12s,transform .12s}
+  .stars button.on{color:#fbbf24}
+  .stars button:hover{transform:scale(1.12)}
+  /* photo */
+  .photo-row{display:flex;align-items:center;gap:12px}
+  .photo-prev{width:52px;height:52px;border-radius:50%;background:#0c1626;border:1px solid var(--border);object-fit:cover;flex:0 0 auto}
+  .filebtn{display:inline-flex;align-items:center;gap:7px;background:#0c1626;border:1px solid var(--border);color:var(--text);
+    border-radius:9px;padding:8px 13px;font-size:13px;cursor:pointer;font-weight:600}
+  .filebtn:hover{border-color:rgba(59,130,246,.5)}
+  .clearbtn{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline}
+  input[type=file]{display:none}
+  /* toggles */
+  .check{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text);user-select:none}
+  .check input{width:16px;height:16px;accent-color:var(--accent)}
+  /* swatches */
+  .swatches{display:flex;gap:9px;flex-wrap:wrap}
+  .swatch{width:44px;height:44px;border-radius:10px;cursor:pointer;border:2px solid transparent;position:relative;overflow:hidden}
+  .swatch.sel{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(56,189,248,.18)}
+  .seg{display:flex;gap:8px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:84px;background:#0c1626;border:1px solid var(--border);color:var(--muted);border-radius:9px;
+    padding:9px 8px;font-size:12.5px;cursor:pointer;font-weight:600;transition:.15s}
+  .seg button.sel{background:rgba(59,130,246,.14);border-color:rgba(59,130,246,.5);color:#cfe3ff}
+  /* preview */
+  .preview-wrap{position:sticky;top:22px}
+  .stage{display:flex;align-items:center;justify-content:center;background:
+    repeating-conic-gradient(#0c1626 0% 25%,#0a1120 0% 50%) 50%/26px 26px;border:1px solid var(--border);border-radius:var(--radius);padding:22px;min-height:300px}
+  canvas#card{width:100%;height:auto;max-width:520px;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .actions{display:flex;gap:12px;margin-top:16px;align-items:center;flex-wrap:wrap}
+  .download{background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;border:none;border-radius:11px;padding:13px 22px;
+    font-size:14.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:9px;box-shadow:0 10px 24px rgba(37,99,235,.32)}
+  .download:hover{filter:brightness(1.07)}
+  .download svg{width:17px;height:17px}
+  .ghostbtn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:11px;padding:12px 16px;font-size:13px;cursor:pointer;font-weight:600}
+  .ghostbtn:hover{color:var(--text);border-color:rgba(255,255,255,.25)}
+  .dims{font-size:12px;color:var(--muted);margin-left:auto}
+  footer{padding:0 28px 40px;color:var(--muted);font-size:12px;max-width:760px}
+  footer a{color:var(--accent2)}
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 11-13h-7l1-7z"/></svg>
+      <span><b>Light Speed Ghost</b> · Testimonial Studio</span>
+    </div>
+    <div class="tag">Real reviews → clean, shareable cards</div>
+  </header>
+
+  <div class="honesty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+    <div>Use these only for <b>real quotes from real, consenting customers</b>. These are testimonial cards — not social-media posts — so never present them as someone's actual tweet. Turn on “Verified customer” only for people who actually paid for and used the product.</div>
+  </div>
+
+  <main>
+    <section class="panel">
+      <h2>Card content</h2>
+
+      <div class="field">
+        <label for="quote">Quote (their words)</label>
+        <textarea id="quote" maxlength="320" placeholder="What did the tool actually do for them?"></textarea>
+        <div class="counter" id="qcount"></div>
+      </div>
+
+      <div class="field">
+        <label for="name">Name</label>
+        <input type="text" id="name" maxlength="40" placeholder="e.g. Amina K.">
+      </div>
+
+      <div class="field">
+        <label for="role">Role / handle <span style="color:#647b9c">(shown under the name)</span></label>
+        <input type="text" id="role" maxlength="60" placeholder="e.g. MSc Public Health · Univ. of Nairobi">
+      </div>
+
+      <div class="field">
+        <label>Photo <span style="color:#647b9c">(optional — must have their permission)</span></label>
+        <div class="photo-row">
+          <img class="photo-prev" id="photoPrev" alt="">
+          <label class="filebtn" for="photo">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            Upload
+          </label>
+          <input type="file" id="photo" accept="image/*">
+          <button class="clearbtn" id="photoClear" type="button" style="display:none">remove</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Rating</label>
+        <div class="stars" id="stars" role="group" aria-label="Star rating"></div>
+      </div>
+
+      <div class="field">
+        <label class="check"><input type="checkbox" id="verified"> Add “Verified customer” badge</label>
+      </div>
+
+      <h2 style="margin-top:26px">Style</h2>
+      <div class="field">
+        <label>Theme</label>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <div class="field">
+        <label>Format</label>
+        <div class="seg" id="sizes"></div>
+      </div>
+
+      <div class="field">
+        <button class="ghostbtn" id="loadSample" type="button" style="width:100%">↺ Load example (then replace with a real one)</button>
+      </div>
+    </section>
+
+    <section class="preview-wrap">
+      <div class="stage"><canvas id="card" width="1080" height="1080"></canvas></div>
+      <div class="actions">
+        <button class="download" id="download" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Download PNG
+        </button>
+        <button class="ghostbtn" id="copyBtn" type="button">Copy to clipboard</button>
+        <span class="dims" id="dims"></span>
+      </div>
+      <footer>
+        Tip: square cards suit Instagram &amp; Reddit image posts; landscape suits X/Twitter &amp; LinkedIn; portrait suits stories.
+        Everything runs in your browser — no photo or text ever leaves your computer.
+      </footer>
+    </section>
+  </main>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+
+  var SIZES = {
+    square:    { w:1080, h:1080, label:"Square 1:1" },
+    portrait:  { w:1080, h:1350, label:"Portrait 4:5" },
+    landscape: { w:1200, h:675,  label:"Landscape 16:9" },
+    story:     { w:1080, h:1920, label:"Story 9:16" }
+  };
+
+  var THEMES = {
+    midnight: {
+      label:"Midnight",
+      swatch:"linear-gradient(135deg,#0a1730,#050b18)",
+      bg: function(ctx,w,h){ var g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,"#0c1b38"); g.addColorStop(1,"#050b18"); return g; },
+      glow:"rgba(56,189,248,.16)", text:"#f1f5f9", muted:"#93a7c4",
+      accent:"#3b82f6", accent2:"#38bdf8", quoteMark:"rgba(56,189,248,.16)",
+      star:"#fbbf24", starEmpty:"rgba(255,255,255,.16)", ring:"rgba(255,255,255,.20)",
+      pillBg:"rgba(56,189,248,.16)", pillText:"#7dd3fc", border:"rgba(255,255,255,.08)", footer:"#6e87a8"
+    },
+    gradient: {
+      label:"Ocean",
+      swatch:"linear-gradient(135deg,#2563eb,#06b6d4)",
+      bg: function(ctx,w,h){ var g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,"#2563eb"); g.addColorStop(1,"#0891b2"); return g; },
+      glow:"rgba(255,255,255,.14)", text:"#ffffff", muted:"rgba(255,255,255,.85)",
+      accent:"#ffffff", accent2:"#e0f2fe", quoteMark:"rgba(255,255,255,.22)",
+      star:"#fde68a", starEmpty:"rgba(255,255,255,.32)", ring:"rgba(255,255,255,.6)",
+      pillBg:"rgba(255,255,255,.20)", pillText:"#ffffff", border:"rgba(255,255,255,.22)", footer:"rgba(255,255,255,.8)"
+    },
+    light: {
+      label:"Light",
+      swatch:"linear-gradient(135deg,#ffffff,#eef3fb)",
+      bg: function(ctx,w,h){ var g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,"#ffffff"); g.addColorStop(1,"#eff4fb"); return g; },
+      glow:"rgba(29,111,244,.10)", text:"#0d1b35", muted:"#5a6b85",
+      accent:"#1d6ff4", accent2:"#0ea5e9", quoteMark:"rgba(29,111,244,.14)",
+      star:"#f59e0b", starEmpty:"rgba(13,27,53,.15)", ring:"rgba(13,27,53,.12)",
+      pillBg:"rgba(29,111,244,.10)", pillText:"#1d6ff4", border:"rgba(13,27,53,.10)", footer:"#7587a3"
+    },
+    emerald: {
+      label:"Emerald",
+      swatch:"linear-gradient(135deg,#0b2a22,#06140f)",
+      bg: function(ctx,w,h){ var g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,"#0c2c23"); g.addColorStop(1,"#06130e"); return g; },
+      glow:"rgba(16,185,129,.18)", text:"#ecfdf5", muted:"#9bbcaf",
+      accent:"#10b981", accent2:"#34d399", quoteMark:"rgba(52,211,153,.16)",
+      star:"#fbbf24", starEmpty:"rgba(255,255,255,.16)", ring:"rgba(255,255,255,.2)",
+      pillBg:"rgba(16,185,129,.18)", pillText:"#6ee7b7", border:"rgba(255,255,255,.08)", footer:"#7ea295"
+    }
+  };
+
+  var state = {
+    quote:"", name:"", role:"", rating:5, verified:true,
+    theme:"midnight", size:"square", img:null
+  };
+
+  var canvas = $("card"), ctx = canvas.getContext("2d");
+
+  /* ---------- canvas helpers ---------- */
+  function roundRect(c,x,y,w,h,r){
+    if(c.roundRect){ c.beginPath(); c.roundRect(x,y,w,h,r); return; }
+    c.beginPath();
+    c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+    c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
+  }
+  function wrap(c,text,maxW){
+    var words=text.split(/\s+/), lines=[], line="";
+    for(var i=0;i<words.length;i++){
+      var test=line?line+" "+words[i]:words[i];
+      if(c.measureText(test).width>maxW && line){ lines.push(line); line=words[i]; }
+      else line=test;
+    }
+    if(line) lines.push(line);
+    return lines;
+  }
+  function layoutQuote(c,text,maxW,maxH,fam){
+    for(var fs=Math.round(maxW/11.5); fs>=Math.round(maxW/26); fs-=2){
+      c.font="600 "+fs+"px "+fam;
+      var lines=wrap(c,text,maxW), lh=fs*1.34;
+      if(lines.length*lh<=maxH) return {fs:fs,lines:lines,lh:lh};
+    }
+    var f=Math.round(maxW/26); c.font="600 "+f+"px "+fam;
+    return {fs:f,lines:wrap(c,text,maxW),lh:f*1.34};
+  }
+  function star(c,cx,cy,R,color){
+    var spikes=5, inner=R*0.42, rot=Math.PI/2*3, step=Math.PI/spikes, i,x,y;
+    c.beginPath(); c.moveTo(cx,cy-R);
+    for(i=0;i<spikes;i++){
+      x=cx+Math.cos(rot)*R; y=cy+Math.sin(rot)*R; c.lineTo(x,y); rot+=step;
+      x=cx+Math.cos(rot)*inner; y=cy+Math.sin(rot)*inner; c.lineTo(x,y); rot+=step;
+    }
+    c.closePath(); c.fillStyle=color; c.fill();
+  }
+  function avatar(c,img,cx,cy,r,th,name){
+    c.save();
+    c.beginPath(); c.arc(cx,cy,r,0,Math.PI*2); c.closePath(); c.clip();
+    if(img){
+      var s=Math.max((2*r)/img.width,(2*r)/img.height), dw=img.width*s, dh=img.height*s;
+      c.drawImage(img,cx-dw/2,cy-dh/2,dw,dh);
+    } else {
+      var g=c.createLinearGradient(cx-r,cy-r,cx+r,cy+r); g.addColorStop(0,th.accent); g.addColorStop(1,th.accent2);
+      c.fillStyle=g; c.fillRect(cx-r,cy-r,2*r,2*r);
+      var ini=(name||"?").trim().split(/\s+/).map(function(w){return w[0]||"";}).join("").slice(0,2).toUpperCase()||"?";
+      c.fillStyle = th.label==="Ocean" ? "#0b3b66" : "#ffffff";
+      c.font="700 "+Math.round(r*0.9)+"px Inter,system-ui,sans-serif";
+      c.textAlign="center"; c.textBaseline="middle"; c.fillText(ini,cx,cy+1);
+    }
+    c.restore();
+    c.beginPath(); c.arc(cx,cy,r,0,Math.PI*2); c.lineWidth=Math.max(2,r*0.05); c.strokeStyle=th.ring; c.stroke();
+  }
+  function zap(c,x,y,size,color){
+    var p=new Path2D("M13 2L3 14h7l-1 8 11-13h-7l1-7z");
+    c.save(); c.translate(x,y); c.scale(size/24,size/24); c.fillStyle=color; c.fill(p); c.restore();
+  }
+
+  /* ---------- main render ---------- */
+  function render(){
+    var S=SIZES[state.size], th=THEMES[state.theme];
+    var W=S.w, H=S.h;
+    canvas.width=W; canvas.height=H;
+    var fam='Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+    $("dims").textContent=S.label+" · "+W+"×"+H;
+
+    // background
+    ctx.fillStyle=th.bg(ctx,W,H); ctx.fillRect(0,0,W,H);
+    // corner glow
+    var rg=ctx.createRadialGradient(W*0.82,H*0.06,0,W*0.82,H*0.06,W*0.7);
+    rg.addColorStop(0,th.glow); rg.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=rg; ctx.fillRect(0,0,W,H);
+    // inset frame
+    ctx.strokeStyle=th.border; ctx.lineWidth=2;
+    roundRect(ctx,8,8,W-16,H-16,26); ctx.stroke();
+
+    var pad=Math.round(W*0.082);
+    var contentW=W-pad*2;
+
+    // brand top-left
+    var bz=Math.round(W*0.046);
+    zap(ctx,pad,pad,bz,th.accent2);
+    ctx.fillStyle=th.text; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    ctx.font="800 "+Math.round(W*0.030)+"px "+fam;
+    ctx.fillText("Light Speed Ghost",pad+bz+Math.round(W*0.022),pad+bz*0.78);
+
+    // decorative quote mark
+    ctx.fillStyle=th.quoteMark; ctx.textAlign="left";
+    ctx.font="800 "+Math.round(W*0.20)+"px Georgia,'Times New Roman',serif";
+    ctx.fillText("“",pad-Math.round(W*0.01),pad+H*0.165);
+
+    // stars
+    var starR=Math.round(W*0.020), gap=starR*0.9, sy=pad+H*0.145+(H>W?H*0.02:0);
+    for(var i=0;i<5;i++){
+      var cx=pad+starR+i*(2*starR+gap);
+      star(ctx,cx,sy,starR, i<state.rating?th.star:th.starEmpty);
+    }
+
+    // author block geometry (bottom)
+    var avR=Math.round(W*0.060);
+    var footerY=H-pad*0.72;
+    var authorCy=H-pad-avR-Math.round(H*0.015);
+    var authorTop=authorCy-avR;
+
+    // quote region
+    var quoteTop=Math.round(pad+H*0.205+ (H>W?H*0.02:0));
+    var quoteBottom=authorTop-Math.round(H*0.045);
+    var q=state.quote.trim()|| "Their words go here — what the tool actually did for them.";
+    var L=layoutQuote(ctx,q,contentW,Math.max(60,quoteBottom-quoteTop),fam);
+    ctx.fillStyle=th.text; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    ctx.font="600 "+L.fs+"px "+fam;
+    var blockH=L.lines.length*L.lh;
+    var startY=quoteTop+Math.max(0,(quoteBottom-quoteTop-blockH)/2)+L.fs;
+    for(var j=0;j<L.lines.length;j++){ ctx.fillText(L.lines[j],pad,startY+j*L.lh); }
+
+    // author: avatar + name + role
+    avatar(ctx,state.img,pad+avR,authorCy,avR,th,state.name);
+    var tx=pad+2*avR+Math.round(W*0.032);
+    ctx.textAlign="left";
+    ctx.fillStyle=th.text; ctx.font="700 "+Math.round(W*0.040)+"px "+fam;
+    ctx.textBaseline="alphabetic";
+    ctx.fillText(state.name.trim()||"Customer name", tx, authorCy-Math.round(W*0.004));
+    if(state.role.trim()){
+      ctx.fillStyle=th.muted; ctx.font="500 "+Math.round(W*0.028)+"px "+fam;
+      ctx.fillText(state.role.trim(), tx, authorCy+Math.round(W*0.040));
+    }
+
+    // verified pill (right side, aligned with avatar)
+    if(state.verified){
+      var pf=Math.round(W*0.026), label="Verified customer";
+      ctx.font="700 "+pf+"px "+fam;
+      var tw=ctx.measureText(label).width, chk=pf*1.15, padX=pf*0.85;
+      var pw=tw+chk+padX*2+pf*0.3, ph=pf*2.05;
+      var px=W-pad-pw, py=authorCy-ph/2;
+      ctx.fillStyle=th.pillBg; roundRect(ctx,px,py,pw,ph,ph/2); ctx.fill();
+      // check
+      ctx.strokeStyle=th.pillText; ctx.lineWidth=Math.max(2,pf*0.14); ctx.lineCap="round"; ctx.lineJoin="round";
+      var cxk=px+padX+chk*0.5, cyk=py+ph/2;
+      ctx.beginPath();
+      ctx.moveTo(cxk-chk*0.28,cyk+chk*0.02);
+      ctx.lineTo(cxk-chk*0.07,cyk+chk*0.22);
+      ctx.lineTo(cxk+chk*0.30,cyk-chk*0.22);
+      ctx.stroke();
+      ctx.fillStyle=th.pillText; ctx.textBaseline="middle"; ctx.textAlign="left";
+      ctx.fillText(label, px+padX+chk+pf*0.3, cyk+1);
+      ctx.textBaseline="alphabetic";
+    }
+
+    // footer url
+    ctx.fillStyle=th.footer; ctx.textAlign="right"; ctx.font="600 "+Math.round(W*0.024)+"px "+fam;
+    ctx.fillText("lightspeedghost.com", W-pad, footerY);
+    ctx.textAlign="left";
+  }
+
+  /* ---------- inputs ---------- */
+  function bindText(id,key,after){
+    $(id).addEventListener("input",function(e){ state[key]=e.target.value; if(after)after(); render(); });
+  }
+  bindText("quote","quote",function(){
+    var n=state.quote.length, el=$("qcount");
+    el.textContent=n+" / 320"+(n>220?" · consider trimming for impact":"");
+    el.className="counter"+(n>320?" over":"");
+  });
+  bindText("name","name");
+  bindText("role","role");
+  $("verified").addEventListener("change",function(e){ state.verified=e.target.checked; render(); });
+
+  // stars
+  (function(){
+    var box=$("stars");
+    for(var i=1;i<=5;i++){ (function(v){
+      var b=document.createElement("button"); b.type="button"; b.textContent="★";
+      b.addEventListener("click",function(){ state.rating=v; paintStars(); render(); });
+      box.appendChild(b);
+    })(i); }
+  })();
+  function paintStars(){
+    var btns=$("stars").children;
+    for(var i=0;i<btns.length;i++){ btns[i].className=(i<state.rating)?"on":""; }
+  }
+
+  // photo
+  $("photo").addEventListener("change",function(e){
+    var f=e.target.files&&e.target.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      var im=new Image();
+      im.onload=function(){ state.img=im; $("photoPrev").src=rd.result; $("photoClear").style.display="inline"; render(); };
+      im.src=rd.result;
+    };
+    rd.readAsDataURL(f);
+  });
+  $("photoClear").addEventListener("click",function(){
+    state.img=null; $("photoPrev").removeAttribute("src"); $("photo").value=""; this.style.display="none"; render();
+  });
+
+  // swatches
+  (function(){
+    var box=$("swatches");
+    Object.keys(THEMES).forEach(function(k){
+      var s=document.createElement("div"); s.className="swatch"+(k===state.theme?" sel":"");
+      s.title=THEMES[k].label; s.style.background=THEMES[k].swatch;
+      s.addEventListener("click",function(){
+        state.theme=k;
+        Array.prototype.forEach.call(box.children,function(c){c.className="swatch";});
+        s.className="swatch sel"; render();
+      });
+      box.appendChild(s);
+    });
+  })();
+
+  // sizes
+  (function(){
+    var box=$("sizes");
+    Object.keys(SIZES).forEach(function(k){
+      var b=document.createElement("button"); b.type="button"; b.textContent=SIZES[k].label;
+      b.className=(k===state.size?"sel":"");
+      b.addEventListener("click",function(){
+        state.size=k;
+        Array.prototype.forEach.call(box.children,function(c){c.className="";});
+        b.className="sel"; render();
+      });
+      box.appendChild(b);
+    });
+  })();
+
+  // sample
+  function loadSample(){
+    state.quote="I went from rewriting my lit review at 2am to a clean, properly cited draft before midnight. Uploading the rubric first is the part that actually changed my grades.";
+    state.name="Amina K."; state.role="MSc Public Health · Univ. of Nairobi"; state.rating=5; state.verified=true;
+    $("quote").value=state.quote; $("name").value=state.name; $("role").value=state.role;
+    $("verified").checked=true; $("quote").dispatchEvent(new Event("input"));
+    paintStars(); render();
+  }
+  $("loadSample").addEventListener("click",loadSample);
+
+  // download
+  $("download").addEventListener("click",function(){
+    canvas.toBlob(function(blob){
+      var a=document.createElement("a");
+      var nm=(state.name||"testimonial").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"testimonial";
+      a.href=URL.createObjectURL(blob); a.download="lsg-"+nm+"-"+state.size+".png";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
+    },"image/png");
+  });
+  // copy
+  $("copyBtn").addEventListener("click",function(){
+    var btn=this;
+    if(!navigator.clipboard||!window.ClipboardItem){ btn.textContent="Use Download instead"; return; }
+    canvas.toBlob(function(blob){
+      navigator.clipboard.write([new ClipboardItem({"image/png":blob})]).then(function(){
+        btn.textContent="Copied ✓"; setTimeout(function(){btn.textContent="Copy to clipboard";},1600);
+      }).catch(function(){ btn.textContent="Use Download instead"; });
+    },"image/png");
+  });
+
+  paintStars();
+  loadSample();
+})();
+</script>
+</body>
+</html>
