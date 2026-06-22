@@ -4,6 +4,7 @@ import { ensureUsageTable } from "./lib/usageTracker";
 import { initReferralTables } from "./routes/referral";
 import { initEbooksTable } from "./routes/ebooks";
 import { startScheduler } from "./seo-engine/scheduler";
+import { ensureSeoSchema } from "./seo-engine/ensure-schema";
 import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
@@ -189,6 +190,15 @@ async function runStartupTasks(): Promise<void> {
     logger.info("[startup] ebooks table ready");
   } catch (err) {
     logger.error({ err }, "[startup] Failed to ensure ebooks table — ebook subscriptions may fail");
+  }
+
+  // 9. Ensure SEO engine tables exist (pages, budget, clusters) — self-heals
+  //    deployments where the manual SEO migrations were never fully applied.
+  try {
+    await ensureSeoSchema();
+    logger.info("[startup] SEO schema ready");
+  } catch (err) {
+    logger.error({ err }, "[startup] Failed to ensure SEO schema — SEO admin may show errors");
   }
 }
 

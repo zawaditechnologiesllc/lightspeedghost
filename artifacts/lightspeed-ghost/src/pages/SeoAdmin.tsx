@@ -6,12 +6,11 @@ import MarkdownIt from "markdown-it";
 // (405 on POST, HTML on GET) instead of the Express backend on Render.
 const API = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
-// Public SEO pages are server-rendered by the Express backend at /seo/<slug>
-// (NOT under /api). On the Vercel-hosted admin a relative "/seo/<slug>" link
-// would hit the SPA rewrite and bounce to the app shell, so preview links must
-// point at the backend origin directly.
-const SEO_ORIGIN = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
-const seoPageUrl = (slug: string) => `${SEO_ORIGIN}/seo/${slug}`;
+// Public SEO pages are server-rendered by the Express backend, but Vercel now
+// proxies /seo/*, /seo-sitemap.xml (→ the backend's /sitemap.xml) and the
+// static /robots.txt on the main domain — so we link to relative paths and the
+// page opens on lightspeedghost.com instead of the raw Render URL.
+const seoPageUrl = (slug: string) => `/seo/${slug}`;
 
 // Markdown → HTML for the manual page author. `html:false` keeps writers from
 // pasting raw markup; linkify turns bare URLs into links. The rendered HTML is
@@ -392,10 +391,13 @@ function DashboardTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      apiFetch("/seo/dashboard/summary"),
-      apiFetch("/seo/budget/status"),
-    ]).then(([sum, bud]) => { setData(sum); setBudget(bud); }).finally(() => setLoading(false));
+    // Load the two cards independently so a budget hiccup (or a cold backend)
+    // can't blank the page counts — and a failed summary shows a banner instead
+    // of silently reading 0/0/0/0.
+    let done = 0;
+    const finish = () => { if (++done === 2) setLoading(false); };
+    apiFetch("/seo/dashboard/summary").then(setData).catch(() => setData(null)).finally(finish);
+    apiFetch("/seo/budget/status").then(setBudget).catch(() => setBudget(null)).finally(finish);
   }, []);
 
   if (loading) return <Spinner />;
@@ -406,6 +408,11 @@ function DashboardTab() {
 
   return (
     <div className="space-y-5">
+      {!data && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs px-3 py-2.5">
+          Couldn't load page stats — the backend may be waking up (Render free tier). These numbers aren't real zeros; refresh in ~30s.
+        </div>
+      )}
       {/* KPI grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="Published" value={pages.published ?? 0} color="text-emerald-400" sub="Live pages" />
@@ -448,8 +455,8 @@ function DashboardTab() {
           <div className="space-y-2 mb-4">
             {[
               { href: seoPageUrl("ai-paper-writer"), label: "↗ Preview: AI Paper Writer" },
-              { href: `${SEO_ORIGIN}/sitemap.xml`, label: "↗ View sitemap.xml (live, with SEO pages)" },
-              { href: `${SEO_ORIGIN}/robots.txt`, label: "↗ View robots.txt (live)" },
+              { href: "/seo-sitemap.xml", label: "↗ View sitemap.xml (live, with SEO pages)" },
+              { href: "/robots.txt", label: "↗ View robots.txt (live)" },
             ].map((l) => (
               <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer"
                 className="block text-xs text-blue-400 hover:text-blue-300 transition-colors py-0.5">
