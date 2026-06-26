@@ -62,19 +62,13 @@ publicRouter.get("/api/seo/cron/run", handleSeoCron);
 publicRouter.post("/api/seo/cron/run", handleSeoCron);
 
 // ── robots.txt — served dynamically ──────────────────────────────────────────
-publicRouter.get("/robots.txt", async (_req: Request, res: Response) => {
-  try {
-    const { rows } = await pool.query(
-      `SELECT slug FROM seo_pages WHERE published = true ORDER BY updated_at DESC`
-    );
-    const slugs = rows.map((r: { slug: string }) => r.slug);
-    res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    res.setHeader("Cache-Control", "public, max-age=3600");
-    res.send(renderRobotsTxt(slugs));
-  } catch {
-    res.setHeader("Content-Type", "text/plain");
-    res.send("User-agent: *\nAllow: /\nSitemap: https://lightspeedghost.com/sitemap.xml");
-  }
+// Policy is static (no per-request data needed), so render it directly — the
+// content matches the canonical robots.txt on the main domain and advertises
+// both the marketing and SEO-programme sitemaps.
+publicRouter.get("/robots.txt", (_req: Request, res: Response) => {
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.send(renderRobotsTxt());
 });
 
 // ── sitemap.xml — dynamic with all SEO pages ─────────────────────────────────
