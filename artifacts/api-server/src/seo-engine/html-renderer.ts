@@ -216,23 +216,49 @@ function escapeHtml(str: string): string {
 }
 
 // ── Dynamic robots.txt ────────────────────────────────────────────────────────
-export function renderRobotsTxt(publishedSlugs: string[]): string {
-  const sitemapUrl = "https://lightspeedghost.com/sitemap.xml";
+// Mirrors the canonical robots.txt served on the main domain
+// (artifacts/lightspeed-ghost/public/robots.txt): allow search AND AI crawlers
+// (we want our public content indexed and cited), disallow only /api/ and the
+// auth-gated tool routes (which redirect anonymous crawlers and waste crawl
+// budget), and advertise BOTH sitemaps — the static marketing sitemap and the
+// dynamic SEO-programme sitemap. Kept in sync so the admin "robots preview"
+// reflects what crawlers actually see.
+export function renderRobotsTxt(_publishedSlugs: string[] = []): string {
   return `User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /app
+Disallow: /admin
+Disallow: /write
+Disallow: /humanizer
+Disallow: /plagiarism
+Disallow: /revision
+Disallow: /stem
+Disallow: /study
+Disallow: /outline
+Disallow: /ebooks
+Disallow: /documents
+Disallow: /billing
 
-# Google — allow all crawlers including AI features
+# Search engines — allow
 User-agent: Googlebot
 Allow: /
+Disallow: /api/
 
-# Block Google AI training (but allow AI Overviews/SGE crawling via Googlebot)
-User-agent: Google-Extended
-Disallow: /
+User-agent: bingbot
+Allow: /
+Disallow: /api/
 
-# OpenAI: block training, allow search/retrieval
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+# AI answer engines — allow (drives referral traffic + citations)
 User-agent: GPTBot
-Disallow: /
+Allow: /
+Disallow: /api/
 
 User-agent: OAI-SearchBot
 Allow: /
@@ -240,57 +266,34 @@ Allow: /
 User-agent: ChatGPT-User
 Allow: /
 
-# Perplexity — allow (drives referral traffic)
 User-agent: PerplexityBot
 Allow: /
 
-# Anthropic: block training, allow Claude search
 User-agent: anthropic-ai
-Disallow: /
+Allow: /
+Disallow: /api/
 
 User-agent: ClaudeBot
-Disallow: /
-
-User-agent: Claude-User
 Allow: /
+Disallow: /api/
 
-# ByteDance / TikTok — block training crawler
-User-agent: Bytespider
-Disallow: /
+User-agent: Google-Extended
+Allow: /
+Disallow: /api/
 
-# Common Crawl — block (feeds AI training)
 User-agent: CCBot
-Disallow: /
-
-# Meta — allow search features
-User-agent: FacebookBot
 Allow: /
+Disallow: /api/
 
-# Apple — allow
-User-agent: Applebot
-Allow: /
-
-User-agent: Applebot-Extended
-Allow: /
-
-# Bing
-User-agent: bingbot
-Allow: /
-
-User-agent: BingPreview
-Allow: /
-
-# SEO crawlers — allow
+# SEO analysis crawlers — allow
 User-agent: AhrefsBot
 Allow: /
 
 User-agent: SemrushBot
 Allow: /
 
-User-agent: DuckDuckBot
-Allow: /
-
-Sitemap: ${sitemapUrl}`;
+Sitemap: https://lightspeedghost.com/sitemap.xml
+Sitemap: https://lightspeedghost.com/seo-sitemap.xml`;
 }
 
 // ── Dynamic sitemap.xml ───────────────────────────────────────────────────────

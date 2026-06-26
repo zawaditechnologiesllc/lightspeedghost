@@ -5,8 +5,10 @@ import { validatePage } from "./compliance-checker";
 import { incrementPageCount } from "./budget-tracker";
 import { PAGE_CATALOG, getPageSpec, type PageSpec } from "./page-catalog";
 
-// Catalog batch limit is separate from the pipeline's 5-page/24hr limit
-const MAX_DAILY_PAGES = parseInt(process.env.SEO_DAILY_PAGE_LIMIT ?? "10");
+// Catalog batch limit is separate from the pipeline's 5-page/24hr limit.
+// Default 30/run matches the operator guide, the Settings tab, and the Catalog
+// generator's max — override with SEO_DAILY_PAGE_LIMIT.
+const MAX_DAILY_PAGES = parseInt(process.env.SEO_DAILY_PAGE_LIMIT ?? "30");
 
 // ── Seed catalog to DB ────────────────────────────────────────────────────────
 export async function seedCatalog(): Promise<{ seeded: number; existing: number }> {

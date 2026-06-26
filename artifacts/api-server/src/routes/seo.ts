@@ -337,7 +337,7 @@ router.post("/seo/generate-page", async (req: Request, res: Response) => {
 let batchInFlight = false;
 router.post("/seo/generate-batch", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
-  const { slugs, type, limit = 10, autoPublish = false } = req.body;
+  const { slugs, type, limit = 30, autoPublish = false } = req.body;
   if (batchInFlight) {
     res.status(200).json({ ok: true, started: false, message: "A batch is already generating — refresh Pages/Review for progress" });
     return;
@@ -451,18 +451,22 @@ router.get("/seo/budget/log", async (req: Request, res: Response) => {
 // dead endpoints, verify the sitemap is actually live and report how to submit it.
 router.post("/seo/sitemap/ping", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+  // Verify the SEO-programme sitemap specifically (the one that lists the
+  // published /seo/<slug> pages), not the static marketing sitemap.
+  const sitemapUrl = "https://lightspeedghost.com/seo-sitemap.xml";
   try {
-    const r = await fetch("https://lightspeedghost.com/sitemap.xml", { signal: AbortSignal.timeout(10_000) });
+    const r = await fetch(sitemapUrl, { signal: AbortSignal.timeout(10_000) });
     const reachable = r.ok;
     res.json({
       ok: true,
       reachable,
+      sitemapUrl,
       message: reachable
-        ? "Sitemap is live and linked from robots.txt, so search engines auto-discover it. The old Google/Bing 'ping' URLs were retired — submit it once in Google & Bing Search Console for instant pickup."
-        : "Sitemap couldn't be fetched — check that the backend is serving /sitemap.xml.",
+        ? "SEO sitemap is live and linked from robots.txt, so search engines auto-discover it. The old Google/Bing 'ping' URLs were retired — submit it once in Google & Bing Search Console for instant pickup."
+        : "The SEO sitemap couldn't be fetched — the backend may be waking up (free tier). Retry in ~30s; it stays linked from robots.txt for auto-discovery.",
     });
   } catch {
-    res.json({ ok: true, reachable: false, message: "Couldn't verify the sitemap, but it's still linked from robots.txt for auto-discovery." });
+    res.json({ ok: true, reachable: false, sitemapUrl, message: "Couldn't verify the SEO sitemap right now, but it stays linked from robots.txt for auto-discovery." });
   }
 });
 
@@ -522,7 +526,7 @@ router.get("/seo/pipeline/clusters", async (req: Request, res: Response) => {
 router.get("/seo/pipeline/cluster/:id", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
-    const cluster = await getCluster(req.params.id);
+    const cluster = await getCluster(String(req.params.id));
     if (!cluster) { res.status(404).json({ error: "Cluster not found" }); return; }
     res.json(cluster);
   } catch (err) {
@@ -597,7 +601,7 @@ router.post("/seo/pipeline/start", async (req: Request, res: Response) => {
 router.post("/seo/pipeline/cluster/:id/resume", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
-    await resumePipeline(req.params.id, { autoPublish: Boolean(req.body?.autoPublish) });
+    await resumePipeline(String(req.params.id), { autoPublish: Boolean(req.body?.autoPublish) });
     res.json({ ok: true, message: "Pipeline resumed" });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -621,7 +625,7 @@ router.get("/seo/pipeline/review-queue", async (req: Request, res: Response) => 
 router.post("/seo/pipeline/cluster/:id/publish-all", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
-    const published = await publishCluster(req.params.id);
+    const published = await publishCluster(String(req.params.id));
     res.json({ ok: true, published, message: `${published} pages published` });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -633,7 +637,7 @@ router.post("/seo/pipeline/cluster/:id/publish-all", async (req: Request, res: R
 router.post("/seo/pipeline/cluster/:id/discard", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
-    const discarded = await discardCluster(req.params.id);
+    const discarded = await discardCluster(String(req.params.id));
     res.json({ ok: true, discarded, message: `${discarded} pages moved to draft` });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);

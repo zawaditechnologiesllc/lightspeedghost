@@ -13,7 +13,8 @@ const seoPageUrl = (slug: string) => `/seo/${slug}`;
 
 // Markdown → HTML for the manual page author. `html:false` keeps writers from
 // pasting raw markup; linkify turns bare URLs into links. The rendered HTML is
-// injected into the SEO page <main>, which is styled by /seo-page.css.
+// injected into the SEO page <main>, which the backend renderer wraps with the
+// site chrome and inlined CSS (see seo-engine/html-renderer.ts).
 const mdRenderer = new MarkdownIt({ html: false, linkify: true, typographer: true });
 
 // The 15 page_type values accepted by the seo_pages CHECK constraint.
@@ -477,7 +478,7 @@ function DashboardTab() {
           <div className="flex justify-between text-xs text-slate-400 mb-2">
             <span>${(budget?.totalSpend ?? 0).toFixed(4)} spent</span>
             <span className="font-medium text-white">{pct}%</span>
-            <span>${budget?.budgetLimit ?? 8} limit</span>
+            <span>${budget?.budgetLimit ?? 25} limit</span>
           </div>
           <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
             <div className={`h-full rounded-full transition-all ${budgetColor}`}
@@ -494,7 +495,7 @@ function DashboardTab() {
             </div>
           </div>
           <p className="text-[10px] text-purple-400 mt-3 bg-purple-500/10 rounded-lg px-3 py-1.5">
-            Gemini 2.5 Flash · $0.075/M input · $0.30/M output · free tier: 50 req/24hr
+            Gemini 2.5 Flash · $0.30/M input · $2.50/M output · free-tier eligible within Google's daily limits
           </p>
         </Card>
 
@@ -850,7 +851,6 @@ function BudgetTab() {
   const [budget, setBudget] = useState<any>(null);
   const [log, setLog] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [upgrading, setUpgrading] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -865,39 +865,24 @@ function BudgetTab() {
     <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="Gemini Spend" value={`$${(budget?.geminiSpend ?? 0).toFixed(4)}`} sub="Gemini 2.5 Flash" color="text-blue-400" />
-        <Stat label="Claude Spend" value={`$${(budget?.claudeSpend ?? 0).toFixed(4)}`} sub="Claude Haiku 4.5" color="text-violet-400" />
         <Stat label="Total Spend" value={`$${(budget?.totalSpend ?? 0).toFixed(4)}`} sub="This month" color="text-white" />
         <Stat label="Remaining" value={`$${(budget?.remainingBudget ?? 0).toFixed(2)}`} sub="Budget left" color="text-emerald-400" />
+        <Stat label="Pages Generated" value={budget?.pagesGenerated ?? 0} sub="This month" color="text-violet-400" />
       </div>
 
       <Card>
         <div className="flex justify-between items-center mb-4">
           <CardTitle>Budget — {budget?.month}</CardTitle>
-          {!budget?.upgraded && (
-            <Btn onClick={async () => {
-              setUpgrading(true);
-              await apiFetch("/seo/budget/upgrade", { method: "POST" });
-              setBudget(await apiFetch("/seo/budget/status"));
-              setUpgrading(false);
-            }} disabled={upgrading} variant="amber">
-              {upgrading ? "Upgrading…" : "Upgrade to Full Claude"}
-            </Btn>
-          )}
         </div>
         <div className="flex justify-between text-xs text-slate-400 mb-2">
-          <span>${(budget?.totalSpend ?? 0).toFixed(4)} of ${budget?.budgetLimit ?? 8} used</span>
+          <span>${(budget?.totalSpend ?? 0).toFixed(4)} of ${budget?.budgetLimit ?? 25} used</span>
           <span className="font-medium text-white">{Math.round(budget?.percentUsed ?? 0)}%</span>
         </div>
         <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
           <div className={`h-full rounded-full ${(budget?.percentUsed ?? 0) > 80 ? "bg-red-500" : "bg-blue-500"}`}
             style={{ width: `${Math.min(budget?.percentUsed ?? 0, 100)}%` }} />
         </div>
-        <p className="text-[10px] text-slate-500 mt-2">{budget?.pagesGenerated ?? 0} pages generated this month</p>
-        {budget?.upgraded && (
-          <p className="text-xs text-emerald-400 mt-2 bg-emerald-500/10 rounded-lg px-3 py-1.5">
-            ✓ Budget upgraded — Claude unlocked for all pages this month
-          </p>
-        )}
+        <p className="text-[10px] text-slate-500 mt-2">{budget?.pagesGenerated ?? 0} pages generated this month · single-model engine (Gemini 2.5 Flash)</p>
       </Card>
 
       <Card>
@@ -1021,7 +1006,7 @@ function IntegrityTab() {
             { label: "EU AI Act — Content Disclosure", desc: "ai-generated meta tag + visible disclosure label on all generated pages" },
             { label: "WCAG 2.2 Level AA", desc: "Skip links, focus rings, table captions, ARIA labels, 24px touch targets" },
             { label: "Academic Integrity", desc: "No bypass/cheat/undetectable language. AI writing assistance framing only." },
-            { label: "Robots.txt Crawler Policy", desc: "Training crawlers blocked, search crawlers allowed, Perplexity allowed" },
+            { label: "Robots.txt Crawler Policy", desc: "Search & AI crawlers allowed to index/cite public pages; /api/ and auth-gated tool routes disallowed" },
           ].map((c) => (
             <div key={c.label} className="flex items-start gap-3 py-3 border-b border-slate-700/40 last:border-0">
               <span className="text-emerald-400 mt-0.5 shrink-0">✓</span>
@@ -1061,14 +1046,16 @@ function SitemapTab() {
         <Card>
           <CardTitle>Sitemap</CardTitle>
           <div className="space-y-2 text-xs mb-4">
+            <a href="/seo-sitemap.xml" target="_blank" rel="noopener noreferrer"
+              className="block text-blue-400 hover:text-blue-300 transition-colors">↗ View seo-sitemap.xml (SEO pages)</a>
+            <p className="text-slate-500">Dynamic — auto-includes every published SEO page on each request</p>
             <a href="/sitemap.xml" target="_blank" rel="noopener noreferrer"
-              className="block text-blue-400 hover:text-blue-300 transition-colors">↗ View sitemap.xml</a>
-            <p className="text-slate-500">Dynamic — auto-includes all published SEO pages on every request</p>
+              className="block text-slate-400 hover:text-slate-300 transition-colors pt-1">↗ View sitemap.xml (core marketing pages)</a>
           </div>
-          <Btn onClick={ping} disabled={pinging}>{pinging ? "Pinging…" : "Ping Google & Bing"}</Btn>
+          <Btn onClick={ping} disabled={pinging}>{pinging ? "Checking…" : "Verify SEO sitemap is live"}</Btn>
           {pingResult && (
-            <div className={`mt-3 text-xs rounded-lg p-3 ${pingResult.ok ? "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20" : "text-red-400 bg-red-400/10 border border-red-400/20"}`}>
-              {pingResult.ok ? `✓ Pinged: ${pingResult.pinged?.join(", ")}` : pingResult.error}
+            <div className={`mt-3 text-xs rounded-lg p-3 ${pingResult.reachable ? "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20" : "text-amber-400 bg-amber-400/10 border border-amber-400/20"}`}>
+              {pingResult.message ?? pingResult.error ?? "Done"}
             </div>
           )}
         </Card>
@@ -1077,8 +1064,8 @@ function SitemapTab() {
           <a href="/robots.txt" target="_blank" rel="noopener noreferrer"
             className="block text-xs text-blue-400 hover:text-blue-300 mb-3 transition-colors">↗ View live robots.txt</a>
           <div className="space-y-1.5 text-[10px] text-slate-500">
-            <p><span className="text-red-400">Blocked:</span> GPTBot, CCBot, anthropic-ai, ClaudeBot, Bytespider</p>
-            <p><span className="text-emerald-400">Allowed:</span> Googlebot, Bingbot, Perplexity, OAI-SearchBot</p>
+            <p><span className="text-emerald-400">Allowed:</span> Googlebot, Bingbot, GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot — search & AI engines may index and cite public pages</p>
+            <p><span className="text-red-400">Disallowed:</span> /api/ and auth-gated tool routes (/write, /stem, /admin…)</p>
           </div>
         </Card>
       </div>
@@ -1144,8 +1131,8 @@ function SettingsTab() {
     { label: "Community research", value: "Reddit (scraping)", note: "scrapes old.reddit.com public HTML · no key needed · falls back to AI knowledge" },
     { label: "Min word count", value: "800 words", note: "per page minimum · override via SEO_MIN_WORD_COUNT" },
     { label: "Daily page limit", value: "30 pages", note: "per batch run · override via SEO_DAILY_PAGE_LIMIT" },
-    { label: "Robots.txt", value: "Dynamic", note: "served by Express · training crawlers blocked" },
-    { label: "Sitemap.xml", value: "Dynamic", note: "auto-includes all published SEO pages" },
+    { label: "Robots.txt", value: "Dynamic", note: "served by Express · search & AI crawlers allowed · /api/ + gated routes disallowed" },
+    { label: "Sitemap", value: "Dynamic", note: "/seo-sitemap.xml auto-includes all published SEO pages" },
     { label: "WCAG standard", value: "2.2 Level AA", note: "skip links, focus rings, ARIA, 24px touch targets" },
     { label: "Academic integrity", value: "Enforced", note: "no bypass/cheat/undetectable · AI writing assistance framing only" },
     { label: "EU AI Act", value: "Compliant", note: "ai-generated meta tag + visible disclosure on all pages" },
@@ -1344,10 +1331,12 @@ const TOOL_FOCUS_OPTIONS = [
   { value: "ebook",        label: "Ebook Generator" },
 ];
 
+// Keyed by the cluster's current_stage value from the backend
+// (research → outline → write_1..write_5 → complete).
 const STAGE_LABELS: Record<string, string> = {
   pending:    "Pending",
-  researching: "Step 1: Researching (Reddit + AI)",
-  outlining:  "Step 2: Building Outline",
+  research:   "Step 1: Researching (Reddit + AI)",
+  outline:    "Step 2: Building Outline",
   write_1:    "Step 3: Writing Page 1 — Hook",
   write_2:    "Step 3: Writing Page 2 — Comparison",
   write_3:    "Step 3: Writing Page 3 — Breakdown",
