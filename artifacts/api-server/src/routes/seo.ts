@@ -526,7 +526,7 @@ router.get("/seo/pipeline/clusters", async (req: Request, res: Response) => {
 router.get("/seo/pipeline/cluster/:id", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
-    const cluster = await getCluster(req.params.id);
+    const cluster = await getCluster(String(req.params.id));
     if (!cluster) { res.status(404).json({ error: "Cluster not found" }); return; }
     res.json(cluster);
   } catch (err) {
@@ -601,7 +601,7 @@ router.post("/seo/pipeline/start", async (req: Request, res: Response) => {
 router.post("/seo/pipeline/cluster/:id/resume", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
-    await resumePipeline(req.params.id, { autoPublish: Boolean(req.body?.autoPublish) });
+    await resumePipeline(String(req.params.id), { autoPublish: Boolean(req.body?.autoPublish) });
     res.json({ ok: true, message: "Pipeline resumed" });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -625,7 +625,7 @@ router.get("/seo/pipeline/review-queue", async (req: Request, res: Response) => 
 router.post("/seo/pipeline/cluster/:id/publish-all", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
-    const published = await publishCluster(req.params.id);
+    const published = await publishCluster(String(req.params.id));
     res.json({ ok: true, published, message: `${published} pages published` });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -637,7 +637,7 @@ router.post("/seo/pipeline/cluster/:id/publish-all", async (req: Request, res: R
 router.post("/seo/pipeline/cluster/:id/discard", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
-    const discarded = await discardCluster(req.params.id);
+    const discarded = await discardCluster(String(req.params.id));
     res.json({ ok: true, discarded, message: `${discarded} pages moved to draft` });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);

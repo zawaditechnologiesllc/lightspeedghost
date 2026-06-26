@@ -72,9 +72,15 @@ describe("computeBodyWordCount", () => {
   });
 
   it("excludes inline APA citations from count", () => {
+    // Body = "The evidence suggests this is true" (6 words) + 99 filler = 105
+    // body words. The APA citation "(Smith, 2020, pp. 45–50)" must contribute
+    // nothing; a lone "." left where it was removed may be tokenised, so the
+    // count lands at 105–106. (If the citation were NOT excluded its 4 tokens
+    // would push the count to ~109, which this range rejects.)
     const content = "The evidence suggests this is true (Smith, 2020, pp. 45–50). " + generateWords(99);
     const count = computeBodyWordCount(content);
-    expect(count).toBeCloseTo(100, -1);
+    expect(count).toBeGreaterThanOrEqual(105);
+    expect(count).toBeLessThanOrEqual(106);
   });
 
   it("excludes numbered citation brackets [1], [2,3]", () => {
