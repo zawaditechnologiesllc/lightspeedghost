@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Light Speed Ghost — Short-Form Video Studio</title>
+<style>
+  :root{
+    --bg:#04080f; --panel:#0b1424; --panel2:#0e1a2e; --border:rgba(255,255,255,.09);
+    --text:#e8eef7; --muted:#8aa0bd; --accent:#3b82f6; --accent2:#38bdf8;
+    --radius:14px; --field:#0a1322;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 600px at 80% -10%,rgba(59,130,246,.10),transparent 60%),var(--bg);
+    color:var(--text);font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;line-height:1.5;
+  }
+  header{padding:22px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px;letter-spacing:-.01em}
+  .logo svg{width:22px;height:22px;color:var(--accent2)}
+  .logo b{color:#fff}.logo span{color:var(--accent2)}
+  header .tag{margin-left:auto;font-size:12.5px;color:var(--muted)}
+  .note{margin:16px 28px 0;padding:11px 15px;border-radius:10px;font-size:12.5px;display:flex;gap:9px;align-items:flex-start}
+  .note svg{width:16px;height:16px;flex:0 0 auto;margin-top:1px}
+  .note.honesty{border:1px solid rgba(56,189,248,.22);background:rgba(56,189,248,.06);color:#bfe0f5}
+  .note.honesty svg{color:var(--accent2)}
+  .note.tip{border:1px solid rgba(251,191,36,.22);background:rgba(251,191,36,.06);color:#f3dca0}
+  .note.tip svg{color:#fbbf24}
+  main{display:grid;grid-template-columns:minmax(330px,400px) 1fr;gap:24px;padding:22px 28px 60px;align-items:start}
+  @media(max-width:920px){main{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+  .panel h2{margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+  .field{margin-top:16px}
+  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;font-weight:600}
+  select,textarea{
+    width:100%;background:var(--field);border:1px solid var(--border);border-radius:10px;color:var(--text);
+    font:inherit;font-size:14px;padding:10px 12px;resize:vertical;transition:border-color .15s,background .15s;
+  }
+  select:focus,textarea:focus{outline:none;border-color:rgba(59,130,246,.55);background:#0c1626}
+  textarea{min-height:200px;font-size:13px;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .seg{display:flex;gap:8px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:64px;background:#0c1626;border:1px solid var(--border);color:var(--muted);border-radius:9px;
+    padding:9px 8px;font-size:12.5px;cursor:pointer;font-weight:600;transition:.15s}
+  .seg button.sel{background:rgba(59,130,246,.14);border-color:rgba(59,130,246,.5);color:#cfe3ff}
+  .swatches{display:flex;gap:9px;flex-wrap:wrap}
+  .swatch{width:42px;height:42px;border-radius:10px;cursor:pointer;border:2px solid transparent;position:relative;overflow:hidden}
+  .swatch.sel{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(56,189,248,.18)}
+  .check{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text);user-select:none;margin-top:12px}
+  .check input{width:16px;height:16px;accent-color:var(--accent)}
+  .hint{color:#647b9c;font-weight:400}
+  /* preview */
+  .preview-wrap{position:sticky;top:22px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .phone{position:relative;width:300px;max-width:78vw;aspect-ratio:9/16;border-radius:30px;border:1px solid var(--border);
+    background:#000;box-shadow:0 30px 70px rgba(0,0,0,.55);overflow:hidden}
+  canvas#stage{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .recdot{position:absolute;top:12px;left:12px;z-index:3;display:none;align-items:center;gap:7px;background:rgba(0,0,0,.5);
+    border-radius:20px;padding:5px 11px;font-size:12px;font-weight:700;color:#fff}
+  .recdot.on{display:flex}
+  .recdot i{width:9px;height:9px;border-radius:50%;background:#ef4444;animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .iconbtn{background:#0c1626;border:1px solid var(--border);color:var(--text);border-radius:11px;padding:10px 15px;font-size:13px;cursor:pointer;font-weight:600}
+  .iconbtn:hover{border-color:rgba(59,130,246,.5)}
+  .exports{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:340px}
+  .exports .wide{grid-column:1/3}
+  .export{background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;border:none;border-radius:11px;padding:13px 14px;
+    font-size:13.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 24px rgba(37,99,235,.30)}
+  .export.alt{background:#0c1626;border:1px solid var(--border);color:var(--text);box-shadow:none}
+  .export:hover{filter:brightness(1.07)}
+  .export:disabled,.iconbtn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  .status{font-size:12.5px;color:var(--muted);text-align:center;min-height:18px;max-width:340px}
+  .status b{color:var(--accent2)}
+  .badge{font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center}
+  .badge .fmt{background:rgba(56,189,248,.14);color:#7dd3fc;border-radius:6px;padding:2px 7px;font-weight:700}
+  footer{padding:0 28px 50px;color:var(--muted);font-size:12px;max-width:820px}
+  footer a{color:var(--accent2)}
+  footer code{background:#0c1626;border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:#cfe3ff}
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 11-13h-7l1-7z"/></svg>
+      <span><b>Light Speed Ghost</b> · Short-Form Video Studio</span>
+    </div>
+    <div class="tag">Per-tool clips for TikTok · Reels · Shorts</div>
+  </header>
+
+  <div class="note honesty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+    <div>Quotes shown as testimonials must be <b>real words from real, consenting customers</b>. Keep claims honest — no "guaranteed grades", "undetectable", or "bypass" language (it gets posts suppressed and breaks academic-integrity rules). Everything renders <b>in your browser</b>; nothing is uploaded.</div>
+  </div>
+  <div class="note tip">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>
+    <div>These export <b>silent</b> on purpose — add a <b>trending sound inside the app</b> when you post (native audio is what the algorithm rewards). Keep the tab focused while it records.</div>
+  </div>
+
+  <main>
+    <section class="panel">
+      <h2>1 · What to make</h2>
+      <div class="field">
+        <label for="tool">Tool</label>
+        <select id="tool"></select>
+      </div>
+      <div class="field">
+        <label>Clip length <span class="hint">— more slides on longer clips</span></label>
+        <div class="seg" id="durs"></div>
+      </div>
+
+      <h2 style="margin-top:26px">2 · Vibe</h2>
+      <div class="field">
+        <label>Background <span class="hint">— scroll-stopping, not an ad</span></label>
+        <div class="seg" id="bgs"></div>
+      </div>
+      <div class="field">
+        <label>Accent</label>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="brand" checked> Show <code style="font-size:11px">lightspeedghost.com</code> chip</label>
+      <label class="check"><input type="checkbox" id="progress" checked> Story-style progress bar</label>
+
+      <h2 style="margin-top:26px">3 · Captions <span class="hint" style="text-transform:none;letter-spacing:0">(edit freely)</span></h2>
+      <div class="field">
+        <label for="deck">One slide per block · blank line between slides · <code style="font-size:11px">&gt;</code> = quote, <code style="font-size:11px">@</code> = name</label>
+        <textarea id="deck" spellcheck="false"></textarea>
+      </div>
+    </section>
+
+    <section class="preview-wrap">
+      <div class="phone">
+        <div class="recdot" id="recdot"><i></i><span id="rectxt">REC</span></div>
+        <canvas id="stage" width="1080" height="1920"></canvas>
+      </div>
+      <div class="controls">
+        <button class="iconbtn" id="playBtn" type="button">⏸ Pause</button>
+        <button class="iconbtn" id="replayBtn" type="button">⟳ Replay</button>
+        <span class="badge">Output <span class="fmt" id="fmt">…</span></span>
+      </div>
+      <div class="exports">
+        <button class="export wide" id="expOne" type="button">⬇ Export this clip</button>
+        <button class="export alt" id="expDurs" type="button">All 4 lengths</button>
+        <button class="export alt" id="expTools" type="button">Every tool</button>
+      </div>
+      <div class="status" id="status"></div>
+    </section>
+  </main>
+
+  <footer>
+    <b style="color:#cfe3ff">How it works:</b> pick a tool, a length and a background, tweak the captions, then export.
+    <b>Export this clip</b> = the current tool at the current length. <b>All 4 lengths</b> = 3s/6s/9s/12s of the current tool.
+    <b>Every tool</b> = one clip per tool plus the “all tools” showcase, at the current length — exactly what you’d batch-schedule across TikTok, Instagram and YouTube Shorts.
+    Recording is real-time (a 12s clip takes 12s) and downloads automatically. If your browser exports <code>.webm</code> and a phone app refuses it, upload from a desktop or run it once through any free MP4 converter — most modern Chrome builds already export <code>.mp4</code> directly.
+  </footer>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var FAM = 'Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+  var W = 1080, H = 1920;
+
+  /* ───────────────────────── tool caption presets ───────────────────────── */
+  var TOOLS = [
+    { key:"paper-writer", label:"AI Paper Writer", deck:
+"it's 2am and the doc is still blank 📄\n3,000 words. due at 9.\n\nupload your rubric first\nthe draft comes back actually citing sources\n\n> went from a blank page to a cited draft before midnight\n@ Amina · MSc, Nairobi\n\n35+ paper types · 11 citation styles\nreferences formatted for you\n\nyour draft, properly cited\nlightspeedghost.com" },
+
+    { key:"humanizer", label:"LightSpeed Humanizer", deck:
+"your writing, but it finally sounds like you ✍️\n\nclunky phrasing → clean, natural sentences\nkeeps your meaning, fixes the flow\n\n> my prof said it 'finally reads like me'\n@ Daniel · Undergrad\n\nrefine a paragraph or a whole paper\nfrom $1.99\n\nsound like yourself again\nlightspeedghost.com" },
+
+    { key:"plagiarism", label:"Plagiarism & AI Check", deck:
+"check it before you submit, not after 😮‍💨\n\nAI + similarity in one pass\nsee what a checker will see\n\nknow your number before your professor does\n\n$1.99 per check\n\nsubmit with confidence\nlightspeedghost.com" },
+
+    { key:"stem", label:"STEM Solver", deck:
+"stuck on one problem for 40 minutes? 🧮\n\nstep-by-step worked solutions\nnot just the answer — the how\n\n> finally understood the steps instead of copying\n@ Joy · Engineering\n\nmath · physics · chem · stats\n$1.99 a problem\n\nactually get it\nlightspeedghost.com" },
+
+    { key:"study", label:"Study Assistant", deck:
+"turn 60 pages of notes into a study plan 📚\n\nsummaries, flashcards, quick quizzes\nfrom your own material\n\nstudy smarter the night before\n\nyour AI study buddy\nlightspeedghost.com" },
+
+    { key:"revision", label:"Paper Revision", deck:
+"you wrote it. let's make it your best. 📝\n\ntighter arguments, cleaner structure\nfeedback like a good TA would give\n\n> took my draft up a whole grade band\n@ Sam · final year\n\nrevise to a higher grade\nfrom $4.99\n\nlightspeedghost.com" },
+
+    { key:"outline", label:"Outline Builder", deck:
+"the hardest part is starting. so skip it. 🗂️\n\na clear outline in seconds\nstructure first, words come easy\n\nessays · reports · dissertations\n$1.99 an outline\n\nlightspeedghost.com" },
+
+    { key:"ebook", label:"Ebook Generator", deck:
+"from idea to finished ebook 📖\n\nchapters, structure, full draft\nyou guide it, it writes\n\npublish-ready in a weekend\n$29.99/month\n\nlightspeedghost.com" },
+
+    { key:"all", label:"All tools (showcase)", deck:
+"every assignment. one tab. ⚡\n\n📄 write & cite\n✍️ humanize\n🔎 plagiarism check\n\n🧮 STEM steps\n📚 study help\n📝 revise up a grade\n\n> replaced the 5 tabs i used to panic-switch between\n@ Amina · MSc\n\nall your coursework, one tool\nlightspeedghost.com" }
+  ];
+
+  /* ───────────────────────────── themes (accent only) ───────────────────── */
+  var THEMES = {
+    ocean:   { label:"Ocean",  sw:"linear-gradient(135deg,#2563eb,#06b6d4)", accent:"#38bdf8", accent2:"#7dd3fc", star:"#fbbf24" },
+    grape:   { label:"Grape",  sw:"linear-gradient(135deg,#7c3aed,#db2777)", accent:"#c084fc", accent2:"#f0abfc", star:"#fbbf24" },
+    mint:    { label:"Mint",   sw:"linear-gradient(135deg,#10b981,#34d399)", accent:"#34d399", accent2:"#6ee7b7", star:"#fbbf24" },
+    sunset:  { label:"Sunset", sw:"linear-gradient(135deg,#f97316,#ef4444)", accent:"#fb923c", accent2:"#fdba74", star:"#fde047" },
+    clean:   { label:"Clean",  sw:"linear-gradient(135deg,#e5e7eb,#9ca3af)", accent:"#ffffff", accent2:"#e5e7eb", star:"#fbbf24" }
+  };
+
+  var BG_OPTS = [
+    { key:"minecraft", label:"Blocky parkour" },
+    { key:"asmr",      label:"Satisfying slice" },
+    { key:"academic",  label:"Study aesthetic" },
+    { key:"gradient",  label:"Clean gradient" }
+  ];
+
+  var DURS = [3,6,9,12];
+  var COUNTS = { 3:2, 6:3, 9:4, 12:5 };   // slides shown per length
+
+  var state = { tool:"paper-writer", dur:6, bg:"minecraft", theme:"ocean", brand:true, progress:true };
+
+  var canvas = $("stage"), ctx = canvas.getContext("2d");
+  var show = null;            // current {slides, per, total}
+  var previewRAF = null, previewStart = 0, paused = false;
+  var rafExport = null, recording = false;
+
+  /* ───────────────────────────── caption parsing ────────────────────────── */
+  function presetFor(key){ for(var i=0;i<TOOLS.length;i++){ if(TOOLS[i].key===key) return TOOLS[i].deck; } return ""; }
+
+  function parseDeck(text){
+    var blocks = String(text||"").replace(/\r/g,"").split(/\n[ \t]*\n/);
+    var deck = [];
+    blocks.forEach(function(b){
+      var lines = b.split("\n").map(function(s){ return s.trim(); }).filter(Boolean);
+      if(!lines.length) return;
+      if(lines[0].charAt(0) === ">"){
+        var who = "", quote = [];
+        lines.forEach(function(l){
+          if(l.charAt(0) === "@") who = l.slice(1).trim();
+          else quote.push(l.replace(/^>\s?/,""));
+        });
+        deck.push({ kind:"quote", text:quote.join(" "), who:who });
+      } else {
+        deck.push({ kind:"text", big:lines[0], sub:lines.slice(1) });
+      }
+    });
+    return deck.length ? deck : [{ kind:"text", big:"Your text here", sub:[] }];
+  }
+
+  function chooseSlides(deck, count){
+    count = Math.max(2, Math.min(count, deck.length));
+    if(count >= deck.length) return deck.slice();
+    var res = [deck[0]], mids = count - 2;
+    for(var i=1;i<=mids;i++){ res.push(deck[ Math.round(i*(deck.length-1)/(mids+1)) ]); }
+    res.push(deck[deck.length-1]);
+    return res;
+  }
+
+  function buildShowFromText(text, dur){
+    var deck = parseDeck(text);
+    var count = COUNTS[dur] || Math.max(2, Math.round(dur/2.1));
+    var slides = chooseSlides(deck, count);
+    return { slides:slides, per:(dur*1000)/slides.length, total:dur*1000 };
+  }
+  function rebuildShow(){ show = buildShowFromText($("deck").value, state.dur); }
+
+  /* ───────────────────────────── text helpers ───────────────────────────── */
+  function wrapLines(text, maxW, fs, weight){
+    ctx.font = (weight||"800")+" "+fs+"px "+FAM;
+    var words = String(text).split(/\s+/), lines = [], line = "";
+    for(var i=0;i<words.length;i++){
+      var test = line ? line+" "+words[i] : words[i];
+      if(ctx.measureText(test).width > maxW && line){ lines.push(line); line = words[i]; }
+      else line = test;
+    }
+    if(line) lines.push(line);
+    return lines;
+  }
+  function fitText(text, maxW, maxFs, minFs, weight, maxLines){
+    maxLines = maxLines || 4;
+    for(var fs=maxFs; fs>=minFs; fs-=3){
+      var lines = wrapLines(text, maxW, fs, weight);
+      if(lines.length <= maxLines) return { fs:fs, lines:lines };
+    }
+    return { fs:minFs, lines:wrapLines(text, maxW, minFs, weight) };
+  }
+  function shadowText(str, x, y){
+    ctx.shadowColor = "rgba(0,0,0,.55)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 2;
+    ctx.fillText(str, x, y);
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  }
+  function drawStar(cx, cy, R, color){
+    var spikes=5, inner=R*0.42, rot=Math.PI/2*3, step=Math.PI/spikes, i, x, y;
+    ctx.beginPath(); ctx.moveTo(cx, cy-R);
+    for(i=0;i<spikes;i++){
+      x=cx+Math.cos(rot)*R; y=cy+Math.sin(rot)*R; ctx.lineTo(x,y); rot+=step;
+      x=cx+Math.cos(rot)*inner; y=cy+Math.sin(rot)*inner; ctx.lineTo(x,y); rot+=step;
+    }
+    ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+  }
+
+  /* ───────────────────────────── backgrounds ────────────────────────────── */
+  // deterministic pseudo-random for stable terrain/positions
+  function hash(n){ var x = Math.sin(n*127.1)*43758.5453; return x - Math.floor(x); }
+
+  function bgGradient(t, th){
+    var g = ctx.createLinearGradient(0,0,W,H);
+    g.addColorStop(0,"#0b1b3a"); g.addColorStop(1,"#070d1c");
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    // drifting accent blobs
+    for(var i=0;i<3;i++){
+      var px = W*(0.3+0.4*hash(i+1)) + Math.sin(t/1700 + i)*120;
+      var py = H*(0.25+0.5*hash(i+9)) + Math.cos(t/2100 + i)*120;
+      var rg = ctx.createRadialGradient(px,py,0,px,py,W*0.5);
+      rg.addColorStop(0, hexA(th.accent,0.22)); rg.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle = rg; ctx.fillRect(0,0,W,H);
+    }
+  }
+
+  function bgAcademic(t, th){
+    var g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,"#241a12"); g.addColorStop(0.5,"#14120f"); g.addColorStop(1,"#0a0a0c");
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    // warm wash
+    var rg = ctx.createRadialGradient(W*0.5,H*0.32,0,W*0.5,H*0.32,W*0.9);
+    rg.addColorStop(0,"rgba(255,176,92,.10)"); rg.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle = rg; ctx.fillRect(0,0,W,H);
+    // ruled paper lines
+    ctx.strokeStyle = "rgba(255,255,255,.04)"; ctx.lineWidth = 2;
+    for(var y=120; y<H; y+=86){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    // drifting bokeh dust
+    for(var i=0;i<26;i++){
+      var seed=i+1, x=W*hash(seed)+Math.sin(t/3000+seed)*40;
+      var y=( H*hash(seed*3) - (t*0.012*(0.5+hash(seed*5))) ) % (H+200); if(y<-100) y+=H+200;
+      var r=8+hash(seed*7)*26;
+      var bg=ctx.createRadialGradient(x,y,0,x,y,r);
+      bg.addColorStop(0,hexA(th.accent2,0.16)); bg.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    }
+    // breathing vignette
+    var v=ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.75);
+    v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,"+(0.34+0.06*Math.sin(t/2200))+")");
+    ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+  }
+
+  function bgAsmr(t, th){
+    var g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,"#f7d9e6"); g.addColorStop(0.5,"#e7d6f5"); g.addColorStop(1,"#d6e6f7");
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    var pastels=["#f9a8d4","#c4b5fd","#93c5fd","#86efac","#fcd34d","#fdba74"];
+    var n=7, bandH=H/n, P=2600, blade=(t%P)/P*H;     // blade sweeps top→bottom
+    for(var i=0;i<n;i++){
+      var cy=i*bandH+bandH/2;
+      var d=blade-cy;                                 // squish/offset near the blade
+      var near=Math.max(0,1-Math.abs(d)/(bandH*0.9));
+      var sep=near*46*Math.sign(d||1);
+      var squish=1-near*0.10;
+      var x=W*0.12, w=W*0.76, y=cy-bandH*0.42*squish+sep, h=bandH*0.84*squish;
+      ctx.save();
+      ctx.shadowColor="rgba(60,30,80,.18)"; ctx.shadowBlur=30; ctx.shadowOffsetY=10;
+      ctx.fillStyle=pastels[i%pastels.length];
+      roundRect(x,y,w,h,h*0.36); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle="rgba(255,255,255,.25)"; roundRect(x,y,w,h*0.34,h*0.30); ctx.fill();
+    }
+    // the blade
+    ctx.fillStyle="rgba(255,255,255,.9)";
+    ctx.fillRect(0,blade-3,W,6);
+    ctx.fillStyle="rgba(180,190,210,.9)";
+    ctx.beginPath(); ctx.moveTo(W*0.5-26,blade); ctx.lineTo(W*0.5+26,blade); ctx.lineTo(W*0.5,blade+34); ctx.closePath(); ctx.fill();
+    // soften the whole thing slightly toward the brand palette
+    ctx.fillStyle=hexA(th.accent,0.05); ctx.fillRect(0,0,W,H);
+  }
+
+  function bgMinecraft(t, th){
+    // saturated sky
+    var sky=ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,"#5fb0e8"); sky.addColorStop(0.6,"#8fd0f0"); sky.addColorStop(1,"#bfe6c9");
+    ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+    var layers=[
+      { sz:150, speed:0.10, top:"#3a7d3a", side:"#2c5e2c", front:false },
+      { sz:120, speed:0.20, top:"#4a9e46", side:"#367334", front:false },
+      { sz:96,  speed:0.34, top:"#5cba50", side:"#418d3a", front:true  }
+    ];
+    for(var li=0; li<layers.length; li++){
+      var L=layers[li], sz=L.sz, scroll=(t*L.speed)%sz;
+      var cols=Math.ceil(W/sz)+1, rows=Math.ceil(H/sz)+2;
+      for(var cxi=0; cxi<cols; cxi++){
+        // per-column terrain height (stable), gives platform/parkour feel
+        var colSeed=cxi+li*53;
+        var hTop=Math.floor( rows*0.45 + hash(colSeed)*rows*0.4 );
+        for(var ry=hTop; ry<rows; ry++){
+          var x=cxi*sz, y=ry*sz - scroll;
+          ctx.fillStyle=L.side; ctx.fillRect(x,y,sz,sz);
+          ctx.fillStyle=L.top;  ctx.fillRect(x+sz*0.06,y+sz*0.06,sz*0.88,sz*0.5);
+          ctx.fillStyle="rgba(0,0,0,.10)"; ctx.fillRect(x,y+sz*0.78,sz,sz*0.22);
+        }
+      }
+      if(L.front){
+        // a little hopping cube — the "parkour" subject
+        var groundRow=Math.floor( rows*0.45 + hash(2+li*53)*rows*0.4 );
+        var gx=W*0.30, hop=Math.abs(Math.sin(t/360))*sz*1.15;
+        var gy=groundRow*sz - scroll - sz - hop;
+        var sq=1+Math.sin(t/360)*0.06;
+        ctx.fillStyle=th.accent; ctx.fillRect(gx, gy, sz*0.62*sq, sz*0.62/sq);
+        ctx.fillStyle="rgba(255,255,255,.30)"; ctx.fillRect(gx, gy, sz*0.62*sq, sz*0.16);
+      }
+    }
+    // pixel haze so captions read
+    ctx.fillStyle="rgba(8,14,28,.12)"; ctx.fillRect(0,0,W,H);
+  }
+
+  function drawBackground(key, t, th){
+    if(key==="academic") return bgAcademic(t,th);
+    if(key==="asmr")      return bgAsmr(t,th);
+    if(key==="minecraft") return bgMinecraft(t,th);
+    return bgGradient(t,th);
+  }
+
+  /* ───────────────────────────── slide overlay ──────────────────────────── */
+  function drawSlide(s, th, alpha, rise){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    var cx = W/2, anchor = H*0.60 - rise;
+
+    if(s.kind === "quote"){
+      // stars
+      var R=W*0.024, gap=R*0.85, total=5*(2*R)+4*gap, sx=cx-total/2+R, sy=anchor-H*0.16;
+      for(var i=0;i<5;i++){ drawStar(sx+i*(2*R+gap), sy, R, th.star); }
+      var f = fitText('“'+s.text+'”', W*0.82, Math.round(W*0.070), Math.round(W*0.044), "600", 5);
+      ctx.font = "600 "+f.fs+"px "+FAM; ctx.fillStyle = "#ffffff";
+      var lh = f.fs*1.28, y = anchor - (f.lines.length-1)*lh/2;
+      for(var j=0;j<f.lines.length;j++) shadowText(f.lines[j], cx, y+j*lh);
+      if(s.who){
+        ctx.font = "600 "+Math.round(W*0.034)+"px "+FAM; ctx.fillStyle = th.accent2;
+        shadowText("— "+s.who, cx, y + f.lines.length*lh + W*0.02);
+      }
+    } else {
+      var bf = fitText(s.big, W*0.86, Math.round(W*0.092), Math.round(W*0.05), "800", 4);
+      ctx.font = "800 "+bf.fs+"px "+FAM; ctx.fillStyle = "#ffffff";
+      var blh = bf.fs*1.14;
+      var subCount = 0, k;
+      if(s.sub) for(k=0;k<s.sub.length;k++) subCount += wrapLines(s.sub[k], W*0.80, Math.round(W*0.042), "500").length;
+      var blockH = bf.lines.length*blh + subCount*W*0.054;
+      var y = anchor - blockH/2 + bf.fs;
+      for(k=0;k<bf.lines.length;k++){ shadowText(bf.lines[k], cx, y); y += blh; }
+      if(s.sub && s.sub.length){
+        y += W*0.012;
+        ctx.fillStyle = "rgba(235,240,250,.94)";
+        for(k=0;k<s.sub.length;k++){
+          var wl = wrapLines(s.sub[k], W*0.80, Math.round(W*0.042), "500");
+          ctx.font = "500 "+Math.round(W*0.042)+"px "+FAM;
+          for(var m=0;m<wl.length;m++){ shadowText(wl[m], cx, y); y += W*0.054; }
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawProgress(th, idx, lt, n){
+    var m=W*0.06, gap=10, top=H*0.035, h=8;
+    var seg=(W-2*m-(n-1)*gap)/n;
+    for(var i=0;i<n;i++){
+      var x=m+i*(seg+gap);
+      ctx.fillStyle="rgba(255,255,255,.28)"; roundRect(x,top,seg,h,h/2); ctx.fill();
+      var f = i<idx ? 1 : (i===idx ? lt : 0);
+      if(f>0){ ctx.fillStyle="#fff"; roundRect(x,top,seg*f,h,h/2); ctx.fill(); }
+    }
+  }
+
+  function drawBrand(th, alpha){
+    var label="lightspeedghost.com", fs=Math.round(W*0.030);
+    ctx.font="700 "+fs+"px "+FAM;
+    var tw=ctx.measureText(label).width, zap=fs*1.1, padX=fs*0.7;
+    var pw=tw+zap+padX*2+fs*0.3, ph=fs*2, px=W/2-pw/2, py=H-ph-H*0.045;
+    ctx.save(); ctx.globalAlpha=0.92*(alpha*0.4+0.6);
+    ctx.fillStyle="rgba(6,12,24,.55)"; roundRect(px,py,pw,ph,ph/2); ctx.fill();
+    ctx.strokeStyle=hexA(th.accent2,0.45); ctx.lineWidth=2; roundRect(px,py,pw,ph,ph/2); ctx.stroke();
+    // zap glyph
+    var p=new Path2D("M13 2L3 14h7l-1 8 11-13h-7l1-7z");
+    ctx.save(); ctx.translate(px+padX, py+ph/2-zap/2); ctx.scale(zap/24,zap/24); ctx.fillStyle=th.accent2; ctx.fill(p); ctx.restore();
+    ctx.fillStyle="#eaf2ff"; ctx.textAlign="left"; ctx.textBaseline="middle";
+    ctx.fillText(label, px+padX+zap+fs*0.3, py+ph/2+1);
+    ctx.restore();
+    ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+  }
+
+  /* ───────────────────────────── frame compositor ───────────────────────── */
+  function render(slideT, bgT, sh){
+    var th = THEMES[state.theme];
+    ctx.clearRect(0,0,W,H);
+    drawBackground(state.bg, bgT, th);
+    // bottom scrim for legibility
+    var sc = ctx.createLinearGradient(0,H*0.30,0,H);
+    sc.addColorStop(0,"rgba(3,6,12,0)"); sc.addColorStop(0.5,"rgba(3,6,12,.50)"); sc.addColorStop(1,"rgba(3,6,12,.84)");
+    ctx.fillStyle = sc; ctx.fillRect(0,0,W,H);
+
+    if(slideT < 0) slideT = 0;
+    var slides = sh.slides, per = sh.per, n = slides.length;
+    var idx = Math.max(0, Math.min(Math.floor(slideT/per), n-1));
+    var lt = (slideT - idx*per)/per;                  // 0..1 within slide
+    var appear = Math.min(1, lt/0.22);
+    var disappear = 1 - Math.max(0, (lt-0.82)/0.18);
+    var alpha = Math.max(0, Math.min(appear, disappear));
+    var rise = (1-appear)*44;
+
+    drawSlide(slides[idx], th, alpha, rise);
+    if(state.progress) drawProgress(th, idx, lt, n);
+    if(state.brand)    drawBrand(th, alpha);
+  }
+
+  /* ───────────────────────────── tiny canvas utils ──────────────────────── */
+  function roundRect(x,y,w,h,r){
+    if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); return; }
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+  function hexA(hex,a){
+    hex=hex.replace("#",""); if(hex.length===3) hex=hex.replace(/./g,"$&$&");
+    var n=parseInt(hex,16); return "rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")";
+  }
+
+  /* ───────────────────────────── preview loop ───────────────────────────── */
+  function startPreview(){
+    stopPreview(); paused=false; $("playBtn").textContent="⏸ Pause";
+    // Seed the clock from the first rAF timestamp (NOT performance.now()) — the
+    // first frame's timestamp can predate a manually-read now and make elapsed
+    // time briefly negative.
+    previewStart = null;
+    function loop(now){
+      if(previewStart===null) previewStart=now;
+      if(!show){ rebuildShow(); }
+      var t=(now-previewStart) % show.total;
+      render(t, now, show);
+      previewRAF = requestAnimationFrame(loop);
+    }
+    previewRAF = requestAnimationFrame(loop);
+  }
+  function stopPreview(){ if(previewRAF) cancelAnimationFrame(previewRAF); previewRAF=null; }
+
+  /* ───────────────────────────── recording ──────────────────────────────── */
+  function pickMime(){
+    var c=["video/mp4;codecs=avc1.42E01E","video/mp4","video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"];
+    if(!window.MediaRecorder) return "";
+    for(var i=0;i<c.length;i++){ try{ if(MediaRecorder.isTypeSupported(c[i])) return c[i]; }catch(e){} }
+    return "";
+  }
+  function extFor(mime){ return mime.indexOf("mp4")>=0 ? "mp4" : "webm"; }
+  function downloadBlob(blob, name){
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }
+
+  function recordOne(sh, durSec, nameBase, forceMime){
+    return new Promise(function(resolve, reject){
+      if(!window.MediaRecorder || !canvas.captureStream){ reject(new Error("no-recorder")); return; }
+      var mime = forceMime || pickMime();
+      var stream=canvas.captureStream(30);
+      var opts={ videoBitsPerSecond: 9000000 }; if(mime) opts.mimeType=mime;
+      var rec; try{ rec=new MediaRecorder(stream, opts); }catch(e){ reject(e); return; }
+      var chunks=[];
+      rec.ondataavailable=function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+      rec.onstop=function(){
+        try{ stream.getTracks().forEach(function(tk){ tk.stop(); }); }catch(e){}
+        var blob=new Blob(chunks, { type: mime || "video/webm" });
+        // Some builds advertise MP4 support but encode nothing — retry once as WebM.
+        if(blob.size < 1200 && !forceMime && mime.indexOf("mp4")>=0){
+          var fb = (window.MediaRecorder && MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) ? "video/webm;codecs=vp9" : "video/webm";
+          recordOne(sh, durSec, nameBase, fb).then(resolve, reject); return;
+        }
+        downloadBlob(blob, nameBase+"."+extFor(mime));
+        resolve(extFor(mime));
+      };
+      var total=sh.total, start=null;
+      rec.start();
+      // Seed `start` from the first rAF timestamp so elapsed time is never negative.
+      function frame(now){
+        if(start===null) start=now;
+        var t=now-start;
+        render(Math.min(t, total-1), now, sh);
+        setStatus("<b>Recording</b> "+nameBase.replace(/^lsg-/,"")+" — "+Math.max(0,Math.ceil((total-t)/1000))+"s left");
+        if(t>=total){ try{ rec.stop(); }catch(e){} return; }
+        rafExport=requestAnimationFrame(frame);
+      }
+      rafExport=requestAnimationFrame(frame);
+    });
+  }
+
+  function beginExport(){ recording=true; stopPreview(); $("recdot").classList.add("on"); setButtons(true); }
+  function endExport(){
+    recording=false; $("recdot").classList.remove("on"); setButtons(false);
+    if(rafExport) cancelAnimationFrame(rafExport);
+    startPreview();
+  }
+
+  function exportThis(){
+    if(recording) return;
+    beginExport();
+    var sh=buildShowFromText($("deck").value, state.dur);
+    recordOne(sh, state.dur, "lsg-"+state.tool+"-"+state.dur+"s")
+      .then(function(ext){ setStatus("Saved <b>lsg-"+state.tool+"-"+state.dur+"s."+ext+"</b> ✓ — add a trending sound when you post."); })
+      .catch(function(){ setStatus("This browser can’t record video. Try desktop Chrome or Edge."); })
+      .finally(endExport);
+  }
+
+  function exportAllDurations(){
+    if(recording) return;
+    beginExport();
+    var i=0;
+    (function next(){
+      if(i>=DURS.length){ setStatus("All 4 lengths of <b>"+state.tool+"</b> saved ✓"); endExport(); return; }
+      var d=DURS[i++];
+      var sh=buildShowFromText($("deck").value, d);
+      recordOne(sh, d, "lsg-"+state.tool+"-"+d+"s")
+        .then(function(){ setTimeout(next, 400); })
+        .catch(function(){ setStatus("This browser can’t record video. Try desktop Chrome or Edge."); endExport(); });
+    })();
+  }
+
+  function exportEveryTool(){
+    if(recording) return;
+    beginExport();
+    var i=0;
+    (function next(){
+      if(i>=TOOLS.length){ setStatus("Exported all "+TOOLS.length+" clips at "+state.dur+"s ✓ — batch-schedule across TikTok, Reels & Shorts."); endExport(); return; }
+      var tool=TOOLS[i++];
+      // use the live textarea for the currently-selected tool (keeps your edits), presets for the rest
+      var text = (tool.key===state.tool) ? $("deck").value : tool.deck;
+      var sh=buildShowFromText(text, state.dur);
+      setStatus("<b>"+(i)+"/"+TOOLS.length+"</b> recording "+tool.label+"…");
+      recordOne(sh, state.dur, "lsg-"+tool.key+"-"+state.dur+"s")
+        .then(function(){ setTimeout(next, 400); })
+        .catch(function(){ setStatus("This browser can’t record video. Try desktop Chrome or Edge."); endExport(); });
+    })();
+  }
+
+  /* ───────────────────────────── UI wiring ──────────────────────────────── */
+  function setStatus(html){ $("status").innerHTML = html; }
+  function setButtons(dis){
+    ["expOne","expDurs","expTools","playBtn","replayBtn","tool","deck"].forEach(function(id){ $(id).disabled = dis; });
+  }
+
+  // tool select
+  (function(){
+    var sel=$("tool");
+    TOOLS.forEach(function(tool){ var o=document.createElement("option"); o.value=tool.key; o.textContent=tool.label; sel.appendChild(o); });
+    sel.value=state.tool;
+    sel.addEventListener("change", function(){
+      state.tool=sel.value; $("deck").value=presetFor(state.tool); rebuildShow();
+    });
+  })();
+
+  // durations
+  (function(){
+    var box=$("durs");
+    DURS.forEach(function(d){
+      var b=document.createElement("button"); b.type="button"; b.textContent=d+"s";
+      b.className=(d===state.dur?"sel":"");
+      b.addEventListener("click", function(){
+        state.dur=d; Array.prototype.forEach.call(box.children,function(c){c.className="";}); b.className="sel"; rebuildShow();
+      });
+      box.appendChild(b);
+    });
+  })();
+
+  // backgrounds
+  (function(){
+    var box=$("bgs");
+    BG_OPTS.forEach(function(o){
+      var b=document.createElement("button"); b.type="button"; b.textContent=o.label;
+      b.className=(o.key===state.bg?"sel":"");
+      b.addEventListener("click", function(){
+        state.bg=o.key; Array.prototype.forEach.call(box.children,function(c){c.className="";}); b.className="sel";
+      });
+      box.appendChild(b);
+    });
+  })();
+
+  // accent swatches
+  (function(){
+    var box=$("swatches");
+    Object.keys(THEMES).forEach(function(k){
+      var s=document.createElement("div"); s.className="swatch"+(k===state.theme?" sel":"");
+      s.title=THEMES[k].label; s.style.background=THEMES[k].sw;
+      s.addEventListener("click", function(){
+        state.theme=k; Array.prototype.forEach.call(box.children,function(c){c.className="swatch";}); s.className="swatch sel";
+      });
+      box.appendChild(s);
+    });
+  })();
+
+  // toggles
+  $("brand").addEventListener("change", function(e){ state.brand=e.target.checked; });
+  $("progress").addEventListener("change", function(e){ state.progress=e.target.checked; });
+
+  // captions
+  $("deck").addEventListener("input", rebuildShow);
+
+  // preview controls
+  $("playBtn").addEventListener("click", function(){
+    if(recording) return;
+    paused=!paused;
+    if(paused){ stopPreview(); this.textContent="▶ Play"; }
+    else { startPreview(); this.textContent="⏸ Pause"; }
+  });
+  $("replayBtn").addEventListener("click", function(){ if(!recording) startPreview(); });
+
+  // export buttons
+  $("expOne").addEventListener("click", exportThis);
+  $("expDurs").addEventListener("click", exportAllDurations);
+  $("expTools").addEventListener("click", exportEveryTool);
+
+  // format badge
+  (function(){
+    var m=pickMime();
+    $("fmt").textContent = m ? extFor(m).toUpperCase() : "n/a";
+    if(!m) setStatus("Your browser can’t record canvas video — use desktop Chrome, Edge or Firefox.");
+  })();
+
+  // boot
+  $("deck").value = presetFor(state.tool);
+  rebuildShow();
+  startPreview();
+})();
+</script>
+</body>
+</html>

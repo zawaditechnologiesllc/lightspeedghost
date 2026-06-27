@@ -126,3 +126,7 @@ Last verified: 2026-06-26 · branch `claude/seo-project-qa-c0s35z`
   `plagiarism.ts`, `study.ts`, `documents.ts`, …) and a duplicate-export issue
   in the generated `lib/api-zod` types. These predate this work and are outside
   the SEO project's surface.
+- One pre-existing failing assertion in `__tests__/wordCount.test.ts`
+  ("excludes inline APA citations") — this exercises the **academic writing
+  tool** (`writing.ts`), not the SEO engine. It was red before this QA pass; the
+  new `seoRenderer.test.ts` is unaffected and passes.
