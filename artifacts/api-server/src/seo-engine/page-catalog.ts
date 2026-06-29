@@ -1,3 +1,5 @@
+import { PROGRAMMATIC_PAGES } from "./programmatic-matrices";
+
 export type PageType =
   | "tool"
   | "service"
@@ -1432,3 +1434,11 @@ export function getCatalogBySoftware(software: string): PageSpec[] {
 export function getPageSpec(slug: string): PageSpec | undefined {
   return PAGE_CATALOG.find((p) => p.slug === slug);
 }
+
+// ── Programmatic SEO matrices ────────────────────────────────────────────────
+// Append the template × dataset pages (citation / competitor / subject matrices)
+// to the hand-authored catalog. `const` forbids reassignment, not mutation, so
+// push() is safe; all helpers above read PAGE_CATALOG at call time, so they pick
+// these up too. See programmatic-matrices.ts for the generators and the
+// scaled-content guardrails.
+PAGE_CATALOG.push(...PROGRAMMATIC_PAGES);

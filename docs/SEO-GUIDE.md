@@ -122,13 +122,20 @@ This is your "is everything OK" view. (If it shows a "backend waking up" banner,
 the free-tier server is cold — refresh in ~30s.)
 
 ### 📋 4. Catalog — *the master plan of pages to build*
-A pre-built list of **130+ planned pages** across 15 types, each a real
-keyword target.
+A pre-built list of **300+ planned pages** across 15 types, each a real
+keyword target (134 hand-authored + **168 programmatic** matrix pages).
 - **Seed catalog** creates **placeholder drafts** for every planned page (titles
   + slugs only, *no content yet*).
 - It shows which are already generated/published vs still empty.
 - **Generate batch** fills empty placeholders with AI content (up to 30/run).
 - Use it as your roadmap: see the gaps, fill the highest-value ones first.
+
+> **Programmatic SEO:** the catalog now includes three template × dataset
+> *matrices* — Citation (`how-to-cite-a-{source}-in-{style}`, 112 pages),
+> Competitor (`…-alternative-for-students` + `lightspeedghost-vs-…`, 28), and
+> Subject (`ai-{subject}-essay/assignment-help`, 28). Generate them in batches and
+> **review before publishing** — do not mass-publish thin pages (it risks a
+> whole-domain demotion). Strategy + guardrails: `docs/SEO-CONTENT-PLAN.md` §3.
 
 ### 📄 5. Pages — *every page in the database (your control center)*
 The full table — filter by status (draft/**review**/published), search, and per
