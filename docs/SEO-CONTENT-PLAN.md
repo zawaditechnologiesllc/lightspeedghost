@@ -230,6 +230,54 @@ internal AI engine already uses — you're just doing it deliberately by hand.
 4. New page → add 1–2 links to it from older related pages (spreads ranking power).
 5. Link to your **pricing** page from BOFU pages.
 
+### Programmatic SEO — scaling with template × dataset matrices
+
+The engine is already a programmatic-SEO machine: the `PageSpec` "focus" fields
+(`toolFocus`, `softwareFocus`, `paperTypeFocus`, `audienceSegment`) are template
+**variables**, and the catalog already runs matrices by hand (e.g. `{software}
+analysis help`, `{style} referencing guide`). Programmatic SEO here means
+**expanding those matrices deliberately** — one template × one dataset → many
+pages that each target a distinct long-tail query.
+
+**What ships in the catalog** (`seo-engine/programmatic-matrices.ts`, appended to
+`PAGE_CATALOG`) — **168 specs**:
+
+| Matrix | Template | Dataset | Pages | Funnel → tool |
+|--------|----------|---------|-------|---------------|
+| **Citation** | `how-to-cite-a-{source}-in-{style}` | 16 sources × 7 styles | **112** | TOFU → `/write` citations |
+| **Competitor** | `{competitor}-alternative-for-students` + `lightspeedghost-vs-{competitor}` | 14 competitors × 2 | **28** | BOFU → `/pricing` |
+| **Subject** | `ai-{subject}-{essay\|assignment}-help` | 14 subjects × 2 intents | **28** | MOFU → `/write` / `/stem` |
+
+Why these three: the **citation matrix** is the best fit because every cell is
+*genuinely* different (the real format for "YouTube in APA" ≠ "book in MLA"), so
+it is not a thin variable-swap; the **competitor matrix** is lowest-volume but
+**highest-converting** (buyers comparing tools right before they pay); the
+**subject matrix** is high buyer-intent MOFU volume.
+
+**How to run it** (no hand-writing 168 pages):
+1. `git pull` so the new specs are live, then **SEO → Catalog → Seed catalog** —
+   creates a placeholder draft for every cell.
+2. **Generate batch** (30/run) → AI writes them into the **Review** queue.
+3. **Review & publish** the good ones; **discard** thin ones. Each must link up to
+   a pillar and out to a money page (the rules above).
+
+**Guardrails — non-negotiable** (Google's *scaled content abuse* policy, March
+2024, demotes the **whole domain** for mass-produced thin pages, and
+"essay/homework help" is policed hard):
+- Publish only cells with real, cell-specific value — the actual citation format,
+  real subject conventions, honest comparison data.
+- **Review before publishing.** The rule-checker's gates (800+ words, 8 data
+  points, FAQ) are the *floor*, not proof of quality.
+- **Ramp, don't dump** — a young domain has tiny crawl budget; ~50–100 reviewed
+  pages/week, not all 168 at once.
+- Interlink every programmatic page (up to a pillar, out to a money page).
+
+**Reality check on volume:** programmatic SEO is the right lever to scale from
+dozens to hundreds of pages, but it does not change the realistic ceiling — see
+the ramp in §1. A new domain doing this *well* reaches **tens of thousands** of
+sessions/month within 12 months and low-hundreds-of-thousands over 1–2 years —
+not millions. Judge it on **signups from organic**, not raw traffic.
+
 ---
 
 ## 4. The 12-month editorial calendar (January → December)

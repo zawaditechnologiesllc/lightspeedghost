@@ -76,7 +76,7 @@ Last verified: 2026-06-26 · branch `claude/seo-project-qa-c0s35z`
 
 | # | Requirement | Implementation | Status |
 |---|---|---|---|
-| R7.1 | 130+ planned pages, unique slugs | `PAGE_CATALOG` (134 slugs, 0 duplicates — verified) | ✅ |
+| R7.1 | 130+ planned pages, unique slugs | `PAGE_CATALOG` (302 slugs: 134 hand-authored + 168 programmatic matrices in `programmatic-matrices.ts`; 0 duplicates, 0 collisions — verified) | ✅ |
 | R7.2 | Seed placeholders | `seedCatalog` (`orchestrator.ts`) | ✅ |
 | R7.3 | Batch-generate up to 30/run (matches guide + UI) | `MAX_DAILY_PAGES` default 30 (`orchestrator.ts`) | 🔧 |
 | R7.4 | AI topic selection: GSC → GA4 → catalog-gap fallback | `topic-selector.ts` | ✅ |
