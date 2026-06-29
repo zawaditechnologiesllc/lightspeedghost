@@ -268,15 +268,47 @@ it is not a thin variable-swap; the **competitor matrix** is lowest-volume but
   real subject conventions, honest comparison data.
 - **Review before publishing.** The rule-checker's gates (800+ words, 8 data
   points, FAQ) are the *floor*, not proof of quality.
-- **Ramp, don't dump** — a young domain has tiny crawl budget; ~50–100 reviewed
-  pages/week, not all 168 at once.
+- **Ramp, don't dump** — see the cadence table below. Never publish all 168 at once.
 - Interlink every programmatic page (up to a pillar, out to a money page).
+
+#### How many programmatic pages can I publish per week?
+
+There is **no fixed safe number** — volume itself isn't penalised; *thin,
+unreviewed pages* are. The cadence is gated by three things, in this order:
+
+1. **Domain age / authority.** A brand-new domain has almost no crawl budget; an
+   aged, already-live domain (with existing indexed content + backlinks) can
+   absorb far more, far sooner. Note: **age ≠ authority** — what really governs
+   crawl budget is backlinks and existing indexed pages, and a freshly-added
+   `/seo/` *section* still has to earn trust even on an old domain.
+2. **Your review throughput.** You are the safety gate. If you can only genuinely
+   read and vet N pages this week, N is your ceiling — full stop.
+3. **Per-page uniqueness.** The volume is only safe because each cell is *truly*
+   different. The moment pages read like swapped variables, the whole-domain
+   demotion risk returns regardless of domain age.
+
+| Domain situation | Start at | Ramp to 50–100/wk by |
+|------------------|---------|----------------------|
+| Brand-new domain (sandbox) | 10–20/week | month 5+ |
+| Aged, already-live domain (1yr+, real traffic) | 20–40/week | month 2–3, if indexing stays clean |
+
+This runs as **two parallel tracks**: the *depth* track (≈5 hand-written
+pillar+cluster pages/week, the money pages you write yourself) and the *breadth*
+track (the programmatic matrices the engine drafts and you review). They are not
+competing budgets — depth is hand-written, breadth is reviewed-not-written.
+
+**The gate is Google Search Console, not a number.** Publish your first 2–3
+batches, then within a week check GSC: are the pages getting **indexed** in a few
+days? Any **soft-404s, "crawled – not indexed", or quality flags**? Any manual
+actions? Indexing clean → ramp up. Pages sitting unindexed → slow down; crawl
+budget is telling you the section isn't ready for more yet. The 168 specs are a
+**3–6 month roadmap**, not a single month's to-do list.
 
 **Reality check on volume:** programmatic SEO is the right lever to scale from
 dozens to hundreds of pages, but it does not change the realistic ceiling — see
-the ramp in §1. A new domain doing this *well* reaches **tens of thousands** of
-sessions/month within 12 months and low-hundreds-of-thousands over 1–2 years —
-not millions. Judge it on **signups from organic**, not raw traffic.
+the ramp in §1. Done *well* this reaches **tens of thousands** of sessions/month
+within 12 months and low-hundreds-of-thousands over 1–2 years — not millions.
+Judge it on **signups from organic**, not raw traffic.
 
 ---
 
@@ -584,7 +616,12 @@ Writing the page is half the job. These mechanics are what make it pay:
 
 ## 7. Publishing workflow & weekly cadence
 
-**The weekly rhythm (pillar + cluster):**
+This is the **depth track** (hand-written). It runs *in parallel* with the
+**breadth track** (the programmatic matrices the engine drafts and you review) —
+see §3 for programmatic per-week cadence, which is gated by domain authority,
+your review throughput, and Search Console indexing, **not** by this table.
+
+**The weekly rhythm (depth track — pillar + cluster, hand-written):**
 
 | Day | Post | Length | Type |
 |---|---|---|---|
