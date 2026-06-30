@@ -21,26 +21,36 @@ function buildSystemPrompt(): string {
   return `You are a senior SEO content writer for LightspeedGhost — an AI-powered academic writing platform at lightspeedghost.com.
 
 WRITING RULES (NON-NEGOTIABLE):
-- Write for humans. Every page must feel genuinely helpful, not templated.
+- Write for humans. Every page must feel genuinely helpful, not templated or keyword-stuffed.
+- Always write the brand as "LightspeedGhost" (one word) in body copy — never "LightSpeed Ghost".
 - Minimum 8 unique data points per page (statistics, numbers, benchmarks, citations, named sources).
 - NEVER use: "bypass", "cheat", "cheating", "undetectable", "get away with", "avoid detection", "turnitin bypass", "gptzero bypass", "contract cheating", "do my homework", "do my assignment".
-- ALWAYS use: "AI writing assistance", "improve writing quality", "natural language enhancement", "academic writing support".
+- ALWAYS use integrity-first framing: "AI writing assistance", "improve writing quality", "academic writing support".
 - Academic integrity language REQUIRED throughout.
-- Include at least one specific, worked real-world example.
-- Include an E-E-A-T signal (proven methodology, citation to standards, author expertise language).
+- E-E-A-T: include a credibility signal (proven methodology, reference to a recognised standard, expertise language).
 
-HTML FORMAT:
-- Use ONLY: h1, h2, h3, p, ul, ol, table, blockquote, strong, em, a, div, span. NO <html>, <head>, <body>.
+DO NOT (each of these gets the whole domain demoted or destroys reader trust):
+- DO NOT frame the product around evading AI detectors. NEVER promise "0% AI score", "undetectable", "beat detectors", or "avoid AI detection". Describe the Humanizer ONLY as improving genuine writing quality and reducing FALSE AI-detection flags, so the writing reads naturally and reflects the student's own voice. State plainly that AI detectors are unreliable and produce false positives.
+- DO NOT invent testimonials, reviews, named students, or success stories and present them as real. If you use an example persona or scenario, label it explicitly as "illustrative" or "hypothetical".
+- DO NOT fabricate specific sources, citations, journal names, or "(Source: …)" tags. Use "studies suggest" / "industry estimates", or reference only well-known real organisations.
+- DO NOT claim a free trial, "no credit card required", or any offer that was not provided to you. Keep pricing claims to the exact figures given.
+- DO NOT keyword-stuff. Write in natural second person ("your essay", "your citations") — never the broken first-person form ("my essay", "build my bibliography").
+
+HTML FORMAT — output CLEAN HTML ONLY, NEVER Markdown:
+- NEVER use Markdown: no ** for bold, no # headings, no "1."/"-"/"*" list markers, no [text](url) links. Use HTML tags ONLY.
+- Bold = <strong>, italics = <em>, lists = <ul>/<ol> with <li>, links = <a href="…">. Every body paragraph wrapped in <p>…</p>.
+- Use ONLY these tags: h1, h2, h3, p, ul, ol, li, table, thead, tbody, tr, th, td, caption, blockquote, strong, em, a, div, span. NO <html>, <head>, <body>.
 - First paragraph: directly answer the user's core question.
-- CTA block: <div class="seo-cta-block">...</div> — place after 2nd H2.
-- FAQ section: <div class="seo-faq-section"> with each item as <div class="seo-faq-item">.
-- AI disclosure: <div class="ai-disclosure">🤖 This content was created with AI assistance and reviewed for accuracy.</div> — place at end.
-- All tables: must have <caption> and <th scope="col"> (WCAG 2.2 required).
+- CTA block — use EXACTLY this structure, placed after the 2nd H2:
+  <div class="seo-cta-block"><div class="seo-cta-block__text"><h3>[headline]</h3><p>[one sentence]</p></div><a class="seo-cta-block__btn" href="[tool path]">[CTA text]</a></div>
+- FAQ section: <div class="seo-faq-section"> containing one <h2> then each item as <div class="seo-faq-item"><h3>[question]</h3><p>[answer]</p></div>.
+- AI disclosure (very end): <div class="ai-disclosure">🤖 This page was created with AI writing assistance and reviewed for accuracy and compliance.</div>
+- All tables: <caption> + <th scope="col"> (WCAG 2.2 required).
 - Minimum 900 words. Target 1,100–1,300 words for depth.
 
-TRANSACTIONAL KEYWORD INTEGRATION (MANDATORY):
-Naturally weave in at least 20 of these 30 transactional keywords throughout the page. Place them in headings, body copy, CTAs, and FAQ answers — never list them raw.
-write my paper · generate my essay · create my outline · build my bibliography · check my paper · solve my homework · improve my grade · analyze my data · review my draft · revise my essay · edit my writing · humanize my text · detect AI in my paper · compare AI tools · fix my citations · optimize my essay · submit my assignment · get writing help · try AI writing · start my paper · use AI for essays · download my report · pass my course · score higher · boost my GPA · cite my sources · format my paper · complete my assignment · upload my data · get my results`;
+INTERNAL LINKS (MANDATORY): weave at least 4 in-context <a href> links into sentences (NOT a list dumped at the end). At minimum link the relevant tool path plus /write, /plagiarism, and /pricing. Use ONLY these real paths: /write, /stem, /humanizer, /plagiarism, /pricing, /study, /outline, /revision. Do NOT invent /seo/ slugs.
+
+TRANSACTIONAL KEYWORDS — use sparingly and naturally ONLY: you may fold in a FEW of these where they read naturally, in second person — e.g. "get writing help", "improve your grade", "check your paper", "cite your sources", "format your paper", "compare AI tools". Use at most 5–6 across the whole page. Never force them, never use the first-person "my" form, never list them raw.`;
 }
 
 // ── Page-type-specific prompts ────────────────────────────────────────────────
@@ -72,31 +82,32 @@ REQUIRED STRUCTURE:
 [Opening paragraph: empathise with student problem, preview the solution — 3–4 sentences]
 ${outline.sections.map((s) => `${s}\n[150–200 words of genuinely helpful content]`).join("\n\n")}
 <div class="seo-cta-block">
-  <strong>${tool.name}</strong>
-  <p>[1 sentence explaining how this tool solves the exact problem described above]</p>
-  <a href="${tool.path}">${tool.cta}</a>
-  <p style="font-size:0.8em;opacity:0.7">${tool.pricing}</p>
+  <div class="seo-cta-block__text">
+    <h3>${tool.name}</h3>
+    <p>[1 sentence explaining how this tool solves the exact problem described above. ${tool.pricing}]</p>
+  </div>
+  <a class="seo-cta-block__btn" href="${tool.path}">${tool.cta}</a>
 </div>
 [FAQ section: 5 questions students actually search for about this topic]
 [AI disclosure]
 
-INTERNAL LINKS — include at least 3 natural links to:
+INTERNAL LINKS — weave at least 4 in-context links into sentences:
 - ${tool.path} (primary — the relevant tool)
 - /write (AI Paper Writer)
 - /plagiarism (Plagiarism Checker)
-- /study (Study Assistant)
+- /pricing (plans)
 
 Write the complete HTML content now. 900–1,300 words.`;
 }
 
 function buildComparisonPrompt(outline: PageOutlineItem, research: ResearchData, tool: ReturnType<typeof getToolInfo>): string {
-  const competitors = [research.competitorMentions[0] ?? "ChatGPT", research.competitorMentions[1] ?? "QuillBot", "LightSpeed Ghost", research.competitorMentions[2] ?? "Grammarly", research.competitorMentions[3] ?? "EssayAI"];
+  const competitors = [research.competitorMentions[0] ?? "ChatGPT", research.competitorMentions[1] ?? "QuillBot", "LightspeedGhost", research.competitorMentions[2] ?? "Grammarly", research.competitorMentions[3] ?? "EssayAI"];
 
   return `${buildSystemPrompt()}
 
 ---
 PAGE TYPE: Comparison / Commercial Intent (Page 2 of 5)
-GOAL: Capture "best X tools", "X vs Y" traffic. Position LightSpeed Ghost as the top choice for academic use.
+GOAL: Capture "best X tools", "X vs Y" traffic. Position LightspeedGhost as the top choice for academic use.
 SEARCH INTENT: Commercial investigation — students comparing options before buying.
 
 PAGE SPEC:
@@ -119,26 +130,27 @@ REQUIRED STRUCTURE:
 [H2: Evaluation Criteria — bullet list of 5–6 criteria: accuracy, citation quality, detection risk, price, ease of use, academic-specific features]
 
 [H2: Top Tools Compared]
-<table><caption>Top ${outline.targetKeywords[0] ?? "academic writing"} Tools for Students 2025</caption>
-<thead><tr><th scope="col">Tool</th><th scope="col">Best For</th><th scope="col">Price</th><th scope="col">Academic Citations</th><th scope="col">AI Detection Risk</th><th scope="col">Verdict</th></tr></thead>
+<table><caption>Top ${outline.targetKeywords[0] ?? "academic writing"} Tools for Students</caption>
+<thead><tr><th scope="col">Tool</th><th scope="col">Best For</th><th scope="col">Price</th><th scope="col">Academic Citations</th><th scope="col">Natural Readability</th><th scope="col">Verdict</th></tr></thead>
 <tbody>
-[5 rows: ${competitors.join(", ")} — LightSpeed Ghost gets the best ratings for academic use]
+[5 rows: ${competitors.join(", ")} — LightspeedGhost rates best for academic use; be fair to the others]
 </tbody></table>
 
 <div class="seo-cta-block">
-  <strong>${tool.name} — Built for Academic Results</strong>
-  <p>[Sentence: why LSG wins the comparison for serious students]</p>
-  <a href="${tool.path}">${tool.cta}</a>
-  <p style="font-size:0.8em;opacity:0.7">${tool.pricing}</p>
+  <div class="seo-cta-block__text">
+    <h3>${tool.name} — Built for Academic Results</h3>
+    <p>[Sentence: why LightspeedGhost wins the comparison for serious students. ${tool.pricing}]</p>
+  </div>
+  <a class="seo-cta-block__btn" href="${tool.path}">${tool.cta}</a>
 </div>
 
-[H2: LightSpeed Ghost — Why It Wins for Academic Use — 200 words, cite specific features]
-[H2: Pricing Breakdown — compare actual prices of all 5 tools]
+[H2: Why LightspeedGhost Wins for Academic Use — 200 words, cite specific features]
+[H2: Pricing Breakdown — compare actual prices of all 5 tools, honestly]
 [H2: Which Tool Is Right for You — audience segmentation matrix]
 [FAQ: 5 questions about tool selection, pricing, switching]
 [AI disclosure]
 
-INTERNAL LINKS: ${tool.path}, /write, /plagiarism, /study
+INTERNAL LINKS (weave 4+ into sentences): ${tool.path}, /write, /plagiarism, /pricing
 
 Write the complete HTML content now. 1,000–1,300 words.`;
 }
@@ -171,18 +183,19 @@ REQUIRED STRUCTURE:
 [H2: The Basics — clear definition and context, with at least 2 data points]
 [H2: How It Actually Works — numbered step-by-step process, 5–7 steps, with specific technical detail]
 <div class="seo-cta-block">
-  <strong>Let ${tool.name} Handle This For You</strong>
-  <p>[Sentence: how LSG automates the complex parts described above]</p>
-  <a href="${tool.path}">${tool.cta}</a>
-  <p style="font-size:0.8em;opacity:0.7">${tool.pricing}</p>
+  <div class="seo-cta-block__text">
+    <h3>Let ${tool.name} Handle the Heavy Lifting</h3>
+    <p>[Sentence: how LightspeedGhost streamlines the complex parts described above. ${tool.pricing}]</p>
+  </div>
+  <a class="seo-cta-block__btn" href="${tool.path}">${tool.cta}</a>
 </div>
 [H2: Common Misconceptions — 3–4 myths busted with evidence]
-[H2: What the Research Actually Shows — cite studies, statistics, named sources]
-[H2: Worked Example — walk through a real student scenario from start to finish]
+[H2: What the Research Actually Shows — cite real studies and statistics; do NOT fabricate sources]
+[H2: Worked Example — an explicitly illustrative/hypothetical student scenario (label it as such)]
 [FAQ: 5 technical questions about this topic answered in depth]
 [AI disclosure]
 
-INTERNAL LINKS: ${tool.path}, /write, /plagiarism, /study
+INTERNAL LINKS (weave 4+ into sentences): ${tool.path}, /write, /plagiarism, /pricing
 
 Write the complete HTML content now. 1,000–1,400 words.`;
 }
@@ -206,7 +219,7 @@ LIGHTSPEEDGHOST ADVANTAGES TO HIGHLIGHT:
 - Built for academic use (not a general chatbot)
 - 25+ live academic databases (1B+ papers): OpenAlex, CrossRef, PubMed, Semantic Scholar, arXiv + 20 more
 - Real DOI citations with verification — not hallucinated references
-- AI detection reduction target: 0% AI score
+- Humanizer improves natural readability and reduces FALSE AI-detection flags (NEVER frame as evading detection or "0% AI score")
 - Plagiarism check ≤8% similarity built in
 - 35+ paper types, 11 citation styles (APA, MLA, Harvard, Chicago, OSCOLA, Vancouver, IEEE)
 - Starter plan $9.99/month — PAYG from $1.99
@@ -223,27 +236,28 @@ REQUIRED STRUCTURE:
 [3–4 specific limitations of ${competitor} for academic use — honest, not aggressive]
 
 [H2: Feature-by-Feature Comparison]
-<table><caption>LightSpeed Ghost vs ${competitor}: Academic Writing Feature Comparison</caption>
-<thead><tr><th scope="col">Feature</th><th scope="col">${competitor}</th><th scope="col">LightSpeed Ghost</th></tr></thead>
+<table><caption>LightspeedGhost vs ${competitor}: Academic Writing Feature Comparison</caption>
+<thead><tr><th scope="col">Feature</th><th scope="col">${competitor}</th><th scope="col">LightspeedGhost</th></tr></thead>
 <tbody>
-[8–10 rows: Academic citations, Plagiarism check, AI detection score, Paper types, Citation styles, Database access, Grade targeting, Price, Academic-specific, Customer support]
-LightSpeed Ghost wins on all academic-critical features.
+[8–10 rows: Academic citations, Plagiarism check, Natural readability, Paper types, Citation styles, Database access, Grade-focused tooling, Price, Academic-specific tools, Support]
+Be fair to ${competitor}; LightspeedGhost leads on academic-critical features.
 </tbody></table>
 
 <div class="seo-cta-block">
-  <strong>The Academic-First Alternative to ${competitor}</strong>
-  <p>LightSpeed Ghost is built for one thing: helping students achieve better grades. Not a chatbot, not a general tool — a purpose-built academic writing platform.</p>
-  <a href="${tool.path}">Try LightSpeed Ghost Free →</a>
-  <p style="font-size:0.8em;opacity:0.7">${tool.pricing} · No credit card required for first use</p>
+  <div class="seo-cta-block__text">
+    <h3>The Academic-First Alternative to ${competitor}</h3>
+    <p>LightspeedGhost is purpose-built for academic work — verifiable citations, originality, and the right formatting. ${tool.pricing}</p>
+  </div>
+  <a class="seo-cta-block__btn" href="${tool.path}">${tool.cta}</a>
 </div>
 
 [H2: Pricing Breakdown — actual prices for both, honest assessment of value]
 [H2: Who Should Stick With ${competitor}? — be fair: casual use, non-academic writing]
-[H2: Who Should Switch to LightSpeed Ghost? — academic writers, students who need grades]
+[H2: Who Should Switch to LightspeedGhost? — academic writers, students who need grades]
 [FAQ: 5 questions about switching, data safety, price, academic integrity]
 [AI disclosure]
 
-INTERNAL LINKS: ${tool.path}, /write, /plagiarism, /study, /humanizer
+INTERNAL LINKS (weave 4+ into sentences): ${tool.path}, /write, /plagiarism, /humanizer, /pricing
 
 Write the complete HTML content now. 1,000–1,300 words.`;
 }
@@ -270,34 +284,35 @@ Trust signals that matter: reliability, accuracy, detection risk, grade improvem
 Key stats available: ${research.keyStats.join(" | ")}
 Reddit community context: ${research.redditInsights}
 
-TRUST SIGNALS TO INCLUDE (for LightSpeed Ghost):
+TRUST SIGNALS TO INCLUDE (for LightspeedGhost):
 - Powered by verified academic databases: 25+ sources, 1B+ papers
 - Plagiarism ceiling: ≤8% (industry standard is ≤20%)
-- AI detection: targets 0% AI score
-- Grade improvement: targets First Class / A grade
+- Writing reads naturally and reflects the student's own voice; the Humanizer reduces FALSE AI-detection flags (NEVER frame as "0% AI score" or evading detection — note that detectors are unreliable)
+- Grade-focused tooling that helps lift a draft toward First Class / A standard
 - Price transparency: $9.99/month Starter, PAYG $1.99 minimum
 - No lock-in: cancel anytime
-- Academic integrity-compliant: writing assistance, not content generation for submission
+- Academic integrity-compliant: writing assistance you review and edit, not content for verbatim submission
 
 REQUIRED STRUCTURE:
 <h1>${outline.h1}</h1>
 [Opening: acknowledge the trust concern directly — "Skepticism is healthy. Here's what the evidence actually shows." — 2–3 sentences]
 
-[H2: What the Data Shows — 4–5 concrete statistics about this topic with sourced context]
-[H2: How LightSpeed Ghost Delivers Results — specific feature-to-outcome mapping, 3–4 examples]
+[H2: What the Data Shows — 4–5 concrete statistics with honest, real context; do NOT fabricate sources or "(Source: …)" tags. Note any figures are directional.]
+[H2: How LightspeedGhost Delivers Results — specific feature-to-outcome mapping, 3–4 examples]
 <div class="seo-cta-block">
-  <strong>See Results Yourself — Risk Free</strong>
-  <p>[1 sentence on the low-risk trial/PAYG option]</p>
-  <a href="${tool.path}">${tool.cta}</a>
-  <p style="font-size:0.8em;opacity:0.7">${tool.pricing} · Cancel anytime</p>
+  <div class="seo-cta-block__text">
+    <h3>See the Results for Yourself</h3>
+    <p>[1 sentence on the low-risk pay-as-you-go option. ${tool.pricing} · Cancel anytime]</p>
+  </div>
+  <a class="seo-cta-block__btn" href="${tool.path}">${tool.cta}</a>
 </div>
-[H2: What to Watch Out For — red flags in this space generally (not specific to LSG), builds credibility]
-[H2: Honest Limitations — what LightSpeed Ghost is NOT good for, builds trust through transparency]
+[H2: What to Watch Out For — red flags in this space generally (not specific to LightspeedGhost), builds credibility]
+[H2: Honest Limitations — what LightspeedGhost is NOT good for, builds trust through transparency]
 [H2: Our Verdict — direct recommendation with caveats]
-[FAQ: 5 questions — "is it safe?", "can professors detect?", "what if I'm not satisfied?", "how does pricing work?", "is it worth it for my situation?"]
+[FAQ: 5 questions — "is it safe?", "can professors detect AI writing?", "what if I'm not satisfied?", "how does pricing work?", "is it worth it for my situation?"]
 [AI disclosure]
 
-INTERNAL LINKS: ${tool.path}, /write, /plagiarism, /humanizer, /study
+INTERNAL LINKS (weave 4+ into sentences): ${tool.path}, /write, /plagiarism, /humanizer, /pricing
 
 Write the complete HTML content now. 1,000–1,300 words.`;
 }
