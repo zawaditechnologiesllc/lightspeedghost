@@ -102,7 +102,9 @@ export async function generatePage(slug: string, opts: { autoPublish?: boolean }
         validation.uniqueDataPoints,
         validation.hasFAQ,
         validation.hasAIDisclosure,
-        validation.integrityCheck,
+        // A sanitiser rewrite means the page needs a human look — mark it
+        // failing so it surfaces in the Integrity tab rather than reading clean.
+        validation.integrityCheck && !result.integrityRewritten,
         result.model,
         result.costUsd,
         opts.autoPublish ? "published" : "review",
@@ -126,7 +128,7 @@ export async function generatePage(slug: string, opts: { autoPublish?: boolean }
           spec.keywords, spec.type, spec.toolFocus ?? null, spec.softwareFocus ?? null,
           spec.paperTypeFocus ?? null, spec.financialFocus ?? null, spec.audienceSegment ?? null,
           result.wordCount, validation.uniqueDataPoints, validation.hasFAQ,
-          validation.hasAIDisclosure, validation.integrityCheck,
+          validation.hasAIDisclosure, validation.integrityCheck && !result.integrityRewritten,
           result.model, result.costUsd,
           opts.autoPublish ? "published" : "review",
           opts.autoPublish ?? false,

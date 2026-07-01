@@ -5,7 +5,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../lib/logger";
 import { logLLMCost, computeCost } from "./budget-tracker";
-import { sanitizeContent, buildAIDisclosureLabel } from "./compliance-checker";
+import { checkAcademicIntegrity, buildAIDisclosureLabel } from "./compliance-checker";
 import { buildFAQSchema, buildPageSchemas } from "./schema-engine";
 import type { PageSpec } from "./page-catalog";
 import { GEMINI_PRO_MODEL } from "./researcher";
@@ -192,6 +192,9 @@ export interface GenerationResult {
   outputTokens:    number;
   faqs:            Array<{ question: string; answer: string }>;
   validationPassed: boolean;
+  /** True if the academic-integrity sanitiser rewrote the text — the page
+   *  should be flagged for human review, not treated as clean. */
+  integrityRewritten: boolean;
 }
 
 export async function generatePageContent(spec: PageSpec, retryCount = 0): Promise<GenerationResult> {
@@ -212,7 +215,14 @@ export async function generatePageContent(spec: PageSpec, retryCount = 0): Promi
     }
   }
 
-  html = sanitizeContent(html);
+  const integrity = checkAcademicIntegrity(html);
+  html = integrity.sanitized;
+  if (integrity.rewritten) {
+    logger.warn(
+      { slug: spec.slug, violations: integrity.violations },
+      "[seo-gen] Content auto-sanitised for academic integrity — flagging page for human review",
+    );
+  }
   if (!html.includes("ai-disclosure")) {
     html += `\n${buildAIDisclosureLabel()}`;
   }
@@ -251,5 +261,6 @@ export async function generatePageContent(spec: PageSpec, retryCount = 0): Promi
     outputTokens,
     faqs,
     validationPassed,
+    integrityRewritten: integrity.rewritten,
   };
 }

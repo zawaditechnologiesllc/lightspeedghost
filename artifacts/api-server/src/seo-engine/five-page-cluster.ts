@@ -6,7 +6,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { pool } from "@workspace/db";
 import { logger } from "../lib/logger";
-import { sanitizeContent, buildAIDisclosureLabel, validatePage } from "./compliance-checker";
+import { checkAcademicIntegrity, buildAIDisclosureLabel, validatePage } from "./compliance-checker";
 import { buildPageSchemas } from "./schema-engine";
 import { logLLMCost, computeCost, incrementPageCount } from "./budget-tracker";
 import { GEMINI_PRO_MODEL } from "./researcher";
@@ -328,6 +328,8 @@ export interface ClusterPageResult {
   wordCount:       number;
   costUsd:         number;
   validationPassed: boolean;
+  /** True if the academic-integrity sanitiser rewrote the text — flag for review. */
+  integrityRewritten: boolean;
 }
 
 export async function generateClusterPage(
@@ -375,7 +377,14 @@ export async function generateClusterPage(
   const outputTokens = usage?.candidatesTokenCount ?? 2500;
 
   // Compliance & cleanup
-  html = sanitizeContent(html);
+  const integrity = checkAcademicIntegrity(html);
+  html = integrity.sanitized;
+  if (integrity.rewritten) {
+    logger.warn(
+      { slug: outline.slug, violations: integrity.violations },
+      "[seo-cluster] Content auto-sanitised for academic integrity — flagging page for human review",
+    );
+  }
   if (!html.includes("ai-disclosure")) {
     html += `\n${buildAIDisclosureLabel()}`;
   }
@@ -418,6 +427,7 @@ export async function generateClusterPage(
     wordCount,
     costUsd,
     validationPassed: wordCount >= MIN_WORDS && faqs.length >= 2,
+    integrityRewritten: integrity.rewritten,
   };
 }
 
@@ -478,7 +488,8 @@ export async function saveClusterPage(
       validation.uniqueDataPoints,
       validation.hasFAQ,
       validation.hasAIDisclosure,
-      validation.integrityCheck,
+      // Flag sanitiser-rewritten pages as failing so a human reviews the edit.
+      validation.integrityCheck && !page.integrityRewritten,
       GEMINI_PRO_MODEL,
       page.costUsd,
       autoPublish ? "published" : "review",
