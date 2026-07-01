@@ -1,18 +1,32 @@
 // ── Academic Integrity & EU AI Act Compliance Checker ────────────────────────
 
+// Ordered MOST-SPECIFIC → GENERIC on purpose: a generic pattern (e.g. bare
+// "cheat") must never fire before a longer phrase that contains it (e.g.
+// "contract cheating" or "cheating detector"), or it mangles the longer phrase.
+// Replacements are chosen to be grammatically self-contained — they read
+// acceptably as a drop-in for the matched span (verb phrase for verb spans,
+// noun phrase for noun spans) so sanitising never leaves a broken sentence like
+// "...guarantees your work will improve writing quality for...".
 const PROHIBITED_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
-  { pattern: /\bbypass\b.*?(turnitin|gpt[z-]?zero|detector|detection|check)/gi, replacement: "improve writing quality for" },
-  { pattern: /\bturnitin\s+bypass\b/gi, replacement: "writing quality improvement" },
-  { pattern: /\bgptzero\s+bypass\b/gi, replacement: "AI writing pattern reduction" },
-  { pattern: /\bcheat(?:ing)?\b/gi, replacement: "academic writing support" },
-  { pattern: /\bcontract\s+cheat(?:ing)?\b/gi, replacement: "academic writing assistance" },
-  { pattern: /\bdo\s+my\s+(assignment|homework|essay|paper)\b/gi, replacement: "get AI writing assistance for your $1" },
-  { pattern: /\bwrite\s+my\s+essay\s+for\s+me\b/gi, replacement: "AI-assisted essay writing" },
+  // ── specific multi-word phrases first ──
+  { pattern: /\bcontract\s+cheat(?:ing)?\b/gi, replacement: "paying someone to write your work" },
+  { pattern: /\bcheat(?:ing)?\s+detector\b/gi, replacement: "writing-quality checker" },
+  { pattern: /\bturnitin\s+bypass\b/gi, replacement: "writing-quality improvement" },
+  { pattern: /\bgptzero\s+bypass\b/gi, replacement: "AI-writing-pattern reduction" },
+  // "bypass ... detection/turnitin/…" → a clean verb phrase. Bounded by [^.<\n]
+  // so it can't run across a sentence or an HTML tag boundary.
+  { pattern: /\bbypass\b[^.<\n]*?(turnitin|gpt[z-]?zero|detector|detection|check)\b/gi, replacement: "read more naturally" },
+  { pattern: /\bwrite\s+my\s+essay\s+for\s+me\b/gi, replacement: "get AI writing help with my essay" },
+  { pattern: /\bdo\s+my\s+(assignment|homework|essay|paper)\b/gi, replacement: "get AI writing help with my $1" },
+  { pattern: /\bavoid\s+getting\s+caught\b/gi, replacement: "keep the writing genuinely my own" },
+  { pattern: /\bget\s+away\s+with\b/gi, replacement: "stay compliant with" },
+  { pattern: /\bghost\s*writ(?:e|ing|ten)\b/gi, replacement: "AI-assisted writing" },
   { pattern: /\bundetectable\b/gi, replacement: "natural-sounding" },
-  { pattern: /\bghost\s*writ(?:e|ing|ten)\b/gi, replacement: "AI-assisted academic writing" },
-  { pattern: /\bget\s+away\s+with\b/gi, replacement: "achieve compliance with" },
-  { pattern: /\bavoid\s+getting\s+caught\b/gi, replacement: "ensure writing quality" },
-  { pattern: /\bcheat(?:ing)?\s+detector\b/gi, replacement: "writing quality checker" },
+  // ── bare "cheat"/"cheating" last; split so the noun and verb forms each get a
+  //    grammatically correct, meaning-preserving replacement (the old single
+  //    replacement inverted the sense of warnings like "cheating is wrong"). ──
+  { pattern: /\bcheating\b/gi, replacement: "academic dishonesty" },
+  { pattern: /\bcheat\b/gi, replacement: "break academic rules" },
 ];
 
 const PROHIBITED_EXACT: string[] = [
@@ -35,6 +49,10 @@ export interface ComplianceResult {
   passed: boolean;
   violations: string[];
   sanitized: string;
+  /** True when the sanitiser actually edited the text (a pattern was rewritten).
+   *  Callers should flag such pages for human review — an auto-rewrite can still
+   *  read awkwardly and should never be published unseen. */
+  rewritten: boolean;
 }
 
 export function checkAcademicIntegrity(content: string): ComplianceResult {
@@ -59,6 +77,7 @@ export function checkAcademicIntegrity(content: string): ComplianceResult {
     passed: violations.length === 0,
     violations,
     sanitized,
+    rewritten: sanitized !== content,
   };
 }
 
