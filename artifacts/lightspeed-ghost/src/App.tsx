@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/Layout";
+import { RouteMeta } from "@/components/RouteMeta";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SplashScreen } from "@/components/SplashScreen";
 // Eager: only the landing (first-paint path). Everything else — including Auth —
@@ -358,6 +359,7 @@ function App() {
           {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
           <AppErrorBoundary>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <RouteMeta />
               <MaintenanceGate>
                 <AuthProvider>
                   <Suspense fallback={<RouteFallback />}>

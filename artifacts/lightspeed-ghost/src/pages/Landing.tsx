@@ -110,7 +110,7 @@ const testimonials = [
 const faqs = [
   {
     q: "What is Light Speed Ghost?",
-    a: "Light Speed Ghost is an AI-powered academic assistance platform built for students. It includes seven core tools: an AI paper writer with real verified citations, an outline builder, a paper revision tool, LightSpeed Humanizer for making AI text undetectable, an AI and plagiarism checker, a STEM step-by-step solver, and an AI study assistant with long-term session memory.",
+    a: "Light Speed Ghost is an AI-powered academic assistance platform built for students. It includes seven core tools: an AI paper writer with real verified citations, an outline builder, a paper revision tool, LightSpeed Humanizer for making AI-assisted text read naturally in your own voice, an AI and plagiarism checker, a STEM step-by-step solver, and an AI study assistant with long-term session memory.",
   },
   {
     q: "What is the AI Study Assistant and what can it generate?",
@@ -675,7 +675,7 @@ export default function Landing() {
 
           <p className="text-base sm:text-lg md:text-xl text-white/55 max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10">
             {siteContent.heroSubtext ||
-              "Eight specialized AI tools for everything academics throw at you — write papers with real citations, humanize AI text to 0% detection, solve STEM step-by-step, check plagiarism, and get 24/7 tutoring. Stop staring at a blank screen and actually sleep."}
+              "Eight specialized AI tools for everything academics throw at you — write papers with real citations, refine AI-assisted writing to read naturally, solve STEM step-by-step, check plagiarism, and get 24/7 tutoring. Stop staring at a blank screen and actually sleep."}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
@@ -906,7 +906,7 @@ export default function Landing() {
                     </div>
                     <div className="mt-1.5 text-[9px] text-white/75 flex items-center gap-1.5">
                       <CheckCircle size={10} className="text-emerald-400" />
-                      Passes Turnitin · GPTZero · Originality.ai
+                      Reads naturally in your own voice
                     </div>
                   </div>
                 )}
@@ -1300,7 +1300,7 @@ export default function Landing() {
                   { feature: "25+ databases, 10B+ papers", lsg: true,  gpt: false, qb: false, gr: false },
                   { feature: "Rubric upload + A-grade targeting", lsg: true, gpt: false, qb: false, gr: false },
                   { feature: "Plagiarism detection",      lsg: true,  gpt: false, qb: "paid", gr: false },
-                  { feature: "AI humanizer to 0%",        lsg: true,  gpt: false, qb: false, gr: false },
+                  { feature: "AI humanizer (natural voice)", lsg: true,  gpt: false, qb: false, gr: false },
                   { feature: "STEM step-by-step solver",  lsg: true,  gpt: "partial", qb: false, gr: false },
                   { feature: "Paper revision with rubric",lsg: true,  gpt: false, qb: false, gr: false },
                   { feature: "AI Study Assistant",        lsg: true,  gpt: "partial", qb: false, gr: false },
