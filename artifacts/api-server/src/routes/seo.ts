@@ -149,6 +149,15 @@ router.put("/seo/page/:slug", async (req: Request, res: Response) => {
       const sanitized = sanitizeContent(contentHtml);
       updates.push(`content_html = $${p++}`);
       params.push(sanitized);
+      // A human just edited and saved this page, so refresh the validation
+      // columns — otherwise a page fixed by hand keeps its stale
+      // integrity_check = false flag and haunts the Integrity tab forever.
+      const v = validatePage(sanitized);
+      updates.push(`word_count = $${p++}`); params.push(v.wordCount);
+      updates.push(`unique_data_points = $${p++}`); params.push(v.uniqueDataPoints);
+      updates.push(`has_faq_schema = $${p++}`); params.push(v.hasFAQ);
+      updates.push(`has_ai_disclosure = $${p++}`); params.push(v.hasAIDisclosure);
+      updates.push(`integrity_check = $${p++}`); params.push(v.integrityCheck);
     }
     if (newStatus !== undefined) {
       updates.push(`status = $${p++}`); params.push(newStatus);
@@ -395,19 +404,47 @@ router.get("/seo/catalog", async (req: Request, res: Response) => {
 });
 
 // ── Integrity audit — GET /api/seo/audit/integrity ───────────────────────────
+// Lists every page the dashboard counts as an integrity issue, with the exact
+// reason. Two ways a page lands here:
+//   1. "prohibited-phrasing" — the live text still contains a banned phrase
+//      (manual edit slipped through, or content predates the checker).
+//   2. "needs-review" — the sanitiser auto-rewrote a phrase during generation
+//      and flagged the page (integrity_check = false) for a human read. The
+//      live text is already clean; approving just clears the flag.
+// This mirrors the dashboard's count (integrity_check = false) so the number on
+// the Dashboard tab and the rows here can never disagree again.
 router.get("/seo/audit/integrity", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
     const { rows } = await pool.query(
-      `SELECT slug, title, content_html FROM seo_pages WHERE content_html IS NOT NULL`
+      `SELECT slug, title, content_html, integrity_check, status, published, word_count, updated_at
+       FROM seo_pages WHERE content_html IS NOT NULL
+       ORDER BY updated_at DESC`
     );
 
-    const issues: Array<{ slug: string; title: string; violations: string[] }> = [];
+    const issues: Array<{
+      slug: string; title: string; status: string; published: boolean;
+      wordCount: number | null; reason: "prohibited-phrasing" | "needs-review";
+      violations: string[]; updatedAt: string;
+    }> = [];
+
     for (const row of rows) {
-      const result = checkAcademicIntegrity(row.content_html ?? "");
-      if (!result.passed) {
-        issues.push({ slug: row.slug, title: row.title, violations: result.violations });
-      }
+      const live = checkAcademicIntegrity(row.content_html ?? "");
+      const flagged = row.integrity_check === false;
+      if (live.passed && !flagged) continue; // healthy page
+
+      issues.push({
+        slug: row.slug,
+        title: row.title,
+        status: row.status,
+        published: !!row.published,
+        wordCount: row.word_count ?? null,
+        reason: live.passed ? "needs-review" : "prohibited-phrasing",
+        violations: live.passed
+          ? ["A banned phrase was auto-rewritten to compliant wording during generation. Give the page a quick read, then approve."]
+          : live.violations,
+        updatedAt: row.updated_at,
+      });
     }
 
     res.json({ total: rows.length, issueCount: issues.length, issues });
@@ -416,7 +453,9 @@ router.get("/seo/audit/integrity", async (req: Request, res: Response) => {
   }
 });
 
-// ── Auto-fix integrity — POST /api/seo/audit/integrity/fix/:slug ─────────────
+// ── Auto-fix / approve integrity — POST /api/seo/audit/integrity/fix/:slug ───
+// Doubles as the "Approve" action for needs-review pages: when the live text is
+// already clean, nothing is rewritten and this simply clears the review flag.
 router.post("/seo/audit/integrity/fix/:slug", async (req: Request, res: Response) => {
   if (!isAdmin(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   const { slug } = req.params;
@@ -425,11 +464,20 @@ router.post("/seo/audit/integrity/fix/:slug", async (req: Request, res: Response
     if (!rows[0]) { res.status(404).json({ error: "Not found" }); return; }
 
     const result = checkAcademicIntegrity(rows[0].content_html ?? "");
+    const v = validatePage(result.sanitized);
     await pool.query(
-      `UPDATE seo_pages SET content_html = $1, integrity_check = true, updated_at = now() WHERE slug = $2`,
-      [result.sanitized, slug]
+      `UPDATE seo_pages SET
+         content_html = $1, integrity_check = true,
+         word_count = $2, unique_data_points = $3, has_faq_schema = $4, has_ai_disclosure = $5,
+         updated_at = now()
+       WHERE slug = $6`,
+      [result.sanitized, v.wordCount, v.uniqueDataPoints, v.hasFAQ, v.hasAIDisclosure, slug]
     );
-    res.json({ ok: true, fixedViolations: result.violations.length });
+    res.json({
+      ok: true,
+      action: result.rewritten ? "rewritten" : "approved",
+      fixedViolations: result.violations.length,
+    });
   } catch {
     res.status(500).json({ error: "Fix failed" });
   }

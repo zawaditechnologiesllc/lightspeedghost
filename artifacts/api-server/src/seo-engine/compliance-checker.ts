@@ -7,42 +7,26 @@
 // acceptably as a drop-in for the matched span (verb phrase for verb spans,
 // noun phrase for noun spans) so sanitising never leaves a broken sentence like
 // "...guarantees your work will improve writing quality for...".
-const PROHIBITED_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
+const PROHIBITED_PATTERNS: Array<{ pattern: RegExp; replacement: string; label: string }> = [
   // ── specific multi-word phrases first ──
-  { pattern: /\bcontract\s+cheat(?:ing)?\b/gi, replacement: "paying someone to write your work" },
-  { pattern: /\bcheat(?:ing)?\s+detector\b/gi, replacement: "writing-quality checker" },
-  { pattern: /\bturnitin\s+bypass\b/gi, replacement: "writing-quality improvement" },
-  { pattern: /\bgptzero\s+bypass\b/gi, replacement: "AI-writing-pattern reduction" },
+  { pattern: /\bcontract\s+cheat(?:ing)?\b/gi, replacement: "paying someone to write your work", label: "“contract cheating”" },
+  { pattern: /\bcheat(?:ing)?\s+detector\b/gi, replacement: "writing-quality checker", label: "“cheating detector”" },
+  { pattern: /\bturnitin\s+bypass\b/gi, replacement: "writing-quality improvement", label: "“Turnitin bypass”" },
+  { pattern: /\bgptzero\s+bypass\b/gi, replacement: "AI-writing-pattern reduction", label: "“GPTZero bypass”" },
   // "bypass ... detection/turnitin/…" → a clean verb phrase. Bounded by [^.<\n]
   // so it can't run across a sentence or an HTML tag boundary.
-  { pattern: /\bbypass\b[^.<\n]*?(turnitin|gpt[z-]?zero|detector|detection|check)\b/gi, replacement: "read more naturally" },
-  { pattern: /\bwrite\s+my\s+essay\s+for\s+me\b/gi, replacement: "get AI writing help with my essay" },
-  { pattern: /\bdo\s+my\s+(assignment|homework|essay|paper)\b/gi, replacement: "get AI writing help with my $1" },
-  { pattern: /\bavoid\s+getting\s+caught\b/gi, replacement: "keep the writing genuinely my own" },
-  { pattern: /\bget\s+away\s+with\b/gi, replacement: "stay compliant with" },
-  { pattern: /\bghost\s*writ(?:e|ing|ten)\b/gi, replacement: "AI-assisted writing" },
-  { pattern: /\bundetectable\b/gi, replacement: "natural-sounding" },
+  { pattern: /\bbypass\b[^.<\n]*?(turnitin|gpt[z-]?zero|detector|detection|check)\b/gi, replacement: "read more naturally", label: "“bypass … detection/Turnitin”" },
+  { pattern: /\bwrite\s+my\s+essay\s+for\s+me\b/gi, replacement: "get AI writing help with my essay", label: "“write my essay for me”" },
+  { pattern: /\bdo\s+my\s+(assignment|homework|essay|paper)\b/gi, replacement: "get AI writing help with my $1", label: "“do my assignment/homework/essay/paper”" },
+  { pattern: /\bavoid\s+getting\s+caught\b/gi, replacement: "keep the writing genuinely my own", label: "“avoid getting caught”" },
+  { pattern: /\bget\s+away\s+with\b/gi, replacement: "stay compliant with", label: "“get away with”" },
+  { pattern: /\bghost\s*writ(?:e|ing|ten)\b/gi, replacement: "AI-assisted writing", label: "“ghostwriting”" },
+  { pattern: /\bundetectable\b/gi, replacement: "natural-sounding", label: "“undetectable”" },
   // ── bare "cheat"/"cheating" last; split so the noun and verb forms each get a
   //    grammatically correct, meaning-preserving replacement (the old single
   //    replacement inverted the sense of warnings like "cheating is wrong"). ──
-  { pattern: /\bcheating\b/gi, replacement: "academic dishonesty" },
-  { pattern: /\bcheat\b/gi, replacement: "break academic rules" },
-];
-
-const PROHIBITED_EXACT: string[] = [
-  "bypass turnitin",
-  "bypass gptzero",
-  "bypass ai detection",
-  "turnitin bypass",
-  "cheat",
-  "cheating",
-  "contract cheating",
-  "do my assignment",
-  "do my homework",
-  "write my essay for me",
-  "undetectable ai",
-  "get away with",
-  "avoid getting caught",
+  { pattern: /\bcheating\b/gi, replacement: "academic dishonesty", label: "“cheating”" },
+  { pattern: /\bcheat\b/gi, replacement: "break academic rules", label: "“cheat”" },
 ];
 
 export interface ComplianceResult {
@@ -56,18 +40,15 @@ export interface ComplianceResult {
 }
 
 export function checkAcademicIntegrity(content: string): ComplianceResult {
+  // One plain-English violation per matched pattern, so an admin reading the
+  // Integrity tab (or the Write-tab rule check) sees exactly which phrase is the
+  // problem and what the auto-fix turns it into — not a raw regex source.
   const violations: string[] = [];
   let sanitized = content;
 
-  for (const exact of PROHIBITED_EXACT) {
-    if (sanitized.toLowerCase().includes(exact.toLowerCase())) {
-      violations.push(`Prohibited phrase: "${exact}"`);
-    }
-  }
-
-  for (const { pattern, replacement } of PROHIBITED_PATTERNS) {
+  for (const { pattern, replacement, label } of PROHIBITED_PATTERNS) {
     if (pattern.test(sanitized)) {
-      violations.push(`Prohibited pattern matched: ${pattern.source}`);
+      violations.push(`Says ${label} — auto-fix rewrites it to “${replacement.replace("$1", "…")}”`);
       sanitized = sanitized.replace(pattern, replacement);
       pattern.lastIndex = 0; // reset regex state
     }
