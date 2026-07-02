@@ -435,7 +435,7 @@ function WriteTab({ editSlug, onLoaded }: { editSlug?: string | null; onLoaded?:
 }
 
 // ── Tab: Dashboard ────────────────────────────────────────────────────────────
-function DashboardTab() {
+function DashboardTab({ onNavigate }: { onNavigate: (tab: string) => void }) {
   const [data, setData] = useState<any>(null);
   const [budget, setBudget] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -524,10 +524,16 @@ function DashboardTab() {
                 </div>
               )}
               {pages.integrity_issues > 0 && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Integrity failures</span>
-                  <span className="text-red-400 font-semibold">{pages.integrity_issues}</span>
-                </div>
+                <button
+                  onClick={() => onNavigate("integrity")}
+                  className="w-full flex items-center justify-between text-xs rounded-lg -mx-1.5 px-1.5 py-1 hover:bg-slate-800/70 transition-colors group"
+                  title="See which pages and fix them"
+                >
+                  <span className="text-slate-400 group-hover:text-slate-200">Integrity — pages needing review</span>
+                  <span className="text-red-400 font-semibold">
+                    {pages.integrity_issues} <span className="text-blue-400 font-normal">view &amp; fix →</span>
+                  </span>
+                </button>
               )}
             </div>
           )}
@@ -923,7 +929,7 @@ function BudgetTab() {
 }
 
 // ── Tab: Integrity ────────────────────────────────────────────────────────────
-function IntegrityTab() {
+function IntegrityTab({ onEdit }: { onEdit: (slug: string) => void }) {
   const [audit, setAudit] = useState<any>(null);
   const [compliance, setCompliance] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -943,7 +949,7 @@ function IntegrityTab() {
 
   const fix = async (slug: string) => {
     setFixing(slug);
-    await apiFetch(`/seo/audit/integrity/fix/${slug}`, { method: "POST" });
+    try { await apiFetch(`/seo/audit/integrity/fix/${slug}`, { method: "POST" }); } catch { /* keep row visible on failure */ }
     await load();
     setFixing(null);
   };
@@ -971,30 +977,60 @@ function IntegrityTab() {
       </div>
 
       <Card>
-        <CardTitle>Academic Integrity Issues ({audit?.issueCount ?? 0} pages)</CardTitle>
+        <CardTitle>Integrity Issues ({audit?.issueCount ?? 0} pages)</CardTitle>
         {audit?.issues?.length === 0 ? (
           <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 rounded-xl px-4 py-3">
             <span>✓</span> All pages pass academic integrity checks
           </div>
         ) : (
           <div className="space-y-2.5">
-            {audit?.issues?.map((issue: any) => (
-              <div key={issue.slug} className="border border-red-500/20 bg-red-900/10 rounded-xl p-4">
-                <div className="flex justify-between items-start gap-3">
-                  <div className="min-w-0">
-                    <span className="text-xs text-red-300 font-mono">{issue.slug}</span>
-                    <ul className="mt-1.5 space-y-0.5">
-                      {issue.violations.slice(0, 3).map((v: string, i: number) => (
-                        <li key={i} className="text-[10px] text-slate-400">• {v}</li>
-                      ))}
-                    </ul>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Each row tells you exactly what's wrong and how to clear it.{" "}
+              <span className="text-amber-300/90">Needs review</span> = the generator auto-rewrote a banned
+              phrase and wants your OK — read the page, then Approve.{" "}
+              <span className="text-red-300/90">Prohibited phrasing</span> = the live text still contains a
+              banned phrase — Auto-Fix rewrites it to compliant wording, or Edit to reword it yourself.
+            </p>
+            {audit?.issues?.map((issue: any) => {
+              const needsReview = issue.reason === "needs-review";
+              return (
+                <div key={issue.slug}
+                  className={`border rounded-xl p-4 ${needsReview ? "border-amber-500/25 bg-amber-900/10" : "border-red-500/20 bg-red-900/10"}`}>
+                  <div className="flex justify-between items-start gap-3 flex-wrap">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm text-slate-100 font-medium">{issue.title || issue.slug}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide ${needsReview ? "bg-amber-500/15 text-amber-300" : "bg-red-500/15 text-red-300"}`}>
+                          {needsReview ? "Needs review" : "Prohibited phrasing"}
+                        </span>
+                        {issue.published && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-semibold uppercase tracking-wide">Live</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">/seo/{issue.slug}</span>
+                      <ul className="mt-1.5 space-y-0.5">
+                        {issue.violations?.slice(0, 5).map((v: string, i: number) => (
+                          <li key={i} className="text-[11px] text-slate-300">• {v}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {issue.published && (
+                        <a href={seoPageUrl(issue.slug)} target="_blank" rel="noopener noreferrer"
+                          className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors">
+                          Preview ↗
+                        </a>
+                      )}
+                      <Btn onClick={() => onEdit(issue.slug)} variant="secondary" size="xs">Edit</Btn>
+                      <Btn onClick={() => fix(issue.slug)} disabled={fixing === issue.slug}
+                        variant={needsReview ? "success" : "danger"} size="xs">
+                        {fixing === issue.slug ? "Working…" : needsReview ? "✓ Approve" : "Auto-Fix"}
+                      </Btn>
+                    </div>
                   </div>
-                  <Btn onClick={() => fix(issue.slug)} disabled={fixing === issue.slug} variant="danger" size="xs">
-                    {fixing === issue.slug ? "Fixing…" : "Auto-Fix"}
-                  </Btn>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Card>
@@ -1751,14 +1787,14 @@ export default function SeoAdmin() {
     switch (activeTab) {
       case "write":      return <WriteTab editSlug={editSlug} onLoaded={() => setEditSlug(null)} />;
       case "pipeline":   return <PipelineTab />;
-      case "dashboard":  return <DashboardTab />;
+      case "dashboard":  return <DashboardTab onNavigate={setActiveTab} />;
       case "catalog":   return <CatalogTab />;
       case "pages":     return <PagesTab onEdit={openEditor} />;
       case "budget":    return <BudgetTab />;
-      case "integrity":  return <IntegrityTab />;
+      case "integrity":  return <IntegrityTab onEdit={openEditor} />;
       case "sitemap":    return <SitemapTab />;
       case "settings":   return <SettingsTab />;
-      default:           return <DashboardTab />;
+      default:           return <DashboardTab onNavigate={setActiveTab} />;
     }
   };
 
