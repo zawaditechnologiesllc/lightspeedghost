@@ -41,7 +41,6 @@
 
 import { withCache } from "./cache.js";
 import { ssRateLimit } from "./ssRateLimit.js";
-import { ssRateLimit } from "./ssRateLimit.js";
 
 export interface AcademicPaper {
   title: string;
@@ -498,10 +497,6 @@ async function searchSemanticScholar(
 
     const ssHeaders: Record<string, string> = { "User-Agent": "LightSpeedGhost/1.0" };
     if (process.env.SEMANTIC_SCHOLAR_API_KEY) ssHeaders["x-api-key"] = process.env.SEMANTIC_SCHOLAR_API_KEY;
-
-    // Shared Bottleneck limiter — Semantic Scholar unauthenticated quota is
-    // ~1 req/s; concurrent tool calls previously raced it and ate 429s.
-    await ssRateLimit();
 
     const res = await fetch(
       `https://api.semanticscholar.org/graph/v1/paper/search?${params}`,
