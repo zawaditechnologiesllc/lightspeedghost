@@ -1,3 +1,4 @@
+import { compressPrompt } from "../lib/caveman";
 import { Router } from "express";
 import { requireAuth } from "../middlewares/auth";
 import { db } from "@workspace/db";
@@ -54,6 +55,10 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
       );
       if (ragPapers.length > 0) {
         academicContext = buildRAGContext(ragPapers);
+        // Token budgeting: RAG context can be huge; caveman-compress ("lite"
+        // keeps content, strips filler) when oversized so the solve prompt
+        // never starves the reasoning budget.
+        if (academicContext.length > 9000) academicContext = compressPrompt(academicContext, "lite");
       }
     } catch { /* non-fatal — proceed without RAG */ }
 
