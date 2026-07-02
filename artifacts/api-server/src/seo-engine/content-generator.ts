@@ -104,7 +104,7 @@ UNIQUE DATA POINTS required (pick 8+ relevant ones):
 - Data analysis covers 28+ software tools and 100+ statistical methods
 - Financial analysis covers IFRS 1–17 standards
 - Plans from $9.99/month; PAYG from $1.99
-- 25+ live academic databases (1B+ papers)
+- 35+ live academic databases (10B+ papers & citation records)
 - Grade-focused tooling toward A / First Class standard
 
 TRANSACTIONAL KEYWORDS — use sparingly and naturally ONLY:

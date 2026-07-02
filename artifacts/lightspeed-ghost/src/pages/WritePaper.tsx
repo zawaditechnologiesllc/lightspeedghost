@@ -1,11 +1,15 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, lazy, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import {
   Loader2, Wand2, Download, Save, CheckCircle, XCircle, ExternalLink,
   FileText, ListOrdered, BookMarked, Zap, BarChart3, Edit3,
   Eye, RotateCcw, ChevronDown, Upload, X, Check, AlertTriangle,
-  GraduationCap, FlaskConical,
+  GraduationCap, FlaskConical, LineChart,
 } from "lucide-react";
+import type { ChartSpecUI } from "@/components/PaperCharts";
+
+// Lazy: recharts is heavy and only needed when a paper has data figures.
+const PaperCharts = lazy(() => import("@/components/PaperCharts"));
 import { useWakeLock } from "@/hooks/useWakeLock";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import MathRenderer from "@/components/MathRenderer";
@@ -41,10 +45,11 @@ interface PaperStats {
 interface PaperResult {
   documentId: number; title: string; content: string;
   citations: Citation[]; bibliography: string; stats: PaperStats;
+  charts?: ChartSpecUI[];
 }
 
 type Phase = "config" | "generating" | "results";
-type ResultTab = "paper" | "citations" | "bibliography" | "stats";
+type ResultTab = "paper" | "citations" | "bibliography" | "figures" | "stats";
 type PaperViewMode = "view" | "edit";
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -731,6 +736,9 @@ export default function WritePaper() {
               { id: "paper", label: "Paper", icon: FileText },
               { id: "citations", label: `Citations (${result.citations.length})`, icon: BookMarked },
               { id: "bibliography", label: "Bibliography", icon: ListOrdered },
+              ...(result.charts && result.charts.length > 0
+                ? [{ id: "figures", label: `Figures (${result.charts.length})`, icon: LineChart }] as const
+                : []),
               { id: "stats", label: "Quality Report", icon: BarChart3 },
             ] as const).map(tab => (
               <button
@@ -821,6 +829,15 @@ export default function WritePaper() {
               <div className="text-sm text-foreground leading-relaxed font-mono whitespace-pre-wrap bg-muted/20 rounded-xl p-5 border border-border">
                 {result.bibliography}
               </div>
+            </div>
+          )}
+
+          {/* ── Figures tab — charts computed from the student's uploaded data ── */}
+          {resultTab === "figures" && result.charts && result.charts.length > 0 && (
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+              <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 size={20} className="animate-spin text-muted-foreground" /></div>}>
+                <PaperCharts charts={result.charts} />
+              </Suspense>
             </div>
           )}
 

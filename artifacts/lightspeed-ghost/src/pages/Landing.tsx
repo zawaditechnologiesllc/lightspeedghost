@@ -31,7 +31,7 @@ const tools = [
   {
     icon: PenLine,
     name: "AI Paper Writer",
-    desc: "Papers grounded in 25+ live academic databases (10B+ papers). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
+    desc: "Papers grounded in 35+ live academic databases (10B+ papers). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
     badge: "Most used",
     href: "/auth",
     color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -126,7 +126,7 @@ const faqs = [
   },
   {
     q: "How is the paper quality? I've tried AI writers before and they're terrible.",
-    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 25+ live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, Europe PMC, JSTOR, Scopus, SSRN, NBER, BASE, PhilPapers, EconPapers, WHO IRIS, MEDLINE, ClinicalTrials.gov, Cochrane Library, bioRxiv, medRxiv, PsycINFO, ProQuest and more — pulling over 10 billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop until the AI score reaches 0%. That is the pipeline on every single output.",
+    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 35+ live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, Europe PMC, JSTOR, Scopus, SSRN, NBER, BASE, PhilPapers, EconPapers, WHO IRIS, MEDLINE, ClinicalTrials.gov, Cochrane Library, bioRxiv, medRxiv, PsycINFO, ProQuest and more — pulling over 10 billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop until the AI score reaches 0%. That is the pipeline on every single output.",
   },
   {
     q: "Does file upload work with PDFs from my university portal?",
@@ -1110,7 +1110,7 @@ export default function Landing() {
                 border: "border-violet-500/20 bg-violet-500/5",
               },
               {
-                value: "25+",
+                value: "35+",
                 label: "Live academic databases",
                 sub: "10B+ papers · OpenAlex · PubMed · CrossRef · Semantic Scholar · JSTOR · Scopus · arXiv · CORE · SSRN + 16 more",
                 color: "text-amber-400",
@@ -1196,8 +1196,8 @@ export default function Landing() {
               },
               {
                 icon: "📚",
-                title: "25+ Live Academic Databases",
-                desc: "Every paper queries 25+ live databases in parallel — OpenAlex (250M+ papers), CrossRef (145M+ DOIs), PubMed, Semantic Scholar, JSTOR, Scopus, SSRN, NBER, arXiv, CORE, DOAJ, Europe PMC, MEDLINE, Cochrane Library, ClinicalTrials.gov, bioRxiv, medRxiv, BASE, PsycINFO, ProQuest, ERIC, Zenodo, PhilPapers, EconPapers, WHO IRIS, and more. Real abstracts as grounding context — not guesswork.",
+                title: "35+ Live Academic Databases",
+                desc: "Every paper queries 35+ live databases in parallel — OpenAlex (250M+ papers), CrossRef (145M+ DOIs), PubMed, Semantic Scholar, JSTOR, Scopus, SSRN, NBER, arXiv, CORE, DOAJ, Europe PMC, MEDLINE, Cochrane Library, ClinicalTrials.gov, bioRxiv, medRxiv, BASE, PsycINFO, ProQuest, ERIC, Zenodo, PhilPapers, EconPapers, WHO IRIS, and more. Real abstracts as grounding context — not guesswork.",
                 color: "border-violet-500/20 bg-violet-500/5",
                 tag: "Paper Writer · Study Assistant",
               },
@@ -1297,7 +1297,7 @@ export default function Landing() {
               <tbody>
                 {[
                   { feature: "Real DOI citations",        lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "25+ databases, 10B+ papers", lsg: true,  gpt: false, qb: false, gr: false },
+                  { feature: "35+ databases, 10B+ papers", lsg: true,  gpt: false, qb: false, gr: false },
                   { feature: "Rubric upload + A-grade targeting", lsg: true, gpt: false, qb: false, gr: false },
                   { feature: "Plagiarism detection",      lsg: true,  gpt: false, qb: "paid", gr: false },
                   { feature: "AI humanizer (natural voice)", lsg: true,  gpt: false, qb: false, gr: false },
@@ -1490,11 +1490,11 @@ export default function Landing() {
               <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-4 sm:mb-5">Paper Writer</p>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4 sm:mb-5 leading-tight">A draft you can actually submit. Not cringe at.</h2>
               <p className="text-white/55 leading-relaxed mb-6 sm:mb-8 text-sm sm:text-base">
-                Upload your rubric and we extract the A-grade criteria first — before writing a single word. The paper is then grounded in 25+ live academic databases, plagiarism-gated below 8%, and cross-checked against your rubric before delivery.
+                Upload your rubric and we extract the A-grade criteria first — before writing a single word. The paper is then grounded in 35+ live academic databases, plagiarism-gated below 8%, and cross-checked against your rubric before delivery.
               </p>
               <ul className="space-y-3">
                 {[
-                  "25+ live academic databases queried per paper — 10B+ papers",
+                  "35+ live academic databases queried per paper — 10B+ papers",
                   "A-grade rubric extraction + cross-check on every output",
                   "Plagiarism enforced below 8% — not estimated, measured",
                   "STEM mode: equations mapped to the right section (Methods, Results, etc.)",
@@ -2180,7 +2180,7 @@ export default function Landing() {
 
               <div className="space-y-2 mb-6">
                 {[
-                  "25+ live academic databases — 10B+ real papers",
+                  "35+ live academic databases — 10B+ real papers",
                   "A-grade rubric extraction from your brief",
                   "Plagiarism checked below 8% before delivery",
                   "7-day money-back guarantee",
