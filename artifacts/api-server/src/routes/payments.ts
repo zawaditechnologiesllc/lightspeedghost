@@ -1035,6 +1035,86 @@ router.post("/payments/webhook/stripe", async (req: Request, res: Response) => {
          WHERE gateway_subscription_id=$1`,
         [sub.id]
       );
+    } else if (event.type === "invoice.payment_succeeded" || event.type === "invoice.paid") {
+      // Renewal (or successful Stripe Smart Retry): reactivate and extend the
+      // period. Without this, current_period_end was only ever set at checkout,
+      // so month 2 of a healthy subscription lazily "expired" while Stripe
+      // kept charging the customer.
+      const invoice = event.data.object as Stripe.Invoice;
+      const invObj = invoice as unknown as {
+        subscription?: string | { id: string } | null;
+        parent?: { subscription_details?: { subscription?: string | { id: string } | null } | null } | null;
+        lines?: { data?: Array<{ period?: { end?: number | null } | null }> };
+      };
+      const rawSub = invObj.subscription ?? invObj.parent?.subscription_details?.subscription ?? null;
+      const subId = typeof rawSub === "string" ? rawSub : rawSub?.id ?? null;
+      if (subId) {
+        const periodEndEpoch = invObj.lines?.data?.reduce<number>(
+          (max, l) => Math.max(max, l?.period?.end ?? 0), 0,
+        ) ?? 0;
+        if (periodEndEpoch > 0) {
+          await pool.query(
+            `UPDATE user_subscriptions SET status='active', current_period_end=to_timestamp($2), updated_at=NOW()
+             WHERE gateway_subscription_id=$1`,
+            [subId, periodEndEpoch],
+          );
+        } else {
+          await pool.query(
+            `UPDATE user_subscriptions SET status='active', updated_at=NOW()
+             WHERE gateway_subscription_id=$1`,
+            [subId],
+          );
+        }
+        logger.info({ subId, periodEndEpoch }, "Stripe renewal applied — subscription reactivated/extended");
+      }
+    } else if (event.type === "invoice.payment_failed") {
+      // Mark past_due and let Stripe Smart Retries run their course. The plan
+      // resolver keeps paid access until the already-paid period ends, then
+      // resets the user to the free tier; a later successful retry lands as
+      // invoice.payment_succeeded above and restores the plan.
+      const invoice = event.data.object as Stripe.Invoice;
+      const invObj = invoice as unknown as {
+        subscription?: string | { id: string } | null;
+        parent?: { subscription_details?: { subscription?: string | { id: string } | null } | null } | null;
+      };
+      const rawSub = invObj.subscription ?? invObj.parent?.subscription_details?.subscription ?? null;
+      const subId = typeof rawSub === "string" ? rawSub : rawSub?.id ?? null;
+      if (subId) {
+        await pool.query(
+          `UPDATE user_subscriptions SET status='past_due', updated_at=NOW()
+           WHERE gateway_subscription_id=$1`,
+          [subId],
+        );
+        logger.warn({ subId }, "Stripe payment failed — subscription past_due, awaiting Stripe retries");
+      }
+    } else if (event.type === "customer.subscription.updated") {
+      // Keep status + period in sync with Stripe (covers reactivations,
+      // cancel-at-period-end, and plan pauses).
+      const sub = event.data.object as Stripe.Subscription;
+      const subObj = sub as unknown as {
+        current_period_end?: number | null;
+        items?: { data?: Array<{ current_period_end?: number | null }> };
+      };
+      const periodEndEpoch = subObj.current_period_end
+        ?? subObj.items?.data?.reduce<number>((max, it) => Math.max(max, it?.current_period_end ?? 0), 0)
+        ?? 0;
+      const status = sub.status === "active" || sub.status === "trialing" ? "active"
+        : sub.status === "past_due" ? "past_due"
+        : sub.status === "canceled" ? "cancelled"
+        : sub.status;
+      if (periodEndEpoch > 0) {
+        await pool.query(
+          `UPDATE user_subscriptions SET status=$2, current_period_end=to_timestamp($3), updated_at=NOW()
+           WHERE gateway_subscription_id=$1`,
+          [sub.id, status, periodEndEpoch],
+        );
+      } else {
+        await pool.query(
+          `UPDATE user_subscriptions SET status=$2, updated_at=NOW()
+           WHERE gateway_subscription_id=$1`,
+          [sub.id, status],
+        );
+      }
     }
   } catch (err) {
     logger.error({ err }, "Stripe webhook processing error");

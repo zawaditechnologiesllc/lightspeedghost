@@ -137,6 +137,15 @@ export function quotaExceededMessage(
 
 // There is no free plan: anything other than an active, unexpired, paid
 // subscription resolves to "none" (zero included quota — PAYG/credits only).
+// Normalise legacy / alternate plan keys to their canonical PLAN_LIMITS entry.
+function normalisePlan(plan: string | null | undefined): string {
+  if (!plan) return "starter";
+  if (plan === "campus" || plan === "campus_annual") return "institution";
+  if (plan === "student_pro") return "student_pro_monthly";
+  if (plan === "free" || plan === "starter_monthly") return "starter";
+  return plan;
+}
+
 export async function getUserPlan(userId: string): Promise<string> {
   try {
     const { rows } = await pool.query<{ plan: string; status: string; current_period_end: string | null }>(
@@ -144,27 +153,40 @@ export async function getUserPlan(userId: string): Promise<string> {
       [userId],
     );
     const sub = rows[0];
-    if (!sub) return "none";
 
-    // Lazily expire subscriptions whose period has ended
-    if (sub.status === "active" && sub.current_period_end && new Date(sub.current_period_end) < new Date()) {
+    // No subscription row = a brand-new signup. They get the FREE tier
+    // (Starter limits), never "none" — "none" zero-locks every tool, which
+    // made new accounts look banned the moment they tried anything.
+    if (!sub) return "starter";
+
+    const periodEnded =
+      !!sub.current_period_end && new Date(sub.current_period_end) < new Date();
+
+    // Lazily expire subscriptions whose period has ended → reset to free tier.
+    // If Stripe later collects a retried payment, the invoice.payment_succeeded
+    // webhook reactivates the plan and extends the period.
+    if (sub.status === "active" && periodEnded) {
       await pool.query(
         `UPDATE user_subscriptions SET status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'active'`,
         [userId],
       );
-      return "none";
+      return "starter";
     }
 
-    if (sub.status !== "active") return "none";
+    // Payment failed and Stripe is retrying (Smart Retries): keep paid access
+    // until the period they already paid for runs out, then free tier.
+    if (sub.status === "past_due") {
+      return periodEnded ? "starter" : normalisePlan(sub.plan);
+    }
 
-    const plan = sub.plan ?? "none";
-    // Normalise legacy / alternate plan keys
-    if (plan === "campus" || plan === "campus_annual") return "institution";
-    if (plan === "student_pro") return "student_pro_monthly";
-    if (plan === "free" || plan === "starter_monthly") return "starter";
-    return plan;
+    // Cancelled / expired / anything else inactive → free tier, not lock-out.
+    if (sub.status !== "active") return "starter";
+
+    return normalisePlan(sub.plan);
   } catch {
-    return "none";
+    // On a transient DB error, fail open to the free tier rather than
+    // zero-locking a legitimate user.
+    return "starter";
   }
 }
 
