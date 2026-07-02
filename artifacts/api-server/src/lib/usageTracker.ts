@@ -154,15 +154,17 @@ export async function getUserPlan(userId: string): Promise<string> {
     );
     const sub = rows[0];
 
-    // No subscription row = a brand-new signup. They get the FREE tier
-    // (Starter limits), never "none" — "none" zero-locks every tool, which
-    // made new accounts look banned the moment they tried anything.
-    if (!sub) return "starter";
+    // No subscription row = signed up but not yet subscribed. There is NO free
+    // plan — smallest plan is Starter at $9.99/mo — so they resolve to "none"
+    // (zero included quota). They can still buy Pay-As-You-Go credits, and the
+    // quota message tells them to subscribe or pay per use — this is a plan
+    // prompt, not a ban.
+    if (!sub) return "none";
 
     const periodEnded =
       !!sub.current_period_end && new Date(sub.current_period_end) < new Date();
 
-    // Lazily expire subscriptions whose period has ended → reset to free tier.
+    // Lazily expire subscriptions whose period has ended → back to no-plan.
     // If Stripe later collects a retried payment, the invoice.payment_succeeded
     // webhook reactivates the plan and extends the period.
     if (sub.status === "active" && periodEnded) {
@@ -170,23 +172,22 @@ export async function getUserPlan(userId: string): Promise<string> {
         `UPDATE user_subscriptions SET status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'active'`,
         [userId],
       );
-      return "starter";
+      return "none";
     }
 
-    // Payment failed and Stripe is retrying (Smart Retries): keep paid access
-    // until the period they already paid for runs out, then free tier.
+    // Payment failed and Stripe is retrying (Smart Retries): the customer keeps
+    // the paid access they already paid for until the period runs out, then
+    // resets to no-plan until a retry succeeds.
     if (sub.status === "past_due") {
-      return periodEnded ? "starter" : normalisePlan(sub.plan);
+      return periodEnded ? "none" : normalisePlan(sub.plan);
     }
 
-    // Cancelled / expired / anything else inactive → free tier, not lock-out.
-    if (sub.status !== "active") return "starter";
+    // Cancelled / expired / anything else inactive → no-plan.
+    if (sub.status !== "active") return "none";
 
     return normalisePlan(sub.plan);
   } catch {
-    // On a transient DB error, fail open to the free tier rather than
-    // zero-locking a legitimate user.
-    return "starter";
+    return "none";
   }
 }
 
