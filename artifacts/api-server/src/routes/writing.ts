@@ -1,3 +1,4 @@
+import { wordsToTokens } from "../lib/tokenBudget";
 import { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
@@ -637,7 +638,7 @@ router.post("/writing/generate-stream", requireAuth, async (req, res) => {
     const citationCount = body.numSources ? Math.min(Math.max(body.numSources, 3), 50) : autoCitations;
     const includeToC = hasTableOfContents(body.additionalInstructions ?? "") || hasTableOfContents(body.rubricText ?? "");
     const refsOverhead = Math.min(2000, Math.max(400, citationCount * 120));
-    const maxTokens = Math.min(16000, Math.ceil(maxWords * 1.5) + refsOverhead);
+    const maxTokens = wordsToTokens(maxWords, refsOverhead); // token-budget lib: calibrated words->tokens with 16k cap
 
     // Keep-alive ping so the SSE connection stays open during slow citation/DB calls
     send("ping", { t: Date.now() });

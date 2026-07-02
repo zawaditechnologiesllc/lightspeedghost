@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middlewares/auth";
 import { CheckPlagiarismBody, HumanizeTextBody } from "@workspace/api-zod";
 import { compareDocuments } from "../lib/winnow";
+import { analyseCodeSimilarity, detectLanguage, type CodeLanguage } from "../lib/codeAnalysis";
 import { analyseTextPlagiarism, computeReadabilityScores } from "../lib/textAnalysis";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage, enforceLimit, quotaExceededMessage } from "../lib/usageTracker";
@@ -442,11 +443,36 @@ router.post("/plagiarism/code", requireAuth, async (req, res) => {
     const windowSize = typeof rawW === "number" && rawW >= 2 && rawW <= 20 ? Math.floor(rawW) : 4;
 
     const result = compareDocuments(doc1, doc2, kgramSize, windowSize);
-    const overallSimilarity = Math.round((result.similarity1 + result.similarity2) / 2);
+
+    // Code-AWARE analysis (structure, control-flow, API-call patterns) on top
+    // of raw winnowing — previously the `language` field was parsed then
+    // ignored and code was compared as plain text, missing renamed-variable
+    // and restructured plagiarism this analyser is built to catch.
+    let codeAware: ReturnType<typeof analyseCodeSimilarity> | null = null;
+    try {
+      const lang = typeof language === "string" && language.length > 0
+        ? (language as CodeLanguage)
+        : detectLanguage(doc1);
+      codeAware = analyseCodeSimilarity(doc1, doc2, lang);
+    } catch { /* non-fatal — winnowing result still returned */ }
+
+    // Take the stronger signal so rename/restructure evasion can't lower it.
+    const winnowSim = Math.round((result.similarity1 + result.similarity2) / 2);
+    const overallSimilarity = codeAware ? Math.max(winnowSim, Math.round(codeAware.similarity)) : winnowSim;
     const riskLevel: "low" | "medium" | "high" =
       overallSimilarity >= 40 ? "high" : overallSimilarity >= 20 ? "medium" : "low";
 
     res.json({
+      ...(codeAware ? {
+        detectedLanguage: codeAware.language,
+        codeSimilarity: Math.round(codeAware.similarity),
+        structuralSimilarity: Math.round(codeAware.structuralSimilarity),
+        tokenSimilarity: Math.round(codeAware.tokenSimilarity),
+        apiCallSimilarity: Math.round(codeAware.apiCallSimilarity),
+        sharedPatterns: codeAware.sharedPatterns.slice(0, 12),
+        verdict: codeAware.verdict,
+        verdictLabel: codeAware.verdictLabel,
+      } : {}),
       similarity1: Math.round(result.similarity1),
       similarity2: Math.round(result.similarity2),
       overallSimilarity,
