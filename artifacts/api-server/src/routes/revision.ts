@@ -19,6 +19,13 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
+// Grade cross-checks must read the WHOLE paper — long revisions can exceed any
+// fixed slice. Up to 100k chars the full text is sent; larger gets head+tail.
+function fullPaperWindow(text: string): string {
+  if (text.length <= 100_000) return text;
+  return `${text.slice(0, 88_000)}\n\n[... middle section omitted for length ...]\n\n${text.slice(-12_000)}`;
+}
+
 async function enforceRevisionWordCount(
   revisedText: string,
   targetWords: number,
@@ -473,9 +480,8 @@ ${effectiveGradingCriteria}`,
           },
           {
             role: "user",
-            // Score the bulk of the paper, not a token slice — a cross-check
-            // that reads <20% of the text can't verify anything.
-            content: `Score this revised paper:\n\n${revisedText.slice(0, 24000)}${revisedText.length > 28000 ? `\n\nCLOSING SECTION:\n${revisedText.slice(-4000)}` : ""}`,
+            // Score the WHOLE paper — a fixed slice can't verify a long revision.
+            content: `Score this revised paper:\n\n${fullPaperWindow(revisedText)}`,
           },
         ],
       });
@@ -710,7 +716,7 @@ ${effectiveGradingCriteria}`,
           },
           {
             role: "user",
-            content: `Score this final paper:\n\n${revisedText.slice(0, 24000)}${revisedText.length > 28000 ? `\n\nCLOSING SECTION:\n${revisedText.slice(-4000)}` : ""}`,
+            content: `Score this final paper:\n\n${fullPaperWindow(revisedText)}`,
           },
         ],
       });

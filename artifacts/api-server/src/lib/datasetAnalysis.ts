@@ -388,9 +388,17 @@ export function buildDatasetCharts(csvText: string): ChartSpec[] {
   }
 }
 
-/** One-line figure list for the writer prompt so the paper text references the
- *  real rendered figures by number instead of describing imaginary ones. */
+/** Figure list + placement instructions for the writer prompt. The paper must
+ *  BOTH reference each figure by number AND place a [[FIGURE:n]] marker where
+ *  it belongs — the app renders the real chart at that exact position, so the
+ *  figures are part of the delivered paper (view and exports), not a side tab. */
 export function describeChartsForPrompt(charts: ChartSpec[]): string {
   if (charts.length === 0) return "";
-  return `\nRENDERED FIGURES (these charts are generated from the student's actual data and displayed with the paper — refer to them by number in the text, e.g. "as shown in Figure 1"):\n${charts.map((c, i) => `Figure ${i + 1}: ${c.title} (${c.type})`).join("\n")}\n`;
+  return `\nRENDERED FIGURES (generated from the student's actual data — these are real charts embedded in the paper):
+${charts.map((c, i) => `Figure ${i + 1}: ${c.title} (${c.type})`).join("\n")}
+
+FIGURE PLACEMENT RULES (mandatory):
+1. Place the literal marker [[FIGURE:1]] on its own line at the point in the Results/Findings/Analysis section where Figure 1 belongs — likewise [[FIGURE:2]], etc. Use each marker exactly once.
+2. Reference each figure in the surrounding prose by number ("as shown in Figure 1") and interpret what it shows using the real computed values above.
+3. Never invent figures beyond this list and never describe a chart that is not listed.\n`;
 }

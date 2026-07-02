@@ -541,6 +541,14 @@ function hasTableOfContents(instructions: string): boolean {
   return /table of contents|toc\b/i.test(instructions ?? "");
 }
 
+// Grade cross-checks must read the WHOLE paper — PAYG papers can run 10,000+
+// words (~60k+ chars), far beyond a fixed slice. Up to 100k chars (≈25k tokens)
+// the full text is sent; only truly enormous papers get head+tail windowing.
+function fullPaperWindow(text: string): string {
+  if (text.length <= 100_000) return text;
+  return `${text.slice(0, 88_000)}\n\n[... middle section omitted for length ...]\n\n${text.slice(-12_000)}`;
+}
+
 function academicLevelPrompt(level: string): string {
   const map: Record<string, string> = {
     high_school: "Write at a high school (secondary) level: clear argument, basic academic structure, accessible vocabulary.",
@@ -1227,9 +1235,8 @@ Return JSON:
             },
             {
               role: "user",
-              // Check the bulk of the paper, not a token opening slice — a rubric
-              // cross-check that reads <20% of the text can't verify anything.
-              content: `A-GRADE CRITERIA TO CHECK:\n${aGradeCriteria}\n\nPAPER (opening ${Math.min(content.length, 24000).toLocaleString()} chars):\n${content.slice(0, 24000)}${content.length > 28000 ? `\n\nPAPER CLOSING SECTION:\n${content.slice(-4000)}` : ""}`,
+              // Check the WHOLE paper — a fixed slice can't verify a long PAYG paper.
+              content: `A-GRADE CRITERIA TO CHECK:\n${aGradeCriteria}\n\nFULL PAPER:\n${fullPaperWindow(content)}`,
             },
           ],
         });
@@ -1514,6 +1521,27 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
       }
     }
 
+    // ── Step 5c2: Figure marker integrity ─────────────────────────────────────
+    // The writer is instructed to place [[FIGURE:n]] markers where each chart
+    // belongs. Guarantee the delivered paper contains every figure exactly:
+    // strip markers with no matching chart, append any the writer omitted.
+    if (paperCharts.length > 0) {
+      const present = new Set<number>();
+      for (const m of finalContent.matchAll(/\[\[FIGURE:(\d+)\]\]/g)) present.add(parseInt(m[1], 10));
+      finalContent = finalContent.replace(/\[\[FIGURE:(\d+)\]\]/g, (full, n: string) => {
+        const num = parseInt(n, 10);
+        return num >= 1 && num <= paperCharts.length ? full : "";
+      });
+      const missing = paperCharts.map((_, i) => i + 1).filter((n) => !present.has(n));
+      if (missing.length > 0) {
+        finalContent += `\n\n## Figures\n\n${missing.map((n) => `[[FIGURE:${n}]]`).join("\n\n")}\n`;
+        send("step", { id: "figures", message: `Embedded ${missing.length} figure${missing.length !== 1 ? "s" : ""} into the paper's Figures section`, status: "done" });
+      }
+    } else {
+      // No charts were generated — never leak a raw marker into the paper.
+      finalContent = finalContent.replace(/\[\[FIGURE:\d+\]\]/g, "");
+    }
+
     // ── Step 5d: FINAL rubric cross-check — the grade shown to the user is
     // scored against the A-grade criteria on the FINAL text (after every
     // rewrite), never a hardcoded number or a mid-pipeline snapshot. ─────────
@@ -1533,7 +1561,7 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
             },
             {
               role: "user",
-              content: `GRADING CRITERIA (top band):\n${aGradeCriteria}\n\nFINAL PAPER (opening ${Math.min(finalContent.length, 24000).toLocaleString()} chars):\n${finalContent.slice(0, 24000)}${finalContent.length > 28000 ? `\n\nPAPER CLOSING SECTION:\n${finalContent.slice(-4000)}` : ""}`,
+              content: `GRADING CRITERIA (top band):\n${aGradeCriteria}\n\nFULL FINAL PAPER:\n${fullPaperWindow(finalContent)}`,
             },
           ],
         });

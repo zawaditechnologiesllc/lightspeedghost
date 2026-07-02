@@ -7,9 +7,33 @@ import {
   GraduationCap, FlaskConical, LineChart,
 } from "lucide-react";
 import type { ChartSpecUI } from "@/components/PaperCharts";
+import { inlineChartsIntoMarkdown } from "@/lib/chartExport";
 
 // Lazy: recharts is heavy and only needed when a paper has data figures.
 const PaperCharts = lazy(() => import("@/components/PaperCharts"));
+
+// Renders the paper body with any [[FIGURE:n]] markers replaced by the live
+// chart at that exact position — figures are part of the paper, not a side tab.
+function renderPaperWithFigures(content: string, charts: ChartSpecUI[] | undefined): React.ReactNode {
+  if (!charts || charts.length === 0) return renderMarkdown(content.replace(/\[\[FIGURE:\d+\]\]/g, ""));
+  const parts = content.split(/\[\[FIGURE:(\d+)\]\]/);
+  const nodes: React.ReactNode[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 0) {
+      if (parts[i].trim()) nodes.push(<div key={`t${i}`}>{renderMarkdown(parts[i])}</div>);
+    } else {
+      const spec = charts[parseInt(parts[i], 10) - 1];
+      if (spec) {
+        nodes.push(
+          <Suspense key={`f${i}`} fallback={<div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-muted-foreground" /></div>}>
+            <div className="my-4"><PaperCharts charts={[spec]} figureOffset={parseInt(parts[i], 10) - 1} /></div>
+          </Suspense>
+        );
+      }
+    }
+  }
+  return nodes;
+}
 import { useWakeLock } from "@/hooks/useWakeLock";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import MathRenderer from "@/components/MathRenderer";
@@ -714,8 +738,8 @@ export default function WritePaper() {
               </button>
             )}
             <ExportButtons
-              getHtml={() => wrapDocHtml(result.title, mdToBodyHtml(result.content) + (result.bibliography ? `<hr class="section-rule"><h2>References</h2><p>${result.bibliography.replace(/\n/g, "<br>")}</p>` : ""))}
-              getText={() => `${result.content}\n\nReferences:\n${result.bibliography}`}
+              getHtml={() => wrapDocHtml(result.title, mdToBodyHtml(inlineChartsIntoMarkdown(result.content, result.charts)) + (result.bibliography ? `<hr class="section-rule"><h2>References</h2><p>${result.bibliography.replace(/\n/g, "<br>")}</p>` : ""))}
+              getText={() => `${inlineChartsIntoMarkdown(result.content, result.charts)}\n\nReferences:\n${result.bibliography}`}
               filename={makeLsgFilename("paper", result.title || "PAPER")}
               formats={["docx", "pdf", "copy"]}
             />
@@ -781,7 +805,7 @@ export default function WritePaper() {
                 <CheckCircle size={12} />
                 All citations verified from Semantic Scholar & arXiv — no hallucinated references
               </div>
-              {renderMarkdown(result.content)}
+              {renderPaperWithFigures(result.content, result.charts)}
             </div>
           )}
 
