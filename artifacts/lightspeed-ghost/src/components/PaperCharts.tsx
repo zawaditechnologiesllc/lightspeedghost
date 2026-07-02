@@ -104,19 +104,21 @@ function SingleChart({ spec, palette }: { spec: ChartSpecUI; palette: string[] }
   );
 }
 
-export default function PaperCharts({ charts }: { charts: ChartSpecUI[] }) {
+export default function PaperCharts({ charts, figureOffset = 0 }: { charts: ChartSpecUI[]; figureOffset?: number }) {
   const palette = useChartPalette();
   if (!charts || charts.length === 0) return null;
 
   return (
     <div className="space-y-5">
-      <p className="text-xs text-muted-foreground">
-        Figures generated from your uploaded data — the same computed values the paper's analysis cites.
-      </p>
+      {figureOffset === 0 && charts.length > 1 && (
+        <p className="text-xs text-muted-foreground">
+          Figures generated from your uploaded data — the same computed values the paper's analysis cites.
+        </p>
+      )}
       {charts.map((spec, idx) => (
         <figure key={spec.id} className="rounded-lg border border-border bg-card p-4">
           <figcaption className="text-sm font-semibold text-foreground mb-1">
-            Figure {idx + 1}. {spec.title}
+            Figure {figureOffset + idx + 1}. {spec.title}
           </figcaption>
           <div className="text-[11px] text-muted-foreground mb-2">{spec.yLabel} by {spec.xLabel}</div>
           <div className="h-64 text-foreground">
