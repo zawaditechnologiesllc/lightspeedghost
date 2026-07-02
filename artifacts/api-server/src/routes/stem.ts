@@ -1,4 +1,4 @@
-import { compressPrompt } from "../lib/caveman";
+import { compressPrompt, graphifyContext } from "../lib/caveman";
 import { Router } from "express";
 import { requireAuth } from "../middlewares/auth";
 import { db } from "@workspace/db";
@@ -58,6 +58,7 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
         // Token budgeting: RAG context can be huge; caveman-compress ("lite"
         // keeps content, strips filler) when oversized so the solve prompt
         // never starves the reasoning budget.
+        if (academicContext.length > 20000) academicContext = graphifyContext(academicContext);
         if (academicContext.length > 9000) academicContext = compressPrompt(academicContext, "lite");
       }
     } catch { /* non-fatal — proceed without RAG */ }
@@ -89,7 +90,7 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
     // 4. Generate graph data if requested
     let graphData = null;
     if (body.generateGraph) {
-      graphData = generateGraphForSubject(body.subject, body.problem);
+      graphData = await generateGraphForSubject(body.subject, body.problem, typeof coveResult?.finalAnswer === "string" ? coveResult.finalAnswer : JSON.stringify(coveResult ?? reactResult ?? "").slice(0, 2500));
     }
 
     // 5. Build final answer — use CoVe-verified version if corrections were made
@@ -350,7 +351,7 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
 
     let graphData = null;
     if (body.generateGraph) {
-      graphData = generateGraphForSubject(body.subject, body.problem);
+      graphData = await generateGraphForSubject(body.subject, body.problem, typeof coveResult?.finalAnswer === "string" ? coveResult.finalAnswer : JSON.stringify(coveResult ?? reactResult ?? "").slice(0, 2500));
     }
 
     const finalAnswer = coveResult.passedVerification ? reactResult.finalAnswer : coveResult.verified;
@@ -632,36 +633,42 @@ async function handleMoleculeLookup(req: import("express").Request, res: import(
   }
 }
 
-function generateGraphForSubject(
+async function generateGraphForSubject(
   subject: string,
-  problem: string
-): {
+  problem: string,
+  solutionText = ""
+): Promise<{
   type: "line";
   data: Array<{ x: number; y: number; label: string }>;
   labels: { x: string; y: string; title: string };
-} {
-  const points = Array.from({ length: 12 }, (_, i) => {
-    const x = i - 2;
-    let y: number;
-    if (subject === "mathematics" || subject === "physics") {
-      y = Math.pow(x, 2) - 2 * x + 1;
-    } else if (subject === "statistics") {
-      y = Math.exp(-Math.pow(x, 2) / 2) / Math.sqrt(2 * Math.PI);
-    } else {
-      y = Math.sin(x * 0.8) * 5 + x * 0.5;
-    }
-    return { x: parseFloat(x.toFixed(2)), y: parseFloat(y.toFixed(4)), label: `x=${x}` };
-  });
-
-  return {
-    type: "line",
-    data: points,
-    labels: {
-      x: "x",
-      y: subject === "statistics" ? "P(x)" : "f(x)",
-      title: `Solution Visualization — ${subject}`,
-    },
-  };
+} | null> {
+  // Graph is derived from the ACTUAL problem + worked solution (never a canned
+  // subject curve). One cheap structured call; null when nothing is plottable.
+  try {
+    const resp = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 900,
+      system: `Extract a plottable relationship from a solved STEM problem. Return ONLY JSON:
+{"plottable": boolean, "points": [{"x": number, "y": number}] (10-16 points computed from the problem's actual function/data), "xLabel": string, "yLabel": string, "title": string}
+Rules: points MUST come from the real function, equation, or data in the problem/solution — never invent a generic curve. If nothing is genuinely plottable, return {"plottable": false}.`,
+      messages: [{ role: "user", content: `Subject: ${subject}\nProblem: ${problem.slice(0, 1500)}\n\nWorked solution:\n${solutionText.slice(0, 2500)}` }],
+    });
+    const txt = resp.content[0].type === "text" ? resp.content[0].text : "";
+    recordUsage("claude-haiku-4-5", resp.usage.input_tokens, resp.usage.output_tokens, "stem-graph");
+    const m = txt.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    const g = JSON.parse(m[0]) as { plottable?: boolean; points?: Array<{ x: number; y: number }>; xLabel?: string; yLabel?: string; title?: string };
+    if (!g.plottable || !Array.isArray(g.points) || g.points.length < 3) return null;
+    const pts = g.points.filter((pt) => typeof pt.x === "number" && typeof pt.y === "number" && isFinite(pt.x) && isFinite(pt.y)).slice(0, 16);
+    if (pts.length < 3) return null;
+    return {
+      type: "line",
+      data: pts.map((pt) => ({ x: pt.x, y: pt.y, label: `(${pt.x}, ${Number(pt.y.toFixed(3))})` })),
+      labels: { x: g.xLabel ?? "x", y: g.yLabel ?? "y", title: g.title ?? "Problem graph" },
+    };
+  } catch {
+    return null; // no graph beats a fake graph
+  }
 }
 
 export default router;

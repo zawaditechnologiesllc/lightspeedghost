@@ -161,3 +161,25 @@ export function cavemanSystem(prompt: string, level: CavemanLevel = "full"): str
   }
   return compressPrompt(prompt, level);
 }
+
+// ── Graphify: context-graph reduction ────────────────────────────────────────
+// The other half of the hunted pairing (see header): reduce a long context to
+// its core "meaning nodes" before compression. Deterministic and local — keeps
+// sentences carrying instruction verbs, numbers/statistics, citations, or
+// domain keywords; drops connective filler. Chain: graphify → caveman.
+const NODE_SIGNAL = /\b(must|never|always|require|cite|use|return|include|solve|compute|calculate|show|prove|derive|analy[sz]e|compare|\d|%|=|DOI|et al\.)\b/i;
+
+export function graphifyContext(text: string, maxNodes = 120): string {
+  const sentences = text.split(/(?<=[.!?:])\s+|\n+/).map((s) => s.trim()).filter(Boolean);
+  const seen = new Set<string>();
+  const nodes: string[] = [];
+  for (const s of sentences) {
+    if (nodes.length >= maxNodes) break;
+    if (!NODE_SIGNAL.test(s)) continue;              // no instruction/data signal
+    const key = s.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 60);
+    if (key.length < 8 || seen.has(key)) continue;   // dedupe near-identical nodes
+    seen.add(key);
+    nodes.push(s);
+  }
+  return nodes.length >= 5 ? nodes.join("\n") : text; // fall back if too sparse
+}
