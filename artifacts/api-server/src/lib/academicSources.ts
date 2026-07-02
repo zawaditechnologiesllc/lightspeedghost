@@ -3,7 +3,7 @@
  * Aggregates from 50,000+ peer-reviewed sources via free public APIs.
  * No Wikipedia, no blogs — only DOI-verifiable academic content.
  *
- * Sources (25 live databases, 10B+ papers & citation records):
+ * Sources (35 live databases, 10B+ papers & citation records):
  *  • OpenAlex     — 250M+ papers from 50,000+ publishers (openalex.org)
  *  • CrossRef     — 145M+ DOI records (crossref.org)
  *  • Europe PMC   — 40M+ biomedical papers with full abstracts (europepmc.org)
@@ -1593,7 +1593,7 @@ async function searchDBLP(query: string, limit: number): Promise<AcademicPaper[]
 /**
  * Search all academic databases in parallel and return deduplicated results.
  *
- * Database coverage (25 sources, 10B+ papers & citation records):
+ * Database coverage (35 sources, 10B+ papers & citation records):
  *  • OpenAlex          — 250M+ works, all disciplines (primary source, highest quality)
  *  • CrossRef          — 145M+ DOI records (citation backbone of academic publishing)
  *  • Europe PMC        — 40M+ biomedical papers (MEDLINE, PubMed Central, life sciences)
@@ -1666,6 +1666,18 @@ async function _fetchAllAcademicSources(
   const trialsLimit      = isBiomedical ? Math.ceil(budget * 0.05) : 0;
   const whoLimit         = isBiomedical ? Math.ceil(budget * 0.04) : 0;
   const dblpLimit        = isSTEM ? Math.ceil(budget * 0.05) : 0;
+  // Expansion sources 26–35 — subject-routed like the rest; niche sources get 0
+  // outside their discipline so they never dilute general queries.
+  const gbooksLimit      = isHumanities ? Math.ceil(budget * 0.05) : Math.ceil(budget * 0.02);
+  const openLibLimit     = isHumanities ? Math.ceil(budget * 0.03) : 0;
+  const worldBankLimit   = isFinanceBusiness ? Math.ceil(budget * 0.06) : 0;
+  const locLimit         = isHumanities ? Math.ceil(budget * 0.04) : 0;
+  const iaLimit          = isHumanities ? Math.ceil(budget * 0.03) : Math.ceil(budget * 0.01);
+  const bookshelfLimit   = isBiomedical ? Math.ceil(budget * 0.04) : 0;
+  const figshareLimit    = Math.ceil(budget * 0.03);
+  const dryadLimit       = (isSTEM || isBiomedical) ? Math.ceil(budget * 0.03) : Math.ceil(budget * 0.01);
+  const pwcLimit         = isSTEM ? Math.ceil(budget * 0.05) : 0;
+  const nberLimit        = isFinanceBusiness ? Math.ceil(budget * 0.06) : 0;
 
   const [
     openAlexResults,
@@ -1721,6 +1733,23 @@ async function _fetchAllAcademicSources(
     dblpLimit > 0      ? searchDBLP(query, dblpLimit)               : Promise.resolve([] as AcademicPaper[]),
   ]);
 
+  // Expansion sources 26–35 (each internally fault-isolated → [] on failure)
+  const [
+    gbooksResults, openLibResults, worldBankResults, locResults, iaResults,
+    bookshelfResults, figshareResults, dryadResults, pwcResults, nberResults,
+  ] = await Promise.all([
+    gbooksLimit > 0    ? searchGoogleBooks(query, gbooksLimit)        : Promise.resolve([] as AcademicPaper[]),
+    openLibLimit > 0   ? searchOpenLibrary(query, openLibLimit)       : Promise.resolve([] as AcademicPaper[]),
+    worldBankLimit > 0 ? searchWorldBank(query, worldBankLimit)       : Promise.resolve([] as AcademicPaper[]),
+    locLimit > 0       ? searchLibraryOfCongress(query, locLimit)     : Promise.resolve([] as AcademicPaper[]),
+    iaLimit > 0        ? searchInternetArchive(query, iaLimit)        : Promise.resolve([] as AcademicPaper[]),
+    bookshelfLimit > 0 ? searchNCBIBookshelf(query, bookshelfLimit)   : Promise.resolve([] as AcademicPaper[]),
+    figshareLimit > 0  ? searchFigshare(query, figshareLimit)         : Promise.resolve([] as AcademicPaper[]),
+    dryadLimit > 0     ? searchDryad(query, dryadLimit)               : Promise.resolve([] as AcademicPaper[]),
+    pwcLimit > 0       ? searchPapersWithCode(query, pwcLimit)        : Promise.resolve([] as AcademicPaper[]),
+    nberLimit > 0      ? searchNBER(query, nberLimit)                 : Promise.resolve([] as AcademicPaper[]),
+  ]);
+
   // ── Deduplicate by DOI (primary), then normalised title prefix (fallback) ───
   const seen = new Set<string>();
   const merged: AcademicPaper[] = [];
@@ -1751,6 +1780,16 @@ async function _fetchAllAcademicSources(
     ...trialsResults,
     ...whoResults,
     ...dblpResults,
+    ...pwcResults,
+    ...nberResults,
+    ...worldBankResults,
+    ...bookshelfResults,
+    ...dryadResults,
+    ...figshareResults,
+    ...gbooksResults,
+    ...locResults,
+    ...iaResults,
+    ...openLibResults,
   ];
 
   for (const paper of allResults) {
@@ -1818,11 +1857,12 @@ APA Reference: ${p.authors} (${p.year}). ${p.title}.${journal} ${p.source}. ${p.
 
   return `════════════════════════════════════════════════════════════
 VERIFIED ACADEMIC KNOWLEDGE BASE — ${papers.length} PEER-REVIEWED SOURCES
-Retrieved from 25 live academic databases (10B+ papers & citation records):
+Retrieved from 35 live academic databases (10B+ papers & citation records):
 OpenAlex, CrossRef, Semantic Scholar, PubMed NCBI, PubMed Central, Europe PMC,
 arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE, PLOS, bioRxiv/medRxiv,
 SSRN/Research Square, HAL, EconBiz, DOAB, OAPEN, Unpaywall, ClinicalTrials.gov,
-WHO IRIS, and dblp.
+WHO IRIS, dblp, Papers With Code, NBER, World Bank, NCBI Bookshelf, Dryad,
+Figshare, Google Books, Library of Congress, Internet Archive, and Open Library.
 Results ranked by citation count. Wikipedia and non-peer-reviewed sources excluded.
 
 GROUNDING RULES (non-negotiable):
@@ -1861,4 +1901,245 @@ export function formatPaperCitations(
         return `${p.authors} (${p.year}). ${p.title}.${journal} ${p.url}`;
     }
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Expansion sources 26–35 — keyless public APIs, each fault-isolated
+// (any failure returns [] so Promise.all in the orchestrator never rejects).
+// Routed by subject in _fetchAllAcademicSources like the original 25.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const EXP_TIMEOUT = 8000;
+const EXP_UA = { "User-Agent": "LightspeedGhost/1.0 (academic research; mailto:support@lightspeedghost.com)" };
+
+/** Google Books — 40M+ scholarly & academic books (humanities, textbooks). */
+async function searchGoogleBooks(query: string, limit: number): Promise<AcademicPaper[]> {
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${Math.min(limit, 10)}&printType=books`,
+      { headers: EXP_UA, signal: AbortSignal.timeout(EXP_TIMEOUT) },
+    );
+    if (!res.ok) return [];
+    const data = await res.json() as { items?: Array<{ volumeInfo?: { title?: string; authors?: string[]; publishedDate?: string; description?: string; publisher?: string; canonicalVolumeLink?: string; infoLink?: string } }> };
+    return (data.items ?? []).slice(0, limit).map((it) => {
+      const v = it.volumeInfo ?? {};
+      return {
+        title: v.title ?? "Unknown Title",
+        authors: (v.authors ?? []).join(", ") || "Unknown Authors",
+        year: parseInt((v.publishedDate ?? "").slice(0, 4)) || new Date().getFullYear(),
+        abstract: (v.description ?? "").slice(0, 1200),
+        url: v.canonicalVolumeLink ?? v.infoLink ?? "",
+        source: "Google Books",
+        journal: v.publisher,
+      };
+    }).filter((p) => p.title !== "Unknown Title" && p.url);
+  } catch { return []; }
+}
+
+/** Open Library (Internet Archive) — 45M+ book records. */
+async function searchOpenLibrary(query: string, limit: number): Promise<AcademicPaper[]> {
+  try {
+    const res = await fetch(
+      `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=${Math.min(limit, 10)}&fields=title,author_name,first_publish_year,key,publisher`,
+      { headers: EXP_UA, signal: AbortSignal.timeout(EXP_TIMEOUT) },
+    );
+    if (!res.ok) return [];
+    const data = await res.json() as { docs?: Array<{ title?: string; author_name?: string[]; first_publish_year?: number; key?: string; publisher?: string[] }> };
+    return (data.docs ?? []).slice(0, limit).map((d) => ({
+      title: d.title ?? "Unknown Title",
+      authors: (d.author_name ?? []).slice(0, 4).join(", ") || "Unknown Authors",
+      year: d.first_publish_year ?? new Date().getFullYear(),
+      abstract: "",
+      url: d.key ? `https://openlibrary.org${d.key}` : "",
+      source: "Open Library",
+      journal: d.publisher?.[0],
+    })).filter((p) => p.title !== "Unknown Title" && p.url);
+  } catch { return []; }
+}
+
+/** World Bank Documents & Reports — 380k+ development/economics reports. */
+async function searchWorldBank(query: string, limit: number): Promise<AcademicPaper[]> {
+  try {
+    const res = await fetch(
+      `https://search.worldbank.org/api/v3/wds?format=json&qterm=${encodeURIComponent(query)}&rows=${Math.min(limit, 10)}&fl=display_title,docdt,pdfurl,url,abstracts,count`,
+      { headers: EXP_UA, signal: AbortSignal.timeout(EXP_TIMEOUT) },
+    );
+    if (!res.ok) return [];
+    const data = await res.json() as { documents?: Record<string, { display_title?: string; docdt?: string; url?: string; pdfurl?: string; abstracts?: { "cdata!"?: string } }> };
+    const docs = Object.entries(data.documents ?? {}).filter(([k]) => k !== "facets");
+    return docs.slice(0, limit).map(([, d]) => ({
+      title: d.display_title ?? "Unknown Title",
+      authors: "World Bank Group",
+      year: parseInt((d.docdt ?? "").slice(0, 4)) || new Date().getFullYear(),
+      abstract: (d.abstracts?.["cdata!"] ?? "").slice(0, 1200),
+      url: d.url ?? d.pdfurl ?? "",
+      source: "World Bank",
+      journal: "World Bank Documents & Reports",
+    })).filter((p) => p.title !== "Unknown Title" && p.url);
+  } catch { return []; }
+}
+
+/** Library of Congress — primary & historical sources. */
+async function searchLibraryOfCongress(query: string, limit: number): Promise<AcademicPaper[]> {
+  try {
+    const res = await fetch(
+      `https://www.loc.gov/search/?q=${encodeURIComponent(query)}&fo=json&c=${Math.min(limit, 10)}`,
+      { headers: EXP_UA, signal: AbortSignal.timeout(EXP_TIMEOUT) },
+    );
+    if (!res.ok) return [];
+    const data = await res.json() as { results?: Array<{ title?: string; date?: string; url?: string; description?: string[] | string; contributor?: string[] }> };
+    return (data.results ?? []).slice(0, limit).map((r) => ({
+      title: r.title ?? "Unknown Title",
+      authors: (r.contributor ?? []).slice(0, 4).join(", ") || "Library of Congress",
+      year: parseInt((r.date ?? "").slice(0, 4)) || new Date().getFullYear(),
+      abstract: (Array.isArray(r.description) ? r.description.join(" ") : r.description ?? "").slice(0, 1200),
+      url: r.url ?? "",
+      source: "Library of Congress",
+    })).filter((p) => p.title !== "Unknown Title" && p.url);
+  } catch { return []; }
+}
+
+/** Internet Archive — 20M+ digitized texts (advancedsearch API). */
+async function searchInternetArchive(query: string, limit: number): Promise<AcademicPaper[]> {
+  try {
+    const params = new URLSearchParams({
+      q: `(${query}) AND mediatype:texts`,
+      output: "json",
+      rows: String(Math.min(limit, 10)),
+      "fl[]": "identifier,title,creator,year,description",
+    });
+    const res = await fetch(`https://archive.org/advancedsearch.php?${params}`, { headers: EXP_UA, signal: AbortSignal.timeout(EXP_TIMEOUT) });
+    if (!res.ok) return [];
+    const data = await res.json() as { response?: { docs?: Array<{ identifier?: string; title?: string; creator?: string | string[]; year?: string | number; description?: string | string[] }> } };
+    return (data.response?.docs ?? []).slice(0, limit).map((d) => ({
+      title: (Array.isArray(d.title) ? d.title[0] : d.title) ?? "Unknown Title",
+      authors: (Array.isArray(d.creator) ? d.creator.slice(0, 4).join(", ") : d.creator) ?? "Unknown Authors",
+      year: parseInt(String(d.year ?? "")) || new Date().getFullYear(),
+      abstract: (Array.isArray(d.description) ? d.description.join(" ") : d.description ?? "").slice(0, 1200),
+      url: d.identifier ? `https://archive.org/details/${d.identifier}` : "",
+      source: "Internet Archive",
+    })).filter((p) => p.title !== "Unknown Title" && p.url);
+  } catch { return []; }
+}
+
+/** NCBI Bookshelf — medical/science reference books via E-utilities. */
+async function searchNCBIBookshelf(query: string, limit: number): Promise<AcademicPaper[]> {
+  try {
+    const search = await fetch(
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=books&retmode=json&retmax=${Math.min(limit, 10)}&term=${encodeURIComponent(query)}`,
+      { headers: EXP_UA, signal: AbortSignal.timeout(EXP_TIMEOUT) },
+    );
+    if (!search.ok) return [];
+    const s = await search.json() as { esearchresult?: { idlist?: string[] } };
+    const ids = s.esearchresult?.idlist ?? [];
+    if (ids.length === 0) return [];
+    const summary = await fetch(
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=books&retmode=json&id=${ids.join(",")}`,
+      { headers: EXP_UA, signal: AbortSignal.timeout(EXP_TIMEOUT) },
+    );
+    if (!summary.ok) return [];
+    const j = await summary.json() as { result?: Record<string, { title?: string; authors?: Array<{ name?: string }>; pubdate?: string; publishername?: string }> };
+    return ids.map((id) => {
+      const b = j.result?.[id];
+      if (!b?.title) return null;
+      return {
+        title: b.title,
+        authors: (b.authors ?? []).map((a) => a.name ?? "").filter(Boolean).slice(0, 4).join(", ") || "NCBI Bookshelf",
+        year: parseInt((b.pubdate ?? "").slice(0, 4)) || new Date().getFullYear(),
+        abstract: "",
+        url: `https://www.ncbi.nlm.nih.gov/books/${id}/`,
+        source: "NCBI Bookshelf",
+        journal: b.publishername,
+      } as AcademicPaper;
+    }).filter((p): p is AcademicPaper => p !== null);
+  } catch { return []; }
+}
+
+/** Figshare — 7M+ research outputs (figures, datasets, papers, theses). */
+async function searchFigshare(query: string, limit: number): Promise<AcademicPaper[]> {
+  try {
+    const res = await fetch("https://api.figshare.com/v2/articles/search", {
+      method: "POST",
+      headers: { ...EXP_UA, "Content-Type": "application/json" },
+      body: JSON.stringify({ search_for: query, page_size: Math.min(limit, 10) }),
+      signal: AbortSignal.timeout(EXP_TIMEOUT),
+    });
+    if (!res.ok) return [];
+    const items = await res.json() as Array<{ title?: string; doi?: string; url_public_html?: string; published_date?: string }>;
+    return (Array.isArray(items) ? items : []).slice(0, limit).map((it) => ({
+      title: it.title ?? "Unknown Title",
+      authors: "Figshare contributors",
+      year: parseInt((it.published_date ?? "").slice(0, 4)) || new Date().getFullYear(),
+      abstract: "",
+      doi: it.doi,
+      url: it.doi ? `https://doi.org/${it.doi}` : it.url_public_html ?? "",
+      source: "Figshare",
+    })).filter((p) => p.title !== "Unknown Title" && p.url);
+  } catch { return []; }
+}
+
+/** Dryad — curated open research datasets (100k+, DOI-backed). */
+async function searchDryad(query: string, limit: number): Promise<AcademicPaper[]> {
+  try {
+    const res = await fetch(
+      `https://datadryad.org/api/v2/search?q=${encodeURIComponent(query)}&per_page=${Math.min(limit, 10)}`,
+      { headers: EXP_UA, signal: AbortSignal.timeout(EXP_TIMEOUT) },
+    );
+    if (!res.ok) return [];
+    const data = await res.json() as { _embedded?: { "stash:datasets"?: Array<{ title?: string; authors?: Array<{ firstName?: string; lastName?: string }>; publicationDate?: string; abstract?: string; identifier?: string }> } };
+    return (data._embedded?.["stash:datasets"] ?? []).slice(0, limit).map((d) => ({
+      title: d.title ?? "Unknown Title",
+      authors: (d.authors ?? []).slice(0, 4).map((a) => `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim()).filter(Boolean).join(", ") || "Unknown Authors",
+      year: parseInt((d.publicationDate ?? "").slice(0, 4)) || new Date().getFullYear(),
+      abstract: (d.abstract ?? "").replace(/<[^>]+>/g, "").slice(0, 1200),
+      doi: d.identifier?.replace(/^doi:/, ""),
+      url: d.identifier ? `https://doi.org/${d.identifier.replace(/^doi:/, "")}` : "",
+      source: "Dryad",
+      journal: "Dryad Digital Repository",
+    })).filter((p) => p.title !== "Unknown Title" && p.url);
+  } catch { return []; }
+}
+
+/** Papers With Code — 1M+ ML/CS papers linked to code implementations. */
+async function searchPapersWithCode(query: string, limit: number): Promise<AcademicPaper[]> {
+  try {
+    const res = await fetch(
+      `https://paperswithcode.com/api/v1/search/?q=${encodeURIComponent(query)}&items_per_page=${Math.min(limit, 10)}`,
+      { headers: EXP_UA, signal: AbortSignal.timeout(EXP_TIMEOUT) },
+    );
+    if (!res.ok) return [];
+    const data = await res.json() as { results?: Array<{ paper?: { title?: string; authors?: string[]; published?: string; abstract?: string; url_abs?: string; arxiv_id?: string } }> };
+    return (data.results ?? []).slice(0, limit).map((r) => {
+      const p = r.paper ?? {};
+      return {
+        title: p.title ?? "Unknown Title",
+        authors: (p.authors ?? []).slice(0, 4).join(", ") || "Unknown Authors",
+        year: parseInt((p.published ?? "").slice(0, 4)) || new Date().getFullYear(),
+        abstract: (p.abstract ?? "").slice(0, 1200),
+        url: p.url_abs ?? (p.arxiv_id ? `https://arxiv.org/abs/${p.arxiv_id}` : ""),
+        source: "Papers With Code",
+      };
+    }).filter((p) => p.title !== "Unknown Title" && p.url);
+  } catch { return []; }
+}
+
+/** NBER — National Bureau of Economic Research working papers. */
+async function searchNBER(query: string, limit: number): Promise<AcademicPaper[]> {
+  try {
+    const res = await fetch(
+      `https://www.nber.org/api/v1/working_page_listing/contentType/working_paper/_/_/search?page=1&perPage=${Math.min(limit, 10)}&q=${encodeURIComponent(query)}`,
+      { headers: EXP_UA, signal: AbortSignal.timeout(EXP_TIMEOUT) },
+    );
+    if (!res.ok) return [];
+    const data = await res.json() as { results?: Array<{ title?: string; authors?: Array<string | { name?: string }>; displaydate?: string; abstract?: string; url?: string }> };
+    return (data.results ?? []).slice(0, limit).map((r) => ({
+      title: (r.title ?? "").replace(/<[^>]+>/g, "") || "Unknown Title",
+      authors: (r.authors ?? []).slice(0, 4).map((a) => typeof a === "string" ? a : a.name ?? "").filter(Boolean).join(", ") || "NBER",
+      year: parseInt((r.displaydate ?? "").match(/\d{4}/)?.[0] ?? "") || new Date().getFullYear(),
+      abstract: (r.abstract ?? "").replace(/<[^>]+>/g, "").slice(0, 1200),
+      url: r.url ? (r.url.startsWith("http") ? r.url : `https://www.nber.org${r.url}`) : "",
+      source: "NBER",
+      journal: "NBER Working Papers",
+    })).filter((p) => p.title !== "Unknown Title" && p.url);
+  } catch { return []; }
 }

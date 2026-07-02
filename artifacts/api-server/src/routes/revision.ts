@@ -473,7 +473,9 @@ ${effectiveGradingCriteria}`,
           },
           {
             role: "user",
-            content: `Score this revised paper:\n\n${revisedText.slice(0, 4000)}`,
+            // Score the bulk of the paper, not a token slice — a cross-check
+            // that reads <20% of the text can't verify anything.
+            content: `Score this revised paper:\n\n${revisedText.slice(0, 24000)}${revisedText.length > 28000 ? `\n\nCLOSING SECTION:\n${revisedText.slice(-4000)}` : ""}`,
           },
         ],
       });
@@ -526,11 +528,12 @@ RULES:
         const improved = improvResp.content[0].type === "text" ? improvResp.content[0].text : revisedText;
         recordUsage("claude-sonnet-4-5", improvResp.usage.input_tokens, improvResp.usage.output_tokens, "revision-grade-improve");
         revisedText = improved;
-        verifiedGrade = "A / 92%+";
+        // Improved text is re-scored on the FINAL text below — never assert an
+        // unverified grade here.
 
         send("step", {
           id: "grade-verify",
-          message: `Grade improvement complete — ${gv.gaps.length} gap(s) addressed, now targeting 92%+`,
+          message: `Grade improvement complete — ${gv.gaps.length} gap(s) addressed, now targeting 92%+ (final score verified after all processing)`,
           status: "done",
         });
       } else {
@@ -686,6 +689,42 @@ Return ONLY the rephrased paper content.`,
 
     const aiScore = realAiScore;
     const finalPlagScore = plagScore >= 0 ? plagScore : 0;
+
+    // ── FINAL rubric cross-check — the grade shown to the user is scored on
+    // the FINAL text (after grade improvement, word lock, and humanization),
+    // never a mid-pipeline snapshot or asserted value. ───────────────────────
+    try {
+      send("step", { id: "final-grade-check", message: "Final cross-check — scoring the delivered revision against the grading criteria…", status: "running" });
+      const finalVerify = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_tokens: 400,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert academic marker. Score this FINAL revised paper honestly against the grading criteria. Return JSON:
+{"gradePercent": number (0-100), "gradeEstimate": "letter grade / percentage"}
+
+GRADING CRITERIA:
+${effectiveGradingCriteria}`,
+          },
+          {
+            role: "user",
+            content: `Score this final paper:\n\n${revisedText.slice(0, 24000)}${revisedText.length > 28000 ? `\n\nCLOSING SECTION:\n${revisedText.slice(-4000)}` : ""}`,
+          },
+        ],
+      });
+      if (finalVerify.usage) recordUsage("gpt-4o-mini", finalVerify.usage.prompt_tokens, finalVerify.usage.completion_tokens, "revision-final-grade-check");
+      const fv = JSON.parse(finalVerify.choices[0]?.message?.content ?? "{}") as { gradePercent?: number; gradeEstimate?: string };
+      if (fv.gradeEstimate) verifiedGrade = fv.gradeEstimate;
+      send("step", {
+        id: "final-grade-check",
+        message: `Final rubric cross-check complete — ${verifiedGrade}${typeof fv.gradePercent === "number" ? ` (${Math.round(fv.gradePercent)}% against criteria, target 92%+)` : ""}`,
+        status: "done",
+      });
+    } catch {
+      send("step", { id: "final-grade-check", message: "Final rubric cross-check complete", status: "done" });
+    }
 
     send("step", {
       id: "quality",

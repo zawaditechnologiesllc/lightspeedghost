@@ -27,7 +27,7 @@ const ROUTE_META: Record<string, { title: string; description: string }> = {
   "/": {
     title: "Light Speed Ghost — AI Academic Writing for Students",
     description:
-      "AI academic platform for students: write papers with real citations from 25+ databases, refine AI-assisted writing to read naturally, check plagiarism, and solve STEM step by step. From $9.99/mo.",
+      "AI academic platform for students: write papers with real citations from 35+ databases, refine AI-assisted writing to read naturally, check plagiarism, and solve STEM step by step. From $9.99/mo.",
   },
   "/about": {
     title: "About Light Speed Ghost — Ethical AI Academic Writing",

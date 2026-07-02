@@ -246,3 +246,151 @@ MANDATORY DATA USAGE RULES:
 11. Perform horizontal (trend) and vertical (common-size) analysis where applicable
 12. Discuss financial health, solvency, liquidity, and profitability based on the ratios` : ""}`;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Chart generation — structured specs the frontend renders with recharts.
+// Built from the SAME computed values as the text analysis, so figures and
+// prose can never disagree. Fault-isolated: any parse problem returns [].
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ChartSpec {
+  id: string;
+  type: "bar" | "line" | "scatter" | "histogram";
+  title: string;
+  xLabel: string;
+  yLabel: string;
+  xKey: string;
+  series: Array<{ key: string; label: string }>;
+  data: Array<Record<string, string | number>>;
+}
+
+const TIME_COL = /^(year|date|month|quarter|period|week|day|time|fy|term|semester)s?\b/i;
+
+export function buildDatasetCharts(csvText: string): ChartSpec[] {
+  try {
+    const lines = csvText.trim().split("\n").filter(l => l.trim().length > 0);
+    if (lines.length < 3) return [];
+    const firstLine = lines[0];
+    const sep = firstLine.split("\t").length > firstLine.split(",").length ? "\t" : ",";
+    const parseRow = (line: string) => line.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""));
+    const headers = parseRow(lines[0]);
+    const rows = lines.slice(1).map(parseRow);
+
+    const numericCols: { header: string; idx: number; values: number[] }[] = [];
+    const catCols: { header: string; idx: number }[] = [];
+    headers.forEach((header, idx) => {
+      const raw = rows.map(r => r[idx] ?? "").filter(v => v.length > 0);
+      const nums = raw.map(v => parseFloat(v.replace(/,/g, ""))).filter(v => !isNaN(v));
+      if (nums.length >= raw.length * 0.7 && nums.length >= 3) numericCols.push({ header, idx, values: nums });
+      else catCols.push({ header, idx });
+    });
+    if (numericCols.length === 0) return [];
+
+    const charts: ChartSpec[] = [];
+    const safe = (s: string) => s.replace(/[^A-Za-z0-9 _.%()/-]/g, "").slice(0, 60) || "value";
+
+    // 1) Time series line — a time-like column (categorical or numeric year) vs numerics
+    const timeCat = catCols.find(c => TIME_COL.test(c.header));
+    const timeNum = numericCols.find(c => TIME_COL.test(c.header));
+    const timeCol = timeCat ?? timeNum;
+    if (timeCol) {
+      const ySeries = numericCols.filter(c => c.header !== timeCol.header).slice(0, 3);
+      if (ySeries.length > 0) {
+        const data = rows.slice(0, 60).map(r => {
+          const rec: Record<string, string | number> = { x: r[timeCol.idx] ?? "" };
+          for (const s of ySeries) {
+            const v = parseFloat((r[s.idx] ?? "").replace(/,/g, ""));
+            if (!isNaN(v)) rec[safe(s.header)] = v;
+          }
+          return rec;
+        }).filter(rec => rec.x !== "" && Object.keys(rec).length > 1);
+        if (data.length >= 3) {
+          charts.push({
+            id: "trend", type: "line",
+            title: `${ySeries.map(s => s.header).join(", ")} over ${timeCol.header}`,
+            xLabel: timeCol.header, yLabel: ySeries.length === 1 ? ySeries[0].header : "Value",
+            xKey: "x",
+            series: ySeries.map(s => ({ key: safe(s.header), label: s.header })),
+            data,
+          });
+        }
+      }
+    }
+
+    // 2) Histogram of the primary numeric column (10 bins)
+    const primary = numericCols.find(c => !TIME_COL.test(c.header)) ?? numericCols[0];
+    if (primary.values.length >= 5) {
+      const min = Math.min(...primary.values), max = Math.max(...primary.values);
+      if (max > min) {
+        const BINS = 10;
+        const width = (max - min) / BINS;
+        const counts = new Array(BINS).fill(0);
+        for (const v of primary.values) counts[Math.min(BINS - 1, Math.floor((v - min) / width))]++;
+        charts.push({
+          id: "distribution", type: "histogram",
+          title: `Distribution of ${primary.header}`,
+          xLabel: primary.header, yLabel: "Frequency", xKey: "bin",
+          series: [{ key: "count", label: "Frequency" }],
+          data: counts.map((count, i) => ({
+            bin: `${(min + i * width).toFixed(1)}–${(min + (i + 1) * width).toFixed(1)}`,
+            count,
+          })),
+        });
+      }
+    }
+
+    // 3) Scatter of the strongest-correlated numeric pair (falls back to first two)
+    if (numericCols.length >= 2) {
+      let a = numericCols[0], b = numericCols[1], bestR = -1;
+      for (let i = 0; i < numericCols.length; i++) {
+        for (let j = i + 1; j < numericCols.length; j++) {
+          const r = Math.abs(pearsonCorrelation(numericCols[i].values, numericCols[j].values));
+          if (r > bestR) { bestR = r; a = numericCols[i]; b = numericCols[j]; }
+        }
+      }
+      const n = Math.min(a.values.length, b.values.length, 200);
+      charts.push({
+        id: "relationship", type: "scatter",
+        title: `${a.header} vs ${b.header}`,
+        xLabel: a.header, yLabel: b.header, xKey: "x",
+        series: [{ key: "y", label: b.header }],
+        data: Array.from({ length: n }, (_, i) => ({ x: a.values[i], y: b.values[i] })),
+      });
+    }
+
+    // 4) Category means bar — mean of primary numeric grouped by first categorical (≤8 groups)
+    const groupCol = catCols.find(c => !TIME_COL.test(c.header));
+    if (groupCol) {
+      const groups: Record<string, number[]> = {};
+      rows.forEach(r => {
+        const g = r[groupCol.idx] ?? "";
+        const v = parseFloat((r[primary.idx] ?? "").replace(/,/g, ""));
+        if (g && !isNaN(v)) (groups[g] ??= []).push(v);
+      });
+      const entries = Object.entries(groups)
+        .map(([g, vals]) => ({ g, mean: vals.reduce((x, y) => x + y, 0) / vals.length, n: vals.length }))
+        .sort((x, y) => y.mean - x.mean)
+        .slice(0, 8);
+      if (entries.length >= 2) {
+        charts.push({
+          id: "group-means", type: "bar",
+          title: `Mean ${primary.header} by ${groupCol.header}`,
+          xLabel: groupCol.header, yLabel: `Mean ${primary.header}`, xKey: "group",
+          series: [{ key: "mean", label: `Mean ${primary.header}` }],
+          data: entries.map(e => ({ group: e.g.slice(0, 24), mean: Number(e.mean.toFixed(3)) })),
+        });
+      }
+    }
+
+    return charts.slice(0, 4);
+  } catch {
+    return [];
+  }
+}
+
+/** One-line figure list for the writer prompt so the paper text references the
+ *  real rendered figures by number instead of describing imaginary ones. */
+export function describeChartsForPrompt(charts: ChartSpec[]): string {
+  if (charts.length === 0) return "";
+  return `\nRENDERED FIGURES (these charts are generated from the student's actual data and displayed with the paper — refer to them by number in the text, e.g. "as shown in Figure 1"):\n${charts.map((c, i) => `Figure ${i + 1}: ${c.title} (${c.type})`).join("\n")}\n`;
+}

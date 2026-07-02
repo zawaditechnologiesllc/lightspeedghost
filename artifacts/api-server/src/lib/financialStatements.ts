@@ -454,3 +454,79 @@ MANDATORY FINANCIAL ANALYSIS RULES:
 8. Flag any red flags or areas of concern with clear evidence from the data
 9. Conclude with an overall financial health assessment tied to specific numbers`;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Financial chart specs — rendered by the frontend alongside the paper.
+// Self-contained extraction (mirrors the context-builder's patterns) so a
+// parse failure can never break paper generation: returns [] on any problem.
+// ═══════════════════════════════════════════════════════════════════════════
+
+import type { ChartSpec } from "./datasetAnalysis";
+
+const FIN_CHART_ITEMS: Array<{ label: string; pattern: RegExp }> = [
+  { label: "Revenue",             pattern: /(?:total\s+)?(?:revenue|net\s+sales|sales|turnover)\s*[:\|]?\s*\(?([$£€¥]?\s*[\d,]+\.?\d*)\)?/i },
+  { label: "Gross Profit",        pattern: /gross\s+profit\s*[:\|]?\s*\(?([$£€¥]?\s*[\d,]+\.?\d*)\)?/i },
+  { label: "Operating Income",    pattern: /(?:ebit|operating\s+(?:income|profit))\s*[:\|]?\s*\(?([$£€¥]?\s*[\d,]+\.?\d*)\)?/i },
+  { label: "Net Income",          pattern: /net\s+(?:income|profit|earnings)\s*[:\|]?\s*\(?([$£€¥]?\s*[\d,]+\.?\d*)\)?/i },
+  { label: "Total Assets",        pattern: /total\s+assets\s*[:\|]?\s*\(?([$£€¥]?\s*[\d,]+\.?\d*)\)?/i },
+  { label: "Total Liabilities",   pattern: /total\s+liabilities\s*[:\|]?\s*\(?([$£€¥]?\s*[\d,]+\.?\d*)\)?/i },
+  { label: "Total Equity",        pattern: /(?:total\s+(?:shareholders?'?\s+)?equity|net\s+worth)\s*[:\|]?\s*\(?([$£€¥]?\s*[\d,]+\.?\d*)\)?/i },
+  { label: "Current Assets",      pattern: /(?:total\s+)?current\s+assets\s*[:\|]?\s*\(?([$£€¥]?\s*[\d,]+\.?\d*)\)?/i },
+  { label: "Current Liabilities", pattern: /(?:total\s+)?current\s+liabilities\s*[:\|]?\s*\(?([$£€¥]?\s*[\d,]+\.?\d*)\)?/i },
+];
+
+function extractFinValue(raw: string, pattern: RegExp): number | null {
+  const m = raw.match(pattern);
+  if (!m?.[1]) return null;
+  const v = parseFloat(m[1].replace(/[$£€¥,\s]/g, ""));
+  return isNaN(v) ? null : v;
+}
+
+export function buildFinancialCharts(rawText: string): ChartSpec[] {
+  try {
+    const found: Array<{ label: string; value: number }> = [];
+    for (const item of FIN_CHART_ITEMS) {
+      const v = extractFinValue(rawText, item.pattern);
+      if (v !== null) found.push({ label: item.label, value: v });
+    }
+    if (found.length < 2) return [];
+
+    const charts: ChartSpec[] = [];
+    const get = (label: string) => found.find(f => f.label === label)?.value;
+
+    // 1) Key line items (as reported)
+    charts.push({
+      id: "fin-line-items", type: "bar",
+      title: "Key Financial Line Items (as reported)",
+      xLabel: "Line item", yLabel: "Amount", xKey: "item",
+      series: [{ key: "value", label: "Amount" }],
+      data: found.map(f => ({ item: f.label, value: f.value })),
+    });
+
+    // 2) Computed ratios (%) — same formulas as the analysis context
+    const revenue = get("Revenue"), netIncome = get("Net Income"),
+      totalAssets = get("Total Assets"), totalEquity = get("Total Equity"),
+      totalLiab = get("Total Liabilities"), grossProfit = get("Gross Profit"),
+      currentAssets = get("Current Assets"), currentLiab = get("Current Liabilities");
+    const ratios: Array<{ ratio: string; value: number }> = [];
+    if (revenue && grossProfit)  ratios.push({ ratio: "Gross Margin %",   value: Number((grossProfit / revenue * 100).toFixed(2)) });
+    if (revenue && netIncome)    ratios.push({ ratio: "Net Margin %",     value: Number((netIncome / revenue * 100).toFixed(2)) });
+    if (netIncome && totalAssets) ratios.push({ ratio: "ROA %",           value: Number((netIncome / totalAssets * 100).toFixed(2)) });
+    if (netIncome && totalEquity) ratios.push({ ratio: "ROE %",           value: Number((netIncome / totalEquity * 100).toFixed(2)) });
+    if (totalLiab && totalEquity) ratios.push({ ratio: "Debt/Equity ×100", value: Number((totalLiab / totalEquity * 100).toFixed(2)) });
+    if (currentAssets && currentLiab) ratios.push({ ratio: "Current Ratio ×100", value: Number((currentAssets / currentLiab * 100).toFixed(2)) });
+    if (ratios.length >= 2) {
+      charts.push({
+        id: "fin-ratios", type: "bar",
+        title: "Computed Financial Ratios (percent / scaled)",
+        xLabel: "Ratio", yLabel: "Value", xKey: "ratio",
+        series: [{ key: "value", label: "Value" }],
+        data: ratios,
+      });
+    }
+
+    return charts;
+  } catch {
+    return [];
+  }
+}

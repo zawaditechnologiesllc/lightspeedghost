@@ -15,8 +15,8 @@ import { eq, desc, and, isNotNull } from "drizzle-orm";
 import { trackUsage, enforceLimit, getUserPlan, quotaExceededMessage } from "../lib/usageTracker";
 import { recordSearchResults, recordQualitySignal } from "../lib/learningEngine";
 import { buildGradeCriteria } from "../lib/gradeStandards.js";
-import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
-import { buildFinancialStatementsContext } from "../lib/financialStatements";
+import { parseAndAnalyzeDataset, buildDatasetCharts, describeChartsForPrompt, type ChartSpec } from "../lib/datasetAnalysis";
+import { buildFinancialStatementsContext, buildFinancialCharts } from "../lib/financialStatements";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -717,7 +717,7 @@ Return JSON:
       id: "citations",
       message: isAnnotatedBib
         ? `Annotated bibliography mode — fetching ${citationCount} verified academic sources from 13 live databases (OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE) for "${body.topic}"…`
-        : `Searching 13 live academic databases (1B+ papers: OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE) for "${body.topic}"…`,
+        : `Searching 35 live academic databases (10B+ papers & citation records: OpenAlex, Semantic Scholar, CrossRef, PubMed, Europe PMC, arXiv, CORE, DOAJ, ERIC, Zenodo, BASE, DataCite, OpenAIRE, NBER, World Bank + 20 more) for "${body.topic}"…`,
       status: "running",
     });
 
@@ -782,10 +782,16 @@ Return JSON:
     // upload itself is explicit intent, regardless of how the subject is worded
     // (e.g. "Business Strategy" or "Case Study" papers still need the ratios).
     let financialContext = "";
+    let paperCharts: ChartSpec[] = [];
     if (body.financialStatementText?.trim()) {
       send("step", { id: "financial-analysis", message: "Parsing financial statements — extracting ratios, trends, and red flags…", status: "running" });
       financialContext = buildFinancialStatementsContext(body.financialStatementText, body.financialStatementType ?? "all");
-      send("step", { id: "financial-analysis", message: "Financial statement analysis complete — ratios and trends injected into paper context.", status: "done" });
+      paperCharts.push(...buildFinancialCharts(body.financialStatementText));
+      send("step", {
+        id: "financial-analysis",
+        message: `Financial statement analysis complete — ratios and trends injected into paper context${paperCharts.length > 0 ? `, ${paperCharts.length} chart${paperCharts.length !== 1 ? "s" : ""} generated from your statements` : ""}.`,
+        status: "done",
+      });
     }
 
     let datasetAnalysis = "";
@@ -797,14 +803,26 @@ Return JSON:
       });
       try {
         datasetAnalysis = parseAndAnalyzeDataset(body.datasetText);
+        const datasetCharts = buildDatasetCharts(body.datasetText);
+        paperCharts.push(...datasetCharts);
         const estimatedVars = (datasetAnalysis.match(/\*\*/g) ?? []).length / 2;
         send("step", {
           id: "data",
-          message: `Dataset analysed — ${estimatedVars} variable${estimatedVars !== 1 ? "s" : ""} processed with descriptive statistics, ready for injection into Results/Findings section`,
+          message: `Dataset analysed — ${estimatedVars} variable${estimatedVars !== 1 ? "s" : ""} processed with descriptive statistics${datasetCharts.length > 0 ? ` and ${datasetCharts.length} visualisation${datasetCharts.length !== 1 ? "s" : ""} generated from your data` : ""}, ready for injection into Results/Findings section`,
           status: "done",
         });
       } catch {
         send("step", { id: "data", message: "Dataset processed — injecting into Results/Findings section", status: "done" });
+      }
+    }
+
+    // Tell the writer about the rendered figures so the paper text references
+    // the REAL charts (by figure number) instead of describing imaginary ones.
+    {
+      const figureNote = describeChartsForPrompt(paperCharts);
+      if (figureNote) {
+        if (datasetAnalysis) datasetAnalysis += figureNote;
+        else financialContext += figureNote;
       }
     }
 
@@ -1203,12 +1221,15 @@ Return JSON:
   "metCriteria": ["criteria clearly satisfied in the paper (exact quotes from criteria list)"],
   "gapCriteria": ["criteria that are weak, missing, or inadequately addressed"],
   "overallPass": boolean (true if 85%+ of criteria are clearly met),
+  "estimatedGradePercent": number (honest 0-100 estimate of where this paper lands against the criteria),
   "improvementNeeded": "specific description of what to add or strengthen, or null if passed"
 }`,
             },
             {
               role: "user",
-              content: `A-GRADE CRITERIA TO CHECK:\n${aGradeCriteria}\n\nPAPER EXCERPT (first 3500 chars):\n${content.slice(0, 3500)}`,
+              // Check the bulk of the paper, not a token opening slice — a rubric
+              // cross-check that reads <20% of the text can't verify anything.
+              content: `A-GRADE CRITERIA TO CHECK:\n${aGradeCriteria}\n\nPAPER (opening ${Math.min(content.length, 24000).toLocaleString()} chars):\n${content.slice(0, 24000)}${content.length > 28000 ? `\n\nPAPER CLOSING SECTION:\n${content.slice(-4000)}` : ""}`,
             },
           ],
         });
@@ -1221,11 +1242,14 @@ Return JSON:
           metCriteria?: string[];
           gapCriteria?: string[];
           overallPass?: boolean;
+          estimatedGradePercent?: number;
           improvementNeeded?: string;
         };
 
         const gaps = Array.isArray(vd.gapCriteria) ? vd.gapCriteria.filter(Boolean) : [];
-        if (vd.overallPass) gradeVerifyResult = 92;
+        // Honest provisional estimate — superseded by the FINAL-text cross-check
+        // (Step 5d) which scores the delivered paper after all rewrites.
+        if (vd.overallPass) gradeVerifyResult = typeof vd.estimatedGradePercent === "number" ? Math.round(vd.estimatedGradePercent) : null;
 
         if (!vd.overallPass && gaps.length > 0 && vd.improvementNeeded) {
           send("step", {
@@ -1264,7 +1288,9 @@ RULES:
           const revised = improvResp.content[0].type === "text" ? improvResp.content[0].text : content;
           recordUsage("claude-sonnet-4-5", improvResp.usage.input_tokens, improvResp.usage.output_tokens, "grade-improvement");
           content = revised;
-          gradeVerifyResult = 92;
+          // Improved text hasn't been re-scored yet — leave the grade to the
+          // final-text cross-check rather than asserting an unverified number.
+          gradeVerifyResult = null;
 
           send("step", {
             id: "grade-verify",
@@ -1471,11 +1497,70 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
       });
     }
 
+    // ── Step 5c: Word-count safety re-check ──────────────────────────────────
+    // Grade improvement, plagiarism rephrasing, and humanization passes all
+    // rewrite the full paper AFTER the Step-3 word-count lock — so the count
+    // can drift. Re-enforce here so the DELIVERED paper meets the target.
+    {
+      const postGateCount = computeBodyWordCount(finalContent);
+      if (postGateCount < Math.floor(targetWords * 0.95) || postGateCount > Math.ceil(targetWords * 1.05)) {
+        send("step", {
+          id: "word-count-final",
+          message: `Post-processing shifted body count to ${postGateCount.toLocaleString()} words — re-locking to target ${targetWords.toLocaleString()}…`,
+          status: "running",
+        });
+        finalContent = await enforceBodyWordCount(finalContent, targetWords, send);
+        send("step", { id: "word-count-final", message: `Final word count locked at ${computeBodyWordCount(finalContent).toLocaleString()} words`, status: "done" });
+      }
+    }
+
+    // ── Step 5d: FINAL rubric cross-check — the grade shown to the user is
+    // scored against the A-grade criteria on the FINAL text (after every
+    // rewrite), never a hardcoded number or a mid-pipeline snapshot. ─────────
+    let finalRubricGrade: number | null = null;
+    if (aGradeCriteria && finalContent.length > 300) {
+      send("step", { id: "final-grade-check", message: "Final cross-check — scoring the delivered paper against the A-grade rubric criteria…", status: "running" });
+      try {
+        const finalVerify = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          max_tokens: 500,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert academic marker. Score this FINAL paper honestly against the grading criteria. Return JSON:
+{"estimatedGradePercent": number (0-100, your honest estimate against the criteria), "metCount": number, "gapCount": number}`,
+            },
+            {
+              role: "user",
+              content: `GRADING CRITERIA (top band):\n${aGradeCriteria}\n\nFINAL PAPER (opening ${Math.min(finalContent.length, 24000).toLocaleString()} chars):\n${finalContent.slice(0, 24000)}${finalContent.length > 28000 ? `\n\nPAPER CLOSING SECTION:\n${finalContent.slice(-4000)}` : ""}`,
+            },
+          ],
+        });
+        if (finalVerify.usage) recordUsage("gpt-4o-mini", finalVerify.usage.prompt_tokens, finalVerify.usage.completion_tokens, "final-grade-check");
+        const fv = JSON.parse(finalVerify.choices[0]?.message?.content ?? "{}") as { estimatedGradePercent?: number; metCount?: number; gapCount?: number };
+        if (typeof fv.estimatedGradePercent === "number" && fv.estimatedGradePercent > 0) {
+          finalRubricGrade = Math.round(Math.min(100, fv.estimatedGradePercent));
+          send("step", {
+            id: "final-grade-check",
+            message: `Final rubric cross-check complete — ${fv.metCount ?? "?"} criteria met${(fv.gapCount ?? 0) > 0 ? `, ${fv.gapCount} partial` : ""} · estimated ${finalRubricGrade}% against the top band (target: 92%+)`,
+            status: "done",
+          });
+        } else {
+          send("step", { id: "final-grade-check", message: "Final rubric cross-check complete", status: "done" });
+        }
+      } catch {
+        send("step", { id: "final-grade-check", message: "Final rubric cross-check complete", status: "done" });
+      }
+    }
+
     // ── Step 6: Quality stats ─────────────────────────────────────────────────
     send("step", { id: "stats", message: "Assessing academic quality — estimating grade, AI detection score and confirmed plagiarism score…", status: "running" });
 
-    // Platform quality promises: grade ≥ 92%, AI score 0%, plagiarism ≤ 8%
-    let stats = { grade: gradeVerifyResult ?? 0, aiScore: realAiScore, plagiarismScore: plagiarismGateScore >= 0 ? plagiarismGateScore : 0, wordCount: 0, bodyWordCount: 0, feedback: [] as string[] };
+    // Platform quality targets: grade 92%+, near-0% AI score, plagiarism ≤ 8%.
+    // Reported numbers are MEASURED on the final text (rubric cross-check, AI
+    // gate, plagiarism gate) — targets, not guarantees.
+    let stats = { grade: finalRubricGrade ?? gradeVerifyResult ?? 0, aiScore: realAiScore, plagiarismScore: plagiarismGateScore >= 0 ? plagiarismGateScore : 0, wordCount: 0, bodyWordCount: 0, feedback: [] as string[] };
     try {
       const statsResp = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -1483,7 +1568,7 @@ Return ONLY the rephrased paper content (same structure, no extra commentary).`,
         response_format: { type: "json_object" },
         messages: [{
           role: "system",
-          content: `You are an expert academic assessor. This paper was written by a professional AI system targeting distinction-level academic quality with deliberate AI-evasion techniques and full citation integrity.
+          content: `You are an expert academic assessor. This paper was written by a professional AI writing system targeting distinction-level academic quality and full citation integrity.
 
 Analyse the provided paper excerpt and produce quality metrics. Respond ONLY with valid JSON:
 {"grade": <number 0-100>, "aiScore": <number 0-100, estimated AI-detection probability>, "plagiarismScore": <number 0-100, estimated plagiarism risk>, "feedback": [<array of 3-5 specific strength/improvement strings>]}
@@ -1504,6 +1589,9 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
       if (plagiarismGateScore >= 0) {
         stats.plagiarismScore = plagiarismGateScore;
       }
+      // The grade shown to the user comes from the final-text rubric
+      // cross-check (Step 5d) whenever it ran — not the generic estimate.
+      if (finalRubricGrade !== null) stats.grade = finalRubricGrade;
       if (statsResp.usage) recordUsage("gpt-4o-mini", statsResp.usage.prompt_tokens, statsResp.usage.completion_tokens, "quality-assessment");
     } catch { /* keep defaults */ }
 
@@ -1570,6 +1658,7 @@ Plagiarism guidance: fully cited academic work with paraphrased synthesis scores
       })),
       bibliography,
       stats,
+      charts: paperCharts,
       citationIntegrity: {
         totalCitations: citations.length,
         citedInText: citedCount,
