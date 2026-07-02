@@ -349,7 +349,24 @@ export async function generateClusterPage(
     trust:       buildTrustPrompt(outline, research, tool),
   };
 
-  const prompt = promptMap[outline.pageType] ?? buildHookPrompt(outline, research, tool);
+  const basePrompt = promptMap[outline.pageType] ?? buildHookPrompt(outline, research, tool);
+
+  // Pillar↔cluster interlinking: every page must weave in links to its sibling
+  // cluster pages (topical-authority structure), not just the money pages. The
+  // hook page (page 1) acts as the cluster's pillar — siblings link to it with
+  // a keyword-rich anchor, and it links down to each of them.
+  const siblings = fullOutline.pages.filter((p) => p.slug !== outline.slug);
+  const hub = fullOutline.pages.find((p) => p.pageNumber === 1);
+  const siblingBlock = siblings.length > 0
+    ? `\n\nCLUSTER INTERLINKING (MANDATORY — these pages publish together as one topic cluster):
+${siblings.map((p) => `- /seo/${p.slug} — "${p.title}"${p.pageNumber === 1 ? " (the cluster's PILLAR page)" : ""}`).join("\n")}
+Rules:
+1. Weave 2–3 of these links into sentences where genuinely relevant (descriptive anchor text using the target page's topic — never "click here").
+${hub && hub.slug !== outline.slug ? `2. ALWAYS include one in-context link to the pillar page /seo/${hub.slug}.` : "2. As the pillar, link DOWN to every sibling page above at the point where its subtopic is mentioned."}
+3. Use ONLY the /seo/ slugs listed here — never invent other /seo/ URLs.`
+    : "";
+
+  const prompt = basePrompt + siblingBlock;
 
   // gemini-2.5-pro is a thinking model — reasoning tokens count against
   // maxOutputTokens, so it needs generous headroom or it returns empty
