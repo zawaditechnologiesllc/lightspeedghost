@@ -189,6 +189,22 @@ async function getCatalogGaps(): Promise<string[]> {
 
 // ── Already-generated cluster topics ─────────────────────────────────────────
 
+// Turn the first uncovered catalog page into a topic selection — used both when
+// Gemini fails and when it re-picks an already-written topic.
+function catalogGapSelection(catalogGaps: string[]): TopicSelection | null {
+  if (catalogGaps.length === 0) return null;
+  const slug = catalogGaps[0];
+  const spec = PAGE_CATALOG.find((p) => p.slug === slug);
+  return {
+    topic:           spec?.title ?? slug,
+    topicSlug:       slug,
+    toolFocus:       spec?.toolFocus ?? "paper-writer",
+    audienceSegment: spec?.audienceSegment ?? "students",
+    rationale:       "Fallback: first uncovered catalog page",
+    dataSource:      "catalog-gap",
+  };
+}
+
 async function getRecentClusterTopics(days = 30): Promise<string[]> {
   const { rows } = await pool.query(
     `SELECT topic FROM seo_article_clusters WHERE created_at > NOW() - ($1 || ' days')::interval`,
@@ -200,11 +216,14 @@ async function getRecentClusterTopics(days = 30): Promise<string[]> {
 // ── Main topic selector ───────────────────────────────────────────────────────
 
 export async function selectTopic(geminiClient: GoogleGenerativeAI): Promise<TopicSelection> {
+  // A full year of past cluster topics: re-picking a covered topic makes the
+  // outline derive the SAME formulaic slugs as the earlier cluster (they're
+  // built from the topic text), producing near-duplicate content.
   const [gscData, ga4Revenue, catalogGaps, recentTopics] = await Promise.all([
     fetchGSCOpportunities(),
     fetchGA4Revenue(),
     getCatalogGaps(),
-    getRecentClusterTopics(30),
+    getRecentClusterTopics(365),
   ]);
 
   const hasGSC     = gscData.length > 0;
@@ -236,7 +255,7 @@ ${gapDetails.join("\n")}`);
   }
 
   if (recentTopics.length > 0) {
-    contextParts.push(`RECENTLY WRITTEN (avoid repeating these topics in last 30 days):
+    contextParts.push(`ALREADY WRITTEN — HARD CONSTRAINT: you MUST NOT pick any topic below, nor a paraphrase or minor variation of one. Pick something genuinely NEW:
 ${recentTopics.map((t) => `  • ${t}`).join("\n")}`);
   }
 
@@ -297,6 +316,20 @@ Return a JSON object:
     const toolFocus = String(parsed.toolFocus ?? "paper-writer");
     const topicSlug = topic.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 60);
 
+    // Hard duplicate check — the prompt asks Gemini not to repeat itself, but
+    // prompts can be ignored; this can't. A repeated topic slug means the same
+    // formulaic page slugs and near-duplicate content, so route to a catalog
+    // gap instead of writing the same cluster twice.
+    const { rows: dupRows } = await pool.query(
+      `SELECT 1 FROM seo_article_clusters WHERE topic_slug = $1 AND status <> 'failed' LIMIT 1`,
+      [topicSlug],
+    );
+    if (dupRows.length > 0) {
+      logger.warn({ topic, topicSlug }, "[topic-selector] Gemini re-picked an already-written topic — falling back to a catalog gap");
+      const gap = catalogGapSelection(catalogGaps);
+      if (gap) return gap;
+    }
+
     const selection: TopicSelection = {
       topic,
       topicSlug,
@@ -312,18 +345,8 @@ Return a JSON object:
     logger.error({ err }, "[topic-selector] Gemini topic selection failed — using fallback");
 
     // Fallback: pick first uncovered catalog page
-    if (hasGaps) {
-      const slug = catalogGaps[0];
-      const spec = PAGE_CATALOG.find((p) => p.slug === slug);
-      return {
-        topic:           spec?.title ?? slug,
-        topicSlug:       slug,
-        toolFocus:       spec?.toolFocus ?? "paper-writer",
-        audienceSegment: spec?.audienceSegment ?? "students",
-        rationale:       "Fallback: first uncovered catalog page",
-        dataSource:      "catalog-gap",
-      };
-    }
+    const gap = catalogGapSelection(catalogGaps);
+    if (gap) return gap;
 
     // Last resort
     return {

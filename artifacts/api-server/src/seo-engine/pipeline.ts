@@ -14,7 +14,7 @@ import { pool } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { researchTopic } from "./researcher";
 import { buildOutline } from "./outliner";
-import { generateClusterPage, saveClusterPage } from "./five-page-cluster";
+import { generateClusterPage, saveClusterPage, dedupeOutlineSlugs } from "./five-page-cluster";
 
 const PIPELINE_DAILY_PAGE_LIMIT = 5;
 
@@ -238,6 +238,11 @@ export async function runPipeline(
       cluster.competitor,
       geminiClient,
     );
+    // Outline slugs are formulaic ("<topic>-guide", …) — if the topic overlaps
+    // an earlier cluster they collide with pages that already exist. Settle
+    // fresh slugs NOW, before any page is written, so existing pages are never
+    // overwritten and the cluster's internal links point at the right URLs.
+    outline = await dedupeOutlineSlugs(outline);
     await updateCluster(clusterId, {
       outlineData:  outline,
       status:       "writing_1",
@@ -315,7 +320,11 @@ export async function resumePipeline(clusterId: string, opts: { autoPublish?: bo
     errorMessage:   undefined,
   });
 
-  await pool.query(`DELETE FROM seo_pages WHERE cluster_id = $1`, [clusterId]);
+  // Only clear this cluster's own unpublished pages before the re-run. Never
+  // touch published rows — before the slug-collision guards existed, a cluster
+  // could hijack unrelated live pages via upsert, and a retry would then have
+  // hard-deleted them here.
+  await pool.query(`DELETE FROM seo_pages WHERE cluster_id = $1 AND published = false`, [clusterId]);
 
   setImmediate(() => {
     runPipeline(clusterId, opts).catch((err: unknown) => {

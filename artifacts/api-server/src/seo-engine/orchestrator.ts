@@ -53,7 +53,10 @@ export async function seedCatalog(): Promise<{ seeded: number; existing: number 
 }
 
 // ── Generate a single page ─────────────────────────────────────────────────────
-export async function generatePage(slug: string, opts: { autoPublish?: boolean } = {}): Promise<{
+// `force` regenerates a page that already has content (an explicit per-page
+// admin action). Batch and scheduled paths never pass it, so they can only
+// fill empty pages — never rewrite existing ones.
+export async function generatePage(slug: string, opts: { autoPublish?: boolean; force?: boolean } = {}): Promise<{
   success: boolean;
   slug: string;
   wordCount?: number;
@@ -65,6 +68,16 @@ export async function generatePage(slug: string, opts: { autoPublish?: boolean }
   if (!spec) return { success: false, slug, error: "Slug not in catalog" };
 
   try {
+    if (!opts.force) {
+      const { rows: guard } = await pool.query(
+        `SELECT content_html IS NOT NULL AS has_content FROM seo_pages WHERE slug = $1`,
+        [slug],
+      );
+      if (guard[0]?.has_content) {
+        logger.info({ slug }, "[seo-orchestrator] Page already has content — skipped (use the per-page Generate button to regenerate)");
+        return { success: false, slug, error: "Already generated — skipped to protect existing content" };
+      }
+    }
     let attempts = 0;
     let result = await generatePageContent(spec);
 
@@ -89,8 +102,11 @@ export async function generatePage(slug: string, opts: { autoPublish?: boolean }
         integrity_check = $9,
         llm_used = $10,
         llm_cost_usd = $11,
-        status = $12,
-        published = $13,
+        -- Never demote an already-published page: a force-regenerate of a live
+        -- URL keeps it live (dropping it to review would 404 it out of the
+        -- index); everything else follows the autoPublish choice.
+        status = CASE WHEN published THEN status ELSE $12 END,
+        published = published OR $13,
         updated_at = now()
        WHERE slug = $14`,
       [
@@ -166,11 +182,21 @@ export async function generateBatch(opts: {
   const limit = Math.min(opts.limit ?? MAX_DAILY_PAGES, MAX_DAILY_PAGES);
   let slugs: string[];
 
+  // Batch runs only ever FILL pages — anything that already has content is
+  // excluded up front (and generatePage's own guard skips stragglers), so a
+  // batch can never rewrite or demote existing pages.
+  const { rows: doneRows } = await pool.query(
+    `SELECT slug FROM seo_pages WHERE content_html IS NOT NULL`
+  );
+  const alreadyGenerated = new Set(doneRows.map((r: { slug: string }) => r.slug));
+
   if (opts.slugs && opts.slugs.length > 0) {
-    slugs = opts.slugs.slice(0, limit);
+    slugs = opts.slugs.filter((s) => !alreadyGenerated.has(s)).slice(0, limit);
   } else if (opts.type) {
-    const matches = PAGE_CATALOG.filter((p) => p.type === opts.type);
-    slugs = matches.slice(0, limit).map((p) => p.slug);
+    slugs = PAGE_CATALOG
+      .filter((p) => p.type === opts.type && !alreadyGenerated.has(p.slug))
+      .slice(0, limit)
+      .map((p) => p.slug);
   } else {
     // Default: generate draft pages in priority order
     const { rows } = await pool.query(
@@ -180,11 +206,14 @@ export async function generateBatch(opts: {
     );
     slugs = rows.map((r: { slug: string }) => r.slug);
 
-    // If no DB slugs, take from catalog
+    // If no seeded drafts remain, fill catalog pages that don't exist yet —
+    // NOT the first tool/service pages regardless of state, which used to
+    // regenerate (and unpublish) live pages once every draft was done.
     if (slugs.length === 0) {
-      slugs = PAGE_CATALOG.filter((p) => {
-        return p.type === "tool" || p.type === "service";
-      }).slice(0, limit).map((p) => p.slug);
+      slugs = PAGE_CATALOG
+        .filter((p) => !alreadyGenerated.has(p.slug))
+        .slice(0, limit)
+        .map((p) => p.slug);
     }
   }
 

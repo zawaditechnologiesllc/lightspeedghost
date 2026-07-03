@@ -448,6 +448,46 @@ ${hub && hub.slug !== outline.slug ? `2. ALWAYS include one in-context link to t
   };
 }
 
+// ── Slug collision protection ─────────────────────────────────────────────────
+// The outline derives its 5 slugs formulaically from the topic ("<topic>-guide",
+// "best-<topic>-tools", …), so a re-picked or similarly-worded topic produces
+// the SAME slugs as an earlier cluster. Without these guards the upsert below
+// would replace those live pages with new content AND demote them to review
+// (published → false). A new cluster must only ever CREATE pages — never touch
+// pages it doesn't own.
+
+async function findFreeSlug(base: string, alsoTaken: Set<string>): Promise<string> {
+  const { rows } = await pool.query<{ slug: string }>(
+    `SELECT slug FROM seo_pages WHERE slug = $1 OR slug LIKE $2`,
+    [base, `${base}-%`],
+  );
+  const inDb = new Set(rows.map((r) => r.slug));
+  if (!inDb.has(base) && !alsoTaken.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const candidate = `${base}-${n}`;
+    if (!inDb.has(candidate) && !alsoTaken.has(candidate)) return candidate;
+  }
+}
+
+// Runs right after the outline is built and BEFORE any page is written, so the
+// final slugs are settled while the sibling-interlinking prompts still see them
+// — renaming later would break the links pages write to each other.
+export async function dedupeOutlineSlugs(outline: ArticleOutline): Promise<ArticleOutline> {
+  const taken = new Set<string>();
+  for (const page of outline.pages) {
+    const free = await findFreeSlug(page.slug, taken);
+    if (free !== page.slug) {
+      logger.warn(
+        { requested: page.slug, assigned: free },
+        "[seo-cluster] Outline slug already exists in seo_pages — assigned a fresh slug so the existing page is never overwritten",
+      );
+      page.slug = free;
+    }
+    taken.add(page.slug);
+  }
+  return outline;
+}
+
 // ── Save cluster page to DB ───────────────────────────────────────────────────
 
 export async function saveClusterPage(
@@ -458,6 +498,22 @@ export async function saveClusterPage(
   autoPublish: boolean,
 ): Promise<void> {
   const validation = validatePage(page.html);
+
+  // Safety net behind dedupeOutlineSlugs (covers a race with a concurrent
+  // batch/manual save): if the slug now belongs to a page with content from
+  // outside this cluster, save under a fresh slug instead of overwriting.
+  let slug = page.slug;
+  const { rows: existing } = await pool.query(
+    `SELECT cluster_id, content_html IS NOT NULL AS has_content FROM seo_pages WHERE slug = $1`,
+    [slug],
+  );
+  if (existing[0]?.has_content && existing[0].cluster_id !== clusterId) {
+    slug = await findFreeSlug(slug, new Set());
+    logger.warn(
+      { requested: page.slug, saved: slug, clusterId },
+      "[seo-cluster] Slug already belongs to another page — saved under a fresh slug instead of overwriting it",
+    );
+  }
 
   await pool.query(
     `INSERT INTO seo_pages (
@@ -485,11 +541,14 @@ export async function saveClusterPage(
       integrity_check = EXCLUDED.integrity_check,
       llm_used = EXCLUDED.llm_used,
       llm_cost_usd = EXCLUDED.llm_cost_usd,
-      status = EXCLUDED.status,
-      published = EXCLUDED.published,
+      -- With the guards above, a conflict can only be this cluster re-saving its
+      -- own page (retry). Even then, never demote a page an admin already
+      -- published: a live URL must not silently drop out of the index.
+      status = CASE WHEN seo_pages.published THEN seo_pages.status ELSE EXCLUDED.status END,
+      published = seo_pages.published OR EXCLUDED.published,
       updated_at = now()`,
     [
-      page.slug,
+      slug,
       outline.title,
       outline.metaDescription,
       page.html,
