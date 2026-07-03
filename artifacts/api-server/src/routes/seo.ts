@@ -336,7 +336,10 @@ router.post("/seo/generate-page", async (req: Request, res: Response) => {
   if (!slug) { res.status(400).json({ error: "slug required" }); return; }
   res.status(202).json({ ok: true, slug, message: "Generating — the page appears in Pages/Review when it's done" });
   setImmediate(() => {
-    generatePage(slug, { autoPublish }).catch((err) => logger.error({ err, slug }, "[seo-api] generate-page failed"));
+    // force: the admin explicitly asked for THIS page, so regenerating existing
+    // content is intended. Batch/scheduled paths never force and only fill
+    // empty pages.
+    generatePage(slug, { autoPublish, force: true }).catch((err) => logger.error({ err, slug }, "[seo-api] generate-page failed"));
   });
 });
 
