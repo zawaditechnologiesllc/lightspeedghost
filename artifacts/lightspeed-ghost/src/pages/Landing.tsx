@@ -12,7 +12,7 @@ import {
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, Sparkles, BarChart3,
   Quote, MapPin, Mail, Twitter, Linkedin, Wand2,
-  Lock, Building2, Share, BotMessageSquare,
+  Lock, Building2, Share,
   Database, Layers, Clock, AlertTriangle,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -78,12 +78,12 @@ const tools = [
     color: "bg-amber-50 text-amber-600 border-amber-200",
   },
   {
-    icon: BotMessageSquare,
-    name: "Flashcards & Quizzes",
-    desc: "A dedicated AI tutor with long-term memory. Generate flashcards, summaries, practice quizzes, mind maps, and concept explanations from any topic or uploaded material. Upload notes, screenshots, or financial statements — it reads them all.",
-    badge: null,
-    href: "/study",
-    color: "bg-violet-50 text-violet-600 border-violet-200",
+    icon: Wand2,
+    name: "LightSpeed Humanizer",
+    desc: "AI-assisted drafts can read stiff and robotic. The Humanizer rewrites them into natural, authentic academic prose in your own voice — varied rhythm, genuine phrasing — so your writing reads as authentically human, never machine-generated.",
+    badge: "Authentic voice",
+    href: "/auth",
+    color: "bg-purple-50 text-purple-600 border-purple-200",
   },
 ];
 
@@ -649,21 +649,33 @@ export default function Landing() {
               </m.div>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-bold leading-[1.1] tracking-tight mb-5 sm:mb-6 text-[#131b2e]" style={{ letterSpacing: "-0.02em" }}>
+            <h1 className="text-[32px] sm:text-5xl lg:text-[46px] font-bold leading-[1.08] tracking-tight mb-5 sm:mb-6 text-[#131b2e]" style={{ letterSpacing: "-0.02em" }}>
               {siteContent.heroHeadline ? (
                 siteContent.heroHeadline
               ) : (
                 <>
-                  Every other AI writes from memory.{" "}
+                  Every other AI writes from memory.
+                  <br className="hidden sm:block" />{" "}
                   <span className="text-[#6b38d4]">Light Speed Ghost writes from real academic papers.</span>
                 </>
               )}
             </h1>
 
-            <p className="text-base sm:text-lg text-[#45464d] max-w-xl leading-relaxed mb-8 sm:mb-10">
+            <p className="text-base sm:text-lg text-[#45464d] max-w-xl leading-relaxed mb-5">
               {siteContent.heroSubtext ||
-                "OpenAlex, PubMed, JSTOR, Scopus, arXiv — 35+ databases, 10 billion+ indexed papers. Upload your rubric, your notes, your materials. Your paper is built on actual research, cross-checked against your A-grade criteria, targeting 92% and above. High school to PhD. Every subject. One subscription."}
+                "35+ databases, 10 billion+ indexed papers. Upload your rubric, your notes, your materials — your paper is built on actual research, cross-checked against your A-grade criteria, targeting 92% and above. High school to PhD. Every subject. One subscription."}
             </p>
+
+            {/* Real-sources proof strip */}
+            <div className="flex flex-wrap items-center gap-2 mb-8">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#76777d] uppercase tracking-wider mr-1">
+                <Database size={12} className="text-[#6b38d4]" /> Indexed sources
+              </span>
+              {["OpenAlex", "PubMed", "JSTOR", "Scopus", "arXiv", "CrossRef"].map((s) => (
+                <span key={s} className="text-[11px] font-semibold text-[#45464d] bg-white border border-[#e0e3e5] rounded-full px-2.5 py-1 shadow-sm">{s}</span>
+              ))}
+              <span className="text-[11px] font-bold text-[#6b38d4]">+30 more</span>
+            </div>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
               <Link href="/auth">
