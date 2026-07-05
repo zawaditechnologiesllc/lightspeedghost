@@ -13,6 +13,7 @@ import {
   FileText, ChevronDown, Sparkles, BarChart3,
   Quote, MapPin, Mail, Twitter, Linkedin, Wand2,
   Lock, Building2, Share, BotMessageSquare,
+  Database, Layers, Clock, AlertTriangle,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
@@ -31,7 +32,7 @@ const tools = [
   {
     icon: PenLine,
     name: "AI Paper Writer",
-    desc: "Papers grounded in 35+ live academic databases (10B+ papers). Upload your rubric, your dataset (CSV/Excel), or both. We target the A-grade criteria only, weave in your data, and plagiarism-check below 8% before delivery. Real DOI citations, no Wikipedia.",
+    desc: "Writes from real academic papers, never from memory. Every paragraph is grounded in 35+ live databases (10B+ indexed papers) with real, clickable DOI citations. Upload your rubric — or we apply a preset Grade A standard — and cross-check every output against the A-grade criteria, targeting 92%+. Covers 35+ paper types, high school to PhD.",
     badge: "Most used",
     href: "/auth",
     color: "bg-blue-50 text-blue-600 border-blue-200",
@@ -55,7 +56,7 @@ const tools = [
   {
     icon: ShieldCheck,
     name: "AI & Plagiarism Check",
-    desc: "Detect AI patterns and similarity before your professor does. One click humanizes flagged sections while keeping your argument intact.",
+    desc: "Verify your own work for originality and accuracy before you submit. Every similarity match is traced back to its real source so you can check and correct it yourself, with confidence.",
     badge: null,
     href: "/auth",
     color: "bg-emerald-50 text-emerald-600 border-emerald-200",
@@ -71,8 +72,8 @@ const tools = [
   {
     icon: GraduationCap,
     name: "AI Study Assistant",
-    desc: "Ask anything, upload lecture notes, or drop in a dataset. LightSpeed AI builds a personal memory of everything you've studied — recalling past struggles, past topics, and past sessions to tutor you better every time.",
-    badge: "Long-term memory",
+    desc: "Reads your own materials or pulls from academic databases, then builds flashcards, quizzes, summaries, study guides, and slides tailored to your content. It identifies your weak points and tells you exactly where to focus — 24/7 tutoring across every subject.",
+    badge: "Reads your materials",
     href: "/auth",
     color: "bg-amber-50 text-amber-600 border-amber-200",
   },
@@ -102,7 +103,7 @@ const testimonials = [
   {
     name: "Aisha K.",
     role: "Postgrad · International Relations · Edinburgh",
-    text: "The plagiarism checker caught things TurnItIn missed. The humanization actually sounds like me on a good day — not a robot trying to sound human. Big difference from everything else I've tried.",
+    text: "The plagiarism checker caught overlap I'd completely missed on my own read-through, and traced every match to a real source so I could fix it properly. The humanized draft actually sounds like me on a good day — not a robot trying to sound human.",
     stars: 5,
   },
 ];
@@ -110,7 +111,7 @@ const testimonials = [
 const faqs = [
   {
     q: "What is Light Speed Ghost?",
-    a: "Light Speed Ghost is an AI-powered academic assistance platform built for students. It includes seven core tools: an AI paper writer with real verified citations, an outline builder, a paper revision tool, LightSpeed Humanizer for making AI-assisted text read naturally in your own voice, an AI and plagiarism checker, a STEM step-by-step solver, and an AI study assistant with long-term session memory.",
+    a: "Light Speed Ghost is an AI-powered academic toolkit for students from high school through to PhD. Unlike general AI that writes from memory, the research-facing tools write from real academic papers pulled from 35+ live databases (OpenAlex, PubMed, JSTOR, Scopus, arXiv and more) — 10 billion+ indexed sources. One subscription includes seven tools: Paper Writer, Outline Builder, Paper Revision, AI & Plagiarism Checker, LightSpeed Humanizer (for a natural academic voice in your own words), STEM Solver with step-by-step working, and a Study Assistant that reads your own materials.",
   },
   {
     q: "What is the AI Study Assistant and what can it generate?",
@@ -126,7 +127,7 @@ const faqs = [
   },
   {
     q: "How is the paper quality? I've tried AI writers before and they're terrible.",
-    a: "Fair skepticism. Here is exactly what happens on every paper: (1) We simultaneously query 35+ live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, Europe PMC, JSTOR, Scopus, SSRN, NBER, BASE, PhilPapers, EconPapers, WHO IRIS, MEDLINE, ClinicalTrials.gov, Cochrane Library, bioRxiv, medRxiv, PsycINFO, ProQuest and more — pulling over 10 billion papers worth of real abstracts, ranked by citation count. No fake citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found. (4) A plagiarism gate measures cosine similarity and rephrases any section above 8% before we send it to you. (5) The humanizer runs a real detect → rewrite → re-detect loop until the AI score reaches 0%. That is the pipeline on every single output.",
+    a: "Fair skepticism. The difference is that we write from real papers, not from memory. Here is exactly what happens on every paper: (1) We simultaneously query 35+ live academic databases — OpenAlex, CrossRef, PubMed, Semantic Scholar, ERIC, Zenodo, arXiv, CORE, DOAJ, Europe PMC, JSTOR, Scopus, SSRN, NBER, BASE, PhilPapers, EconPapers, WHO IRIS, MEDLINE, ClinicalTrials.gov, Cochrane Library, bioRxiv, medRxiv, PsycINFO, ProQuest and more — pulling over 10 billion papers worth of real abstracts, ranked by citation count. Every source is indexed, peer-reviewed, and clickable. No fabricated citations with broken URLs. (2) If you upload a grading rubric, we extract only the A-grade / Distinction criteria and lock them as requirements before writing starts. No rubric? We apply a preset Grade A standard calibrated from Harvard, Oxford, Yale, Princeton, MIT, and Cambridge. (3) After the paper is written, we cross-check it against those criteria and run a targeted improvement pass if any gaps are found, targeting a minimum 92% grade. (4) A plagiarism gate measures similarity and rephrases any section above 8% before we send it to you. (5) The Humanizer refines anything that reads robotic into a natural, authentic academic voice in your own words. That is the pipeline on every single output.",
   },
   {
     q: "Does file upload work with PDFs from my university portal?",
@@ -635,7 +636,7 @@ export default function Landing() {
                 transition={{ delay: 0.1, duration: 0.5 }}
               >
                 <Zap size={11} className="text-[#6b38d4]" />
-                8 AI tools. One platform. Actually works.
+                Writes from real academic papers — not from memory
               </m.div>
               <m.div
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium"
@@ -653,23 +654,21 @@ export default function Landing() {
                 siteContent.heroHeadline
               ) : (
                 <>
-                  Your deadline is{" "}
-                  <span className="text-[#6b38d4]">tonight.</span>
-                  <br />
-                  Your notes are chaos.
+                  Every other AI writes from memory.{" "}
+                  <span className="text-[#6b38d4]">Light Speed Ghost writes from real academic papers.</span>
                 </>
               )}
             </h1>
 
             <p className="text-base sm:text-lg text-[#45464d] max-w-xl leading-relaxed mb-8 sm:mb-10">
               {siteContent.heroSubtext ||
-                "Eight specialized AI tools for everything academics throw at you — write papers with real citations, refine AI-assisted writing to read naturally, solve STEM step-by-step, check plagiarism, and get 24/7 tutoring. Stop staring at a blank screen and actually sleep."}
+                "OpenAlex, PubMed, JSTOR, Scopus, arXiv — 35+ databases, 10 billion+ indexed papers. Upload your rubric, your notes, your materials. Your paper is built on actual research, cross-checked against your A-grade criteria, targeting 92% and above. High school to PhD. Every subject. One subscription."}
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
               <Link href="/auth">
                 <span className="inline-flex items-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all cursor-pointer shadow-lg shadow-[#6b38d4]/25 hover:-translate-y-0.5 text-sm sm:text-base">
-                  Try for $9.99 / month
+                  Write From Real Research — From $9.99
                   <ArrowRight size={16} />
                 </span>
               </Link>
@@ -875,8 +874,8 @@ export default function Landing() {
                         <span className="text-[11px] font-semibold text-[#191c1e]">LightSpeed Humanizer</span>
                       </div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] text-[#76777d]">AI score before</span>
-                        <span className="text-[9px] font-mono font-bold text-red-500">73%</span>
+                        <span className="text-[9px] text-[#76777d]">Reads robotic</span>
+                        <span className="text-[9px] font-mono font-bold text-red-500">Stiff</span>
                       </div>
                       <div className="h-1.5 bg-[#eceef0] rounded-full overflow-hidden mb-3">
                         <div className="h-full bg-red-500 rounded-full" style={{ width: "73%" }} />
@@ -886,11 +885,11 @@ export default function Landing() {
                         <span className="text-emerald-600 not-italic font-medium">"What emerges from this data is…"</span>
                       </div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] text-[#76777d]">AI score after</span>
-                        <span className="text-[9px] font-mono font-bold text-emerald-600">0%</span>
+                        <span className="text-[9px] text-[#76777d]">Natural academic voice</span>
+                        <span className="text-[9px] font-mono font-bold text-emerald-600">Authentic</span>
                       </div>
                       <div className="h-1.5 bg-[#eceef0] rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: "2%" }} />
+                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: "96%" }} />
                       </div>
                       <div className="mt-1.5 text-[9px] text-[#45464d] flex items-center gap-1.5">
                         <CheckCircle size={10} className="text-emerald-600" />
@@ -1079,27 +1078,27 @@ export default function Landing() {
           <StaggerGrid className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
             {[
               {
-                value: "92%+",
-                label: "Grade accuracy target",
-                sub: "A-grade rubric cross-check on every paper",
+                value: "10B+",
+                label: "Real indexed papers",
+                sub: "Every output traces to a real source you can click through and verify — OpenAlex, PubMed, JSTOR, Scopus, arXiv + 30 more",
                 color: "text-blue-600",
+              },
+              {
+                value: "92%+",
+                label: "Grade target",
+                sub: "Cross-checked against your rubric — or a preset Grade A standard from Harvard, Oxford, Yale, Princeton, MIT & Cambridge",
+                color: "text-[#6b38d4]",
               },
               {
                 value: "< 8%",
                 label: "Plagiarism ceiling",
-                sub: "Cosine similarity gate — enforced before delivery",
+                sub: "Similarity measured and reduced before delivery so you can verify your own work with confidence",
                 color: "text-emerald-600",
               },
               {
-                value: "0%",
-                label: "AI detection score",
-                sub: "Multi-pass humanization loop — real detector, not self-reported. We don't deliver until it passes.",
-                color: "text-[#6b38d4]",
-              },
-              {
-                value: "35+",
-                label: "Live academic databases",
-                sub: "10B+ papers · OpenAlex · PubMed · CrossRef · Semantic Scholar · JSTOR · Scopus · arXiv · CORE · SSRN + 16 more",
+                value: "HS→PhD",
+                label: "Every academic level",
+                sub: "Academic-level guardrails enforced across every subject, from high school assignments to PhD dissertations",
                 color: "text-amber-600",
               },
             ].map(({ value, label, sub, color }) => (
@@ -1110,6 +1109,52 @@ export default function Landing() {
               </m.div>
             ))}
           </StaggerGrid>
+        </div>
+      </section>
+
+      {/* ─── INTEREST · THE VILLAIN ─── */}
+      <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#131b2e] text-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10 sm:mb-16">
+            <p className="text-[#a78bfa] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">The problem with every other AI</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight" style={{ letterSpacing: "-0.01em" }}>
+              Here is what writing from memory actually costs you.
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-5 sm:gap-6">
+            {[
+              {
+                icon: AlertTriangle,
+                title: "Work you can't defend",
+                body: "When an AI writes from memory it produces content that sounds like research but cites nothing real, draws from nothing verified, and falls apart the moment it's challenged. That is not a writing tool. It is a liability with your name on it — from a high-school assignment to a PhD dissertation.",
+              },
+              {
+                icon: Layers,
+                title: "Five tools, five logins, still not solved",
+                body: "To patch the problem, students stack tools — one to write, one to check citations, one to tutor, one for STEM, one to revise. Five subscriptions. Five logins. And the problem still isn't solved, because none of them write from actual papers, cross-check against a rubric, show STEM working, or target a grade outcome.",
+              },
+              {
+                icon: Clock,
+                title: "Hours you never get back",
+                body: "Manual research burns hours per assignment, across 35+ paper types, compounding every semester and every subject. Hunting sources, formatting citations by hand, wrestling datasets into the right section — the old way is never neutral. It costs you the time you don't have.",
+              },
+            ].map(({ icon: Icon, title, body }) => (
+              <div key={title} className="rounded-2xl border border-white/10 bg-white/5 p-6 sm:p-8">
+                <div className="w-11 h-11 rounded-xl bg-[#6b38d4]/25 flex items-center justify-center mb-5">
+                  <Icon size={22} className="text-[#c4b5fd]" />
+                </div>
+                <h3 className="font-bold text-white text-lg mb-3">{title}</h3>
+                <p className="text-sm text-[#9aa3bd] leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 sm:mt-14 text-center">
+            <p className="text-white/70 text-base sm:text-lg max-w-3xl mx-auto leading-relaxed">
+              Light Speed Ghost defeats this at the source. It reads real papers first, cross-checks against your rubric, shows its working, and studies with you — <span className="text-white font-semibold">then it delivers.</span>
+            </p>
+          </div>
         </div>
       </section>
 
@@ -1124,12 +1169,12 @@ export default function Landing() {
       >
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
-            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">What it does</p>
+            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">One subscription. Seven tools.</p>
             <h2 className="text-3xl sm:text-4xl font-bold leading-tight mb-4 sm:mb-5 text-[#131b2e]">
-              Eight tools. One subscription.
+              Everything you need, built on real research.
             </h2>
             <p className="text-[#45464d] text-base sm:text-lg">
-              Each tool is built for a specific academic pain point. They work independently or in sequence — run your paper through the writer, into the plagiarism checker, then ask the AI assistant to explain the tricky bits.
+              Paper Writer, Outline Builder, Paper Revision, AI &amp; Plagiarism Checker, Humanizer, STEM Solver, and Study Assistant. No stacking costs, no switching between apps — every subject, every academic level, high school to PhD, in one place.
             </p>
           </div>
 
@@ -1210,8 +1255,8 @@ export default function Landing() {
               },
               {
                 icon: "✍️",
-                title: "AI Humanization Engine",
-                desc: "The humanizer runs a real detect → rewrite → re-detect loop using an actual AI detection model between each pass — not self-reporting. Up to three passes until the score reaches 0%. Each pass targets the specific patterns the detector flagged. We do not deliver until the score is zero.",
+                title: "Natural Academic Voice",
+                desc: "AI-assisted drafts often read stiff and robotic. The Humanizer rewrites them into natural, authentic academic prose that sounds like you on a good day — varied sentence rhythm, genuine voice, your own words — so your writing reads as authentically human, not machine-generated.",
                 tag: "LightSpeed Humanizer",
               },
               {
@@ -1254,55 +1299,41 @@ export default function Landing() {
       <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#f7f9fb]">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10 sm:mb-14">
-            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">Why LightSpeed Ghost</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3 text-[#131b2e]">Purpose-built for academics. Not a chatbot wrapper.</h2>
-            <p className="text-[#45464d] text-sm max-w-xl mx-auto">ChatGPT hallucinates citations. QuillBot doesn't write papers. Grammarly checks grammar. We do all of it — purpose-built for student deadlines.</p>
+            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">Why choose it</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3 text-[#131b2e]">Every alternative has one gap. We close it.</h2>
+            <p className="text-[#45464d] text-sm max-w-xl mx-auto">The villain is the same everywhere: AI that writes from nothing. Here is exactly where each alternative falls short — and what we do instead.</p>
           </div>
 
           <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 rounded-xl">
-            <table className="w-full min-w-[560px] text-sm bg-white rounded-xl border border-[#e0e3e5] border-separate border-spacing-0 overflow-hidden">
+            <table className="w-full min-w-[620px] text-sm bg-white rounded-xl border border-[#e0e3e5] border-separate border-spacing-0 overflow-hidden">
               <thead>
                 <tr>
-                  <th className="text-left py-4 px-4 text-[#45464d] font-medium text-xs uppercase tracking-wider w-44 border-b-2 border-[#c6c6cd]">Feature</th>
-                  <th className="py-4 px-3 text-center bg-[#e9ddff]/40 border-b-2 border-[#6b38d4]">
-                    <div className="inline-flex flex-col items-center gap-1">
-                      <span className="text-[#6b38d4] font-bold text-sm">LightSpeed Ghost</span>
-                      <span className="text-[#5516be] text-[10px] font-semibold">from $1.99</span>
-                    </div>
-                  </th>
-                  <th className="py-4 px-3 text-center text-[#45464d] font-medium text-xs border-b-2 border-[#c6c6cd]">ChatGPT Plus<br/><span className="text-[10px] font-normal text-[#76777d]">$20/mo</span></th>
-                  <th className="py-4 px-3 text-center text-[#45464d] font-medium text-xs border-b-2 border-[#c6c6cd]">QuillBot<br/><span className="text-[10px] font-normal text-[#76777d]">$19.95/mo</span></th>
-                  <th className="py-4 px-3 text-center text-[#45464d] font-medium text-xs border-b-2 border-[#c6c6cd]">Grammarly<br/><span className="text-[10px] font-normal text-[#76777d]">$30/mo</span></th>
+                  <th className="text-left py-4 px-4 text-[#45464d] font-semibold text-xs uppercase tracking-wider w-40 border-b-2 border-[#c6c6cd]">Instead of</th>
+                  <th className="text-left py-4 px-4 text-[#45464d] font-semibold text-xs uppercase tracking-wider border-b-2 border-[#c6c6cd]">Their gap</th>
+                  <th className="text-left py-4 px-4 bg-[#e9ddff]/40 text-[#6b38d4] font-bold text-xs uppercase tracking-wider border-b-2 border-[#6b38d4]">Light Speed Ghost's edge</th>
                 </tr>
               </thead>
               <tbody>
                 {[
-                  { feature: "Real DOI citations",        lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "35+ databases, 10B+ papers", lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "Rubric upload + A-grade targeting", lsg: true, gpt: false, qb: false, gr: false },
-                  { feature: "Plagiarism detection",      lsg: true,  gpt: false, qb: "paid", gr: false },
-                  { feature: "AI humanizer (natural voice)", lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "STEM step-by-step solver",  lsg: true,  gpt: "partial", qb: false, gr: false },
-                  { feature: "Paper revision with rubric",lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "AI Study Assistant",        lsg: true,  gpt: "partial", qb: false, gr: false },
-                  { feature: "Pay per use (no sub)",      lsg: true,  gpt: false, qb: false, gr: false },
-                  { feature: "Mobile money payments",     lsg: true,  gpt: false, qb: false, gr: false },
-                ].map(({ feature, lsg, gpt, qb, gr }) => {
-                  const cell = (val: boolean | string) => {
-                    if (val === true) return <span className="text-emerald-600 text-base">✓</span>;
-                    if (val === false) return <span className="text-[#c6c6cd] text-base">✕</span>;
-                    return <span className="text-amber-600 text-[10px] font-medium">Partial</span>;
-                  };
-                  return (
-                    <tr key={feature} className="hover:bg-[#f7f9fb] transition-colors">
-                      <td className="py-3.5 px-4 text-[#191c1e] font-medium text-xs leading-snug border-b border-[#eceef0]">{feature}</td>
-                      <td className="py-3.5 px-3 text-center bg-[#e9ddff]/25 border-b border-[#eceef0]">{cell(lsg)}</td>
-                      <td className="py-3.5 px-3 text-center border-b border-[#eceef0]">{cell(gpt)}</td>
-                      <td className="py-3.5 px-3 text-center border-b border-[#eceef0]">{cell(qb)}</td>
-                      <td className="py-3.5 px-3 text-center border-b border-[#eceef0]">{cell(gr)}</td>
-                    </tr>
-                  );
-                })}
+                  { vs: "ChatGPT", gap: "Writes from memory, fabricates citations", edge: "Writes from real papers — real DOIs, 10B+ indexed sources you can click and verify" },
+                  { vs: "QuillBot / Grammarly", gap: "Rewriting only, no research", edge: "Research, writing, STEM, and tutoring — one subscription" },
+                  { vs: "Chegg / tutors", gap: "Priced per subject", edge: "One price, every subject, every academic level — instant, 24/7" },
+                  { vs: "Manual research", gap: "Hours per paper, manual formatting", edge: "Minutes, auto-formatted across 10 citation and formatting methods" },
+                  { vs: "Any AI tool", gap: "No rubric cross-checking, unknown grade outcome", edge: "Targets 92%+ against your rubric or a preset Grade A standard from Harvard, Oxford, Yale, Princeton, MIT & Cambridge" },
+                  { vs: "STEM tools", gap: "Answers only, no working shown", edge: "Full step-by-step working across every technical subject" },
+                  { vs: "Study apps", gap: "Generic content, no personalization", edge: "Reads your materials, builds your study tools, identifies your weak points" },
+                ].map(({ vs, gap, edge }, i) => (
+                  <tr key={vs} className={i % 2 === 0 ? "" : "bg-[#f7f9fb]"}>
+                    <td className="py-3.5 px-4 text-[#191c1e] font-semibold text-xs leading-snug border-b border-[#eceef0] align-top">{vs}</td>
+                    <td className="py-3.5 px-4 text-[#76777d] text-xs leading-snug border-b border-[#eceef0] align-top">{gap}</td>
+                    <td className="py-3.5 px-4 text-[#191c1e] text-xs leading-snug border-b border-[#eceef0] bg-[#e9ddff]/20 align-top">
+                      <span className="inline-flex items-start gap-1.5">
+                        <CheckCircle size={13} className="text-[#6b38d4] shrink-0 mt-0.5" />
+                        {edge}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -1843,15 +1874,15 @@ export default function Landing() {
             <Logo size={48} showText={false} />
           </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-5 leading-tight" style={{ letterSpacing: "-0.02em" }}>
-            Stop staring at midnight.<br />Start with a draft.
+            Stop writing from nothing.<br />Write from real research.
           </h2>
           <p className="text-[#9aa3bd] mb-8 sm:mb-10 text-base sm:text-lg">
-            Join 4 million students using the fastest, most reliable academic AI in the world. Subscribe from $9.99/month — or pay once per task. No lock-in.
+            Real papers, real citations, cross-checked against your A-grade criteria. High school to PhD, every subject, one subscription — or pay once per task. Backed by a 7-day money-back guarantee.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link href="/auth">
               <span className="inline-flex items-center gap-2 px-8 sm:px-10 py-4 sm:py-5 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all cursor-pointer shadow-2xl hover:-translate-y-1 text-base sm:text-lg">
-                Get Started for $9.99
+                Write From Real Research — From $9.99
                 <ArrowRight size={18} />
               </span>
             </Link>

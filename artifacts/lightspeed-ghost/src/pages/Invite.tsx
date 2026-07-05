@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 const PERKS = [
   { icon: Zap,           label: "AI-written papers",       sub: "Real citations, every time" },
   { icon: GraduationCap, label: "Step-by-step STEM",       sub: "LaTeX + graphs included" },
-  { icon: ShieldCheck,   label: "Plagiarism & AI checker", sub: "Beat Turnitin & GPTZero" },
+  { icon: ShieldCheck,   label: "Plagiarism & AI checker", sub: "Verify your own work first" },
   { icon: BookOpen,      label: "Study Assistant",         sub: "Tutor that remembers you" },
 ];
 
