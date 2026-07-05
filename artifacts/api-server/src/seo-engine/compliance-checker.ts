@@ -101,12 +101,39 @@ export function hasFAQSection(content: string): boolean {
   return /frequently asked questions|faq|common questions/i.test(content);
 }
 
+// ── Marketing-foundation audit (the four questions + the villain) ─────────────
+// A page passes the positioning audit when it (a) names the villain / real-paper
+// contrast, and (b) answers the four questions well enough to be on-brand. This
+// is the pre-publish standard: content that doesn't carry the positioning is
+// flagged for review, not published silently.
+export function checkPositioningCoverage(content: string): { passed: boolean; issues: string[] } {
+  const text = content.toLowerCase();
+  const issues: string[] = [];
+
+  // Q1/Q2 + Villain: writes from real papers, not from memory.
+  const namesRealPapers = /real (academic )?papers?|indexed papers?|from real research|actual research/.test(text);
+  const namesVillain = /from memory|writes? from nothing|fabricat|hallucinat/.test(text);
+  if (!namesRealPapers) issues.push("Positioning: page never states it writes from real academic papers (the governing line).");
+  if (!namesVillain) issues.push("Villain missing: page never contrasts against AI that writes from memory / fabricates citations.");
+
+  // Q3 Why trust it: verifiable sources + grade/rubric standard.
+  const namesTrust = /rubric|grade a|92%|clickable|verif|peer-review|money-back/.test(text);
+  if (!namesTrust) issues.push("Why-trust-it thin: no rubric / Grade A / verifiable-source / guarantee signal.");
+
+  // Q4 Why choose it: an explicit comparison to a named alternative.
+  const namesComparison = /chatgpt|quillbot|grammarly|chegg|instead of|compared to|vs\.?\s/.test(text);
+  if (!namesComparison) issues.push("Why-choose-it missing: no comparison to ChatGPT / QuillBot / Grammarly / Chegg or 'instead of' framing.");
+
+  return { passed: issues.length === 0, issues };
+}
+
 export function validatePage(content: string): {
   wordCount: number;
   uniqueDataPoints: number;
   hasFAQ: boolean;
   hasAIDisclosure: boolean;
   integrityCheck: boolean;
+  positioningCheck: boolean;
   issues: string[];
 } {
   const wordCount = content.split(/\s+/).filter(Boolean).length;
@@ -114,6 +141,7 @@ export function validatePage(content: string): {
   const hasFAQ = hasFAQSection(content);
   const hasAIDisclosure = content.includes("ai-disclosure") || content.includes("AI writing assistance");
   const integrity = checkAcademicIntegrity(content);
+  const positioning = checkPositioningCoverage(content);
   const issues: string[] = [];
 
   if (wordCount < 800) issues.push(`Word count ${wordCount} < 800 minimum`);
@@ -121,6 +149,7 @@ export function validatePage(content: string): {
   if (!hasFAQ) issues.push("No FAQ section found");
   if (!hasAIDisclosure) issues.push("No AI disclosure label");
   if (!integrity.passed) issues.push(...integrity.violations);
+  if (!positioning.passed) issues.push(...positioning.issues);
 
   return {
     wordCount,
@@ -128,6 +157,7 @@ export function validatePage(content: string): {
     hasFAQ,
     hasAIDisclosure,
     integrityCheck: integrity.passed,
+    positioningCheck: positioning.passed,
     issues,
   };
 }

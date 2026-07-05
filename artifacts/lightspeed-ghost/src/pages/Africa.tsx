@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import {
   Zap, ArrowRight, CheckCircle, Star, Menu, X,
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
-  FileText, BotMessageSquare, MapPin, Quote,
+  FileText, Wand2, MapPin, Quote,
   CreditCard, Smartphone, Globe,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -62,8 +62,8 @@ const tools = [
   { icon: FileText, name: "Paper Revision", desc: "Paste your draft, upload the rubric, set your target grade. We rewrite and explain every change.", badge: "Grade booster" },
   { icon: ShieldCheck, name: "AI & Plagiarism Check", desc: "Detect AI patterns and similarity before your lecturer does. One click humanizes flagged sections.", badge: null },
   { icon: FlaskConical, name: "STEM Solver", desc: "Photograph your problem set or upload a dataset. Full step-by-step solutions — Maths, Physics, Chemistry, CS.", badge: "Photo upload" },
-  { icon: GraduationCap, name: "AI Study Assistant", desc: "Upload lecture notes, ask anything, get tutored. Remembers every session and adapts to your weak topics.", badge: "Long-term memory" },
-  { icon: BotMessageSquare, name: "Flashcards & Quizzes", desc: "Generate flashcards, summaries, practice quizzes, and mind maps from any topic or uploaded material.", badge: null },
+  { icon: GraduationCap, name: "AI Study Assistant", desc: "Reads your notes or pulls from academic databases, then builds flashcards, quizzes, summaries, and study guides tailored to your content — and flags exactly where to focus. Remembers every session.", badge: "Reads your materials" },
+  { icon: Wand2, name: "LightSpeed Humanizer", desc: "Rewrites stiff AI-assisted drafts into natural, authentic academic prose in your own voice — so your writing reads as genuinely human.", badge: "Authentic voice" },
 ];
 
 const africanTestimonials = [

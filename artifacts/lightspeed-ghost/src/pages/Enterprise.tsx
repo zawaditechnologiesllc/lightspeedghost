@@ -128,13 +128,13 @@ const valueProps = [
 ];
 
 const toolList = [
-  { name: "AI Paper Writer", note: "25+ live academic databases, real DOI citations" },
+  { name: "AI Paper Writer", note: "Writes from real papers — 35+ databases, real DOI citations" },
   { name: "Outline Builder", note: "Structure any assignment in seconds" },
   { name: "Paper Revision", note: "Grade-targeted rewrites with rubric upload" },
-  { name: "AI & Plagiarism Check", note: "Similarity detection across 99B+ sources" },
-  { name: "STEM Solver", note: "Step-by-step with photo upload, all subjects" },
-  { name: "AI Study Assistant", note: "Long-term memory tutoring" },
-  { name: "Flashcards & Quizzes", note: "Auto-generated from any material" },
+  { name: "AI & Plagiarism Check", note: "Verify your own work across 99B+ sources" },
+  { name: "LightSpeed Humanizer", note: "Natural, authentic academic voice in your own words" },
+  { name: "STEM Solver", note: "Step-by-step working with photo upload, all subjects" },
+  { name: "AI Study Assistant", note: "Reads your materials — flashcards, quizzes, weak-point focus" },
 ];
 
 type FormState = "idle" | "submitting" | "success" | "error";
