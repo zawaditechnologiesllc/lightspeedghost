@@ -319,7 +319,7 @@ export default function Africa() {
             </p>
 
             <p className="text-base text-[#45464d] max-w-xl leading-relaxed mb-8">
-              Seven AI tools — paper writing, STEM solving, plagiarism checking, humanizing AI text, and more — all accessible via mobile money. No foreign card. No VPN. Works on mobile data.
+              Seven AI tools that write from real academic papers — African journals (AJOL) plus 35+ global databases, not from memory. Paper writing, STEM step-by-step, self-checking, a natural academic voice, and more — all via mobile money. No foreign card. No VPN. Works on mobile data.
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-8">

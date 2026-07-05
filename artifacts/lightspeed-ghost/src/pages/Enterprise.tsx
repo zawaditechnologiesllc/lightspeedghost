@@ -275,7 +275,7 @@ export default function Enterprise() {
             </h1>
 
             <p className="text-base sm:text-lg text-[#45464d] max-w-xl leading-relaxed mb-8">
-              200+ universities already using LightSpeed Ghost. Equip every student with AI tools at a fraction of the cost. Dedicated support and one invoice for your entire institution.
+              200+ universities already using LightSpeed Ghost. Equip every student with AI that writes from real academic papers — not from memory — cross-checked against A-grade criteria. Real citations, dedicated support, and one invoice for your entire institution.
             </p>
 
             {/* Stat bars */}
@@ -432,7 +432,7 @@ export default function Enterprise() {
               <div className="max-w-xl">
                 <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-[#131b2e]">What your students get</h2>
                 <p className="text-[#45464d] text-sm sm:text-base">
-                  Seven purpose-built academic AI tools designed to enhance learning and research productivity without compromising academic rigor. Every seat gets the full suite — no tool-level upsells.
+                  Seven purpose-built academic AI tools — with every research-facing tool writing from real, indexed papers across 35+ databases, not from memory. Every seat gets the full suite, high school to PhD, no tool-level upsells.
                 </p>
               </div>
               <Link href="/">

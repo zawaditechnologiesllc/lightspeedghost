@@ -27,7 +27,7 @@ interface ToolItem {
 const TOOLS: ToolItem[] = [
   { key: "paper",      label: "Write Paper",          desc: "Full paper with real verified citations",      icon: PenLine,       color: "text-blue-400",    bg: "bg-blue-500/10",    tiered: true },
   { key: "revision",   label: "Revise Paper",          desc: "AI revision with tracked changes",             icon: Files,         color: "text-violet-400",  bg: "bg-violet-500/10",  tiered: true },
-  { key: "humanizer",  label: "LightSpeed Humanizer",  desc: "AI bypass — drop score below 5%",             icon: Wand2,         color: "text-purple-400",  bg: "bg-purple-500/10",  tiered: true },
+  { key: "humanizer",  label: "LightSpeed Humanizer",  desc: "A natural, authentic academic voice",         icon: Wand2,         color: "text-purple-400",  bg: "bg-purple-500/10",  tiered: true },
   { key: "stem",       label: "STEM Problem",          desc: "Step-by-step solve with graphs — $1.99",      icon: FlaskConical,  color: "text-cyan-400",    bg: "bg-cyan-500/10",    tiered: false },
   { key: "study",      label: "Study Day Pass",        desc: "Unlimited AI tutor for 24 hours — $2.99",     icon: GraduationCap, color: "text-amber-400",   bg: "bg-amber-500/10",   tiered: false },
   { key: "plagiarism", label: "Plagiarism Check",      desc: "Full AI + similarity scan — $1.99",           icon: ShieldCheck,   color: "text-emerald-400", bg: "bg-emerald-500/10", tiered: false },
