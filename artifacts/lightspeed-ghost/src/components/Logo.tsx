@@ -3,9 +3,11 @@ interface LogoProps {
   showText?: boolean;
   className?: string;
   textSize?: string;
+  /** "dark" renders white wordmark text (for dark backgrounds); "light" renders ink text (for light backgrounds). */
+  variant?: "dark" | "light";
 }
 
-export function Logo({ size = 32, showText = true, className = "", textSize = "text-lg" }: LogoProps) {
+export function Logo({ size = 32, showText = true, className = "", textSize = "text-lg", variant = "dark" }: LogoProps) {
   const iconSize = Math.round(size * 0.56);
 
   return (
@@ -54,8 +56,8 @@ export function Logo({ size = 32, showText = true, className = "", textSize = "t
       </div>
 
       {showText && (
-        <span className={`font-bold text-white tracking-tight leading-none ${textSize}`}>
-          Light Speed <span className="text-blue-400">Ghost</span>
+        <span className={`font-bold tracking-tight leading-none ${variant === "light" ? "text-[#131b2e]" : "text-white"} ${textSize}`}>
+          Light Speed <span className={variant === "light" ? "text-[#6b38d4]" : "text-blue-400"}>Ghost</span>
         </span>
       )}
     </div>
