@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight, CheckCircle, ShieldCheck, Sparkles, Database } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight, ArrowLeft, CheckCircle, ShieldCheck, Sparkles, Database } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
@@ -124,20 +124,13 @@ export default function Auth() {
           <Link href="/">
             <Logo size={30} textSize="text-base" variant="light" className="cursor-pointer select-none" />
           </Link>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => switchTab("login")}
-              className={`px-4 py-2 text-sm rounded-lg transition-colors ${tab === "login" && !forgot ? "text-[#6b38d4] font-semibold" : "text-[#45464d] hover:bg-[#f2f4f6]"}`}
-            >
-              Log In
-            </button>
-            <button
-              onClick={() => switchTab("signup")}
-              className="px-5 py-2 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-colors shadow-md shadow-[#6b38d4]/20"
-            >
-              Sign Up
-            </button>
-          </div>
+          {/* On the auth page the Log In / Sign Up shortcuts are redundant (the
+              form is right here), so the top bar just offers a quick way back. */}
+          <Link href="/">
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] transition-colors cursor-pointer">
+              <ArrowLeft size={15} /> Back to home
+            </span>
+          </Link>
         </div>
       </header>
 

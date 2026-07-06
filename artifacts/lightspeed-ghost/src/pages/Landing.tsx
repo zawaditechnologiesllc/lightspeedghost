@@ -431,6 +431,27 @@ export default function Landing() {
       .catch(() => {});
   }, []);
 
+  // Influencer link tracking — when someone arrives via ?ref=CODE, register one
+  // view for that creator (self-throttled to once per code per day via
+  // localStorage) and remember the code so a later signup can be attributed.
+  useEffect(() => {
+    try {
+      const code = new URLSearchParams(window.location.search).get("ref");
+      if (!code) return;
+      const clean = code.toUpperCase().trim().slice(0, 32);
+      localStorage.setItem("lsg_ref", clean);
+      const key = `lsg_ref_view_${clean}_${new Date().toISOString().slice(0, 10)}`;
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, "1");
+      const apiBase = (import.meta.env.VITE_API_URL ?? "") + "/api";
+      fetch(`${apiBase}/influencer/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: clean }),
+      }).catch(() => {});
+    } catch { /* non-fatal */ }
+  }, []);
+
   function handleIOSInstall() { setShowIOSModal(true); }
   function handleAndroidInstall() {
     if (installState.type === "android") {
@@ -740,29 +761,42 @@ export default function Landing() {
                   style={{ opacity: fading ? 0 : 1 }}
                 >
                   {previewIdx === 0 && (
-                    /* Write Paper */
+                    /* Write Paper — grounded in real papers, cited inline */
                     <div className="space-y-2.5">
                       <div className="flex items-center gap-2 mb-3">
                         <PenLine size={13} className="text-blue-600" />
                         <span className="text-[11px] font-semibold text-[#191c1e]">Write Your Paper</span>
+                        <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" /> Streaming
+                        </span>
                       </div>
-                      <div className="h-8 bg-[#f2f4f6] rounded-lg border border-[#e0e3e5] flex items-center px-3 gap-2">
-                        <div className="h-2 w-3 bg-[#c6c6cd] rounded" /><div className="h-1.5 w-40 bg-[#e0e3e5] rounded" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="h-8 bg-[#f2f4f6] rounded-lg border border-[#e0e3e5] flex items-center px-3">
-                          <div className="h-1.5 w-16 bg-[#e0e3e5] rounded" />
+                      {/* Draft text with a live inline citation */}
+                      <p className="text-[10px] text-[#45464d] leading-relaxed">
+                        Sustained attention degrades measurably after prolonged screen exposure, with reaction times
+                        slowing by up to 14%{" "}
+                        <span className="bg-[#e9ddff] text-[#6b38d4] px-1 rounded font-medium">(Okafor &amp; Lin, 2023)</span>.
+                        This effect is amplified in adolescents{" "}
+                        <span className="bg-[#e9ddff] text-[#6b38d4] px-1 rounded font-medium">(Mensah et al., 2024)</span>,
+                        suggesting developmental
+                        <span className="inline-block w-1 h-3 align-middle bg-[#6b38d4] ml-0.5 animate-pulse" />
+                      </p>
+                      {/* Source it's pulling from right now */}
+                      <div className="p-2 rounded-lg border border-[#e0e3e5] bg-[#f7f9fb] space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <BookOpen size={10} className="text-[#6b38d4]" />
+                          <span className="text-[9px] font-semibold text-[#191c1e]">Grounded in 2 indexed sources</span>
+                          <CheckCircle size={10} className="text-emerald-600 ml-auto" />
                         </div>
-                        <div className="h-8 bg-[#f2f4f6] rounded-lg border border-[#e0e3e5] flex items-center px-3">
-                          <div className="h-1.5 w-12 bg-[#e0e3e5] rounded" />
+                        <div className="flex items-center gap-1.5 text-[9px] text-[#45464d]">
+                          <span className="font-mono text-[#76777d] shrink-0">DOI</span>
+                          <span className="truncate">Okafor &amp; Lin (2023), <span className="italic">J. Cognitive Science</span></span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[9px] text-[#45464d]">
+                          <span className="font-mono text-[#76777d] shrink-0">DOI</span>
+                          <span className="truncate">Mensah et al. (2024), <span className="italic">Dev. Psychology Rev.</span></span>
                         </div>
                       </div>
-                      <div className="h-14 bg-[#f2f4f6] rounded-lg border border-[#e0e3e5]" />
-                      <div className="h-8 bg-[#6b38d4]/15 rounded-lg border border-[#6b38d4]/30 flex items-center justify-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#6b38d4] animate-pulse" />
-                        <div className="h-2 w-28 bg-[#6b38d4]/40 rounded" />
-                      </div>
-                      <div className="text-[9px] text-[#76777d] mt-1">APA 7th · 1,500 words · Streaming…</div>
+                      <div className="text-[9px] text-[#76777d]">APA 7th · 1,500 words · every claim traceable to a real paper</div>
                     </div>
                   )}
 
@@ -1220,22 +1254,10 @@ export default function Landing() {
                 tag: "LightSpeed Humanizer",
               },
               {
-                icon: "🌍",
-                title: "Smart Payment Routing",
-                desc: "Payments are routed to the right gateway based on your location — card processors for international users, mobile money (M-Pesa, MTN MoMo, Airtel Money) for East and West Africa. One checkout, every country.",
-                tag: "Payments",
-              },
-              {
                 icon: "🎯",
                 title: "Adaptive Tutoring Modes",
                 desc: "The Study Assistant has four distinct modes: Tutor (guided, Socratic), Explain (fast, example-driven), Quiz (test-and-reveal), and Summarize (structured key points). Switch mid-session — the AI tracks context across every mode change.",
                 tag: "Study Assistant",
-              },
-              {
-                icon: "⚡",
-                title: "Adaptive Study Assistant",
-                desc: "The Study Assistant remembers your past sessions and tracks your weak topics. Each new session builds on the last — the AI knows what you struggled with, adjusts difficulty, and generates targeted practice until you're ready.",
-                tag: "AI Study Assistant",
               },
               {
                 icon: "📊",
@@ -1965,6 +1987,7 @@ export default function Landing() {
                   { label: "Careers", href: "/careers" },
                   { label: "Contact", href: "/contact" },
                   { label: "Pricing", href: "#pricing" },
+                  { label: "Influencer Program", href: "/influencer" },
                   { label: "For African Students", href: "/africa" },
                   { label: "For Institutions", href: "/enterprise" },
                 ].map(({ label, href }) => (

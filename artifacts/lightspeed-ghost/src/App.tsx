@@ -45,6 +45,7 @@ const PaymentSuccess = lazy(() => import("@/pages/PaymentSuccess"));
 const Ebooks = lazy(() => import("@/pages/Ebooks"));
 const Africa = lazy(() => import("@/pages/Africa"));
 const Enterprise = lazy(() => import("@/pages/Enterprise"));
+const Influencer = lazy(() => import("@/pages/Influencer"));
 const FloatingAssistant = lazy(() => import("@/pages/FloatingAssistant"));
 
 function RouteFallback() {
@@ -327,6 +328,7 @@ function Router() {
       <Route path="/payment/success" component={PaymentSuccess} />
       <Route path="/africa" component={Africa} />
       <Route path="/enterprise" component={Enterprise} />
+      <Route path="/influencer" component={Influencer} />
       <Route component={AppRoutes} />
     </Switch>
   );
