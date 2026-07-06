@@ -2635,6 +2635,23 @@ export default function Admin() {
                             placeholder="Built for students who have too much to do and too little time."
                             className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50" />
                         </div>
+                        <div className="pt-2 border-t border-white/5">
+                          <p className="text-[10px] text-white/30 mb-2.5 mt-1">Social links — footer icons use the default handle when a URL is blank.</p>
+                          {([
+                            { key: "social_x",         label: "X (Twitter) URL",  placeholder: "https://x.com/lightspeedghost" },
+                            { key: "social_instagram", label: "Instagram URL",     placeholder: "https://instagram.com/lightspeedghost" },
+                            { key: "social_youtube",   label: "YouTube URL",       placeholder: "https://youtube.com/@lightspeedghost" },
+                          ] as { key: string; label: string; placeholder: string }[]).map(({ key, label, placeholder }) => (
+                            <div key={key} className="mb-3 last:mb-0">
+                              <label className="block text-xs text-white/50 mb-1.5">{label}</label>
+                              <input value={(settings as unknown as Record<string, string>)[key] ?? ""}
+                                onChange={(e) => setSettings((s) => s ? { ...s, [key]: e.target.value } : s)}
+                                onBlur={(e) => quickSaveSetting(key, e.target.value)}
+                                placeholder={placeholder}
+                                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-blue-500/50" />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </SettingsCard>
 
