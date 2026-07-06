@@ -627,25 +627,25 @@ export default function Landing() {
         <div className="absolute -top-24 -right-24 w-72 h-72 bg-[#4cd7f6]/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-1/2 -left-32 w-80 h-80 bg-[#6b38d4]/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div className="relative max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           {/* Left — copy */}
           <m.div
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="flex flex-wrap items-center gap-3 mb-6 sm:mb-8">
+            <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 mb-6 sm:mb-8">
               <m.div
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#e9ddff] text-[#5516be] text-xs font-bold uppercase tracking-wider"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#e9ddff] text-[#5516be] text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap shrink-0"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.1, duration: 0.5 }}
               >
-                <Zap size={11} className="text-[#6b38d4]" />
+                <Zap size={11} className="text-[#6b38d4] shrink-0" />
                 Writes from real academic papers — not from memory
               </m.div>
               <m.div
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium"
+                className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] sm:text-[11px] font-medium whitespace-nowrap shrink-0"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
