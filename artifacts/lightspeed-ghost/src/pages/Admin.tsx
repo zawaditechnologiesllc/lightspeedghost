@@ -2655,6 +2655,27 @@ export default function Admin() {
                       </div>
                     </SettingsCard>
 
+                    {/* Influencer program */}
+                    <SettingsCard title="Influencer Program">
+                      <p className="text-[10px] text-white/30 mb-3">Creators earn per 1,000 views on their tracked link. Rates in cents (100 = $1.00). Manage payouts under the Influencers tab.</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {([
+                          { key: "influencer_rate_per_1k_cents", label: "Rate / 1k views (¢)", ph: "100" },
+                          { key: "influencer_min_payout_cents",   label: "Min payout (¢)",      ph: "2000" },
+                          { key: "influencer_payout_days",        label: "Payout cycle (days)", ph: "30" },
+                        ] as { key: string; label: string; ph: string }[]).map(({ key, label, ph }) => (
+                          <div key={key}>
+                            <label className="block text-xs text-white/40 mb-1.5">{label}</label>
+                            <input type="number" min="0" placeholder={ph}
+                              value={(settings as unknown as Record<string, string>)[key] ?? ""}
+                              onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
+                              onBlur={(e) => quickSaveSetting(key, e.target.value)}
+                              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all" />
+                          </div>
+                        ))}
+                      </div>
+                    </SettingsCard>
+
                     {/* Plan limits */}
                     {(["starter", "student_pro_monthly", "pro", "institution"] as const).map((plan) => (
                       <SettingsCard key={plan} title={`${planDisplayName(plan)} Plan Monthly Limits`}>
