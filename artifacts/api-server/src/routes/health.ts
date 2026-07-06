@@ -23,17 +23,20 @@ router.get("/healthz", async (_req: Request, res: Response) => {
 router.get("/site-content", async (_req: Request, res: Response) => {
   try {
     const { rows } = await pool.query<{ key: string; value: string }>(
-      "SELECT key, value FROM system_settings WHERE key IN ('hero_headline','hero_subtext','footer_tagline')",
+      "SELECT key, value FROM system_settings WHERE key IN ('hero_headline','hero_subtext','footer_tagline','social_x','social_instagram','social_youtube')",
     );
     const m = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     res.setHeader("Cache-Control", "public, max-age=60");
     res.json({
-      heroHeadline:  m.hero_headline ?? "",
-      heroSubtext:   m.hero_subtext ?? "",
-      footerTagline: m.footer_tagline ?? "",
+      heroHeadline:     m.hero_headline ?? "",
+      heroSubtext:      m.hero_subtext ?? "",
+      footerTagline:    m.footer_tagline ?? "",
+      socialX:          m.social_x ?? "",
+      socialInstagram:  m.social_instagram ?? "",
+      socialYoutube:    m.social_youtube ?? "",
     });
   } catch {
-    res.json({ heroHeadline: "", heroSubtext: "", footerTagline: "" });
+    res.json({ heroHeadline: "", heroSubtext: "", footerTagline: "", socialX: "", socialInstagram: "", socialYoutube: "" });
   }
 });
 
