@@ -392,3 +392,8 @@
     transform: none;
   }
 }
+
+/* Hide scrollbars on horizontally-scrollable chip rows (e.g. the hero badges)
+   while keeping them scrollable on narrow screens. */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

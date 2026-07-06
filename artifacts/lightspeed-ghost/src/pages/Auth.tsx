@@ -153,12 +153,13 @@ export default function Auth() {
             }}
           />
           <div className="relative z-10 w-full max-w-lg">
-            <span className="inline-block px-3 py-1 bg-white/10 text-[#c4b5fd] rounded-full text-xs font-bold uppercase tracking-wider mb-6">Academic Intelligence</span>
-            <h1 className="text-4xl xl:text-5xl font-bold text-white mb-5 leading-[1.1]" style={{ letterSpacing: "-0.02em" }}>
-              Elevate your scholarly potential.
+            <span className="inline-block px-3 py-1 bg-white/10 text-[#c4b5fd] rounded-full text-xs font-bold uppercase tracking-wider mb-6">Writes from real papers — not from memory</span>
+            <h1 className="text-3xl xl:text-4xl font-bold text-white mb-5 leading-[1.15]" style={{ letterSpacing: "-0.02em" }}>
+              Every other AI writes from memory.{" "}
+              <span className="text-[#c4b5fd]">Light Speed Ghost writes from real academic papers.</span>
             </h1>
-            <p className="text-lg text-[#9aa3bd] leading-relaxed mb-10">
-              Designed for researchers who require precision. Experience high-trust AI that respects academic integrity and boosts output.
+            <p className="text-base text-[#9aa3bd] leading-relaxed mb-10">
+              35+ databases, 10 billion+ indexed papers. Upload your rubric, your notes, your materials — your paper is built on actual research, cross-checked against your A-grade criteria, targeting 92% and above. High school to PhD. One subscription.
             </p>
 
             {/* Decorative feature card */}
@@ -178,8 +179,8 @@ export default function Auth() {
             {/* Trust points */}
             <div className="mt-8 space-y-3">
               {[
-                { icon: Database, text: "35+ live academic databases · 10B+ papers" },
-                { icon: ShieldCheck, text: "Plagiarism-gated below 8% before delivery" },
+                { icon: Database, text: "Real, clickable citations — never fabricated" },
+                { icon: ShieldCheck, text: "Cross-checked to A-grade criteria, plagiarism under 8%" },
                 { icon: CheckCircle, text: "4M+ students · 200+ universities worldwide" },
               ].map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-3 text-sm text-white/70">
