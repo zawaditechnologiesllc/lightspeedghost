@@ -12,7 +12,7 @@ import {
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, Sparkles, BarChart3,
   Quote, MapPin, Mail, Twitter, Linkedin, Wand2,
-  Lock, Building2, Share,
+  Lock, Share,
   Database, Layers, Clock, AlertTriangle,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -649,13 +649,12 @@ export default function Landing() {
               </m.div>
             </div>
 
-            <h1 className="text-[32px] sm:text-5xl lg:text-[46px] font-bold leading-[1.08] tracking-tight mb-5 sm:mb-6 text-[#131b2e]" style={{ letterSpacing: "-0.02em" }}>
+            <h1 className="text-3xl sm:text-4xl lg:text-[40px] font-bold leading-[1.12] tracking-tight mb-4 sm:mb-5 text-[#131b2e]" style={{ letterSpacing: "-0.02em" }}>
               {siteContent.heroHeadline ? (
                 siteContent.heroHeadline
               ) : (
                 <>
-                  Every other AI writes from memory.
-                  <br className="hidden sm:block" />{" "}
+                  Every other AI writes from memory.{" "}
                   <span className="text-[#6b38d4]">Light Speed Ghost writes from real academic papers.</span>
                 </>
               )}
@@ -663,91 +662,34 @@ export default function Landing() {
 
             <p className="text-base sm:text-lg text-[#45464d] max-w-xl leading-relaxed mb-5">
               {siteContent.heroSubtext ||
-                "35+ databases, 10 billion+ indexed papers. Upload your rubric, your notes, your materials — your paper is built on actual research, cross-checked against your A-grade criteria, targeting 92% and above. High school to PhD. Every subject. One subscription."}
+                "35+ databases, 10 billion+ indexed papers. Upload your rubric, your notes, your materials — your paper is built on actual research, cross-checked against your A-grade criteria, targeting 92% and above. High school to PhD. One subscription."}
             </p>
 
             {/* Real-sources proof strip */}
-            <div className="flex flex-wrap items-center gap-2 mb-8">
+            <div className="flex flex-wrap items-center gap-2 mb-7">
               <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#76777d] uppercase tracking-wider mr-1">
                 <Database size={12} className="text-[#6b38d4]" /> Indexed sources
               </span>
-              {["OpenAlex", "PubMed", "JSTOR", "Scopus", "arXiv", "CrossRef"].map((s) => (
+              {["OpenAlex", "PubMed", "JSTOR", "Scopus", "arXiv"].map((s) => (
                 <span key={s} className="text-[11px] font-semibold text-[#45464d] bg-white border border-[#e0e3e5] rounded-full px-2.5 py-1 shadow-sm">{s}</span>
               ))}
               <span className="text-[11px] font-bold text-[#6b38d4]">+30 more</span>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <Link href="/auth">
-                <span className="inline-flex items-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all cursor-pointer shadow-lg shadow-[#6b38d4]/25 hover:-translate-y-0.5 text-sm sm:text-base">
-                  Write From Real Research — From $9.99
-                  <ArrowRight size={16} />
+                <span className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-all cursor-pointer shadow-md shadow-[#6b38d4]/25 hover:-translate-y-0.5 text-sm">
+                  Write From Real Research — $9.99
+                  <ArrowRight size={15} />
                 </span>
               </Link>
-              <a href="#payg" className="inline-flex items-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 border border-[#76777d] hover:border-[#6b38d4] text-[#191c1e] hover:text-[#6b38d4] font-bold rounded-lg transition-all hover:bg-[#eceef0] text-sm sm:text-base">
-                <Zap size={15} className="text-orange-500" />
+              <a href="#payg" className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-[#c6c6cd] hover:border-[#6b38d4] text-[#191c1e] hover:text-[#6b38d4] font-semibold rounded-lg transition-all hover:bg-[#eceef0] text-sm">
+                <Zap size={14} className="text-orange-500" />
                 No subscription — pay once
               </a>
             </div>
 
-            <p className="mt-4 text-xs text-[#76777d]">Starter at $9.99/mo · Or pay per use · No expiry on PAYG charges</p>
-
-            {/* Grade proof micro-strip */}
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs">
-                <span className="font-mono text-[#76777d] line-through">61%</span>
-                <span className="text-emerald-600 font-bold">→ 94%</span>
-                <span className="text-[#45464d]">Priya · UCL Biochemistry</span>
-              </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs">
-                <span className="font-mono text-[#76777d] line-through">D</span>
-                <span className="text-emerald-600 font-bold">→ 93%</span>
-                <span className="text-[#45464d]">Marcus · Georgia Tech CS</span>
-              </div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#eceef0] border border-[#e0e3e5] text-[11px] text-[#45464d]">
-                92%+ average grade across all papers
-              </div>
-            </div>
-
-            {/* ── App Store Badges ── */}
-            <div className="mt-8 flex flex-col items-start gap-3">
-              <p className="text-[10px] text-[#76777d] uppercase tracking-[0.18em] font-medium">Also available as an app</p>
-              <div className="flex flex-wrap items-center gap-3">
-
-                {/* iOS – App Store */}
-                <button
-                  onClick={handleIOSInstall}
-                  className="flex items-center gap-3 pl-4 pr-5 py-2.5 bg-white border border-[#d8dadc] hover:border-[#6b38d4] hover:shadow-md rounded-2xl transition-all group"
-                >
-                  <svg viewBox="0 0 24 24" className="w-7 h-7 fill-[#191c1e] shrink-0" aria-hidden="true">
-                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-                  </svg>
-                  <div className="text-left leading-tight">
-                    <div className="text-[9px] text-[#76777d] uppercase tracking-wider font-medium">Download on the</div>
-                    <div className="text-sm font-bold text-[#191c1e]">App Store</div>
-                  </div>
-                </button>
-
-                {/* Android – Google Play */}
-                <button
-                  onClick={handleAndroidInstall}
-                  className="flex items-center gap-3 pl-4 pr-5 py-2.5 bg-white border border-[#d8dadc] hover:border-[#6b38d4] hover:shadow-md rounded-2xl transition-all group"
-                >
-                  <svg viewBox="0 0 24 24" className="w-7 h-7 shrink-0" aria-hidden="true">
-                    <path d="M3.18 23.76c.33.18.71.24 1.08.15L16.5 12 4.26.09C3.89 0 3.51.06 3.18.24 2.65.54 2.29 1.1 2.29 1.8v20.4c0 .7.36 1.26.89 1.56z" fill="#4285F4"/>
-                    <path d="M20.94 10.78 18.5 9.38 16.5 12l2 2.62 2.44-1.4c.83-.45.83-1.99 0-2.44z" fill="#FBBC04"/>
-                    <path d="M4.26.09l12.24 11.9L4.26 23.91c-.33-.18-.69-.27-1.08-.15V.24c.39.12.75.03 1.08-.15z" fill="#34A853" opacity=".01"/>
-                    <path d="M16.5 9.38 4.26.09c-.33-.18-.69-.27-1.08-.15l13.32 11.44L16.5 9.38z" fill="#34A853"/>
-                    <path d="M16.5 14.62l-13.32 9.14c.39.12.75.21 1.08.15L16.5 14.62z" fill="#EA4335"/>
-                  </svg>
-                  <div className="text-left leading-tight">
-                    <div className="text-[9px] text-[#76777d] uppercase tracking-wider font-medium">Get it on</div>
-                    <div className="text-sm font-bold text-[#191c1e]">Google Play</div>
-                  </div>
-                </button>
-
-              </div>
-            </div>
+            <p className="mt-4 text-xs text-[#76777d]">Starter $9.99/mo · Pay per use from $1.99 · 7-day money-back guarantee</p>
           </m.div>
 
           {/* Right — animated product preview */}
@@ -2035,133 +1977,52 @@ export default function Landing() {
           {/* ── Payment Methods + Security Trust Strip ── */}
           <div className="border-t border-[#d8dadc] pt-8 pb-6 space-y-5">
 
-            {/* Payment method logos row */}
-            <div className="text-center">
-              <p className="text-[10px] font-bold text-[#76777d] uppercase tracking-widest mb-3">Accepted payment methods</p>
-              <div className="flex flex-wrap gap-2 items-center justify-center">
+            <div className="grid gap-5 lg:grid-cols-2 items-stretch">
 
-                {/* Visa */}
-                <div className="h-8 px-3 rounded-md flex items-center" style={{ backgroundColor: "#1a1f71" }}>
-                  <span className="text-white font-extrabold italic text-sm" style={{ letterSpacing: "0.12em" }}>VISA</span>
-                </div>
-
-                {/* Mastercard */}
-                <div className="h-8 px-2.5 rounded-md bg-[#1a1a1a] flex items-center gap-2">
-                  <div className="relative flex items-center" style={{ width: "30px", height: "20px" }}>
-                    <div className="absolute rounded-full" style={{ width: "20px", height: "20px", background: "#eb001b", left: 0 }} />
-                    <div className="absolute rounded-full" style={{ width: "20px", height: "20px", background: "#f79e1b", left: "10px", opacity: 0.9 }} />
+              {/* Payments — Stripe + mobile money */}
+              <div className="rounded-2xl border border-[#e0e3e5] bg-white p-5 shadow-sm">
+                <p className="text-[10px] font-bold text-[#76777d] uppercase tracking-widest mb-3.5">Simple, secure payments</p>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* Stripe — cards & wallets */}
+                  <div className="h-9 px-4 rounded-lg flex items-center gap-2 shadow-sm" style={{ backgroundColor: "#635bff" }}>
+                    <Lock size={12} className="text-white/90" />
+                    <span className="text-white font-bold text-[15px] tracking-tight">stripe</span>
                   </div>
-                  <span className="text-white/90 font-semibold" style={{ fontSize: "10px" }}>Mastercard</span>
+                  <span className="text-[11px] text-[#76777d]">cards &amp; wallets</span>
+                  <span className="w-px h-6 bg-[#e0e3e5] mx-0.5 hidden sm:block" />
+                  {/* Mobile money */}
+                  <div className="h-9 px-3 rounded-lg border bg-white flex items-center" style={{ borderColor: "#00a65166" }}>
+                    <span className="font-bold" style={{ fontSize: "11px", color: "#00a651", letterSpacing: "0.03em" }}>M-PESA</span>
+                  </div>
+                  <div className="h-9 px-3 rounded-lg flex items-center" style={{ backgroundColor: "#ffcb05" }}>
+                    <span className="font-bold" style={{ fontSize: "10px", color: "#17120e" }}>MTN MoMo</span>
+                  </div>
+                  <div className="h-9 px-3 rounded-lg border bg-white flex items-center" style={{ borderColor: "#ff000055" }}>
+                    <span className="font-bold" style={{ fontSize: "10px", color: "#e11900" }}>Airtel Money</span>
+                  </div>
                 </div>
-
-                {/* American Express */}
-                <div className="h-8 px-3 rounded-md flex items-center" style={{ backgroundColor: "#2557a7" }}>
-                  <span className="text-white font-bold" style={{ fontSize: "10px", letterSpacing: "0.05em" }}>AMEX</span>
+                <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[#76777d]">
+                  <span className="flex items-center gap-1.5"><Lock size={10} /><span style={{ fontSize: "10px" }} className="font-medium">256-bit SSL</span></span>
+                  <span className="flex items-center gap-1.5"><ShieldCheck size={10} /><span style={{ fontSize: "10px" }} className="font-medium">PCI DSS Level 1</span></span>
+                  <span className="flex items-center gap-1.5"><CheckCircle size={10} /><span style={{ fontSize: "10px" }} className="font-medium">Secure checkout</span></span>
                 </div>
-
-                {/* Discover */}
-                <div className="h-8 px-3 rounded-md border flex items-center gap-1.5 bg-white" style={{ borderColor: "#f7971e66" }}>
-                  <div className="w-4 h-4 rounded-full" style={{ background: "#f7971e" }} />
-                  <span className="font-bold" style={{ fontSize: "10px", color: "#d97c06" }}>Discover</span>
-                </div>
-
-                {/* UnionPay */}
-                <div className="h-8 px-3 rounded-md flex items-center gap-1" style={{ background: "linear-gradient(135deg,#c0392b,#8b0000)" }}>
-                  <span className="text-white font-bold" style={{ fontSize: "10px", letterSpacing: "0.05em" }}>UnionPay</span>
-                </div>
-
-                {/* Verve */}
-                <div className="h-8 px-3 rounded-md border bg-white flex items-center" style={{ borderColor: "#d4712a66" }}>
-                  <span className="font-bold" style={{ fontSize: "11px", color: "#c56a24" }}>Verve</span>
-                </div>
-
-                {/* PayPal */}
-                <div className="h-8 px-3 rounded-md border border-[#d8dadc] bg-white flex items-center gap-0.5">
-                  <span className="font-bold text-sm" style={{ color: "#009cde" }}>Pay</span>
-                  <span className="font-bold text-sm" style={{ color: "#003087" }}>Pal</span>
-                </div>
-
-                {/* Apple Pay */}
-                <div className="h-8 px-3 rounded-md border border-[#d8dadc] bg-white flex items-center gap-1.5">
-                  <svg width="13" height="16" viewBox="0 0 814 1000" fill="#191c1e">
-                    <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 391.8 0 263.1 0 140.8c0-94.3 32.6-181.5 92.4-245.7 50.4-55.5 127.8-91.8 212.6-91.8 81.1 0 153.2 56.8 205.6 56.8 50 0 128.2-60.8 217.7-60.8 35.3 0 130.9 3.2 197.9 115.3zm-170.1-175.5c30.3-32.5 50.7-81.3 50.7-130.1 0-6.5-.6-13-1.9-18.3-48.1 1.9-104.9 33.8-140.8 71.1-27.6 30.3-51.9 78.1-51.9 127.6 0 7.1 1.3 14.3 1.9 16.5 3.2.6 8.4 1.3 13.6 1.3 43.4 0 98.1-29 128.4-68.1z" />
-                  </svg>
-                  <span className="text-[#191c1e] font-semibold" style={{ fontSize: "11px" }}>Pay</span>
-                </div>
-
-                {/* Google Pay */}
-                <div className="h-8 px-3 rounded-md border border-[#d8dadc] bg-white flex items-center gap-1">
-                  <span className="font-bold" style={{ fontSize: "12px", background: "linear-gradient(135deg,#4285f4,#34a853,#fbbc05,#ea4335)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>G</span>
-                  <span className="text-[#45464d] font-semibold" style={{ fontSize: "11px" }}>Pay</span>
-                </div>
-
-                {/* Klarna */}
-                <div className="h-8 px-3 rounded-md flex items-center" style={{ backgroundColor: "#ffb3c7" }}>
-                  <span className="font-black" style={{ fontSize: "11px", color: "#17120e", letterSpacing: "0.02em" }}>klarna</span>
-                </div>
-
-                {/* Afterpay */}
-                <div className="h-8 px-3 rounded-md flex items-center gap-1" style={{ backgroundColor: "#b2fce4" }}>
-                  <span className="font-black" style={{ fontSize: "10px", color: "#000", letterSpacing: "0.01em" }}>Afterpay</span>
-                </div>
-
-                {/* Alipay */}
-                <div className="h-8 px-3 rounded-md border bg-white flex items-center gap-1.5" style={{ borderColor: "#1677ff55" }}>
-                  <span className="font-bold" style={{ fontSize: "10px", color: "#1677ff" }}>Alipay</span>
-                </div>
-
-                {/* WeChat Pay */}
-                <div className="h-8 px-3 rounded-md border bg-white flex items-center gap-1.5" style={{ borderColor: "#07c16055" }}>
-                  <span className="font-bold" style={{ fontSize: "10px", color: "#07c160" }}>WeChat Pay</span>
-                </div>
-
-                {/* M-Pesa */}
-                <div className="h-8 px-3 rounded-md border bg-white flex items-center" style={{ borderColor: "#00a65166" }}>
-                  <span className="font-bold" style={{ fontSize: "11px", color: "#00a651", letterSpacing: "0.03em" }}>M-PESA</span>
-                </div>
-
-                {/* Airtel Money */}
-                <div className="h-8 px-3 rounded-md border bg-white flex items-center" style={{ borderColor: "#ff000055" }}>
-                  <span className="font-bold" style={{ fontSize: "10px", color: "#e11900", letterSpacing: "0.02em" }}>Airtel Money</span>
-                </div>
-
-                {/* MTN MoMo */}
-                <div className="h-8 px-3 rounded-md flex items-center gap-1.5" style={{ backgroundColor: "#ffcb05" }}>
-                  <span className="font-bold" style={{ fontSize: "10px", color: "#17120e", letterSpacing: "0.02em" }}>MTN MoMo</span>
-                </div>
-
-                {/* Bank Transfer */}
-                <div className="h-8 px-3 rounded-md border border-[#d8dadc] bg-white flex items-center gap-1.5">
-                  <Building2 size={11} className="text-[#45464d]" />
-                  <span className="text-[#45464d] font-medium" style={{ fontSize: "10px" }}>Bank Transfer</span>
-                </div>
-
               </div>
-            </div>
 
-            {/* Security trust badges */}
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              <div className="flex items-center gap-1.5 text-[#76777d]">
-                <Lock size={11} />
-                <span style={{ fontSize: "10px" }} className="font-medium">256-bit SSL Encrypted</span>
+              {/* Get the app */}
+              <div className="flex flex-col justify-center lg:items-end gap-3">
+                <p className="text-[10px] text-[#76777d] uppercase tracking-[0.18em] font-medium">Also available as an app</p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button onClick={handleIOSInstall} className="flex items-center gap-3 pl-4 pr-5 py-2.5 bg-white border border-[#d8dadc] hover:border-[#6b38d4] hover:shadow-md rounded-2xl transition-all">
+                    <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#191c1e] shrink-0" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" /></svg>
+                    <div className="text-left leading-tight"><div className="text-[9px] text-[#76777d] uppercase tracking-wider font-medium">Download on the</div><div className="text-sm font-bold text-[#191c1e]">App Store</div></div>
+                  </button>
+                  <button onClick={handleAndroidInstall} className="flex items-center gap-3 pl-4 pr-5 py-2.5 bg-white border border-[#d8dadc] hover:border-[#6b38d4] hover:shadow-md rounded-2xl transition-all">
+                    <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0" aria-hidden="true"><path d="M3.18 23.76c.33.18.71.24 1.08.15L16.5 12 4.26.09C3.89 0 3.51.06 3.18.24 2.65.54 2.29 1.1 2.29 1.8v20.4c0 .7.36 1.26.89 1.56z" fill="#4285F4"/><path d="M20.94 10.78 18.5 9.38 16.5 12l2 2.62 2.44-1.4c.83-.45.83-1.99 0-2.44z" fill="#FBBC04"/><path d="M16.5 9.38 4.26.09c-.33-.18-.69-.27-1.08-.15l13.32 11.44L16.5 9.38z" fill="#34A853"/><path d="M16.5 14.62l-13.32 9.14c.39.12.75.21 1.08.15L16.5 14.62z" fill="#EA4335"/></svg>
+                    <div className="text-left leading-tight"><div className="text-[9px] text-[#76777d] uppercase tracking-wider font-medium">Get it on</div><div className="text-sm font-bold text-[#191c1e]">Google Play</div></div>
+                  </button>
+                </div>
               </div>
-              <div className="hidden sm:block w-px h-3 bg-[#c6c6cd]" />
-              <div className="flex items-center gap-1.5 text-[#76777d]">
-                <ShieldCheck size={11} />
-                <span style={{ fontSize: "10px" }} className="font-medium">PCI DSS Level 1 Compliant</span>
-              </div>
-              <div className="hidden sm:block w-px h-3 bg-[#c6c6cd]" />
-              <div className="flex items-center gap-1.5 text-[#76777d]">
-                <CheckCircle size={11} />
-                <span style={{ fontSize: "10px" }} className="font-medium">Secure Checkout</span>
-              </div>
-              <div className="hidden sm:block w-px h-3 bg-[#c6c6cd]" />
-              <div className="flex items-center gap-1.5 text-[#76777d]">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-                </svg>
-                <span style={{ fontSize: "10px" }} className="font-medium">Fraud Protection</span>
-              </div>
+
             </div>
 
           </div>
