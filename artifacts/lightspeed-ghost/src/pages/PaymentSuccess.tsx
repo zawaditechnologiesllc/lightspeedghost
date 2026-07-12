@@ -8,7 +8,7 @@ export default function PaymentSuccess() {
   const { verifyPayment } = usePaymentGateway();
 
   const [status, setStatus] = useState<"verifying" | "success" | "failed">("verifying");
-  const [plan, setPlan] = useState<string>("free");
+  const [plan, setPlan] = useState<string>("none");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

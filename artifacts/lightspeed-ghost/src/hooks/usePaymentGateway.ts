@@ -148,7 +148,7 @@ export function usePaymentGateway() {
       });
       return await res.json() as { confirmed: boolean; plan: string };
     } catch {
-      return { confirmed: false, plan: "starter" };
+      return { confirmed: false, plan: "none" };
     }
   }, []);
 

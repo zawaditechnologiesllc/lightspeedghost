@@ -337,7 +337,7 @@ router.get("/admin/stats", async (req: Request, res: Response) => {
     q<{ cnt: string }[]>("SELECT COUNT(DISTINCT user_id) as cnt FROM study_sessions WHERE user_id IS NOT NULL", [{ cnt: "0" }]),
     q<{ gateway: string; total: string; cnt: string }[]>("SELECT gateway, SUM(amount_cents) as total, COUNT(*) as cnt FROM payments WHERE status = 'completed' GROUP BY gateway", []),
     q<{ total: string }[]>("SELECT COALESCE(SUM(lifetime_earned_cents), 0) as total FROM user_credits", [{ total: "0" }]),
-    q<{ cnt: string }[]>("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE plan != 'starter'", [{ cnt: "0" }]),
+    q<{ cnt: string }[]>("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE status = 'active'", [{ cnt: "0" }]),
     q<{ plan: string; cnt: string }[]>("SELECT plan, COUNT(*) as cnt FROM user_subscriptions GROUP BY plan", []),
     q<{ cnt: string }[]>("SELECT COUNT(DISTINCT user_id) as cnt FROM request_logs WHERE user_id IS NOT NULL AND created_at > NOW() - INTERVAL '7 days'", [{ cnt: "0" }]),
     q<{ mrr: string }[]>("SELECT COALESCE(SUM(amount_cents), 0) as mrr FROM payments WHERE status = 'completed' AND type = 'subscription' AND created_at > NOW() - INTERVAL '30 days'", [{ mrr: "0" }]),
@@ -620,7 +620,7 @@ router.get("/admin/users", async (req: Request, res: Response) => {
         lastSignIn: authUser?.last_sign_in_at ?? null,
         documentCount: userDocCounts[id] ?? 0,
         sessionCount: userSessionCounts[id] ?? 0,
-        plan: planMap[id]?.plan ?? "starter",
+        plan: planMap[id]?.plan ?? "none",
         billing: planMap[id]?.billing ?? null,
         creditBalance: creditMap[id]?.balance_cents ?? 0,
         lifetimeEarned: creditMap[id]?.lifetime_earned_cents ?? 0,
@@ -823,7 +823,7 @@ router.get("/admin/subscriptions", async (req: Request, res: Response) => {
   if (!verifyAdminToken(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const rows = await pool.query<{ user_id: string; plan: string; billing: string | null; gateway: string | null; created_at: string }>(
-      "SELECT user_id, plan, billing, gateway, created_at FROM user_subscriptions WHERE plan != 'starter' ORDER BY created_at DESC"
+      "SELECT user_id, plan, billing, gateway, created_at FROM user_subscriptions ORDER BY created_at DESC"
     ).catch(() => ({ rows: [] }));
     const counts = await pool.query<{ plan: string; cnt: string }>(
       "SELECT plan, COUNT(*) as cnt FROM user_subscriptions GROUP BY plan"
