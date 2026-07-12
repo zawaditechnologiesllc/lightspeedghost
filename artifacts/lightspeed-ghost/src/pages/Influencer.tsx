@@ -100,9 +100,12 @@ export default function Influencer() {
           </nav>
           <div className="hidden md:flex items-center gap-2.5">
             {user ? (
-              <a href="#dashboard" className="px-5 py-2.5 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-colors shadow-md shadow-[#6b38d4]/20">Your dashboard</a>
+              <>
+                <Link href="/app"><span className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] transition-colors cursor-pointer">Open app</span></Link>
+                <a href="#dashboard" className="px-5 py-2.5 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-colors shadow-md shadow-[#6b38d4]/20">Your dashboard</a>
+              </>
             ) : (
-              <Link href="/auth"><span className="px-5 py-2.5 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-colors cursor-pointer shadow-md shadow-[#6b38d4]/20">Get your link</span></Link>
+              <Link href="/auth?next=/influencer"><span className="px-5 py-2.5 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-colors cursor-pointer shadow-md shadow-[#6b38d4]/20">Get your link</span></Link>
             )}
           </div>
           <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-[#45464d] rounded-lg hover:bg-[#f2f4f6]" aria-label="Menu">
@@ -114,8 +117,11 @@ export default function Influencer() {
             {navLinks.map((i) => (
               <a key={i.label} href={i.href} onClick={() => setMobileOpen(false)} className="block px-3 py-3 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6]">{i.label}</a>
             ))}
-            <div className="pt-3 border-t border-[#e0e3e5] mt-2">
-              <Link href={user ? "#dashboard" : "/auth"}><span onClick={() => setMobileOpen(false)} className="block text-center px-4 py-2.5 text-sm bg-[#6b38d4] text-white font-semibold rounded-lg cursor-pointer">{user ? "Your dashboard" : "Get your link"}</span></Link>
+            <div className="pt-3 border-t border-[#e0e3e5] mt-2 space-y-1.5">
+              {user && (
+                <Link href="/app"><span onClick={() => setMobileOpen(false)} className="block text-center px-4 py-2.5 text-sm border border-[#c6c6cd] text-[#45464d] font-semibold rounded-lg cursor-pointer">Open app</span></Link>
+              )}
+              <Link href={user ? "#dashboard" : "/auth?next=/influencer"}><span onClick={() => setMobileOpen(false)} className="block text-center px-4 py-2.5 text-sm bg-[#6b38d4] text-white font-semibold rounded-lg cursor-pointer">{user ? "Your dashboard" : "Get your link"}</span></Link>
             </div>
           </div>
         )}
@@ -141,7 +147,7 @@ export default function Influencer() {
                   Go to your dashboard <ArrowRight size={16} />
                 </a>
               ) : (
-                <Link href="/auth"><span className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all cursor-pointer shadow-lg shadow-[#6b38d4]/25 hover:-translate-y-0.5 text-sm">
+                <Link href="/auth?next=/influencer"><span className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all cursor-pointer shadow-lg shadow-[#6b38d4]/25 hover:-translate-y-0.5 text-sm">
                   Sign in to get your link <ArrowRight size={16} />
                 </span></Link>
               )}
@@ -333,7 +339,7 @@ export default function Influencer() {
             {user ? (
               <a href="#dashboard" className="inline-flex items-center gap-2 px-8 py-4 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all shadow-2xl hover:-translate-y-0.5 text-base">Open your dashboard <ArrowRight size={18} /></a>
             ) : (
-              <button onClick={() => navigate("/auth")} className="inline-flex items-center gap-2 px-8 py-4 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all shadow-2xl hover:-translate-y-0.5 text-base">Get your link — it's free <ArrowRight size={18} /></button>
+              <button onClick={() => navigate("/auth?next=/influencer")} className="inline-flex items-center gap-2 px-8 py-4 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all shadow-2xl hover:-translate-y-0.5 text-base">Get your link — it's free <ArrowRight size={18} /></button>
             )}
           </div>
         </section>

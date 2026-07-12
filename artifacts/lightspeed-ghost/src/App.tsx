@@ -289,7 +289,15 @@ function AppRedirect() {
 
   useEffect(() => {
     if (!loading) {
-      navigate(user ? "/app" : "/auth");
+      // Honor a destination stashed before an OAuth round-trip (e.g. the
+      // influencer page's "Sign in to get your link"). Internal paths only.
+      let next = "/app";
+      try {
+        const stored = sessionStorage.getItem("lsg_auth_next");
+        sessionStorage.removeItem("lsg_auth_next");
+        if (stored && stored.startsWith("/") && !stored.startsWith("//")) next = stored;
+      } catch { /* non-fatal */ }
+      navigate(user ? next : "/auth");
     }
   }, [user, loading, navigate]);
 
