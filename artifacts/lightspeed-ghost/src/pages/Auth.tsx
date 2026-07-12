@@ -28,6 +28,12 @@ export default function Auth() {
   const [forgot, setForgot] = useState(false);
   const [, navigate] = useLocation();
 
+  // Post-auth destination — ?next=/somewhere lets flows like the influencer
+  // page ("Sign in to get your link") return the user to where they started.
+  // Internal paths only, so the param can't be abused as an open redirect.
+  const nextParam = new URLSearchParams(window.location.search).get("next");
+  const next = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/app";
+
   const reset = () => {
     setError("");
     setStatus("idle");
@@ -55,13 +61,18 @@ export default function Auth() {
       setStatus("error");
     } else {
       setStatus("done");
-      navigate("/app");
+      navigate(next);
     }
   }
 
   async function handleGoogleLogin() {
     setError("");
     setStatus("loading");
+    // OAuth leaves the site and returns via /auth/callback — stash the
+    // destination so AppRedirect can honor it after the round-trip.
+    if (next !== "/app") {
+      try { sessionStorage.setItem("lsg_auth_next", next); } catch { /* non-fatal */ }
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -94,7 +105,7 @@ export default function Auth() {
       setStatus("error");
     } else {
       setStatus("done");
-      navigate("/app");
+      navigate(next);
     }
   }
 
