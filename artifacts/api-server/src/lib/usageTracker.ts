@@ -138,11 +138,13 @@ export function quotaExceededMessage(
 // There is no free plan: anything other than an active, unexpired, paid
 // subscription resolves to "none" (zero included quota — PAYG/credits only).
 // Normalise legacy / alternate plan keys to their canonical PLAN_LIMITS entry.
+// Legacy rows from the old free-tier era (plan 'free' or empty) carry no paid
+// entitlement — they must NOT resolve to Starter, which is now a $9.99 plan.
 function normalisePlan(plan: string | null | undefined): string {
-  if (!plan) return "starter";
+  if (!plan || plan === "free") return "none";
   if (plan === "campus" || plan === "campus_annual") return "institution";
   if (plan === "student_pro") return "student_pro_monthly";
-  if (plan === "free" || plan === "starter_monthly") return "starter";
+  if (plan === "starter_monthly") return "starter";
   return plan;
 }
 

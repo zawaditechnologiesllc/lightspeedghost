@@ -935,7 +935,7 @@ router.get("/payments/subscription", async (req: Request, res: Response) => {
     );
     res.json(row.rows[0] ?? { plan: "none", status: "none" });
   } catch {
-    res.json({ plan: "free", status: "active" });
+    res.json({ plan: "none", status: "none" });
   }
 });
 

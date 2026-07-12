@@ -123,6 +123,12 @@ router.post("/influencer/track", async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /influencer/terms — public program terms (marketing page) ─────────────
+router.get("/influencer/terms", async (_req: Request, res: Response) => {
+  const settings = await getInfluencerSettings();
+  res.json(settings);
+});
+
 // ── GET /influencer/me — the signed-in user's program status ──────────────────
 router.get("/influencer/me", async (req: Request, res: Response) => {
   if (!req.userId) { res.status(401).json({ error: "Unauthorized" }); return; }

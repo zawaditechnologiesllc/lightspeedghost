@@ -1272,7 +1272,7 @@ export default function Admin() {
                       </div>
                       <span className="text-sm font-semibold text-white/70 tabular-nums">{user.documentCount}</span>
                       <span className="text-sm font-semibold text-white/70 tabular-nums">{user.sessionCount}</span>
-                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border w-fit capitalize ${PLAN_COLORS[user.plan] ?? PLAN_COLORS.starter}`}>{user.plan}</span>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border w-fit capitalize ${PLAN_COLORS[user.plan] ?? PLAN_COLORS.none}`}>{planDisplayName(user.plan)}</span>
                       <span className="text-xs text-amber-300 font-mono tabular-nums">{user.creditBalance.toLocaleString()} cr</span>
                       <span className="text-xs text-white/30">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"}</span>
                       <span className="text-xs text-white/40">{user.lastSignIn ? new Date(user.lastSignIn).toLocaleDateString() : <span className="text-white/20">—</span>}</span>
@@ -1660,7 +1660,7 @@ export default function Admin() {
                             <p className="text-sm font-bold text-amber-400 tabular-nums">{u.balance_cents.toLocaleString()} cr</p>
                             <p className="text-[10px] text-white/30">≈ ${(u.balance_cents / 100).toFixed(2)}</p>
                           </div>
-                          <button onClick={() => { const usr = users.find((x) => x.id === u.user_id); if (usr) { setCreditAdjustUser(usr); setCreditAdjustAmt(""); setCreditAdjustNote(""); } else { setCreditAdjustUser({ id: u.user_id, email: null, createdAt: null, lastSignIn: null, documentCount: 0, sessionCount: 0, plan: "starter", billing: null, creditBalance: u.balance_cents, lifetimeEarned: u.lifetime_earned_cents, lifetimeSpent: u.lifetime_spent_cents, banned: false, banReason: null }); setCreditAdjustAmt(""); setCreditAdjustNote(""); } }}
+                          <button onClick={() => { const usr = users.find((x) => x.id === u.user_id); if (usr) { setCreditAdjustUser(usr); setCreditAdjustAmt(""); setCreditAdjustNote(""); } else { setCreditAdjustUser({ id: u.user_id, email: null, createdAt: null, lastSignIn: null, documentCount: 0, sessionCount: 0, plan: "none", billing: null, creditBalance: u.balance_cents, lifetimeEarned: u.lifetime_earned_cents, lifetimeSpent: u.lifetime_spent_cents, banned: false, banReason: null }); setCreditAdjustAmt(""); setCreditAdjustNote(""); } }}
                             className="p-1.5 rounded-md text-white/20 hover:text-amber-400 hover:bg-amber-500/10 transition-all" title="Adjust credits">
                             <Edit2 size={11} />
                           </button>
