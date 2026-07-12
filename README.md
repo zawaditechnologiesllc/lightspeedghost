@@ -215,7 +215,7 @@ Total coverage: ~1 billion papers. Wikipedia and non-peer-reviewed sources exclu
 
 URL: `https://lightspeedghost.com/mwaramuriuki-login`
 
-Features: user management, usage metrics, gateway on/off toggles, SEO content editor, referral tracking, cost monitoring.
+Features: user management, usage metrics, gateway on/off toggles, SEO content editor, influencer payouts, cost monitoring.
 
 ---
 

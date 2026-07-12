@@ -45,13 +45,13 @@
 │                                                      │
 │  Routes: writing · revision · humanizer · stem       │
 │  study · plagiarism · files · documents · payments   │
-│  referral · assistant · ebooks · admin · auth        │
+│  influencer · assistant · ebooks · admin · auth      │
 └──────────────────┬──────────────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────────────┐
 │              SUPABASE / POSTGRESQL                    │
 │  Auth (JWT) · Documents · Subscriptions · Credits    │
-│  Usage Tracking · Sessions · Payments · Referrals    │
+│  Usage Tracking · Sessions · Payments · Influencers  │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -224,7 +224,7 @@ The system automatically routes users to the optimal gateway based on their coun
 | **Analytics** | Live users; daily/weekly active; country breakdown; hourly traffic; tool feedback scores |
 | **Logs** | Request logs; error log; 24h summary |
 | **Announcements** | Create/edit/delete site-wide announcements shown to all users |
-| **Referrals** | Referral codes; conversion rates; pending discounts |
+| **Influencers** | Creator codes; view counts; earned/paid balances; record payouts |
 | **Settings** | Maintenance mode; signup toggle; PAYG toggle; starter plan limits |
 | **Messages** | Contact form submissions; mark read/replied |
 
@@ -555,7 +555,7 @@ All routes are prefixed with `/api`.
 | `GET` | `/mwaramuriuki-login/api-costs` | AI API usage costs |
 | `GET` | `/mwaramuriuki-login/ping` | Server health + uptime |
 | `GET` | `/mwaramuriuki-login/messages` | Contact form messages |
-| `GET` | `/mwaramuriuki-login/referrals` | Referral program stats |
+| `GET` | `/mwaramuriuki-login/influencers` | Influencer program stats |
 | `GET` | `/mwaramuriuki-login/ebooks` | Ebook stats + subscribers |
 
 ### Public Endpoints
@@ -634,9 +634,10 @@ request_logs (id, method, path, status, duration_ms, user_id, country, error_msg
 gateway_settings (gateway, paused, notes, updated_at)
 user_risk (user_id, risk_level, reason, updated_at)
 
--- Referrals
-referral_codes (user_id, code, created_at)
-referral_discounts (id, referrer_user_id, referral_code, referred_user_id, discount_pct, status, created_at, applied_at)
+-- Influencer program (pay-per-view creator payouts)
+influencers (user_id, code, payout_method, payout_details, created_at, last_payout_at)
+influencer_views (code, view_day, views)
+influencer_payouts (id, user_id, code, views, amount_cents, method, details, status, created_at, paid_at)
 
 -- Ebooks
 user_ebook_subscriptions (user_id, status, billing, gateway, gateway_subscription_id, current_period_end, created_at, updated_at)
