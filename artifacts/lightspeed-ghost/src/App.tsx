@@ -28,6 +28,7 @@ const StemSolver = lazy(() => import("@/pages/StemSolver"));
 const StudyAssistant = lazy(() => import("@/pages/StudyAssistant"));
 const Documents = lazy(() => import("@/pages/Documents"));
 const Billing = lazy(() => import("@/pages/Billing"));
+const Earnings = lazy(() => import("@/pages/Earnings"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const ConfirmEmail = lazy(() => import("@/pages/ConfirmEmail"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
@@ -274,6 +275,7 @@ function AppRoutes() {
               <Route path="/ebooks" component={Ebooks} />
               <Route path="/documents" component={Documents} />
               <Route path="/billing" component={Billing} />
+              <Route path="/earnings" component={Earnings} />
               <Route component={NotFound} />
             </Switch>
           </Layout>

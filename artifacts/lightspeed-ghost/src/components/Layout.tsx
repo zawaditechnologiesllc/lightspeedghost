@@ -41,7 +41,7 @@ const navItems = [
   { path: "/study",      label: "AI Study Assistant",   icon: GraduationCap },
   { path: "/ebooks",     label: "Ebooks",               icon: BookMarked, badge: "Business" },
   { path: "/documents",  label: "History",              icon: Files },
-  { path: "/influencer", label: "Influencer",           icon: DollarSign, badge: "Earn" },
+  { path: "/earnings",   label: "Influencer",           icon: DollarSign, badge: "Earn" },
 ];
 
 const mobileBottomNav = [
