@@ -30,7 +30,6 @@ const Documents = lazy(() => import("@/pages/Documents"));
 const Billing = lazy(() => import("@/pages/Billing"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const ConfirmEmail = lazy(() => import("@/pages/ConfirmEmail"));
-const Invite = lazy(() => import("@/pages/Invite"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
 const CookiePolicy = lazy(() => import("@/pages/CookiePolicy"));
@@ -313,8 +312,6 @@ function Router() {
       <Route path="/mwaramuriuki-login/:tab" component={Admin} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/confirm-email" component={ConfirmEmail} />
-      <Route path="/invite" component={Invite} />
-      <Route path="/ref/:code" component={Invite} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/refunds" component={RefundPolicy} />

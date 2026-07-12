@@ -8,12 +8,13 @@ import {
   ArrowUp, ArrowDown, ReceiptText, UserX, UserCheck, Edit2, Check,
   Radio, ServerCrash, Database, Clock, CheckCheck, XCircle, Signal,
   Megaphone, Link2, Eye, EyeOff, ThumbsUp, ThumbsDown,
-  Wrench, ToggleLeft, ToggleRight, Timer, BarChart2, Share2, Gift, BadgeDollarSign,
+  Wrench, ToggleLeft, ToggleRight, Timer, BarChart2,
   Search, BookOpen, Mail, Download,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link, useParams, useLocation } from "wouter";
 import SeoAdmin from "@/pages/SeoAdmin";
+import { AdminInfluencerTab } from "@/pages/AdminInfluencerTab";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
@@ -31,7 +32,7 @@ async function adminFetch(path: string, password: string, options?: RequestInit)
   return res.json();
 }
 
-type Tab = "overview" | "users" | "tools" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "referrals" | "messages" | "settings" | "seo" | "admins";
+type Tab = "overview" | "users" | "tools" | "documents" | "gateways" | "payments" | "credits" | "finance" | "analytics" | "logs" | "announcements" | "influencers" | "messages" | "settings" | "seo" | "admins";
 
 interface ContactMessage { id: number; email: string; subject: string; message: string; source: string; status: string; created_at: string; }
 interface ManagedAdmin { id: number; name: string; email: string; sectors: string[]; active: boolean; created_at: string; }
@@ -205,9 +206,9 @@ interface SystemSettings {
   student_pro_monthly_study: string;
   student_pro_monthly_plagiarism: string;
   student_pro_monthly_outline: string;
-  referral_referrer_pct: string;
-  referral_friend_pct: string;
-  referral_commission_pct: string;
+  influencer_rate_per_1k_cents: string;
+  influencer_min_payout_cents: string;
+  influencer_payout_days: string;
   export_expiry_days: string;
   hero_headline: string;
   hero_subtext: string;
@@ -322,7 +323,7 @@ export default function Admin() {
   });
   const { tab: urlTab } = useParams<{ tab?: string }>();
   const [, setLocation] = useLocation();
-  const validTabs: Tab[] = ["overview","users","tools","documents","gateways","payments","credits","finance","analytics","logs","announcements","referrals","messages","settings","seo"];
+  const validTabs: Tab[] = ["overview","users","tools","documents","gateways","payments","credits","finance","analytics","logs","announcements","influencers","messages","settings","seo"];
   const initialTab = (urlTab && validTabs.includes(urlTab as Tab) ? urlTab : "overview") as Tab;
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
@@ -392,23 +393,6 @@ export default function Admin() {
     totalLaunches: number; launches7d: number; launches30d: number;
     byPlatform: Array<{ platform: string; installs: string; launches: string }>;
   } | null>(null);
-  const [referralData, setReferralData] = useState<{
-    summary: {
-      totalReferrers: number; totalReferrals: number; totalConversions: number;
-      pendingDiscounts: number; appliedDiscounts: number;
-    };
-    referrers: Array<{
-      code: string; userId: string; createdAt: string;
-      referrals: number; conversions: number;
-      pendingDiscounts: number; appliedDiscounts: number;
-    }>;
-    discounts: Array<{
-      id: number; referrer_user_id: string; referral_code: string;
-      referred_user_id: string; discount_pct: number; status: string;
-      created_at: string; applied_at: string | null;
-    }>;
-  } | null>(null);
-  const [applyingDiscountId, setApplyingDiscountId] = useState<number | null>(null);
   const [enterpriseLeads, setEnterpriseLeads] = useState<EnterpriseLead[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [managedAdmins, setManagedAdmins] = useState<ManagedAdmin[]>([]);
@@ -609,15 +593,6 @@ export default function Admin() {
     } catch { setFeedbackStats([]); }
   }, [password]);
 
-  const loadReferrals = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await adminFetch("/admin/referrals", password) as typeof referralData;
-      setReferralData(data);
-    } catch { setReferralData(null); }
-    finally { setLoading(false); }
-  }, [password]);
-
   const loadMessages = useCallback(async () => {
     setLoading(true);
     try {
@@ -737,7 +712,6 @@ export default function Admin() {
     if (activeTab === "analytics") { loadTraffic(); loadFeedback(); loadTools(); loadPwaStats(); }
     if (activeTab === "logs") loadLogs();
     if (activeTab === "announcements") loadAnnouncements();
-    if (activeTab === "referrals") loadReferrals();
     if (activeTab === "messages") loadMessages();
     if (activeTab === "admins") loadAdmins();
   }, [isAuthed, activeTab]);
@@ -1014,7 +988,7 @@ export default function Admin() {
     { id: "credits",        label: "Credits",        icon: Coins },
     { id: "finance",        label: "Finance",        icon: BarChart3 },
     { id: "announcements",  label: "Announcements",  icon: Megaphone },
-    { id: "referrals",      label: "Referrals",      icon: Share2 },
+    { id: "influencers",    label: "Influencers",    icon: Zap },
     { id: "messages",       label: "Messages",       icon: Mail },
     { id: "seo",            label: "SEO",            icon: Search },
     { id: "settings",       label: "Settings",       icon: Settings },
@@ -1223,7 +1197,7 @@ export default function Admin() {
                           { id: "credits",       label: "Credits",        sub: "Balances & topups",         icon: Coins,        color: "text-orange-400",  bg: "bg-orange-500/8",  border: "border-orange-500/12" },
                           { id: "finance",       label: "Finance",        sub: "Revenue & reports",         icon: BarChart3,    color: "text-emerald-400", bg: "bg-emerald-500/8", border: "border-emerald-500/12" },
                           { id: "announcements", label: "Announcements",  sub: "Banner messages",           icon: Megaphone,    color: "text-pink-400",    bg: "bg-pink-500/8",    border: "border-pink-500/12" },
-                          { id: "referrals",     label: "Referrals",      sub: "Affiliate commissions",     icon: Share2,       color: "text-lime-400",    bg: "bg-lime-500/8",    border: "border-lime-500/12" },
+                          { id: "influencers",   label: "Influencers",    sub: "Creator view payouts",      icon: Zap,          color: "text-lime-400",    bg: "bg-lime-500/8",    border: "border-lime-500/12" },
                           { id: "settings",      label: "Settings",       sub: "Platform config",           icon: Settings,     color: "text-white/50",    bg: "bg-white/5",       border: "border-white/10" },
                         ] as const).map(({ id, label, sub, icon: Icon, color, bg, border }) => (
                           <button
@@ -2227,162 +2201,9 @@ export default function Admin() {
               </div>
             )}
 
-            {/* ── Referrals ─────────────────────────────────────────────── */}
-            {activeTab === "referrals" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <SectionHeader title="Affiliate Program" sub="Referrers earn 10% off their next subscription payment" />
-                  <button onClick={loadReferrals} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white/40 hover:text-white/70 hover:bg-white/5 border border-white/8 rounded-lg transition-all">
-                    <RefreshCw size={11} /> Refresh
-                  </button>
-                </div>
-
-                {loading && !referralData && (
-                  <div className="flex items-center justify-center h-40 text-white/30"><Loader2 size={20} className="animate-spin" /></div>
-                )}
-
-                {referralData && (
-                  <>
-                    {/* Summary stats */}
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                      {[
-                        { label: "Active Referrers",    value: referralData.summary.totalReferrers.toString(),   icon: Users,        color: "text-blue-400" },
-                        { label: "Total Signups",        value: referralData.summary.totalReferrals.toString(),   icon: Share2,       color: "text-violet-400" },
-                        { label: "Paid Conversions",     value: referralData.summary.totalConversions.toString(), icon: CheckCircle2, color: "text-emerald-400" },
-                        { label: "Pending Discounts",    value: referralData.summary.pendingDiscounts.toString(), icon: Gift,         color: "text-amber-400" },
-                        { label: "Discounts Applied",    value: referralData.summary.appliedDiscounts.toString(), icon: BadgeDollarSign, color: "text-lime-400" },
-                      ].map(({ label, value, icon: Icon, color }) => (
-                        <div key={label} className="bg-white/[0.02] border border-white/8 rounded-xl p-4">
-                          <Icon size={14} className={`${color} mb-2`} />
-                          <div className="text-xl font-bold text-white tabular-nums">{value}</div>
-                          <div className="text-xs text-white/35 mt-0.5">{label}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Per-referrer table */}
-                    <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                      <div className="px-4 py-3 border-b border-white/8 flex items-center gap-2">
-                        <Share2 size={13} className="text-lime-400" />
-                        <span className="text-sm font-semibold text-white/70">Ambassador Leaderboard</span>
-                        <span className="ml-auto text-xs text-white/25">{referralData.referrers.length} referrers</span>
-                      </div>
-                      {referralData.referrers.length === 0 ? (
-                        <div className="px-4 py-10 text-center text-white/25 text-sm">No referrers yet</div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="border-b border-white/5 text-white/30">
-                                <th className="text-left px-4 py-2.5 font-medium">Code</th>
-                                <th className="text-left px-4 py-2.5 font-medium">User ID</th>
-                                <th className="text-right px-4 py-2.5 font-medium">Signups</th>
-                                <th className="text-right px-4 py-2.5 font-medium">Conversions</th>
-                                <th className="text-right px-4 py-2.5 font-medium">Pending Discounts</th>
-                                <th className="text-right px-4 py-2.5 font-medium">Applied</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {referralData.referrers.map((r) => (
-                                <tr key={r.code} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                                  <td className="px-4 py-2.5 font-mono font-bold text-lime-300">{r.code}</td>
-                                  <td className="px-4 py-2.5 text-white/40 font-mono truncate max-w-[120px]">{r.userId.slice(0, 12)}…</td>
-                                  <td className="px-4 py-2.5 text-right text-white/70 tabular-nums">{r.referrals}</td>
-                                  <td className="px-4 py-2.5 text-right text-white/70 tabular-nums">{r.conversions}</td>
-                                  <td className="px-4 py-2.5 text-right tabular-nums">
-                                    {r.pendingDiscounts > 0
-                                      ? <span className="text-amber-300 font-semibold">{r.pendingDiscounts}</span>
-                                      : <span className="text-white/30">0</span>}
-                                  </td>
-                                  <td className="px-4 py-2.5 text-right text-emerald-400 tabular-nums">{r.appliedDiscounts}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Referral discounts table */}
-                    <div className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
-                      <div className="px-4 py-3 border-b border-white/8 flex items-center gap-2">
-                        <Gift size={13} className="text-amber-400" />
-                        <span className="text-sm font-semibold text-white/70">Referral Discounts</span>
-                        <span className="ml-auto text-xs text-white/25">{referralData.discounts.length} records</span>
-                      </div>
-                      {referralData.discounts.length === 0 ? (
-                        <div className="px-4 py-10 text-center text-white/25 text-sm">No discounts issued yet — discounts appear here after a referred user makes their first payment</div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="border-b border-white/5 text-white/30">
-                                <th className="text-left px-4 py-2.5 font-medium">ID</th>
-                                <th className="text-left px-4 py-2.5 font-medium">Code</th>
-                                <th className="text-left px-4 py-2.5 font-medium">Referrer</th>
-                                <th className="text-left px-4 py-2.5 font-medium">Referred By</th>
-                                <th className="text-right px-4 py-2.5 font-medium">Discount</th>
-                                <th className="text-left px-4 py-2.5 font-medium">Status</th>
-                                <th className="text-left px-4 py-2.5 font-medium">Earned</th>
-                                <th className="text-left px-4 py-2.5 font-medium">Applied</th>
-                                <th className="px-4 py-2.5" />
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {referralData.discounts.map((d) => (
-                                <tr key={d.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                                  <td className="px-4 py-2.5 text-white/30 tabular-nums">#{d.id}</td>
-                                  <td className="px-4 py-2.5 font-mono font-bold text-lime-300">{d.referral_code}</td>
-                                  <td className="px-4 py-2.5 text-white/40 font-mono">{d.referrer_user_id.slice(0, 10)}…</td>
-                                  <td className="px-4 py-2.5 text-white/40 font-mono">{d.referred_user_id.slice(0, 10)}…</td>
-                                  <td className="px-4 py-2.5 text-right text-lime-300 font-semibold tabular-nums">{d.discount_pct}%</td>
-                                  <td className="px-4 py-2.5">
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                                      d.status === "applied"
-                                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
-                                        : "bg-amber-500/15 text-amber-400 border-amber-500/20"
-                                    }`}>
-                                      {d.status === "applied" ? <CheckCircle2 size={9} /> : <Clock size={9} />}
-                                      {d.status}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-2.5 text-white/30">{new Date(d.created_at).toLocaleDateString()}</td>
-                                  <td className="px-4 py-2.5 text-white/30">{d.applied_at ? new Date(d.applied_at).toLocaleDateString() : "—"}</td>
-                                  <td className="px-4 py-2.5">
-                                    {d.status === "pending" && (
-                                      <button
-                                        disabled={applyingDiscountId === d.id}
-                                        onClick={async () => {
-                                          setApplyingDiscountId(d.id);
-                                          try {
-                                            await adminFetch(`/admin/referrals/discount/${d.id}/apply`, password, { method: "POST" });
-                                            await loadReferrals();
-                                          } catch { /* ignore */ }
-                                          finally { setApplyingDiscountId(null); }
-                                        }}
-                                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/15 transition-all text-xs disabled:opacity-40"
-                                      >
-                                        {applyingDiscountId === d.id ? <Loader2 size={9} className="animate-spin" /> : <Check size={9} />}
-                                        Mark applied
-                                      </button>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="bg-blue-500/5 border border-blue-500/15 rounded-xl p-4 text-xs text-blue-300/70 leading-relaxed">
-                      <strong className="text-blue-300">How it works:</strong> Users share their unique <code className="font-mono bg-white/5 px-1 rounded">/ref/CODE</code> link.
-                      When a referred user makes their first subscription payment, the referrer automatically receives a 10% discount on their next renewal.
-                      The discount is applied automatically at checkout — no manual payouts needed. Status updates to <em>applied</em> once used.
-                    </div>
-                  </>
-                )}
-              </div>
+            {/* ── Influencers ───────────────────────────────────────────── */}
+            {activeTab === "influencers" && (
+              <AdminInfluencerTab password={password} />
             )}
 
             {/* ── SEO ───────────────────────────────────────────────────── */}
@@ -2715,26 +2536,6 @@ export default function Admin() {
                       </div>
                     </SettingsCard>
 
-                    {/* Referral Program */}
-                    <SettingsCard title="Referral Program">
-                      <p className="text-[10px] text-white/30 mb-3">Percentage-based incentives for the referral program.</p>
-                      <div className="grid grid-cols-3 gap-3">
-                        {([
-                          { key: "referral_referrer_pct",    label: "Referrer Discount %",   placeholder: "10" },
-                          { key: "referral_friend_pct",      label: "Friend (Referred) %",    placeholder: "10" },
-                          { key: "referral_commission_pct",  label: "Commission %",           placeholder: "10" },
-                        ] as { key: string; label: string; placeholder: string }[]).map(({ key, label, placeholder }) => (
-                          <div key={key}>
-                            <label className="block text-xs text-white/40 mb-1.5">{label}</label>
-                            <input type="number" min="0" max="100" placeholder={placeholder}
-                              value={(settings as unknown as Record<string, string>)[key] ?? ""}
-                              onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
-                              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </SettingsCard>
                   </div>
                 ) : <Empty text="Settings unavailable" />}
               </div>

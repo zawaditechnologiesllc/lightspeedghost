@@ -1,7 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import crypto from "node:crypto";
 import Stripe from "stripe";
-import { maybeRecordReferralCommission, maybeApplyReferralDiscount, maybeApplyFriendDiscount, markFirstPendingDiscountApplied } from "./referral";
 import { pool } from "@workspace/db";
 import {
   resolveGateway,
@@ -661,20 +660,6 @@ router.post("/payments/create", async (req: Request, res: Response) => {
         amountCents = amountCents * numSeats * 12;
       }
       label = SUBSCRIPTION_PLANS[plan].label;
-
-      // Referrer reward: pending discount earned from a converted referral
-      const disc = await maybeApplyReferralDiscount(userId, amountCents);
-      if (disc.discountApplied) {
-        amountCents = disc.discountedAmount;
-        logger.info({ userId, original: SUBSCRIPTION_PLANS[plan].amountCents, discounted: amountCents }, "[referral] referrer discount applied at checkout");
-      } else {
-        // Friend reward: referred users get a % off their first subscription
-        const friendDisc = await maybeApplyFriendDiscount(userId, amountCents);
-        if (friendDisc.discountApplied) {
-          amountCents = friendDisc.discountedAmount;
-          logger.info({ userId, original: SUBSCRIPTION_PLANS[plan].amountCents, discounted: amountCents }, "[referral] friend first-purchase discount applied");
-        }
-      }
     } else {
       if (!tool) {
         res.status(400).json({ error: "Tool required for PAYG" });
@@ -818,8 +803,8 @@ export async function activateSubscription(userId: string, checkoutPlan: string,
 
 // ── Payment completion (shared by ALL gateway webhooks) ───────────────────────
 // Atomically flips pending→completed, then runs every one-time side effect:
-// subscription activation, credit-package crediting, referral commission, and
-// pending-discount consumption. Idempotent — repeat webhook deliveries no-op.
+// subscription activation and credit-package crediting. Idempotent — repeat
+// webhook deliveries no-op.
 async function applyPaymentCompletion(sessionId: string, gateway: string): Promise<void> {
   const flip = await pool.query<{ user_id: string; type: string; plan: string | null; amount_cents: number }>(
     `UPDATE payments SET status='completed', completed_at=NOW()
@@ -840,8 +825,6 @@ async function applyPaymentCompletion(sessionId: string, gateway: string): Promi
       logger.info({ userId: p.user_id, packageId: p.plan, credits: pkg.credits, gateway }, "[payments] credits applied via webhook");
     }
   }
-  await maybeRecordReferralCommission(p.user_id, p.amount_cents);
-  await markFirstPendingDiscountApplied(p.user_id);
 }
 
 // ── Route: verify payment (polling after redirect) ────────────────────────────
@@ -909,7 +892,6 @@ router.get("/payments/verify", async (req: Request, res: Response) => {
 
       if (payment?.type === "subscription" && payment.plan) {
         await activateSubscription(userId, payment.plan, gateway, ref);
-        await markFirstPendingDiscountApplied(userId);
       }
 
       // Credits purchase — apply exactly once

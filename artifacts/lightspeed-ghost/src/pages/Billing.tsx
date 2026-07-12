@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiFetch";
-import { Receipt, CheckCircle2, Clock, Tag } from "lucide-react";
+import { Receipt, CheckCircle2, Clock } from "lucide-react";
 
 interface Transaction {
   id: string;
@@ -14,12 +14,6 @@ interface Transaction {
   status: string;
   created_at: string;
   completed_at: string | null;
-}
-
-interface Discount {
-  hasDiscount: boolean;
-  discountPct?: number;
-  createdAt?: string;
 }
 
 function formatAmount(cents: number, currency: string) {
@@ -62,25 +56,16 @@ function gatewayLabel(gateway: string) {
 
 export default function Billing() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [discount, setDiscount] = useState<Discount | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [txRes, discRes] = await Promise.all([
-          apiFetch("/payments/transactions"),
-          apiFetch("/referral/my-discount"),
-        ]);
+        const txRes = await apiFetch("/payments/transactions");
         if (!txRes.ok) throw new Error("Failed to load transactions");
         const txData = await txRes.json() as { transactions: Transaction[] };
         setTransactions(txData.transactions ?? []);
-
-        if (discRes.ok) {
-          const discData = await discRes.json() as Discount;
-          setDiscount(discData);
-        }
       } catch {
         setError("Could not load billing history. Please try again.");
       } finally {
@@ -101,22 +86,6 @@ export default function Billing() {
           <p className="text-sm text-muted-foreground">Your payment history</p>
         </div>
       </div>
-
-      {/* Referral discount banner */}
-      {discount?.hasDiscount && (
-        <div className="flex items-start gap-3 px-4 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-          <Tag size={16} className="text-emerald-400 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-emerald-400">
-              {discount.discountPct}% referral discount pending
-            </p>
-            <p className="text-xs text-emerald-400/70 mt-0.5">
-              Your next subscription renewal will automatically be reduced by {discount.discountPct}%.
-              Earned {discount.createdAt ? formatDate(discount.createdAt) : ""}.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Transaction list */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">

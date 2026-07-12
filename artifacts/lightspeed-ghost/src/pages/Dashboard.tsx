@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   PenLine, BookOpen, Files, ShieldCheck, FlaskConical,
   GraduationCap, TrendingUp, Clock, ArrowRight, Sparkles, Zap, Wand2,
-  Copy, Check, Gift, Wallet, X,
+  Wallet, X,
 } from "lucide-react";
 import { useGetDocumentStats } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/apiFetch";
@@ -68,17 +68,8 @@ const quickActions = [
   },
 ];
 
-interface ReferralInfo {
-  code: string;
-  referrals: number;
-  conversions: number;
-  pendingDiscounts: number;
-}
-
 export default function Dashboard() {
   const { data: stats, isLoading } = useGetDocumentStats();
-  const [referral, setReferral] = useState<ReferralInfo | null>(null);
-  const [copied, setCopied] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [paygCount, setPaygCount] = useState<number>(0);
   const [plan, setPlan] = useState<string>("none");
@@ -91,24 +82,6 @@ export default function Dashboard() {
     if (localStorage.getItem("lsg_onboarding_done") === null) {
       setShowOnboarding(true);
     }
-
-    // If the user signed up via a referral link, record it now that they have a session
-    const storedRef = localStorage.getItem("lsg_ref");
-    if (storedRef) {
-      apiFetch("/referral/record-signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: storedRef }),
-      }).then(() => {
-        localStorage.removeItem("lsg_ref");
-      }).catch(() => { /* non-fatal */ });
-    }
-
-    // Load the user's own referral code + stats
-    apiFetch("/referral/my-code")
-      .then((r) => r.json())
-      .then((d: ReferralInfo) => { if (!cancelled) setReferral(d); })
-      .catch(() => { /* non-fatal */ });
 
     // Load payment plan + PAYG count for upgrade nudge
     apiFetch("/payments/usage")
@@ -123,15 +96,6 @@ export default function Dashboard() {
 
     return () => { cancelled = true; };
   }, []);
-
-  function copyLink() {
-    if (!referral) return;
-    const link = `${window.location.origin}/ref/${referral.code}`;
-    navigator.clipboard.writeText(link).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5 sm:space-y-7">
@@ -175,21 +139,8 @@ export default function Dashboard() {
             {[
               { step: "1", title: "Write your first paper", desc: "Upload a rubric for best results", href: "/write", color: "text-blue-400 border-blue-500/20 bg-blue-500/5" },
               { step: "2", title: "Check for AI & plagiarism", desc: "See your similarity and AI score", href: "/plagiarism", color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" },
-              { step: "3", title: "Share & earn discounts", desc: "Refer a friend, get 20% off", href: "#refer", color: "text-purple-400 border-purple-500/20 bg-purple-500/5" },
-            ].map(({ step, title, desc, href, color }) => href.startsWith("#") ? (
-              // In-page target — scroll to the Refer & Earn section below
-              <div key={step} onClick={() => document.getElementById(href.slice(1))?.scrollIntoView({ behavior: "smooth", block: "center" })}>
-                <div className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-80 transition-opacity ${color}`}>
-                  <div className="w-6 h-6 rounded-full bg-current/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-[10px] font-bold">{step}</span>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">{title}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{desc}</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
+              { step: "3", title: "Solve a STEM problem", desc: "Step-by-step with LaTeX & graphs", href: "/stem", color: "text-violet-400 border-violet-500/20 bg-violet-500/5" },
+            ].map(({ step, title, desc, href, color }) => (
               <Link key={step} href={href}>
                 <div className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-80 transition-opacity ${color}`}>
                   <div className="w-6 h-6 rounded-full bg-current/10 flex items-center justify-center shrink-0 mt-0.5">
@@ -252,71 +203,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-
-      {/* Refer & Earn */}
-      <div id="refer" className="relative overflow-hidden bg-gradient-to-br from-emerald-500/8 via-emerald-500/4 to-transparent border border-emerald-500/20 rounded-2xl p-4 sm:p-5 scroll-mt-20">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-        <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Gift size={13} className="text-emerald-400" />
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Refer & Save</span>
-            </div>
-            <p className="text-sm text-muted-foreground mt-0.5 max-w-md">
-              Get <span className="text-foreground font-semibold">20% off your next subscription</span> for every student you refer who pays. They get 10% off too. Share your unique link below.
-            </p>
-            {/* Referral link */}
-            <div className="mt-3 flex items-center gap-2 max-w-sm flex-wrap">
-              <div className="w-full sm:w-auto sm:flex-1 min-w-0 bg-background/60 border border-border rounded-lg px-3 py-2 text-xs font-mono text-muted-foreground truncate">
-                {referral ? `${window.location.origin}/ref/${referral.code}` : "Loading…"}
-              </div>
-              <button
-                onClick={copyLink}
-                disabled={!referral}
-                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors disabled:opacity-40"
-              >
-                {copied ? <Check size={12} /> : <Copy size={12} />}
-                {copied ? "Copied!" : "Copy"}
-              </button>
-              <a
-                href={referral ? `https://wa.me/?text=${encodeURIComponent(`Use my LightSpeed Ghost link and get 10% off your first subscription: ${window.location.origin}/ref/${referral.code}`)}` : "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors disabled:opacity-40"
-              >
-                WhatsApp
-              </a>
-              <a
-                href={referral ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(`I use LightSpeed Ghost for AI-powered academic papers — get 10% off with my link: ${window.location.origin}/ref/${referral.code}`)}` : "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium transition-colors disabled:opacity-40"
-              >
-                Post
-              </a>
-            </div>
-          </div>
-          {/* Stats */}
-          {referral && (
-            <div className="flex sm:flex-col gap-4 sm:gap-2 shrink-0 sm:text-right">
-              <div>
-                <div className="text-xl font-bold text-foreground tabular-nums">{referral.referrals}</div>
-                <div className="text-xs text-muted-foreground">Signups</div>
-              </div>
-              <div>
-                <div className="text-xl font-bold text-foreground tabular-nums">{referral.conversions}</div>
-                <div className="text-xs text-muted-foreground">Conversions</div>
-              </div>
-              <div>
-                <div className="text-xl font-bold text-emerald-400 tabular-nums">
-                  {referral.pendingDiscounts > 0 ? referral.pendingDiscounts : "—"}
-                </div>
-                <div className="text-xs text-muted-foreground">Discount Pending</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Plan / credits nudge */}
       {(plan === "none" || plan === "starter") && (

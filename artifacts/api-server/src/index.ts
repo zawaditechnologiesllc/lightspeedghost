@@ -1,7 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureUsageTable } from "./lib/usageTracker";
-import { initReferralTables } from "./routes/referral";
 import { initInfluencerTables } from "./routes/influencer";
 import { initEbooksTable } from "./routes/ebooks";
 import { startScheduler } from "./seo-engine/scheduler";
@@ -177,15 +176,7 @@ async function runStartupTasks(): Promise<void> {
     logger.error({ err }, "[startup] Failed to ensure student_profiles table");
   }
 
-  // 7. Ensure referral tables exist (affiliate / ambassador program)
-  try {
-    await initReferralTables();
-    logger.info("[startup] referral tables ready");
-  } catch (err) {
-    logger.error({ err }, "[startup] Failed to ensure referral tables — affiliate program may fail");
-  }
-
-  // 7b. Ensure influencer program tables exist (view-based creator payouts)
+  // 7. Ensure influencer program tables exist (view-based creator payouts)
   try {
     await initInfluencerTables();
     logger.info("[startup] influencer tables ready");

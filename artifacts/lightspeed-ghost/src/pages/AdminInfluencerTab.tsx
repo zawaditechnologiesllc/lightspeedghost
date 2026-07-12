@@ -246,7 +246,7 @@ export function AdminInfluencerTab({ password }: { password: string }) {
             <ul className="text-[10px] text-white/40 space-y-1">
               <li>
                 • Each creator receives a unique code (e.g., <code className="bg-black/40 px-1 rounded">4A2F</code>) which
-                tracks their referral link
+                tracks their shared link
               </li>
               <li>• Views accumulate daily: ${influencerData.summary.ratePer1kCents / 100} per 1,000 views</li>
               <li>
