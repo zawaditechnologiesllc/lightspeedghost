@@ -14,7 +14,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 // Tabs/areas a sector admin can be granted. Super admin always has all of them.
 const VALID_SECTORS = [
   "overview", "users", "tools", "documents", "gateways", "payments", "credits",
-  "finance", "analytics", "logs", "announcements", "referrals", "messages",
+  "finance", "analytics", "logs", "announcements", "influencers", "messages",
   "settings", "seo",
 ];
 
@@ -141,9 +141,9 @@ async function initAdminTables() {
       ('campus_study',            '75'),
       ('campus_plagiarism',       '10'),
       ('campus_outline',          '10'),
-      ('referral_referrer_pct',          '10'),
-      ('referral_friend_pct',            '10'),
-      ('referral_commission_pct',        '10'),
+      ('influencer_rate_per_1k_cents',   '100'),
+      ('influencer_min_payout_cents',    '2000'),
+      ('influencer_payout_days',         '30'),
       ('export_expiry_days',             '30'),
       ('tool_write_enabled',      'true'),
       ('tool_outline_enabled',    'true'),

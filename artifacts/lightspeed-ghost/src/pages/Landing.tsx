@@ -433,13 +433,12 @@ export default function Landing() {
 
   // Influencer link tracking — when someone arrives via ?ref=CODE, register one
   // view for that creator (self-throttled to once per code per day via
-  // localStorage) and remember the code so a later signup can be attributed.
+  // localStorage).
   useEffect(() => {
     try {
       const code = new URLSearchParams(window.location.search).get("ref");
       if (!code) return;
       const clean = code.toUpperCase().trim().slice(0, 32);
-      localStorage.setItem("lsg_ref", clean);
       const key = `lsg_ref_view_${clean}_${new Date().toISOString().slice(0, 10)}`;
       if (localStorage.getItem(key)) return;
       localStorage.setItem(key, "1");
