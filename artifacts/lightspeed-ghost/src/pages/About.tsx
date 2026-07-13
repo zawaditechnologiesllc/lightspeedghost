@@ -32,12 +32,82 @@ const JOURNEY = [
   },
 ];
 
+// To use real photos: drop an image at public/team/<slug>.jpg — it replaces
+// the illustrated portrait automatically (no code change needed).
 const LEADERS = [
-  { initials: "DO", name: "Daniel Otieno", role: "Co-founder & CEO", note: "Started the first draft the night a chatbot invented his bibliography.", from: "#6b38d4", to: "#0090a9" },
-  { initials: "GL", name: "Grace Liu", role: "Co-founder & CTO", note: "Built the 35-database research engine that makes every citation real.", from: "#0090a9", to: "#6b38d4" },
-  { initials: "SN", name: "Samuel Njoroge", role: "Head of AI Research", note: "Owns the reasoning loop and the critic layer that checks the math.", from: "#5516be", to: "#a78bfa" },
-  { initials: "EV", name: "Elena Vasquez", role: "Head of Student Success", note: "Makes sure the tool earns its grade with real students, every semester.", from: "#a78bfa", to: "#0090a9" },
+  {
+    slug: "michael-harrington", name: "Michael Harrington", role: "Co-founder & CEO",
+    note: "Started the first draft the night a chatbot invented his bibliography.",
+    from: "#6b38d4", to: "#0090a9", skin: "#f1c9a5", hair: "#3d2e26", shirt: "#131b2e", style: "short" as const,
+  },
+  {
+    slug: "tyler-brooks", name: "Tyler Brooks", role: "Co-founder & CTO",
+    note: "Built the 35-database research engine that makes every citation real.",
+    from: "#0090a9", to: "#6b38d4", skin: "#e8b48c", hair: "#1f1a17", shirt: "#3b3f8f", style: "glasses" as const,
+  },
+  {
+    slug: "james-caldwell", name: "James Caldwell", role: "Head of AI Research",
+    note: "Owns the reasoning loop and the critic layer that checks the math.",
+    from: "#5516be", to: "#a78bfa", skin: "#8d5a3b", hair: "#14100d", shirt: "#0f4c5c", style: "short" as const,
+  },
+  {
+    slug: "emily-sanders", name: "Emily Sanders", role: "Head of Student Success",
+    note: "Makes sure the tool earns its grade with real students, every semester.",
+    from: "#a78bfa", to: "#0090a9", skin: "#f5d3b3", hair: "#6b4423", shirt: "#7a1f3d", style: "long" as const,
+  },
 ];
+
+// Flat-illustration portrait (brand-styled) with a real-photo drop-in path.
+function Portrait({ slug, name, from, to, skin, hair, shirt, style }: (typeof LEADERS)[number]) {
+  const [photoOk, setPhotoOk] = useState(true);
+  const gid = `pg-${slug}`;
+  return (
+    <div className="w-24 h-24 rounded-full mx-auto mb-4 overflow-hidden shadow-md ring-4 ring-white">
+      {photoOk ? (
+        <img
+          src={`/team/${slug}.jpg`}
+          alt={name}
+          className="w-full h-full object-cover"
+          loading="lazy"
+          onError={() => setPhotoOk(false)}
+        />
+      ) : (
+        <svg viewBox="0 0 96 96" className="w-full h-full block" role="img" aria-label={`Illustrated portrait of ${name}`}>
+          <defs>
+            <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={from} />
+              <stop offset="100%" stopColor={to} />
+            </linearGradient>
+          </defs>
+          <rect width="96" height="96" fill={`url(#${gid})`} opacity="0.9" />
+          {/* shoulders / blazer */}
+          <path d="M14 96 C14 74 32 65 48 65 C64 65 82 74 82 96 Z" fill={shirt} />
+          <path d="M42 66 L48 78 L54 66 Z" fill="#f7f9fb" />
+          {/* neck */}
+          <rect x="41" y="50" width="14" height="16" rx="6" fill={skin} />
+          {/* head */}
+          <ellipse cx="48" cy="37" rx="16.5" ry="18.5" fill={skin} />
+          {/* hair variants */}
+          {style === "long" ? (
+            <>
+              <path d="M28 44 C26 18 40 12 48 12 C56 12 70 18 68 44 C70 56 66 62 62 64 L62 40 C62 30 56 24 48 24 C40 24 34 30 34 40 L34 64 C30 62 26 56 28 44 Z" fill={hair} />
+              <path d="M34 30 C36 24 42 21 48 21 C54 21 60 24 62 30 C58 26 54 25 48 25 C42 25 38 26 34 30 Z" fill={hair} />
+            </>
+          ) : (
+            <path d="M31 36 C30 20 39 13 48 13 C57 13 66 20 65 36 C64 29 59 24 48 24 C37 24 32 29 31 36 Z" fill={hair} />
+          )}
+          {style === "glasses" && (
+            <g stroke="#131b2e" strokeWidth="1.6" fill="none" opacity="0.85">
+              <circle cx="41" cy="38" r="5" />
+              <circle cx="55" cy="38" r="5" />
+              <line x1="46" y1="38" x2="50" y2="38" />
+            </g>
+          )}
+        </svg>
+      )}
+    </div>
+  );
+}
 
 const STATS = [
   { icon: Users, value: "6.5M+", label: "Total users worldwide" },
@@ -236,9 +306,7 @@ export default function About() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {LEADERS.map((l) => (
                 <div key={l.name} className="rounded-2xl border border-[#e0e3e5] bg-white p-5 shadow-sm text-center">
-                  <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-white font-bold text-lg shadow-md" style={{ background: `linear-gradient(135deg, ${l.from}, ${l.to})` }}>
-                    {l.initials}
-                  </div>
+                  <Portrait {...l} />
                   <h3 className="font-bold text-[#191c1e]">{l.name}</h3>
                   <p className="text-[11px] font-semibold text-[#6b38d4] uppercase tracking-wide mb-2">{l.role}</p>
                   <p className="text-xs text-[#45464d] leading-relaxed">{l.note}</p>
