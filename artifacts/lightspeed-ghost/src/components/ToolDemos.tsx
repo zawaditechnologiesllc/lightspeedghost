@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import {
   PenLine, ListTree, FileEdit, Wand2, ShieldCheck, FlaskConical,
   GraduationCap, BookOpen, ArrowRight, Check, Search, Sparkles, CheckCircle,
+  Camera, Upload, Calculator, Atom, Cpu, Zap,
 } from "lucide-react";
 
 // ── "Watch them work" — the single per-tool section of the landing page ───────
@@ -106,6 +107,33 @@ function Chips({ items }: { items: string[] }) {
   );
 }
 
+// A row of labeled mini-selects, exactly like the real tools' option rows.
+function SelectRow({ fields }: { fields: Array<[string, string]> }) {
+  return (
+    <div className="flex flex-wrap gap-2 mt-2.5">
+      {fields.map(([label, value]) => (
+        <div key={label} className="min-w-0">
+          <p className="text-[8.5px] font-semibold text-[#76777d] uppercase tracking-wide mb-0.5">{label}</p>
+          <div className="flex items-center gap-1 px-2 py-1 rounded-md border border-[#c6c6cd] bg-white text-[10px] font-medium text-[#191c1e]">
+            {value} <span className="text-[#76777d] text-[8px]">▾</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UploadRow({ label, file }: { label: string; file: string }) {
+  return (
+    <div className="mt-2.5">
+      <p className="text-[8.5px] font-semibold text-[#76777d] uppercase tracking-wide mb-0.5">{label}</p>
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-dashed border-[#c6c6cd] bg-white text-[10px] text-[#45464d] w-fit">
+        <Upload size={10} className="text-[#6b38d4]" /> {file} <Check size={10} className="text-emerald-600" strokeWidth={3} />
+      </div>
+    </div>
+  );
+}
+
 function FakeButton({ children }: { children: React.ReactNode }) {
   return (
     <div className="td-press mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6b38d4] text-white text-[11px] font-bold shadow-md shadow-[#6b38d4]/25">
@@ -153,11 +181,12 @@ function Proc({ title, rows, counter }: {
 
 function WriteDemo() {
   return (
-    <Window url="write" height={300}>
+    <Window url="write" height={336}>
       <div className="td-in">
-        <Label>Paper topic</Label>
+        <Label>Topic *</Label>
         <TypeBox text="Impact of social media on adolescent mental health" />
-        <Chips items={["Psychology", "2,500 words", "APA 7", "Rubric.pdf ✓ criteria extracted"]} />
+        <SelectRow fields={[["Paper Type", "Research Paper"], ["Word Count", "2,500"], ["Citation Style", "APA 7th"], ["Subject", "Psychology"]]} />
+        <UploadRow label="Marking Rubric (optional)" file="PSY204_rubric.pdf" />
         <FakeButton><PenLine size={11} /> Generate Paper</FakeButton>
       </div>
       <div className="td-proc">
@@ -196,12 +225,13 @@ function OutlineDemo() {
     ["IV.", "Findings · limitations · ethical considerations · conclusion", 4],
   ];
   return (
-    <Window url="outline" height={300}>
+    <Window url="outline" height={336}>
       <div className="td-in">
-        <Label>Outline topic</Label>
+        <Label>Topic *</Label>
         <TypeBox text="Neural Networks in Medical Diagnosis" />
-        <Chips items={["Assignment_brief.pdf ✓", "Research paper", "Thesis included"]} />
-        <FakeButton><ListTree size={11} /> Build Outline</FakeButton>
+        <SelectRow fields={[["Paper Type", "Research Paper"], ["Sections", "5"], ["Citation Style", "APA 7th"]]} />
+        <UploadRow label="Assignment brief (optional)" file="Assignment_brief.pdf" />
+        <FakeButton><ListTree size={11} /> Generate Outline</FakeButton>
       </div>
       <div className="td-proc">
         <Proc
@@ -231,13 +261,14 @@ function OutlineDemo() {
 
 function RevisionDemo() {
   return (
-    <Window url="revision" height={300}>
+    <Window url="revision" height={336}>
       <div className="td-in">
-        <Label>Your draft</Label>
+        <Label>Paste your paper text here…</Label>
         <div className="rounded-lg border border-[#c6c6cd] bg-[#f7f9fb] px-3 py-2 text-[9.5px] text-[#76777d] leading-relaxed">
           Social media is very bad for teenagers mental health. Many studies show that it causes problems. This paper will discuss the problems it causes and why it is bad…
         </div>
-        <Chips items={["Current grade: 62/100", "Target: A", "Rubric.pdf ✓"]} />
+        <SelectRow fields={[["Current Grade", "62/100"], ["Target Grade", "A"]]} />
+        <UploadRow label="Marking rubric (recommended)" file="Rubric.pdf" />
         <FakeButton><FileEdit size={11} /> Scan Paper</FakeButton>
       </div>
       <div className="td-proc">
@@ -275,16 +306,17 @@ function RevisionDemo() {
 
 function HumanizerDemo() {
   return (
-    <Window url="humanizer" height={300}>
+    <Window url="humanizer" height={336}>
       <div className="td-in">
-        <Label>Paste AI-generated text</Label>
+        <Label>Paste your AI-generated essay, paper, or any text you want to humanize…</Label>
         <div className="rounded-lg border border-[#c6c6cd] bg-[#f7f9fb] px-3 py-2 text-[9.5px] text-[#76777d] leading-relaxed">
           Furthermore, it is imperative to acknowledge that numerous multifaceted factors contribute significantly to the aforementioned phenomenon. Moreover, it is essential to note that…
         </div>
-        <div className="mt-2.5 inline-flex items-center gap-1.5 text-[10px] font-bold text-[#dc2626] bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
-          AI detection score: 87% — would get flagged
+        <div className="mt-2">
+          <p className="text-[8.5px] font-semibold text-[#76777d] uppercase tracking-wide mb-0.5">Instructions (optional)</p>
+          <div className="rounded-md border border-[#c6c6cd] bg-white px-2.5 py-1.5 text-[9.5px] text-[#76777d] italic">Keep the introduction formal. Preserve all citations.</div>
         </div>
-        <div><FakeButton><Wand2 size={11} /> Humanize</FakeButton></div>
+        <div><FakeButton><Wand2 size={11} /> Detect AI &amp; Humanize</FakeButton></div>
       </div>
       <div className="td-proc">
         <Proc
@@ -316,14 +348,14 @@ function HumanizerDemo() {
 
 function PlagiarismDemo() {
   return (
-    <Window url="plagiarism" height={300}>
+    <Window url="plagiarism" height={336}>
       <div className="td-in">
-        <Label>Check your work before you submit</Label>
+        <Label>Paste your text here to check for AI content and plagiarism…</Label>
         <div className="rounded-lg border border-[#c6c6cd] bg-[#f7f9fb] px-3 py-2 text-[9.5px] text-[#76777d] leading-relaxed">
           The bystander effect describes the phenomenon in which individuals are less likely to offer help when other people are present. Darley and Latané first demonstrated this in laboratory conditions…
         </div>
-        <Chips items={["Essay · 1,842 words", "Code checker available"]} />
-        <FakeButton><Search size={11} /> Scan for AI & Plagiarism</FakeButton>
+        <Chips items={["Essay · 1,842 words", "Text check", "Code check (A vs B)"]} />
+        <FakeButton><Search size={11} /> Check for AI &amp; Plagiarism</FakeButton>
       </div>
       <div className="td-proc">
         <Proc
@@ -363,15 +395,26 @@ function PlagiarismDemo() {
 
 function StemDemo() {
   return (
-    <Window url="stem" height={300}>
+    <Window url="stem" height={336}>
       <div className="td-in">
-        <Label>Your problem — type it or photograph it</Label>
-        <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold text-[#45464d] bg-white border border-[#e0e3e5] rounded-lg px-2.5 py-1.5 w-fit">
-          📷 IMG_2041.jpg uploaded · OCR extracted the problem ✓
+        <div className="flex flex-wrap gap-1 mb-2">
+          {[
+            { label: "Math", icon: <Calculator size={9} />, on: true },
+            { label: "Physics", icon: <Atom size={9} />, on: false },
+            { label: "Chemistry", icon: <FlaskConical size={9} />, on: false },
+            { label: "CS", icon: <Cpu size={9} />, on: false },
+          ].map((s) => (
+            <span key={s.label} className={`inline-flex items-center gap-1 text-[9.5px] font-semibold rounded-full px-2 py-1 border ${s.on ? "bg-[#6b38d4] text-white border-[#6b38d4]" : "bg-white text-[#45464d] border-[#e0e3e5]"}`}>
+              {s.icon} {s.label}
+            </span>
+          ))}
+          <span className="text-[9.5px] font-semibold text-[#76777d] px-1.5 py-1">+6 more</span>
         </div>
         <TypeBox mono text="Find the definite integral of x·sin(x) from 0 to π" />
-        <Chips items={["Subject detected: Calculus", "Step-by-step", "Graph included"]} />
-        <FakeButton><FlaskConical size={11} /> Solve</FakeButton>
+        <div className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-[#45464d] bg-white border border-[#e0e3e5] rounded-lg px-2.5 py-1.5 w-fit">
+          <Camera size={11} className="text-[#6b38d4]" /> IMG_2041.jpg · OCR extracted the problem <Check size={10} className="text-emerald-600" strokeWidth={3} />
+        </div>
+        <FakeButton><Zap size={11} /> Solve</FakeButton>
       </div>
       <div className="td-proc">
         <Proc
@@ -405,12 +448,17 @@ function StemDemo() {
 
 function StudyDemo() {
   return (
-    <Window url="study" height={300}>
+    <Window url="study" height={336}>
       <div className="td-in">
-        <Label>Ask your tutor anything</Label>
+        <div className="flex flex-wrap gap-1 mb-2">
+          {["Tutor", "Explain", "Quiz", "Summarize"].map((mo, i) => (
+            <span key={mo} className={`text-[9.5px] font-semibold rounded-full px-2.5 py-1 border ${i === 0 ? "bg-[#6b38d4] text-white border-[#6b38d4]" : "bg-white text-[#45464d] border-[#e0e3e5]"}`}>{mo}</span>
+          ))}
+        </div>
+        <Label>Enter a topic, question, or paste your notes here…</Label>
         <TypeBox text="Explain photosynthesis like I'm cramming for finals" />
-        <Chips items={["Bio_201_notes.pdf ✓", "Mode: Tutor", "Remembers your progress"]} />
-        <FakeButton><GraduationCap size={11} /> Ask Tutor</FakeButton>
+        <UploadRow label="Your materials (optional)" file="Bio_201_notes.pdf" />
+        <FakeButton><GraduationCap size={11} /> Start Session</FakeButton>
       </div>
       <div className="td-proc">
         <Proc
@@ -442,12 +490,16 @@ function StudyDemo() {
 
 function EbookDemo() {
   return (
-    <Window url="ebooks" height={300}>
+    <Window url="ebooks" height={336}>
       <div className="td-in">
-        <Label>Ebook title</Label>
+        <Label>Ebook title *</Label>
         <TypeBox text="How to Scale a Dropshipping Business from $0 to $1M" />
-        <Chips items={["Audience: first-time entrepreneurs", "Tone: authoritative", "Standard ~15k words"]} />
-        <FakeButton><BookOpen size={11} /> Generate Ebook</FakeButton>
+        <div className="mt-2">
+          <p className="text-[8.5px] font-semibold text-[#76777d] uppercase tracking-wide mb-0.5">Target audience *</p>
+          <div className="rounded-md border border-[#c6c6cd] bg-white px-2.5 py-1.5 text-[9.5px] text-[#45464d]">First-time entrepreneurs aged 25–40 seeking passive income</div>
+        </div>
+        <SelectRow fields={[["Language", "English"], ["Tone", "Authoritative"], ["Length", "Standard ~15k"]]} />
+        <FakeButton><Sparkles size={11} /> Generate with LightSpeed AI</FakeButton>
       </div>
       <div className="td-proc">
         <Proc

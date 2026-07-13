@@ -26,7 +26,7 @@ const ARTICLES: ArticleCard[] = [
   {
     slug: "how-to-write-a-thesis-statement",
     tag: "Writing",
-    tagColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    tagColor: "text-[#6b38d4] bg-[#6b38d4]/10 border-[#6b38d4]/20",
     title: "How to write a thesis statement that professors can't ignore",
     excerpt: "A vague thesis guarantees a mediocre grade. Here's the formula for a statement that is specific, arguable, and positions your whole paper.",
     readTime: "6 min read",
@@ -35,7 +35,7 @@ const ARTICLES: ArticleCard[] = [
   {
     slug: "literature-review-guide",
     tag: "Writing",
-    tagColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    tagColor: "text-[#6b38d4] bg-[#6b38d4]/10 border-[#6b38d4]/20",
     title: "How to write a literature review that actually holds up",
     excerpt: "A literature review is not a summary dump. Here's how to structure one that makes reviewers take you seriously.",
     readTime: "8 min read",
@@ -80,7 +80,7 @@ const ARTICLES: ArticleCard[] = [
   {
     slug: "citations-that-are-real",
     tag: "Writing",
-    tagColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    tagColor: "text-[#6b38d4] bg-[#6b38d4]/10 border-[#6b38d4]/20",
     title: "Why most AI writers give you fake citations (and what we do instead)",
     excerpt: "Hallucinated references will get a paper failed instantly. We pull citations from Semantic Scholar in real time. Here's how.",
     readTime: "6 min read",
@@ -127,20 +127,20 @@ export default function Blog() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#04080f] text-white antialiased">
-      <header className="border-b border-white/5 px-6 h-16 flex items-center justify-between max-w-7xl mx-auto">
-        <Link href="/"><Logo size={28} textSize="text-base" className="cursor-pointer" /></Link>
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased">
+      <header className="border-b border-[#eceef0] px-6 h-16 flex items-center justify-between max-w-7xl mx-auto">
+        <Link href="/"><Logo size={28} textSize="text-base" variant="light" className="cursor-pointer" /></Link>
         <div className="flex items-center gap-4">
-          <Link href="/auth"><span className="text-sm text-white/50 hover:text-white transition-colors cursor-pointer">Sign In</span></Link>
-          <Link href="/auth"><span className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors cursor-pointer">Get Started</span></Link>
+          <Link href="/auth"><span className="text-sm text-[#76777d] hover:text-[#191c1e] transition-colors cursor-pointer">Sign In</span></Link>
+          <Link href="/auth"><span className="px-4 py-2 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-medium rounded-lg transition-colors cursor-pointer">Get Started</span></Link>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-14 sm:py-20">
         <div className="mb-12">
-          <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-4">Blog</p>
+          <p className="text-[#6b38d4] text-xs font-semibold uppercase tracking-widest mb-4">Blog</p>
           <h1 className="text-4xl sm:text-5xl font-bold mb-4 leading-tight">Guides for students who want to do better work.</h1>
-          <p className="text-white/50 text-lg max-w-xl">
+          <p className="text-[#76777d] text-lg max-w-xl">
             Practical articles on academic writing, AI tools, study techniques, and making the most of the platform.
           </p>
         </div>
@@ -148,15 +148,15 @@ export default function Blog() {
         <div className="grid sm:grid-cols-2 gap-5">
           {ARTICLES.map((a) => (
             <a key={a.slug} href={`/blog/${a.slug}`}
-              className="group flex flex-col p-6 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/16 hover:bg-white/[0.05] transition-all cursor-pointer">
+              className="group flex flex-col p-6 rounded-2xl bg-white border border-[#e0e3e5] hover:border-[#c6c6cd] hover:bg-[#f2f4f6] transition-all cursor-pointer">
               <div className="flex items-center gap-2 mb-4">
                 <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${a.tagColor}`}>
                   <Tag size={9} /> {a.tag}
                 </span>
               </div>
-              <h2 className="text-base font-bold text-white group-hover:text-blue-300 transition-colors mb-2 leading-snug">{a.title}</h2>
-              <p className="text-white/45 text-sm leading-relaxed flex-1">{a.excerpt}</p>
-              <div className="flex items-center gap-3 mt-5 text-white/25 text-xs">
+              <h2 className="text-base font-bold text-[#191c1e] group-hover:text-[#5b2fc0] transition-colors mb-2 leading-snug">{a.title}</h2>
+              <p className="text-[#76777d] text-sm leading-relaxed flex-1">{a.excerpt}</p>
+              <div className="flex items-center gap-3 mt-5 text-[#9a9aa1] text-xs">
                 <span>{a.date}</span>
                 <span>·</span>
                 <span className="flex items-center gap-1"><Clock size={10} /> {a.readTime}</span>
@@ -165,18 +165,18 @@ export default function Blog() {
           ))}
         </div>
 
-        <div className="mt-14 py-12 border-t border-white/5 text-center">
-          <p className="text-white/40 text-sm mb-6">More guides on the way — covering citation management, revision techniques, STEM problem-setting, and more.</p>
+        <div className="mt-14 py-12 border-t border-[#eceef0] text-center">
+          <p className="text-[#76777d] text-sm mb-6">More guides on the way — covering citation management, revision techniques, STEM problem-setting, and more.</p>
           <Link href="/auth">
-            <span className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition-all cursor-pointer text-sm">
+            <span className="inline-flex items-center gap-2 px-6 py-3 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-medium rounded-xl transition-all cursor-pointer text-sm">
               Try the platform <ArrowRight size={14} />
             </span>
           </Link>
         </div>
       </main>
 
-      <footer className="border-t border-white/5 py-8 px-6 text-center">
-        <p className="text-white/25 text-xs">© {new Date().getFullYear()} Light Speed Ghost. All rights reserved.</p>
+      <footer className="border-t border-[#eceef0] py-8 px-6 text-center">
+        <p className="text-[#9a9aa1] text-xs">© {new Date().getFullYear()} Light Speed Ghost. All rights reserved.</p>
       </footer>
     </div>
   );
