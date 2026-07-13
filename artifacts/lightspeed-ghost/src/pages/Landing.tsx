@@ -16,6 +16,7 @@ import {
   Database, Layers, Clock, AlertTriangle,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { ToolDemosSection } from "@/components/ToolDemos";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 function useScrolled(threshold = 20) {
@@ -1196,6 +1197,9 @@ export default function Landing() {
           </StaggerGrid>
         </div>
       </section>
+
+      {/* ─── PER-TOOL LIVE DEMOS — input → processing → result ─── */}
+      <ToolDemosSection />
 
       {/* ─── AI CAPABILITIES ─── */}
       <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-y border-[#e0e3e5] bg-white">
