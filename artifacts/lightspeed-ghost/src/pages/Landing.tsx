@@ -1152,133 +1152,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ─── TOOLS ─── */}
-      <section
-        id="tools"
-        className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 relative"
-        style={{
-          background:
-            "radial-gradient(at 0% 0%, rgba(107, 56, 212, 0.05) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(0, 144, 169, 0.05) 0px, transparent 50%)",
-        }}
-      >
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
-            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">One subscription. Seven tools.</p>
-            <h2 className="text-3xl sm:text-4xl font-bold leading-tight mb-4 sm:mb-5 text-[#131b2e]">
-              Everything you need, built on real research.
-            </h2>
-            <p className="text-[#45464d] text-base sm:text-lg">
-              Paper Writer, Outline Builder, Paper Revision, AI &amp; Plagiarism Checker, Humanizer, STEM Solver, and Study Assistant. No stacking costs, no switching between apps — every subject, every academic level, high school to PhD, in one place.
-            </p>
-          </div>
-
-          <StaggerGrid id="features" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {tools.map(({ icon: Icon, name, desc, badge, color, href }) => (
-              <m.div key={name}>
-                <Link href={href}>
-                  <div className="group relative p-6 sm:p-8 rounded-xl bg-white border border-[#e0e3e5] shadow-sm hover:shadow-md transition-all cursor-pointer h-full hover:-translate-y-1">
-                    {badge && (
-                      <span className={`absolute top-4 right-4 sm:top-5 sm:right-5 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${color}`}>
-                        {badge}
-                      </span>
-                    )}
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-5 bg-[#6b38d4]/10 text-[#6b38d4] group-hover:bg-[#6b38d4] group-hover:text-white transition-colors">
-                      <Icon size={20} />
-                    </div>
-                    <h3 className="font-semibold text-lg text-[#191c1e] mb-2">{name}</h3>
-                    <p className="text-sm text-[#45464d] leading-relaxed">{desc}</p>
-                    <div className="mt-4 flex items-center gap-1 text-[11px] text-[#6b38d4] font-semibold">
-                      Open tool <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </div>
-                </Link>
-              </m.div>
-            ))}
-          </StaggerGrid>
-        </div>
-      </section>
-
-      {/* ─── PER-TOOL LIVE DEMOS — input → processing → result ─── */}
+      {/* ─── WATCH THEM WORK — every tool: full info + live demo ─── */}
       <ToolDemosSection />
-
-      {/* ─── AI CAPABILITIES ─── */}
-      <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-y border-[#e0e3e5] bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-10 sm:mb-16">
-            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-[0.2em] mb-3 sm:mb-4">Engineering excellence</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-[#131b2e]">LightSpeed AI Capabilities</h2>
-            <p className="text-[#45464d] text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-              Every tool on this platform is powered by a set of purpose-built AI capabilities — not a generic chatbot wrapper. Here's what makes the difference.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            {[
-              {
-                icon: "🧠",
-                title: "Persistent Student Memory",
-                desc: "Every study session you have is silently indexed into your personal AI memory. Next time you ask a question, the AI already knows what topics you've covered, where you've struggled, and how you like to learn — across every session, forever.",
-                tag: "Study Assistant",
-              },
-              {
-                icon: "🔍",
-                title: "Semantic Recall",
-                desc: "LightSpeed AI doesn't search your history by keyword — it understands meaning. Ask about 'Newton's laws' and it surfaces relevant past context even if you originally asked about 'force and acceleration.' Recall that actually makes sense.",
-                tag: "Study Assistant",
-              },
-              {
-                icon: "📚",
-                title: "35+ Live Academic Databases",
-                desc: "Every paper queries 35+ live databases in parallel — OpenAlex (250M+ papers), CrossRef (145M+ DOIs), PubMed, Semantic Scholar, JSTOR, Scopus, SSRN, NBER, arXiv, CORE, DOAJ, Europe PMC, MEDLINE, Cochrane Library, ClinicalTrials.gov, bioRxiv, medRxiv, BASE, PsycINFO, ProQuest, ERIC, Zenodo, PhilPapers, EconPapers, WHO IRIS, and more. Real abstracts as grounding context — not guesswork.",
-                tag: "Paper Writer · Study Assistant",
-              },
-              {
-                icon: "⚗️",
-                title: "Multi-Step STEM Reasoning",
-                desc: "STEM problems run through a structured reasoning loop: the AI thinks, acts, observes, and reflects before giving you an answer. A second critic layer then checks for math and logic errors — so you don't get confidently wrong results.",
-                tag: "STEM Solver",
-              },
-              {
-                icon: "🔬",
-                title: "Chemistry & Molecule Intelligence",
-                desc: "Chemistry problems unlock molecule lookup — SMILES notation, CAS registry numbers, molecular weight, LogP, H-bond data, and GHS safety classifications. Backed by PubChem's database of 100M+ compounds.",
-                tag: "STEM Solver · Chemistry",
-              },
-              {
-                icon: "🛡️",
-                title: "Structural Code Plagiarism Detection",
-                desc: "Code similarity detection uses a fingerprinting algorithm — the same approach used by Stanford's MOSS system. It catches plagiarism even when variable names are changed, code is reformatted, or logic is reshuffled.",
-                tag: "AI & Plagiarism Checker",
-              },
-              {
-                icon: "✍️",
-                title: "Natural Academic Voice",
-                desc: "AI-assisted drafts often read stiff and robotic. The Humanizer rewrites them into natural, authentic academic prose that sounds like you on a good day — varied sentence rhythm, genuine voice, your own words — so your writing reads as authentically human, not machine-generated.",
-                tag: "LightSpeed Humanizer",
-              },
-              {
-                icon: "🎯",
-                title: "Adaptive Tutoring Modes",
-                desc: "The Study Assistant has four distinct modes: Tutor (guided, Socratic), Explain (fast, example-driven), Quiz (test-and-reveal), and Summarize (structured key points). Switch mid-session — the AI tracks context across every mode change.",
-                tag: "Study Assistant",
-              },
-              {
-                icon: "📊",
-                title: "Dataset Analysis Integration",
-                desc: "All three main tools — Paper Writer, STEM Solver, and Study Assistant — accept CSV and spreadsheet uploads. Your data is parsed, analysed, and injected into the AI context so responses are grounded in your actual numbers, not generics.",
-                tag: "Paper Writer · STEM Solver · Study Assistant",
-              },
-            ].map(({ icon, title, desc, tag }) => (
-              <div key={title} className="p-5 sm:p-6 rounded-xl border border-[#e0e3e5] bg-[#f7f9fb] hover:bg-white hover:shadow-md transition-all">
-                <div className="text-2xl mb-3">{icon}</div>
-                <div className="text-[10px] font-semibold text-[#6b38d4] uppercase tracking-widest mb-2">{tag}</div>
-                <h3 className="font-semibold text-[#191c1e] text-sm mb-2">{title}</h3>
-                <p className="text-xs text-[#45464d] leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ─── COMPETITOR COMPARISON ─── */}
       <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#f7f9fb]">
@@ -1334,80 +1209,40 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ─── EBOOKS ─── */}
-      <section id="ebooks" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#e9ddff]">
+      {/* ─── HOW IT WORKS + PRICING + PAY-AS-YOU-GO (combined) ─── */}
+      <section id="pricing" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 relative bg-white border-t border-[#e0e3e5]">
         <div className="max-w-6xl mx-auto">
-          <div className="bg-white rounded-2xl overflow-hidden shadow-xl border border-[#e0e3e5] p-6 sm:p-10 lg:p-12">
-            <div className="grid lg:grid-cols-2 gap-10 sm:gap-16 items-center">
-              {/* Left: copy */}
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#6b38d4] text-white text-xs font-bold uppercase tracking-wide mb-5">
-                  <BookOpen size={11} />
-                  2.5M+ publishers · $29.99 / month · Separate from academic plans
-                </div>
-                <h2 className="text-3xl sm:text-4xl md:text-[44px] font-bold leading-tight mb-5 text-[#131b2e]" style={{ letterSpacing: "-0.02em" }}>
-                  Publish ebooks on{" "}
-                  <span className="text-[#6b38d4]">Amazon &amp; every platform.</span>
-                </h2>
-                <p className="text-[#45464d] text-base sm:text-lg leading-relaxed mb-6">
-                  Write professional, publish-ready ebooks grounded in verified academic and industry research. Expert quotes from Drucker, Buffett, Sinek, and more — chosen to match your topic. Every ebook arrives with a complete Amazon KDP listing guide.
-                </p>
-                <ul className="space-y-3 mb-8">
-                  {[
-                    { icon: "📦", text: "Amazon KDP, Apple Books, Google Play, Kobo, B&N Press" },
-                    { icon: "📚", text: "Sources from Harvard Business Review, MIT Sloan, McKinsey, Semantic Scholar + 10 more" },
-                    { icon: "💬", text: "Industry expert quotes matched to your topic" },
-                    { icon: "🌍", text: "15 languages · sector/industry targeting · custom tone" },
-                    { icon: "📄", text: "15 ebooks per month · separate from academic plans" },
-                  ].map(item => (
-                    <li key={item.text} className="flex items-start gap-3">
-                      <span className="text-lg leading-none shrink-0 mt-0.5">{item.icon}</span>
-                      <span className="text-sm text-[#45464d] leading-relaxed">{item.text}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/auth">
-                  <span className="inline-flex items-center gap-2 px-8 py-4 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all cursor-pointer shadow-lg shadow-[#6b38d4]/25 hover:-translate-y-0.5 text-sm">
-                    <Sparkles size={15} />
-                    Start Writing Ebooks
-                    <ArrowRight size={15} />
-                  </span>
-                </Link>
-                <p className="text-[#76777d] text-xs mt-3">$29.99/month · Cancel anytime · Completely separate from Starter &amp; Pro academic plans · Not included in any academic subscription</p>
-              </div>
 
-              {/* Right: feature cards */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { icon: "🎯", title: "Topic & Audience", desc: "Set your exact niche, target reader profile, and unique angle" },
-                  { icon: "🌐", title: "15 Languages", desc: "Write and publish in English, Spanish, French, German, and 11 more" },
-                  { icon: "🏭", title: "20+ Industries", desc: "Business, tech, health, finance, marketing, leadership, and more" },
-                  { icon: "✍️", title: "6 Writing Tones", desc: "Authoritative, conversational, inspirational, practical, academic, storytelling" },
-                  { icon: "📊", title: "Publishing Guide", desc: "Ready-to-paste Amazon KDP title, description, keywords, and category paths" },
-                  { icon: "⚡", title: "3 Length Options", desc: "Short (~8k words), Standard (~15k), or Extended (~25k words)" },
-                ].map(card => (
-                  <div key={card.title} className="p-4 rounded-xl bg-[#f7f9fb] border border-[#e0e3e5] hover:border-[#6b38d4]/40 hover:shadow-sm transition-all">
-                    <div className="text-xl mb-2">{card.icon}</div>
-                    <h3 className="font-semibold text-[#191c1e] text-xs mb-1">{card.title}</h3>
-                    <p className="text-[11px] text-[#45464d] leading-relaxed">{card.desc}</p>
-                  </div>
-                ))}
-              </div>
+          {/* Header + toggle */}
+          <div className="text-center mb-10 sm:mb-14">
+            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">How it works · Pricing</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 text-[#131b2e]">Two ways to get started — priced for students</h2>
+            <p className="text-[#45464d] text-sm sm:text-base max-w-xl mx-auto">
+              Starter at $9.99/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done. Honest pricing. No dark patterns.
+            </p>
+            <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
+              <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-[#191c1e]" : "text-[#76777d]"}`}>Monthly</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={billingAnnual}
+                aria-label="Bill annually"
+                onClick={() => setBillingAnnual(b => !b)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${billingAnnual ? "bg-[#6b38d4]" : "bg-[#c6c6cd]"}`}
+              >
+                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200 shadow ${billingAnnual ? "left-6" : "left-1"}`} />
+              </button>
+              <span className={`text-sm font-medium transition-colors ${billingAnnual ? "text-[#191c1e]" : "text-[#76777d]"}`}>Annual</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">Save 25%</span>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── HOW IT WORKS ─── */}
-      <section id="howitworks" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#f2f4f6] border-y border-[#e0e3e5]">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-10 sm:mb-16">
-            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">How it works</p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#131b2e]">Two ways to get started</h2>
-            <p className="text-[#45464d] text-sm mt-3 max-w-xl mx-auto">Subscribe for ongoing use, or pay once for exactly what you need right now. No lock-in either way.</p>
+            <p className="text-[11px] text-[#76777d] mt-2 max-w-sm mx-auto">
+              Best value: lock in a full semester at the annual rate — most students upgrade in August or January.
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
+          {/* How it works — subscribe vs pay-as-you-go (anchor preserved) */}
+          <div id="howitworks" className="scroll-mt-24 mb-12 sm:mb-16">
+            <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
             {/* Path A — Subscribe */}
             <div className="rounded-2xl border border-[#e0e3e5] bg-white p-6 sm:p-8 shadow-sm">
               <div className="flex items-center gap-3 mb-6">
@@ -1474,220 +1309,6 @@ export default function Landing() {
               </a>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ─── FEATURE DEEP DIVE — dark navy showcase ─── */}
-      <section className="py-14 sm:py-20 md:py-28 px-4 sm:px-6 bg-[#131b2e] text-white overflow-hidden">
-        <div className="max-w-6xl mx-auto space-y-16 sm:space-y-24">
-
-          {/* Feature 1: Paper Writer */}
-          <div className="grid md:grid-cols-2 gap-10 sm:gap-16 items-center">
-            <div>
-              <p className="text-[#a78bfa] text-xs font-bold uppercase tracking-widest mb-4 sm:mb-5">Ground Truth Research · Paper Writer</p>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4 sm:mb-5 leading-tight">A draft you can actually submit. Not cringe at.</h2>
-              <p className="text-[#9aa3bd] leading-relaxed mb-6 sm:mb-8 text-sm sm:text-base">
-                Upload your rubric and we extract the A-grade criteria first — before writing a single word. The paper is then grounded in 35+ live academic databases, plagiarism-gated below 8%, and cross-checked against your rubric before delivery.
-              </p>
-              <ul className="space-y-3">
-                {[
-                  "35+ live academic databases queried per paper — 10B+ papers",
-                  "A-grade rubric extraction + cross-check on every output",
-                  "Plagiarism enforced below 8% — not estimated, measured",
-                  "STEM mode: equations mapped to the right section (Methods, Results, etc.)",
-                  "APA 7th, MLA 9th, Chicago 17th, Harvard, IEEE — latest editions",
-                  "500 to 15,000 words — essays, research papers, dissertations, and theses",
-                ].map(item => (
-                  <li key={item} className="flex items-center gap-3 text-sm text-white/80">
-                    <CheckCircle size={14} className="text-[#a78bfa] shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-5 sm:p-6 shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-xs text-white/50 uppercase tracking-widest font-medium">Generated output</div>
-                <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Writing…
-                </div>
-              </div>
-
-              {/* Paper title */}
-              <p className="text-[11px] font-semibold text-white/90 leading-snug mb-3">
-                The Role of Neuroplasticity in Cognitive Recovery Following Traumatic Brain Injury
-              </p>
-
-              {/* Abstract label */}
-              <p className="text-[9px] text-[#a78bfa] uppercase tracking-widest mb-1.5 font-semibold">Abstract</p>
-              <p className="text-[10px] text-white/60 leading-relaxed mb-4">
-                Traumatic brain injury (TBI) represents a leading cause of disability worldwide, affecting millions annually{" "}
-                <span className="text-[#c4b5fd]">(Maas et al., 2022)</span>. Recent advances in neuroimaging have demonstrated
-                that targeted rehabilitation can stimulate cortical reorganisation, challenging prior assumptions about recovery ceilings{" "}
-                <span className="text-[#c4b5fd]">(Chen & Park, 2023)</span>.
-              </p>
-
-              {/* References preview */}
-              <div className="border-t border-white/10 pt-3 space-y-1.5">
-                <p className="text-[9px] text-white/50 uppercase tracking-widest font-medium mb-2">References</p>
-                <p className="text-[10px] text-white/60 leading-relaxed">
-                  Maas, A. I. R., et al. (2022). Traumatic brain injury: integrated approaches.{" "}
-                  <span className="italic">Nature Reviews Neurology, 18</span>(4), 207–224.{" "}
-                  <span className="text-[#c4b5fd] text-[9px]">doi:10.1038/s41582-021-00568-6 ↗</span>
-                </p>
-                <p className="text-[10px] text-white/60 leading-relaxed">
-                  Chen, H., &amp; Park, J. (2023). Cortical plasticity post-TBI.{" "}
-                  <span className="italic">Brain, 146</span>(2), 489–503.{" "}
-                  <span className="text-[#c4b5fd] text-[9px]">doi:10.1093/brain/awac391 ↗</span>
-                </p>
-              </div>
-
-              <div className="mt-4 text-xs text-white/50 flex items-center gap-2 border-t border-white/10 pt-3">
-                <BarChart3 size={11} />
-                1,247 words · 6 citations · APA 7th edition
-              </div>
-            </div>
-          </div>
-
-          {/* Feature 2: STEM Solver */}
-          <div className="grid md:grid-cols-2 gap-10 sm:gap-16 items-center">
-            <div className="order-2 md:order-1 rounded-xl border border-white/10 bg-white/5 p-5 sm:p-6 shadow-2xl">
-              <div className="text-xs text-white/50 uppercase tracking-widest mb-4 font-medium">Step-by-step solution</div>
-              <div className="space-y-3">
-                {["Step 1 — Identify the knowns", "Step 2 — Apply Newton's second law", "Step 3 — Solve for acceleration", "Step 4 — Calculate displacement"].map((step, i) => (
-                  <div key={step} className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-[#6b38d4]/40 border border-[#a78bfa]/40 text-[#c4b5fd] text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                      {i + 1}
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium text-white/80">{step}</div>
-                      <div className="h-2 w-32 bg-white/10 rounded mt-1" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-5 p-3 bg-white/5 border border-white/10 rounded-xl text-xs text-[#c4b5fd] font-mono">
-                a = F/m = 12 N / 3 kg = <span className="text-white font-bold">4 m/s²</span>
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="bg-white/5 p-3 rounded-lg border border-white/10">
-                  <p className="text-lg font-bold">99.8%</p>
-                  <p className="text-[9px] text-white/50 uppercase tracking-wider">Formula accuracy</p>
-                </div>
-                <div className="bg-white/5 p-3 rounded-lg border border-white/10">
-                  <p className="text-lg font-bold">6 subjects</p>
-                  <p className="text-[9px] text-white/50 uppercase tracking-wider">Math → Engineering</p>
-                </div>
-              </div>
-            </div>
-            <div className="order-1 md:order-2">
-              <p className="text-[#4cd7f6] text-xs font-bold uppercase tracking-widest mb-4 sm:mb-5">Step-by-Step STEM Logic · STEM Solver</p>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4 sm:mb-5 leading-tight">Photograph the problem. Get the full method.</h2>
-              <p className="text-[#9aa3bd] leading-relaxed mb-6 sm:mb-8 text-sm sm:text-base">
-                Point your phone at a problem set and upload the image. OCR extracts the text, we identify the subject, and you get a full worked solution with step-by-step reasoning — not just the answer.
-              </p>
-              <ul className="space-y-3">
-                {["Photo upload with browser OCR", "Math, Physics, Chemistry, Biology, CS, Engineering", "KaTeX equation rendering", "Linked research papers per topic"].map(item => (
-                  <li key={item} className="flex items-center gap-3 text-sm text-white/80">
-                    <CheckCircle size={14} className="text-[#4cd7f6] shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ─── TESTIMONIALS ─── */}
-      <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#f7f9fb]">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8 sm:mb-10">
-            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">Real students</p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#131b2e]">Tested by the best.</h2>
-            <p className="text-[#45464d] text-sm mt-3">It's not perfect. But it gets the job done.</p>
-          </div>
-
-          {/* Grade-proof strip */}
-          <div className="flex flex-wrap items-center justify-center gap-3 mb-10 sm:mb-14">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-emerald-200 text-xs shadow-sm">
-              <span className="font-mono text-[#76777d] line-through">61%</span>
-              <span className="text-emerald-600 font-bold">→ 94%</span>
-              <span className="text-[#45464d]">Priya · UCL Biochemistry</span>
-            </div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-emerald-200 text-xs shadow-sm">
-              <span className="font-mono text-[#76777d] line-through">D</span>
-              <span className="text-emerald-600 font-bold">→ 93%</span>
-              <span className="text-[#45464d]">Marcus · Georgia Tech CS</span>
-            </div>
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#eceef0] border border-[#e0e3e5] text-xs text-[#45464d]">
-              92%+ average grade across all papers
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
-            {testimonials.map(({ name, role, text, stars }, idx) => {
-              const avatarColors = [
-                "bg-[#e9ddff] text-[#5516be]",
-                "bg-[#acedff] text-[#004e5c]",
-                "bg-[#dae2fd] text-[#131b2e]",
-              ];
-              const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2);
-              return (
-              <div key={name} className="p-6 sm:p-8 rounded-xl bg-white border border-[#e0e3e5] shadow-sm hover:shadow-md transition-all flex flex-col">
-                <div className="flex items-center gap-0.5 mb-4">
-                  {Array.from({ length: stars }).map((_, i) => (
-                    <Star key={i} size={12} className="fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <Quote size={16} className="text-[#6b38d4]/30 mb-3" />
-                <p className="text-[#45464d] text-sm leading-relaxed flex-1 mb-5 italic">"{text}"</p>
-                <div className="flex items-center gap-3 mt-auto pt-4 border-t border-[#eceef0]">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColors[idx % 3]}`}>
-                    {initials}
-                  </div>
-                  <div>
-                    <div className="font-bold text-[#191c1e] text-sm">{name}</div>
-                    <div className="text-[#76777d] text-xs mt-0.5">{role}</div>
-                  </div>
-                </div>
-              </div>
-            );})}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── PRICING ─── */}
-      <section id="pricing" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 relative bg-white border-t border-[#e0e3e5]">
-        <div className="max-w-6xl mx-auto">
-
-          {/* Header + toggle */}
-          <div className="text-center mb-10 sm:mb-14">
-            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">Pricing</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 text-[#131b2e]">Pricing that respects your budget</h2>
-            <p className="text-[#45464d] text-sm sm:text-base max-w-xl mx-auto">
-              Starter at $9.99/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done. Honest pricing. No dark patterns.
-            </p>
-            <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
-              <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-[#191c1e]" : "text-[#76777d]"}`}>Monthly</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={billingAnnual}
-                aria-label="Bill annually"
-                onClick={() => setBillingAnnual(b => !b)}
-                className={`relative w-11 h-6 rounded-full transition-colors ${billingAnnual ? "bg-[#6b38d4]" : "bg-[#c6c6cd]"}`}
-              >
-                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200 shadow ${billingAnnual ? "left-6" : "left-1"}`} />
-              </button>
-              <span className={`text-sm font-medium transition-colors ${billingAnnual ? "text-[#191c1e]" : "text-[#76777d]"}`}>Annual</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">Save 25%</span>
-            </div>
-            <p className="text-[11px] text-[#76777d] mt-2 max-w-sm mx-auto">
-              Best value: lock in a full semester at the annual rate — most students upgrade in August or January.
-            </p>
           </div>
 
           {/* ── Subscription plan cards ── */}
@@ -1848,6 +1469,64 @@ export default function Landing() {
             </p>
           </div>
 
+        </div>
+      </section>
+
+      {/* ─── TESTIMONIALS ─── */}
+      <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#f7f9fb]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8 sm:mb-10">
+            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">Real students</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-[#131b2e]">Tested by the best.</h2>
+            <p className="text-[#45464d] text-sm mt-3">It's not perfect. But it gets the job done.</p>
+          </div>
+
+          {/* Grade-proof strip */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-10 sm:mb-14">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-emerald-200 text-xs shadow-sm">
+              <span className="font-mono text-[#76777d] line-through">61%</span>
+              <span className="text-emerald-600 font-bold">→ 94%</span>
+              <span className="text-[#45464d]">Priya · UCL Biochemistry</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-emerald-200 text-xs shadow-sm">
+              <span className="font-mono text-[#76777d] line-through">D</span>
+              <span className="text-emerald-600 font-bold">→ 93%</span>
+              <span className="text-[#45464d]">Marcus · Georgia Tech CS</span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#eceef0] border border-[#e0e3e5] text-xs text-[#45464d]">
+              92%+ average grade across all papers
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
+            {testimonials.map(({ name, role, text, stars }, idx) => {
+              const avatarColors = [
+                "bg-[#e9ddff] text-[#5516be]",
+                "bg-[#acedff] text-[#004e5c]",
+                "bg-[#dae2fd] text-[#131b2e]",
+              ];
+              const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2);
+              return (
+              <div key={name} className="p-6 sm:p-8 rounded-xl bg-white border border-[#e0e3e5] shadow-sm hover:shadow-md transition-all flex flex-col">
+                <div className="flex items-center gap-0.5 mb-4">
+                  {Array.from({ length: stars }).map((_, i) => (
+                    <Star key={i} size={12} className="fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <Quote size={16} className="text-[#6b38d4]/30 mb-3" />
+                <p className="text-[#45464d] text-sm leading-relaxed flex-1 mb-5 italic">"{text}"</p>
+                <div className="flex items-center gap-3 mt-auto pt-4 border-t border-[#eceef0]">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColors[idx % 3]}`}>
+                    {initials}
+                  </div>
+                  <div>
+                    <div className="font-bold text-[#191c1e] text-sm">{name}</div>
+                    <div className="text-[#76777d] text-xs mt-0.5">{role}</div>
+                  </div>
+                </div>
+              </div>
+            );})}
+          </div>
         </div>
       </section>
 
