@@ -141,7 +141,7 @@ export default function Influencer() {
               {[
                 { n: "01", icon: Link2, t: "Grab your link", d: "Sign in and get a unique tracked link in one click. It sends people to Light Speed Ghost and counts every view." },
                 { n: "02", icon: Eye, t: "Share it anywhere", d: "Drop it in your TikTok, YouTube, Instagram, X, or blog. Every view your link drives is counted toward your earnings." },
-                { n: "03", icon: Wallet, t: "Get paid every 30 days", d: `Earn ${money(rateCents)} per 1,000 views. Once you pass ${money(minCents)}, we pay out every ${payoutDays} days to your preferred method.` },
+                { n: "03", icon: Wallet, t: `Get paid every ${payoutDays} days`, d: `Earn ${money(rateCents)} per 1,000 views. Once you pass ${money(minCents)}, we pay out every ${payoutDays} days to your preferred method.` },
               ].map(({ n, icon: Icon, t, d }) => (
                 <div key={n} className="rounded-2xl border border-[#e0e3e5] bg-white p-6 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
@@ -167,7 +167,7 @@ export default function Influencer() {
               {[
                 { icon: DollarSign, big: money(rateCents), t: "per 1,000 views", d: "The minimum rate. Real views your link drives, counted transparently." },
                 { icon: Wallet, big: money(minCents), t: "minimum payout", d: "Once your balance clears this, you're due a payout." },
-                { icon: CalendarClock, big: `${payoutDays} days`, t: "payout cycle", d: "We settle balances on a rolling 30-day cycle." },
+                { icon: CalendarClock, big: `${payoutDays} days`, t: "payout cycle", d: `We settle balances on a rolling ${payoutDays}-day cycle.` },
                 { icon: CreditCard, big: "Your call", t: "payment method", d: "PayPal, M-Pesa, MTN MoMo, Airtel Money, Wise, bank transfer — you choose." },
               ].map(({ icon: Icon, big, t, d }) => (
                 <div key={t} className="rounded-2xl border border-[#e0e3e5] bg-white p-5 shadow-sm text-center">
