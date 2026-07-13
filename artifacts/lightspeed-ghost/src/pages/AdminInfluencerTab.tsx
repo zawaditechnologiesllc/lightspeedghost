@@ -90,7 +90,9 @@ export function AdminInfluencerTab({ password }: { password: string }) {
       <div className="flex items-center justify-between">
         <SectionHeader
           title="Influencer Program"
-          sub="Creators earn $1.00 per 1,000 views. Track payouts and payout methods here."
+          sub={influencerData
+            ? `Creators earn ${money(influencerData.summary.ratePer1kCents)} per 1,000 views · ${money(influencerData.summary.minPayoutCents)} minimum payout · every ${influencerData.summary.payoutDays} days`
+            : "Creators earn per 1,000 views on their tracked link. Track payouts and payout methods here."}
         />
         <button
           onClick={loadInfluencers}
