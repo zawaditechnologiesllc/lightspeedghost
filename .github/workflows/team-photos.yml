@@ -25,6 +25,7 @@ jobs:
 
           fetch() {
             out="$1"; url="$2"
+            if [ -f "$out" ]; then echo "exists, keeping: $out"; return 0; fi
             for i in 1 2 3 4; do
               if curl -fsSL --max-time 180 "$url" -o "$out"; then
                 if file "$out" | grep -qiE 'JPEG|PNG|WebP'; then
