@@ -170,8 +170,8 @@ export default function Enterprise() {
         body: JSON.stringify(form),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { message?: string };
-        throw new Error(data.message ?? `Server error ${res.status}`);
+        const data = await res.json().catch(() => ({})) as { error?: string; message?: string };
+        throw new Error(data.error ?? data.message ?? `Server error ${res.status}`);
       }
       setFormState("success");
     } catch (err) {

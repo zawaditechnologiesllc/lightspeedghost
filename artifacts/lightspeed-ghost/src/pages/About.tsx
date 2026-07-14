@@ -46,6 +46,11 @@ const LEADERS = [
     from: "#0090a9", to: "#6b38d4", skin: "#e8b48c", hair: "#1f1a17", shirt: "#3b3f8f", style: "glasses" as const,
   },
   {
+    slug: "john-muriuki", name: "John Muriuki", role: "Chief Operating Officer",
+    note: "Runs the machine — payouts, partners, and 200+ university rollouts.",
+    from: "#131b2e", to: "#6b38d4", skin: "#7a4a2b", hair: "#0d0a08", shirt: "#1f2a44", style: "short" as const,
+  },
+  {
     slug: "james-caldwell", name: "James Caldwell", role: "Head of AI Research",
     note: "Owns the reasoning loop and the critic layer that checks the math.",
     from: "#5516be", to: "#a78bfa", skin: "#8d5a3b", hair: "#14100d", shirt: "#0f4c5c", style: "short" as const,
@@ -303,7 +308,7 @@ export default function About() {
               <h2 className="text-3xl sm:text-4xl font-bold text-[#131b2e]">The people keeping the rule</h2>
               <p className="text-[#45464d] text-sm mt-3 max-w-xl mx-auto">Students first, builders second. Everyone on this team has submitted a paper at 4 a.m. — that's the standard we build for.</p>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {LEADERS.map((l) => (
                 <div key={l.name} className="rounded-2xl border border-[#e0e3e5] bg-white p-5 shadow-sm text-center">
                   <Portrait {...l} />
