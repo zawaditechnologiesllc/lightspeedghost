@@ -1,0 +1,51 @@
+name: Fetch team photos
+
+# Manually-triggered helper: generates the four AI leadership headshots
+# (GitHub runners have unrestricted egress) and commits them to the branch
+# so the About page's photo drop-in picks them up.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate AI headshots
+        run: |
+          set -euo pipefail
+          dir=artifacts/lightspeed-ghost/public/team
+          mkdir -p "$dir"
+          base="https://image.pollinations.ai/prompt"
+          common="width=768&height=768&nologo=true&model=flux"
+
+          fetch() {
+            out="$1"; url="$2"
+            for i in 1 2 3 4; do
+              if curl -fsSL --max-time 180 "$url" -o "$out"; then
+                if file "$out" | grep -qiE 'JPEG|PNG|WebP'; then
+                  echo "OK: $out ($(stat -c%s "$out") bytes)"; return 0
+                fi
+              fi
+              echo "retry $i for $out"; sleep 15
+            done
+            echo "FAILED: $out"; return 1
+          }
+
+          fetch "$dir/michael-harrington.jpg" "$base/corporate%20headshot%20photograph%20of%20a%20confident%20american%20businessman%20in%20his%20early%2030s%2C%20short%20dark%20brown%20hair%2C%20navy%20suit%2C%20white%20shirt%2C%20warm%20smile%2C%20studio%20lighting%2C%20soft%20neutral%20gray%20background%2C%20professional%20linkedin%20profile%20photo%2C%20photorealistic%2C%20sharp%20focus?$common&seed=41"
+          fetch "$dir/tyler-brooks.jpg" "$base/corporate%20headshot%20photograph%20of%20an%20american%20tech%20executive%20in%20his%20early%2030s%2C%20rectangular%20glasses%2C%20short%20black%20hair%2C%20smart%20casual%20dark%20blue%20blazer%20over%20t-shirt%2C%20friendly%20expression%2C%20studio%20lighting%2C%20soft%20neutral%20gray%20background%2C%20professional%20linkedin%20profile%20photo%2C%20photorealistic%2C%20sharp%20focus?$common&seed=87"
+          fetch "$dir/james-caldwell.jpg" "$base/corporate%20headshot%20photograph%20of%20an%20african%20american%20man%20in%20his%20mid%2030s%2C%20short%20hair%2C%20charcoal%20blazer%20with%20white%20shirt%2C%20confident%20calm%20expression%2C%20studio%20lighting%2C%20soft%20neutral%20gray%20background%2C%20professional%20linkedin%20profile%20photo%2C%20photorealistic%2C%20sharp%20focus?$common&seed=23"
+          fetch "$dir/emily-sanders.jpg" "$base/corporate%20headshot%20photograph%20of%20an%20american%20businesswoman%20in%20her%20early%2030s%2C%20shoulder%20length%20brown%20hair%2C%20burgundy%20blazer%20over%20cream%20blouse%2C%20warm%20professional%20smile%2C%20studio%20lighting%2C%20soft%20neutral%20gray%20background%2C%20professional%20linkedin%20profile%20photo%2C%20photorealistic%2C%20sharp%20focus?$common&seed=65"
+
+      - name: Commit photos to this branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/lightspeed-ghost/public/team
+          git diff --cached --quiet && { echo "no changes"; exit 0; }
+          git commit -m "Add AI-generated leadership photos (via team-photos workflow)"
+          git push
