@@ -2478,22 +2478,49 @@ export default function Admin() {
 
                     {/* Influencer program */}
                     <SettingsCard title="Influencer Program">
-                      <p className="text-[10px] text-white/30 mb-3">Creators earn per 1,000 views on their tracked link. Rates in cents (100 = $1.00). Manage payouts under the Influencers tab.</p>
+                      <p className="text-[10px] text-white/30 mb-3">Creators earn per 1,000 views on their tracked link. Standard terms: $1.00 per 1,000 views · $20.00 minimum payout · every 30 days. Manage payouts under the Influencers tab.</p>
                       <div className="grid grid-cols-3 gap-3">
-                        {([
-                          { key: "influencer_rate_per_1k_cents", label: "Rate / 1k views (¢)", ph: "100" },
-                          { key: "influencer_min_payout_cents",   label: "Min payout (¢)",      ph: "2000" },
-                          { key: "influencer_payout_days",        label: "Payout cycle (days)", ph: "30" },
-                        ] as { key: string; label: string; ph: string }[]).map(({ key, label, ph }) => (
-                          <div key={key}>
-                            <label className="block text-xs text-white/40 mb-1.5">{label}</label>
-                            <input type="number" min="0" placeholder={ph}
-                              value={(settings as unknown as Record<string, string>)[key] ?? ""}
-                              onChange={(e) => { setSettings((s) => s ? { ...s, [key]: e.target.value } : s); setSettingsDirty(true); }}
-                              onBlur={(e) => quickSaveSetting(key, e.target.value)}
-                              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all" />
-                          </div>
-                        ))}
+                        <DollarSettingInput
+                          label="Rate per 1,000 views"
+                          cents={settings.influencer_rate_per_1k_cents ?? ""}
+                          onCommit={(c) => { setSettings((s) => s ? { ...s, influencer_rate_per_1k_cents: c } : s); setSettingsDirty(true); quickSaveSetting("influencer_rate_per_1k_cents", c); }}
+                        />
+                        <DollarSettingInput
+                          label="Minimum payout"
+                          cents={settings.influencer_min_payout_cents ?? ""}
+                          onCommit={(c) => { setSettings((s) => s ? { ...s, influencer_min_payout_cents: c } : s); setSettingsDirty(true); quickSaveSetting("influencer_min_payout_cents", c); }}
+                        />
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1.5">Payout cycle (days)</label>
+                          <input type="number" min="1" placeholder="30"
+                            value={settings.influencer_payout_days ?? ""}
+                            onChange={(e) => { setSettings((s) => s ? { ...s, influencer_payout_days: e.target.value } : s); setSettingsDirty(true); }}
+                            onBlur={(e) => quickSaveSetting("influencer_payout_days", e.target.value)}
+                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all" />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between flex-wrap gap-2 mt-3">
+                        <p className="text-[11px] text-white/40">
+                          Creators currently see:{" "}
+                          <span className="text-lime-300 font-semibold">${(((parseInt(settings.influencer_rate_per_1k_cents ?? "", 10) || 100)) / 100).toFixed(2)} / 1,000 views</span>
+                          {" · "}
+                          <span className="text-lime-300 font-semibold">${(((parseInt(settings.influencer_min_payout_cents ?? "", 10) || 2000)) / 100).toFixed(2)} minimum</span>
+                          {" · every "}{(parseInt(settings.influencer_payout_days ?? "", 10) || 30)} days
+                        </p>
+                        <button
+                          onClick={() => {
+                            const std: Array<[keyof SystemSettings & string, string]> = [
+                              ["influencer_rate_per_1k_cents", "100"],
+                              ["influencer_min_payout_cents", "2000"],
+                              ["influencer_payout_days", "30"],
+                            ];
+                            std.forEach(([k, v]) => quickSaveSetting(k, v));
+                            setSettings((s) => s ? { ...s, influencer_rate_per_1k_cents: "100", influencer_min_payout_cents: "2000", influencer_payout_days: "30" } : s);
+                          }}
+                          className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-lime-500/10 text-lime-300 border border-lime-500/20 hover:bg-lime-500/20 transition-all"
+                        >
+                          Reset to standard — $1 / $20 / 30 days
+                        </button>
                       </div>
                     </SettingsCard>
 
@@ -2700,6 +2727,31 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
           <button onClick={onClose} className="p-1.5 rounded-md text-white/30 hover:text-white hover:bg-white/8 transition-all"><X size={15} /></button>
         </div>
         <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// Money settings are stored in cents but edited in dollars — showing admins
+// raw cents ("2000") read as wrong numbers and invited dollar-value entries
+// that corrupted the real terms.
+function DollarSettingInput({ label, cents, onCommit }: { label: string; cents: string; onCommit: (newCents: string) => void }) {
+  const [val, setVal] = useState(() => (cents ? (parseInt(cents, 10) / 100).toFixed(2) : ""));
+  useEffect(() => { setVal(cents ? (parseInt(cents, 10) / 100).toFixed(2) : ""); }, [cents]);
+  return (
+    <div>
+      <label className="block text-xs text-white/40 mb-1.5">{label}</label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm pointer-events-none">$</span>
+        <input
+          type="number" min="0" step="0.01" value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={() => {
+            const d = parseFloat(val);
+            if (!isNaN(d) && d > 0) onCommit(String(Math.round(d * 100)));
+          }}
+          className="w-full pl-7 pr-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
+        />
       </div>
     </div>
   );
