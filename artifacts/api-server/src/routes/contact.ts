@@ -41,11 +41,35 @@ async function ensureTable(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_contact_messages_status  ON contact_messages (status);
     CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages (created_at DESC);
   `);
+  // CREATE TABLE IF NOT EXISTS never upgrades an existing table — production
+  // had a contact_messages created by an older deploy without newer columns,
+  // which made every insert 500. Bring old tables up to the current shape.
+  await pool.query(`
+    ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS subject    TEXT NOT NULL DEFAULT '';
+    ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS source     TEXT NOT NULL DEFAULT 'contact';
+    ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS status     TEXT NOT NULL DEFAULT 'new';
+    ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE enterprise_leads ADD COLUMN IF NOT EXISTS message    TEXT NOT NULL DEFAULT '';
+    ALTER TABLE enterprise_leads ADD COLUMN IF NOT EXISTS status     TEXT NOT NULL DEFAULT 'new';
+    ALTER TABLE enterprise_leads ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+  `);
 }
 
 ensureTable().catch((err) => {
   logger.error({ err }, "[contact] Failed to ensure enterprise_leads table");
 });
+
+// Runs a DB write; on failure, repairs the schema (ensureTable) and retries
+// once. Self-heals stale production tables without a manual migration step.
+async function withSchemaRetry<T>(op: () => Promise<T>): Promise<T> {
+  try {
+    return await op();
+  } catch (err) {
+    logger.warn({ err }, "[contact] insert failed — repairing schema and retrying once");
+    await ensureTable();
+    return op();
+  }
+}
 
 // ── POST /contact/enterprise ──────────────────────────────────────────────────
 router.post("/contact/enterprise", async (req: Request, res: Response) => {
@@ -70,12 +94,12 @@ router.post("/contact/enterprise", async (req: Request, res: Response) => {
   }
 
   try {
-    const { rows } = await pool.query<{ id: number }>(
+    const { rows } = await withSchemaRetry(() => pool.query<{ id: number }>(
       `INSERT INTO enterprise_leads (institution, name, email, role, student_count, message)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
       [institution.trim(), name.trim(), email.trim(), role.trim(), studentCount.trim(), (message ?? "").trim()]
-    );
+    ));
     const leadId = rows[0]?.id;
 
     const adminEmail = process.env["ADMIN_EMAIL"] ?? process.env["EMAIL_FROM"] ?? "hello@lightspeedghost.com";
@@ -216,11 +240,11 @@ router.post("/contact/message", async (req: Request, res: Response) => {
   }
 
   try {
-    const { rows } = await pool.query<{ id: number }>(
+    const { rows } = await withSchemaRetry(() => pool.query<{ id: number }>(
       `INSERT INTO contact_messages (email, subject, message, source)
        VALUES ($1, $2, $3, $4) RETURNING id`,
       [email.trim(), (subject ?? "").trim(), message.trim(), (source ?? "contact").trim().slice(0, 40)],
-    );
+    ));
     const msgId = rows[0]?.id;
 
     const adminEmail = process.env["ADMIN_EMAIL"] ?? process.env["EMAIL_FROM"] ?? "hello@lightspeedghost.com";
