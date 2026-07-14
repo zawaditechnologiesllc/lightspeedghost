@@ -16,7 +16,7 @@ jobs:
         run: |
           set +e
           ORIGIN="https://lightspeedghost.com"
-          RENDER="https://lightspeedghost-api.onrender.com"
+          RENDER="https://lightspeedghost-5szz.onrender.com"
 
           echo "──────────────── 1. deployed frontend: which API base? ────────────────"
           HTML=$(curl -sS --max-time 30 "$ORIGIN/")
