@@ -1,0 +1,60 @@
+name: API contact-form probe
+
+# Manual diagnostic: exercises the production contact endpoints exactly the
+# way a browser does (with Origin headers), and inspects the deployed bundle
+# to see which API base the live frontend calls.
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe production API
+        run: |
+          set +e
+          ORIGIN="https://lightspeedghost.com"
+          RENDER="https://lightspeedghost-api.onrender.com"
+
+          echo "──────────────── 1. deployed frontend: which API base? ────────────────"
+          HTML=$(curl -sS --max-time 30 "$ORIGIN/")
+          ASSET=$(echo "$HTML" | grep -oE '/assets/index-[^"]+\.js' | head -1)
+          echo "entry asset: $ASSET"
+          if [ -n "$ASSET" ]; then
+            curl -sS --max-time 30 "$ORIGIN$ASSET" -o bundle.js
+            echo "onrender.com occurrences in bundle:"
+            grep -oE 'https://[a-z0-9.-]*onrender[a-z0-9.-]*\.com' bundle.js | sort -u || echo "(none — frontend calls same-origin /api)"
+          fi
+
+          echo "──────────────── 2. GET /api/status (Render, with Origin) ─────────────"
+          curl -sS --max-time 30 -D - "$RENDER/api/status" -H "Origin: $ORIGIN" | head -25
+
+          echo "──────────────── 3. OPTIONS preflight for contact POST ────────────────"
+          curl -sS --max-time 30 -D - -o /dev/null -X OPTIONS "$RENDER/api/contact/message" \
+            -H "Origin: $ORIGIN" \
+            -H "Access-Control-Request-Method: POST" \
+            -H "Access-Control-Request-Headers: content-type" | head -25
+
+          echo "──────────────── 4. POST /api/contact/message (real test) ─────────────"
+          curl -sS --max-time 60 -D - -X POST "$RENDER/api/contact/message" \
+            -H "Origin: $ORIGIN" \
+            -H "Content-Type: application/json" \
+            --data '{"email":"probe@lightspeedghost.com","subject":"CI diagnostic probe","message":"Automated end-to-end test of the contact form pipeline. Safe to mark read.","source":"ci-probe"}' | head -40
+
+          echo "──────────────── 5. GET /api/contact/messages (expect 403 JSON) ───────"
+          curl -sS --max-time 30 -D - "$RENDER/api/contact/messages" -H "Origin: $ORIGIN" | head -20
+
+          echo "──────────────── 6. same-origin path: POST via lightspeedghost.com ────"
+          curl -sS --max-time 60 -D - -X POST "$ORIGIN/api/contact/message" \
+            -H "Origin: $ORIGIN" \
+            -H "Content-Type: application/json" \
+            --data '{"email":"probe@lightspeedghost.com","subject":"CI diagnostic probe (domain path)","message":"Same-origin path test.","source":"ci-probe"}' | head -40
+
+          echo "──────────────── 7. POST /api/contact/enterprise (real test) ──────────"
+          curl -sS --max-time 60 -D - -X POST "$RENDER/api/contact/enterprise" \
+            -H "Origin: $ORIGIN" \
+            -H "Content-Type: application/json" \
+            --data '{"institution":"CI Probe University","name":"CI Probe","email":"probe@lightspeedghost.com","role":"QA","studentCount":"5","message":"Automated pipeline test. Safe to close."}' | head -40
+          exit 0
