@@ -5,6 +5,14 @@ import { sendEmail } from "../lib/email";
 
 const router = Router();
 
+// Messages/leads are admin data: super admin always; sector admins only with
+// the "messages" sector granted (the UI hides the tab, the API must too).
+function canReadMessages(req: Request): boolean {
+  const a = req.adminAuth;
+  if (!a?.authorized) return false;
+  return a.isSuperAdmin || (a.sectorAdmin?.sectors.includes("messages") ?? false);
+}
+
 async function ensureTable(): Promise<void> {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS enterprise_leads (
@@ -125,7 +133,7 @@ router.post("/contact/enterprise", async (req: Request, res: Response) => {
 
 // ── GET /contact/enterprise — admin only ─────────────────────────────────────
 router.get("/contact/enterprise", async (req: Request, res: Response) => {
-  if (!req.adminAuth?.authorized) {
+  if (!canReadMessages(req)) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -164,7 +172,7 @@ router.get("/contact/enterprise", async (req: Request, res: Response) => {
 
 // ── PATCH /contact/enterprise/:id/status — admin only ────────────────────────
 router.patch("/contact/enterprise/:id/status", async (req: Request, res: Response) => {
-  if (!req.adminAuth?.authorized) {
+  if (!canReadMessages(req)) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -242,7 +250,7 @@ router.post("/contact/message", async (req: Request, res: Response) => {
 
 // ── GET /contact/messages — admin only ───────────────────────────────────────
 router.get("/contact/messages", async (req: Request, res: Response) => {
-  if (!req.adminAuth?.authorized) { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!canReadMessages(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   const { status, limit = "50", offset = "0" } = req.query as Record<string, string>;
   try {
     const conditions: string[] = [];
@@ -268,7 +276,7 @@ router.get("/contact/messages", async (req: Request, res: Response) => {
 
 // ── PATCH /contact/messages/:id/status — admin only ──────────────────────────
 router.patch("/contact/messages/:id/status", async (req: Request, res: Response) => {
-  if (!req.adminAuth?.authorized) { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!canReadMessages(req)) { res.status(403).json({ error: "Forbidden" }); return; }
   const id = parseInt(req.params["id"] ?? "", 10);
   const { status } = req.body as { status?: string };
   const VALID = ["new", "read", "replied", "closed"];
