@@ -18,7 +18,10 @@ interface InfluencerData {
 
 const PAYOUT_METHODS = ["PayPal", "M-Pesa", "MTN MoMo", "Airtel Money", "Wise", "Bank transfer", "Crypto (USDT)"];
 
-const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+const money = (cents: number) => {
+  const d = cents / 100;
+  return Number.isInteger(d) ? `$${d}` : `$${d.toFixed(2)}`;
+};
 
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);

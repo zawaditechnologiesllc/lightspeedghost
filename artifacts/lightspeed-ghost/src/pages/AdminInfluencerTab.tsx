@@ -40,7 +40,8 @@ function SectionHeader({ title, sub }: { title: string; sub: string }) {
 }
 
 function money(cents: number) {
-  return `$${(cents / 100).toFixed(2)}`;
+  const d = cents / 100;
+  return Number.isInteger(d) ? `$${d}` : `$${d.toFixed(2)}`;
 }
 
 export function AdminInfluencerTab({ password }: { password: string }) {

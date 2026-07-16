@@ -23,9 +23,24 @@ export async function getInfluencerSettings(): Promise<InfluencerSettings> {
       `SELECT key, value FROM system_settings WHERE key IN ('influencer_rate_per_1k_cents','influencer_min_payout_cents','influencer_payout_days')`,
     );
     const m = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+
+    // Self-repair dollar-entered values. Storage is cents, but the old admin
+    // UI accepted raw numbers — an admin typing "1" (meaning $1) stored 1¢ and
+    // every surface then showed $0.01. Any rate under 10¢/1k or minimum under
+    // $1 can only be a dollars-as-cents mistake: reinterpret as dollars and
+    // persist the corrected value.
+    const fix = async (key: string, cents: number) => {
+      pool.query(`UPDATE system_settings SET value=$2, updated_at=NOW() WHERE key=$1`, [key, String(cents)]).catch(() => {});
+      return cents;
+    };
+    let rate = parseInt(m.influencer_rate_per_1k_cents ?? "", 10) || defaults.ratePer1kCents;
+    if (rate > 0 && rate < 10) rate = await fix("influencer_rate_per_1k_cents", rate * 100);
+    let minP = parseInt(m.influencer_min_payout_cents ?? "", 10) || defaults.minPayoutCents;
+    if (minP > 0 && minP < 100) minP = await fix("influencer_min_payout_cents", minP * 100);
+
     return {
-      ratePer1kCents: parseInt(m.influencer_rate_per_1k_cents ?? "", 10) || defaults.ratePer1kCents,
-      minPayoutCents: parseInt(m.influencer_min_payout_cents ?? "", 10) || defaults.minPayoutCents,
+      ratePer1kCents: rate,
+      minPayoutCents: minP,
       payoutDays:     parseInt(m.influencer_payout_days ?? "", 10) || defaults.payoutDays,
     };
   } catch {

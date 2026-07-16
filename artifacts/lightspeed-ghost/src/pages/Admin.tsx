@@ -2478,7 +2478,7 @@ export default function Admin() {
 
                     {/* Influencer program */}
                     <SettingsCard title="Influencer Program">
-                      <p className="text-[10px] text-white/30 mb-3">Creators earn per 1,000 views on their tracked link. Standard terms: $1.00 per 1,000 views · $20.00 minimum payout · every 30 days. Manage payouts under the Influencers tab.</p>
+                      <p className="text-[10px] text-white/30 mb-3">Creators earn per 1,000 views on their tracked link. Standard terms: $1 per 1,000 views · $20 minimum payout · every 30 days. Type plain dollar amounts. Manage payouts under the Influencers tab.</p>
                       <div className="grid grid-cols-3 gap-3">
                         <DollarSettingInput
                           label="Rate per 1,000 views"
@@ -2502,9 +2502,9 @@ export default function Admin() {
                       <div className="flex items-center justify-between flex-wrap gap-2 mt-3">
                         <p className="text-[11px] text-white/40">
                           Creators currently see:{" "}
-                          <span className="text-lime-300 font-semibold">${(((parseInt(settings.influencer_rate_per_1k_cents ?? "", 10) || 100)) / 100).toFixed(2)} / 1,000 views</span>
+                          <span className="text-lime-300 font-semibold">${Math.round((parseInt(settings.influencer_rate_per_1k_cents ?? "", 10) || 100) / 100)} / 1,000 views</span>
                           {" · "}
-                          <span className="text-lime-300 font-semibold">${(((parseInt(settings.influencer_min_payout_cents ?? "", 10) || 2000)) / 100).toFixed(2)} minimum</span>
+                          <span className="text-lime-300 font-semibold">${Math.round((parseInt(settings.influencer_min_payout_cents ?? "", 10) || 2000) / 100)} minimum</span>
                           {" · every "}{(parseInt(settings.influencer_payout_days ?? "", 10) || 30)} days
                         </p>
                         <button
@@ -2732,23 +2732,23 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-// Money settings are stored in cents but edited in dollars — showing admins
-// raw cents ("2000") read as wrong numbers and invited dollar-value entries
-// that corrupted the real terms.
+// Dollar settings editor: admins see and type plain whole dollars — "1" means
+// $1, "20" means $20. No decimals, no visible unit conversion.
 function DollarSettingInput({ label, cents, onCommit }: { label: string; cents: string; onCommit: (newCents: string) => void }) {
-  const [val, setVal] = useState(() => (cents ? (parseInt(cents, 10) / 100).toFixed(2) : ""));
-  useEffect(() => { setVal(cents ? (parseInt(cents, 10) / 100).toFixed(2) : ""); }, [cents]);
+  const dollars = cents ? String(Math.round(parseInt(cents, 10) / 100)) : "";
+  const [val, setVal] = useState(dollars);
+  useEffect(() => { setVal(dollars); }, [dollars]);
   return (
     <div>
       <label className="block text-xs text-white/40 mb-1.5">{label}</label>
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm pointer-events-none">$</span>
         <input
-          type="number" min="0" step="0.01" value={val}
+          type="number" min="1" step="1" value={val}
           onChange={(e) => setVal(e.target.value)}
           onBlur={() => {
-            const d = parseFloat(val);
-            if (!isNaN(d) && d > 0) onCommit(String(Math.round(d * 100)));
+            const d = parseInt(val, 10);
+            if (!isNaN(d) && d > 0) onCommit(String(d * 100));
           }}
           className="w-full pl-7 pr-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all"
         />
