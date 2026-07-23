@@ -235,13 +235,18 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate("/auth");
+      // Remember where they were headed (e.g. a tool clicked from the landing
+      // rail) so they land back on it after signing in. The Auth page reads
+      // ?next= for both email and OAuth flows. Internal paths only.
+      const isInternal = location && location.startsWith("/") && !location.startsWith("//");
+      const dest = isInternal && location !== "/app" ? `/auth?next=${encodeURIComponent(location)}` : "/auth";
+      navigate(dest);
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, location, navigate]);
 
   if (loading) {
     return (

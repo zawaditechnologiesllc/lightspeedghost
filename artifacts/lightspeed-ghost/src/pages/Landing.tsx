@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { HeroAnalyzer } from "@/components/HeroAnalyzer";
+import { ProductSidebar, ProductSidebarDrawer } from "@/components/ProductSidebar";
 import { ToolDemosSection } from "@/components/ToolDemos";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
@@ -451,16 +452,6 @@ export default function Landing() {
     return () => document.removeEventListener("mouseleave", handleMouseLeave);
   }, []);
 
-  const navLinks = [
-    { label: "Tools", href: "#tools" },
-    { label: "Ebooks", href: "#ebooks" },
-    { label: "How it Works", href: "#howitworks" },
-    { label: "Pricing", href: "#pricing" },
-    { label: "Institutions", href: "/enterprise" },
-    { label: "Africa", href: "/africa" },
-    { label: "FAQ", href: "#faq" },
-  ];
-
   return (
     <LazyMotion features={domAnimation}>
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#6b38d4]/20">
@@ -511,191 +502,117 @@ export default function Landing() {
       )}
 
 
-      {/* ─── NAV ─── */}
-      <header className={`fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#e0e3e5] transition-all duration-300 ${scrolled ? "shadow-md bg-white/95 backdrop-blur-md" : ""}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      {/* ─── PRODUCT SIDEBAR (fixed left tool rail) ─── */}
+      <ProductSidebar />
+      <ProductSidebarDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
+      {/* Everything sits to the right of the fixed rail on desktop */}
+      <div className="lg:pl-[84px]">
+
+      {/* ─── MINIMAL TOP BAR (no nav menu — a single CTA, like an app shell) ─── */}
+      <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#e0e3e5] transition-shadow ${scrolled ? "shadow-sm" : ""}`}>
+        <div className="flex items-center gap-3 h-16 px-4 sm:px-6">
+          {/* Mobile: hamburger opens the tool drawer, plus a small wordmark */}
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="lg:hidden p-2 -ml-2 rounded-lg text-[#45464d] hover:bg-[#f2f4f6] transition-colors"
+            aria-label="Open tools menu"
+          >
+            <Menu size={20} />
+          </button>
           <Link href="/">
-            <Logo size={30} textSize="text-base" variant="light" className="cursor-pointer select-none shrink-0" />
+            <span className="lg:hidden cursor-pointer select-none"><Logo size={24} textSize="text-sm" variant="light" /></span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-0.5">
-            {navLinks.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] transition-colors whitespace-nowrap"
-              >
-                {item.label}
-              </a>
-            ))}
-            <Link href="/about">
-              <span className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] transition-colors cursor-pointer whitespace-nowrap">About</span>
-            </Link>
-          </nav>
+          {/* Center trust badges */}
+          <div className="hidden md:flex items-center gap-4 mx-auto text-[#45464d]">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
+              <Database size={13} className="text-[#6b38d4]" /> Writes from real research
+            </span>
+            <span className="w-px h-4 bg-[#e0e3e5]" />
+            <span className="inline-flex items-center gap-1 text-xs font-semibold">
+              <Star size={12} className="text-amber-400 fill-amber-400" /> 4.8 / 5
+            </span>
+            <span className="w-px h-4 bg-[#e0e3e5]" />
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> 4M+ students
+            </span>
+          </div>
 
-          <div className="hidden md:flex items-center gap-2.5">
+          {/* Right: sign in + one primary CTA (no nav menu) */}
+          <div className="flex items-center gap-1.5 ml-auto md:ml-0">
             <Link href="/auth">
-              <span className="px-4 py-2 text-sm text-[#45464d] hover:text-[#6b38d4] transition-colors cursor-pointer">Sign In</span>
+              <span className="hidden sm:inline px-3 py-2 text-sm text-[#45464d] hover:text-[#6b38d4] transition-colors cursor-pointer">Sign In</span>
             </Link>
             <Link href="/auth">
-              <span className="px-5 py-2.5 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-all cursor-pointer shadow-md shadow-[#6b38d4]/20 active:scale-95 whitespace-nowrap">
-                Get Started
+              <span className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-all cursor-pointer shadow-md shadow-[#6b38d4]/20 active:scale-95 whitespace-nowrap">
+                Get Started — Free
               </span>
             </Link>
           </div>
-
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 text-[#45464d] hover:text-[#191c1e] rounded-lg hover:bg-[#f2f4f6] transition-colors"
-            aria-label="Toggle menu"
-          >
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
         </div>
-
-        {/* Mobile menu */}
-        <AnimatePresence>
-          {mobileOpen && (
-            <m.div
-              className="md:hidden bg-white border-t border-[#e0e3e5] px-4 py-4 space-y-1 shadow-lg"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-            >
-              {navLinks.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center px-3 py-3 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] transition-colors"
-                >
-                  {item.label}
-                </a>
-              ))}
-              <Link href="/about">
-                <span onClick={() => setMobileOpen(false)} className="flex items-center px-3 py-3 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] transition-colors cursor-pointer">
-                  About
-                </span>
-              </Link>
-              <div className="pt-3 flex flex-col gap-2.5 border-t border-[#e0e3e5] mt-2">
-                <Link href="/auth">
-                  <span className="block text-center px-4 py-2.5 text-sm border border-[#c6c6cd] text-[#191c1e] rounded-lg cursor-pointer hover:bg-[#f2f4f6] transition-colors">Sign In</span>
-                </Link>
-                <Link href="/auth">
-                  <span className="block text-center px-4 py-2.5 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg cursor-pointer transition-colors">Get Started</span>
-                </Link>
-              </div>
-            </m.div>
-          )}
-        </AnimatePresence>
       </header>
 
       <main>
-      {/* ─── HERO ─── */}
-      <section className="relative overflow-hidden pt-28 pb-14 sm:pt-32 sm:pb-20 px-4 sm:px-6">
-        {/* Soft mesh background */}
+      {/* ─── HERO — centered command box (the open, no-login tool) ─── */}
+      <section className="relative overflow-hidden pt-10 pb-14 sm:pt-16 sm:pb-20 px-4 sm:px-6">
+        {/* Soft background wash */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(at 0% 0%, rgba(107, 56, 212, 0.06) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(0, 144, 169, 0.06) 0px, transparent 50%)",
+              "radial-gradient(at 50% 0%, rgba(107,56,212,0.07) 0px, transparent 55%), radial-gradient(at 100% 0%, rgba(0,144,169,0.05) 0px, transparent 45%)",
           }}
         />
-        <div className="absolute -top-24 -right-24 w-72 h-72 bg-[#4cd7f6]/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-1/2 -left-32 w-80 h-80 bg-[#6b38d4]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 right-10 w-72 h-72 bg-[#4cd7f6]/15 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-          {/* Left — copy */}
-          <m.div
-            initial={false}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 mb-6 sm:mb-8">
-              <m.div
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#e9ddff] text-[#5516be] text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap shrink-0"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1, duration: 0.5 }}
-              >
-                <Zap size={11} className="text-[#6b38d4] shrink-0" />
-                Writes from real academic papers — not from memory
-              </m.div>
-              <m.div
-                className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] sm:text-[11px] font-medium whitespace-nowrap shrink-0"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                4M+ students worldwide
-              </m.div>
-            </div>
+        <div className="relative max-w-4xl mx-auto text-center">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#e9ddff] text-[#5516be] text-[10px] sm:text-[11px] font-bold uppercase tracking-wide mb-5">
+            <Zap size={12} className="text-[#6b38d4]" /> Free forever · your text never touches an AI model
+          </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-[40px] font-bold leading-[1.12] tracking-tight mb-4 sm:mb-5 text-[#131b2e]" style={{ letterSpacing: "-0.02em" }}>
-              {siteContent.heroHeadline ? (
-                siteContent.heroHeadline
-              ) : (
-                <>
-                  Every other AI writes from memory.{" "}
-                  <span className="text-[#6b38d4]">Light Speed Ghost writes from real academic papers.</span>
-                </>
-              )}
-            </h1>
+          <h1 className="text-3xl sm:text-5xl font-bold leading-[1.1] tracking-tight mb-4 text-[#131b2e]" style={{ letterSpacing: "-0.02em" }}>
+            {siteContent.heroHeadline ? (
+              siteContent.heroHeadline
+            ) : (
+              <>
+                Your whole academic toolkit,{" "}
+                <span className="text-[#6b38d4]">in one place.</span>
+              </>
+            )}
+          </h1>
 
-            <p className="text-base sm:text-lg text-[#45464d] max-w-xl leading-relaxed mb-5">
-              {siteContent.heroSubtext ||
-                "35+ databases, 10 billion+ indexed papers. Upload your rubric, your notes, your materials — your paper is built on actual research, cross-checked against your A-grade criteria, targeting 92% and above. High school to PhD. One subscription."}
-            </p>
+          <p className="text-base sm:text-lg text-[#45464d] max-w-2xl mx-auto leading-relaxed mb-8">
+            {siteContent.heroSubtext ||
+              "Check your writing free in the box below — or pick a tool on the left to write from real research, humanize, revise, and solve STEM. High school to PhD. No card required to start."}
+          </p>
 
-            {/* Real-sources proof strip */}
-            <div className="flex flex-wrap items-center gap-2 mb-7">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#76777d] uppercase tracking-wider mr-1">
-                <Database size={12} className="text-[#6b38d4]" /> Indexed sources
-              </span>
-              {["OpenAlex", "PubMed", "JSTOR", "Scopus", "arXiv"].map((s) => (
-                <span key={s} className="text-[11px] font-semibold text-[#45464d] bg-white border border-[#e0e3e5] rounded-full px-2.5 py-1 shadow-sm">{s}</span>
+          {/* The open, in-browser analyzer */}
+          <HeroAnalyzer />
+
+          {/* Suggestion starters */}
+          <div className="mt-10">
+            <p className="text-xs text-[#76777d] mb-3">Need a starting point? Try one of these…</p>
+            <div className="grid sm:grid-cols-3 gap-3 max-w-3xl mx-auto text-left">
+              {[
+                { icon: PenLine,     title: "Write a research paper",     body: "Grounded in real citations from 35+ databases",     href: "/write",      accent: "text-blue-600" },
+                { icon: ShieldCheck, title: "Check for AI & plagiarism",  body: "Similarity + AI-content score, every source traced", href: "/plagiarism", accent: "text-emerald-600" },
+                { icon: FlaskConical,title: "Solve a STEM problem",       body: "Step-by-step, photo upload, answers verified",       href: "/stem",       accent: "text-cyan-600" },
+              ].map(({ icon: Icon, title, body, href, accent }) => (
+                <Link key={title} href={href}>
+                  <span className="block h-full rounded-xl border border-[#e0e3e5] bg-white p-4 hover:border-[#6b38d4]/50 hover:shadow-md transition-all cursor-pointer">
+                    <span className="flex items-center gap-2 mb-1.5">
+                      <Icon size={15} className={accent} />
+                      <span className="text-sm font-bold text-[#191c1e]">{title}</span>
+                    </span>
+                    <span className="text-xs text-[#76777d] leading-snug block">{body}</span>
+                  </span>
+                </Link>
               ))}
-              <span className="text-[11px] font-bold text-[#6b38d4]">+30 more</span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <Link href="/auth">
-                <span className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-all cursor-pointer shadow-md shadow-[#6b38d4]/25 hover:-translate-y-0.5 text-sm">
-                  Start Free — No Card Needed
-                  <ArrowRight size={15} />
-                </span>
-              </Link>
-              <a href="#payg" className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-[#c6c6cd] hover:border-[#6b38d4] text-[#191c1e] hover:text-[#6b38d4] font-semibold rounded-lg transition-all hover:bg-[#eceef0] text-sm">
-                <Zap size={14} className="text-orange-500" />
-                No subscription — pay once
-              </a>
-            </div>
-
-            <p className="mt-4 text-xs text-[#76777d]">Free plan forever · Pro $29.99/mo · Pay per use from $1.99 · 7-day money-back guarantee</p>
-          </m.div>
-
-          {/* Right — open interactive analyzer (QuillBot-style). The hero IS
-              the product: paste text, get an instant AI-likelihood + writing
-              report. 100% client-side (lib/textAnalysis.ts) — no login, no
-              server call, and it never touches an AI model. */}
-          <div className="relative">
-            <div className="absolute -top-12 -left-12 w-64 h-64 bg-[#4cd7f6]/25 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative z-10">
-              <HeroAnalyzer />
-            </div>
-
-            {/* Floating live stat card */}
-            <div className="absolute -bottom-6 -right-2 sm:-right-6 bg-[#6b38d4] text-white p-4 rounded-lg shadow-xl z-20 hidden md:block">
-              <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Live Processing</p>
-              <p className="text-xl font-bold">
-                {liveStats ? `${liveStats.documentsThisWeek.toLocaleString()} papers this week` : "35+ databases live"}
-              </p>
             </div>
           </div>
+
+          <p className="mt-8 text-xs text-[#76777d]">Free plan forever · Pro $29.99/mo · Pay per use from $1.99 · 7-day money-back guarantee</p>
         </div>
       </section>
 
@@ -1425,6 +1342,7 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+      </div>{/* /content-offset wrapper */}
 
       {checkoutPlan && (
         <CheckoutModal

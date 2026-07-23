@@ -1,13 +1,9 @@
-name: Deploy to Cloudflare Pages
+name: Deploy to Vercel
 
 on:
   push:
     branches:
       - main
-
-permissions:
-  contents: read
-  deployments: write
 
 jobs:
   deploy:
@@ -15,25 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build frontend
-        run: pnpm --filter @workspace/lightspeed-ghost run build
-
-      # wrangler.toml (repo root) carries the project name and build output dir;
-      # the functions/ directory (SEO proxy) is bundled automatically.
-      - name: Deploy to Cloudflare Pages
-        run: npx wrangler pages deploy
+      - name: Deploy to Vercel
+        run: npx vercel deploy --prod --force --token=${{ secrets.VERCEL_TOKEN }} --yes
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}

@@ -196,6 +196,7 @@ const KNOWN_DEV_ORIGINS =
         /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
         /\.replit\.dev$/,
         /\.repl\.co$/,
+        /\.vercel\.app$/,
         /\.pages\.dev$/,
       ]
     : [];

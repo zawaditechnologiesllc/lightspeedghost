@@ -48,11 +48,22 @@ Three services, three platforms. Do them in this order.
 
 ---
 
-## 3. Cloudflare Pages (Frontend)
+## 3. Frontend hosting — Vercel (current) → Cloudflare Pages (staged)
+
+> **Current production host is Vercel.** The repo keeps both configs side by
+> side so nothing breaks before you cut over:
+> - **Vercel (active):** `vercel.json` (SPA rewrites + `/seo/*` proxy + headers)
+>   and `api/seo-proxy.js`. `.github/workflows/deploy.yml` deploys to Vercel on
+>   push to `main`.
+> - **Cloudflare Pages (staged):** `functions/`, `public/_headers`, and
+>   `wrangler.toml` are ready. To cut over: move DNS to Cloudflare Pages, set the
+>   build settings below, then switch `deploy.yml` to `wrangler pages deploy`
+>   (or remove it and use Pages' Git integration). Vercel and Cloudflare ignore
+>   each other's config files, so they coexist safely.
 
 **Goal:** Deploy the React frontend, connect your domain, and point it at the Render API.
 
-### Deploy (Git integration — recommended)
+### Cloudflare Pages — Deploy (Git integration — recommended)
 
 1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages → Create → Pages → Connect to Git**
 2. Select your GitHub repository

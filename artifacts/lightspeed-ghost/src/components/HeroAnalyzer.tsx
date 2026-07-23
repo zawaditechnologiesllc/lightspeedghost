@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import {
   Wand2, BookOpen, SpellCheck2, Gauge, ArrowRight, Sparkles, Lock, Check,
+  Plus, ShieldCheck, PenLine, LayoutGrid, X,
 } from "lucide-react";
 import {
   analyzeAiLikelihood,
@@ -14,12 +15,13 @@ import {
   type ToneResult,
 } from "@/lib/textAnalysis";
 
-// ── Open hero widget (QuillBot-style) ─────────────────────────────────────────
-// The landing hero IS the product: paste text, get an instant AI-likelihood +
-// writing report. Every calculation runs in the browser (lib/textAnalysis.ts)
-// — no login, no server call, and it NEVER touches an AI model, so it costs
-// nothing to run no matter how many visitors use it. The numbers match the
-// Free plan's local detection mode server-side.
+// ── Command box (the open hero) ───────────────────────────────────────────────
+// The landing IS the product: paste text into the command box and get an instant
+// writing report. Every calculation runs in the browser (lib/textAnalysis.ts) —
+// no login, no server call, and it NEVER touches an AI model, so it costs nothing
+// to run no matter how many visitors use it. The numbers match the Free plan's
+// local detection mode server-side. Laid out like a modern "one box, pick an
+// action" app shell: a big input, then a row of tool actions beneath it.
 
 type Tab = "ai" | "readability" | "grammar" | "tone";
 
@@ -28,6 +30,15 @@ const TABS: Array<{ id: Tab; label: string; icon: typeof Wand2 }> = [
   { id: "readability", label: "Readability",  icon: Gauge },
   { id: "grammar",     label: "Grammar",      icon: SpellCheck2 },
   { id: "tone",        label: "Tone",         icon: BookOpen },
+];
+
+// Tool actions shown beneath the box. The first runs the free in-browser
+// analyzer; the rest deep-link into the real tools (AuthGuard prompts sign-up).
+const ACTIONS: Array<{ label: string; icon: typeof Wand2; href?: string; accent: string }> = [
+  { label: "Check my writing", icon: Sparkles,    accent: "text-[#6b38d4]" },
+  { label: "AI & Plagiarism",  icon: ShieldCheck, href: "/plagiarism", accent: "text-emerald-600" },
+  { label: "Humanizer",        icon: Wand2,       href: "/humanizer",  accent: "text-purple-600" },
+  { label: "Write Paper",      icon: PenLine,     href: "/write",      accent: "text-blue-600" },
 ];
 
 const SAMPLE_AI = `Furthermore, it is important to note that social media plays a crucial role in shaping adolescent development in today's world. Moreover, numerous studies have shown that excessive screen time has a significant impact on mental health outcomes. Additionally, it is essential to recognize that these multifaceted factors underscore the importance of digital literacy. In conclusion, it is clear that society must navigate the complexities of this evolving landscape in order to safeguard future generations.`;
@@ -61,13 +72,13 @@ export function HeroAnalyzer() {
   const [text, setText] = useState("");
   const [tab, setTab] = useState<Tab>("ai");
   const [report, setReport] = useState<Report | null>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
 
   const wordCount = useMemo(() => text.split(/\s+/).filter(Boolean).length, [text]);
-  const tooShort = wordCount < 30;
 
   function analyze(input?: string) {
     const t = input ?? text;
-    if (!t.trim()) return;
+    if (!t.trim()) { taRef.current?.focus(); return; }
     setReport({
       ai: analyzeAiLikelihood(t),
       readability: analyzeReadability(t),
@@ -79,82 +90,107 @@ export function HeroAnalyzer() {
   function loadSample(sample: string) {
     setText(sample);
     setReport(null);
+    requestAnimationFrame(() => taRef.current?.focus());
   }
 
   const ai = report?.ai;
   const colors = ai ? scoreColor(ai.score) : null;
 
   return (
-    <div className="relative rounded-2xl border border-[#e0e3e5] bg-white shadow-2xl overflow-hidden">
-      {/* Browser chrome */}
-      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-[#e0e3e5] bg-[#f2f4f6]">
-        <span className="w-3 h-3 rounded-full bg-red-400" />
-        <span className="w-3 h-3 rounded-full bg-yellow-400" />
-        <span className="w-3 h-3 rounded-full bg-green-400" />
-        <span className="ml-3 text-xs text-[#45464d] font-mono hidden sm:block">lightspeedghost.com — free analyzer</span>
-        <span className="ml-auto inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 whitespace-nowrap">
-          <Lock size={8} /> Runs in your browser
-        </span>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-1 px-3 pt-3">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
-              tab === id ? "bg-[#6b38d4] text-white" : "text-[#45464d] hover:bg-[#f2f4f6]"
-            }`}
-          >
-            <Icon size={11} /> {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="p-3 sm:p-4">
-        {/* Input */}
+    <div className="w-full max-w-3xl mx-auto">
+      {/* ── The command box ── */}
+      <div className="rounded-[26px] border border-[#e0e3e5] bg-white shadow-[0_18px_50px_-20px_rgba(19,27,46,0.28)] focus-within:border-[#6b38d4]/50 focus-within:shadow-[0_18px_50px_-16px_rgba(107,56,212,0.35)] transition-all overflow-hidden">
         <textarea
+          ref={taRef}
           value={text}
           onChange={(e) => { setText(e.target.value); setReport(null); }}
-          placeholder="Paste your essay, paragraph, or any text here to try it — no account needed…"
-          rows={5}
-          className="w-full resize-none rounded-xl border border-[#c6c6cd] bg-[#f7f9fb] px-3.5 py-3 text-[13px] text-[#191c1e] placeholder:text-[#9aa0a6] focus:outline-none focus:border-[#6b38d4] focus:ring-2 focus:ring-[#6b38d4]/15 leading-relaxed"
+          placeholder="Write, paste, or upload your text — check it free, no account needed…"
+          rows={4}
+          className="w-full resize-none bg-transparent px-5 pt-5 pb-2 text-[15px] text-[#191c1e] placeholder:text-[#9aa0a6] focus:outline-none leading-relaxed"
         />
-
-        <div className="flex flex-wrap items-center gap-2 mt-2.5">
-          <button
-            type="button"
-            onClick={() => analyze()}
-            disabled={!text.trim()}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6b38d4] hover:bg-[#5b2fc0] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition-colors shadow-md shadow-[#6b38d4]/25"
-          >
-            <Sparkles size={12} /> Analyze — free
-          </button>
+        <div className="flex items-center gap-2 px-3.5 pb-3.5 pt-1">
           <button
             type="button"
             onClick={() => loadSample(SAMPLE_AI)}
-            className="px-2.5 py-1.5 rounded-lg border border-[#e0e3e5] text-[10px] font-semibold text-[#45464d] hover:border-[#6b38d4] hover:text-[#6b38d4] transition-colors"
+            title="Load a sample to try it"
+            className="w-9 h-9 rounded-full border border-[#e0e3e5] text-[#45464d] hover:border-[#6b38d4] hover:text-[#6b38d4] flex items-center justify-center transition-colors shrink-0"
           >
-            Try AI-written sample
+            <Plus size={17} />
           </button>
+          {text && (
+            <button
+              type="button"
+              onClick={() => { setText(""); setReport(null); taRef.current?.focus(); }}
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-[#76777d] hover:text-[#45464d] px-2 py-1 rounded-md hover:bg-[#f2f4f6] transition-colors"
+            >
+              <X size={12} /> Clear
+            </button>
+          )}
+          <span className="ml-auto text-[11px] text-[#76777d] tabular-nums">{wordCount} words</span>
           <button
             type="button"
-            onClick={() => loadSample(SAMPLE_HUMAN)}
-            className="px-2.5 py-1.5 rounded-lg border border-[#e0e3e5] text-[10px] font-semibold text-[#45464d] hover:border-[#6b38d4] hover:text-[#6b38d4] transition-colors"
+            onClick={() => analyze()}
+            aria-label="Check my writing"
+            className="w-9 h-9 rounded-full bg-[#6b38d4] hover:bg-[#5b2fc0] text-white flex items-center justify-center transition-colors shadow-md shadow-[#6b38d4]/30 shrink-0"
           >
-            Try human sample
+            <ArrowRight size={17} />
           </button>
-          <span className="ml-auto text-[10px] text-[#76777d] tabular-nums">{wordCount} words</span>
         </div>
+      </div>
 
-        {/* Results */}
-        {report && (
-          <div className="mt-3 rounded-xl border border-[#e0e3e5] bg-white p-3.5">
+      {/* ── Action row ── */}
+      <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+        {ACTIONS.map(({ label, icon: Icon, href, accent }) => {
+          const inner = (
+            <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e3e5] bg-white text-sm font-semibold text-[#191c1e] hover:border-[#6b38d4]/50 hover:bg-[#faf9ff] cursor-pointer transition-all shadow-sm">
+              <Icon size={15} className={accent} /> {label}
+            </span>
+          );
+          return href ? (
+            <Link key={label} href={href}>{inner}</Link>
+          ) : (
+            <button key={label} type="button" onClick={() => analyze()}>{inner}</button>
+          );
+        })}
+        <a
+          href="#tools"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e3e5] bg-white text-sm font-semibold text-[#45464d] hover:border-[#6b38d4]/50 hover:bg-[#faf9ff] transition-all shadow-sm"
+        >
+          <LayoutGrid size={15} className="text-[#76777d]" /> More
+        </a>
+      </div>
+
+      {/* Sample + reassurance */}
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 mt-3.5 text-[11px] text-[#76777d]">
+        <span className="inline-flex items-center gap-1.5"><Lock size={11} className="text-emerald-600" /> Runs in your browser · never sent to an AI model</span>
+        <span className="hidden sm:inline text-[#c6c6cd]">·</span>
+        <button type="button" onClick={() => loadSample(SAMPLE_AI)} className="font-semibold text-[#6b38d4] hover:underline">Try an AI-written sample</button>
+        <button type="button" onClick={() => loadSample(SAMPLE_HUMAN)} className="font-semibold text-[#6b38d4] hover:underline">Try a human sample</button>
+      </div>
+
+      {/* ── Results ── */}
+      {report && (
+        <div className="mt-5 rounded-2xl border border-[#e0e3e5] bg-white shadow-lg overflow-hidden text-left">
+          {/* Result tabs */}
+          <div className="flex items-center gap-1 px-3 pt-3 border-b border-[#eceef0] overflow-x-auto">
+            {TABS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-[12px] font-semibold whitespace-nowrap transition-colors ${
+                  tab === id ? "text-[#6b38d4] border-b-2 border-[#6b38d4] -mb-px" : "text-[#45464d] hover:text-[#191c1e]"
+                }`}
+              >
+                <Icon size={13} /> {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-4">
             {tab === "ai" && ai && colors && (
               <div>
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-2.5">
                   <div className={`shrink-0 w-16 h-16 rounded-full border-4 ${colors.ring} flex flex-col items-center justify-center`}>
                     <span className={`text-lg font-bold leading-none ${colors.text}`}>{ai.score}%</span>
                     <span className="text-[8px] font-bold text-[#76777d] uppercase">AI-like</span>
@@ -239,25 +275,20 @@ export function HeroAnalyzer() {
               </div>
             )}
 
-            {tooShort && (
-              <p className="mt-2 text-[10px] text-[#76777d]">Tip: paste at least 30 words (100+ for AI detection) for meaningful results.</p>
-            )}
+            {/* Upgrade path */}
+            <div className="mt-3.5 flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-[#e9ddff] bg-[#f7f4ff] px-3.5 py-2.5">
+              <p className="text-[10.5px] text-[#45464d] leading-snug flex-1">
+                <span className="font-bold text-[#5516be]">Want the full deep scan?</span> Check against 10B+ academic sources, humanize, or write from real research.
+              </p>
+              <Link href="/auth">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#6b38d4] hover:text-[#5b2fc0] cursor-pointer whitespace-nowrap">
+                  Create free account <ArrowRight size={11} />
+                </span>
+              </Link>
+            </div>
           </div>
-        )}
-
-        {/* Upgrade path */}
-        <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-[#e9ddff] bg-[#f7f4ff] px-3.5 py-2.5">
-          <p className="text-[10.5px] text-[#45464d] leading-snug flex-1">
-            <span className="font-bold text-[#5516be]">Free forever</span> — this analyzer never sends your text to an AI model.
-            Want the full deep scan against 10B+ academic sources?
-          </p>
-          <Link href="/auth">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#6b38d4] hover:text-[#5b2fc0] cursor-pointer whitespace-nowrap">
-              Create free account <ArrowRight size={11} />
-            </span>
-          </Link>
         </div>
-      </div>
+      )}
     </div>
   );
 }
