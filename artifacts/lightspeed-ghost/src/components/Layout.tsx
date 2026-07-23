@@ -10,8 +10,6 @@ import {
   Files,
   RotateCcw,
   Wand2,
-  Moon,
-  Sun,
   LogOut,
   Menu,
   X,
@@ -25,7 +23,6 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { cn } from "@/lib/utils";
@@ -130,7 +127,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     try { return localStorage.getItem("sidebar-collapsed") === "true"; } catch { return false; }
   });
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
   const { plan } = useSubscription();
   const [, navigate] = useLocation();
@@ -305,13 +301,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <span className="hidden sm:inline">Funds</span>
             </button>
             <NotificationBell />
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground"
-              title="Toggle theme"
-            >
-              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
           </div>
         </header>
 

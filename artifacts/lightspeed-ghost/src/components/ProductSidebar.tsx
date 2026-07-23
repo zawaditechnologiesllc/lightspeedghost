@@ -39,10 +39,10 @@ function RailItem({ item, onNavigate }: { item: ToolNavItem; onNavigate?: () => 
         className="group flex flex-col items-center gap-1 px-1 py-2.5 rounded-xl cursor-pointer hover:bg-[#f2f4f6] transition-colors"
         title={label}
       >
-        <span className="w-9 h-9 rounded-lg bg-[#f7f9fb] border border-[#e0e3e5] flex items-center justify-center group-hover:border-[#6b38d4]/40 group-hover:bg-white transition-colors">
+        <span className="w-9 h-9 rounded-lg bg-[#f7f9fb] border border-[#e0e3e5] flex items-center justify-center group-hover:border-[#10b981]/40 group-hover:bg-white transition-colors">
           <Icon size={17} className={accent} />
         </span>
-        <span className="text-[9px] font-semibold text-[#45464d] leading-tight text-center group-hover:text-[#6b38d4] transition-colors">
+        <span className="text-[9px] font-semibold text-[#45464d] leading-tight text-center group-hover:text-[#10b981] transition-colors">
           {label}
         </span>
       </span>
@@ -58,11 +58,11 @@ export function ProductSidebar() {
       <div className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5">
         {/* New — start a fresh document */}
         <Link href="/app">
-          <span className="group flex flex-col items-center gap-1 px-1 py-2.5 rounded-xl cursor-pointer hover:bg-[#6b38d4]/5 transition-colors" title="New">
-            <span className="w-9 h-9 rounded-lg bg-[#6b38d4] flex items-center justify-center shadow-sm shadow-[#6b38d4]/30 group-hover:bg-[#5b2fc0] transition-colors">
+          <span className="group flex flex-col items-center gap-1 px-1 py-2.5 rounded-xl cursor-pointer hover:bg-[#10b981]/5 transition-colors" title="New">
+            <span className="w-9 h-9 rounded-lg bg-[#10b981] flex items-center justify-center shadow-sm shadow-[#10b981]/30 group-hover:bg-[#059669] transition-colors">
               <Plus size={18} className="text-white" strokeWidth={2.5} />
             </span>
-            <span className="text-[9px] font-semibold text-[#45464d] leading-tight group-hover:text-[#6b38d4] transition-colors">New</span>
+            <span className="text-[9px] font-semibold text-[#45464d] leading-tight group-hover:text-[#10b981] transition-colors">New</span>
           </span>
         </Link>
 
@@ -91,8 +91,8 @@ export function ProductSidebarDrawer({ open, onClose }: { open: boolean; onClose
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
           <Link href="/app">
-            <span onClick={onClose} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#6b38d4]/5 cursor-pointer">
-              <span className="w-8 h-8 rounded-lg bg-[#6b38d4] flex items-center justify-center shrink-0">
+            <span onClick={onClose} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#10b981]/5 cursor-pointer">
+              <span className="w-8 h-8 rounded-lg bg-[#10b981] flex items-center justify-center shrink-0">
                 <Plus size={16} className="text-white" strokeWidth={2.5} />
               </span>
               <span className="text-sm font-semibold text-[#191c1e]">New document</span>

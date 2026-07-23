@@ -29,7 +29,7 @@ const css = `
 @keyframes tdRes{0%,58%{opacity:0}63%,96%{opacity:1}100%{opacity:0}}
 .td-type{display:inline-block;max-width:100%;overflow:hidden;white-space:nowrap;vertical-align:bottom;width:0;animation:tdType ${LOOP} infinite}
 @keyframes tdType{0%,4%{width:0;animation-timing-function:steps(30,end)}24%,100%{width:100%}}
-.td-caret{display:inline-block;width:2px;height:1em;background:#6b38d4;vertical-align:text-bottom;margin-left:1px;animation:tdCaret 1s step-end infinite}
+.td-caret{display:inline-block;width:2px;height:1em;background:#10b981;vertical-align:text-bottom;margin-left:1px;animation:tdCaret 1s step-end infinite}
 @keyframes tdCaret{50%{opacity:0}}
 .td-press{animation:tdPress ${LOOP} infinite}
 @keyframes tdPress{0%,25%{transform:scale(1)}27%{transform:scale(.95)}29%,100%{transform:scale(1)}}
@@ -48,7 +48,7 @@ const css = `
 @keyframes tdR4{0%,69%{opacity:0;transform:translateY(7px)}73%,100%{opacity:1;transform:none}}
 .td-shrink{width:87%;animation:tdShrink ${LOOP} infinite}
 @keyframes tdShrink{0%,64%{width:87%;background:#dc2626}76%,100%{width:4%;background:#059669}}
-.td-dots span{width:5px;height:5px;border-radius:9999px;background:#6b38d4;display:inline-block;margin-right:3px;animation:tdDot 1s ease-in-out infinite}
+.td-dots span{width:5px;height:5px;border-radius:9999px;background:#10b981;display:inline-block;margin-right:3px;animation:tdDot 1s ease-in-out infinite}
 .td-dots span:nth-child(2){animation-delay:.15s}.td-dots span:nth-child(3){animation-delay:.3s}
 @keyframes tdDot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
 .td-count{position:relative;display:inline-block;min-width:4.5ch;text-align:right}
@@ -128,7 +128,7 @@ function UploadRow({ label, file }: { label: string; file: string }) {
     <div className="mt-2.5">
       <p className="text-[8.5px] font-semibold text-[#76777d] uppercase tracking-wide mb-0.5">{label}</p>
       <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-dashed border-[#c6c6cd] bg-white text-[10px] text-[#45464d] w-fit">
-        <Upload size={10} className="text-[#6b38d4]" /> {file} <Check size={10} className="text-emerald-600" strokeWidth={3} />
+        <Upload size={10} className="text-[#10b981]" /> {file} <Check size={10} className="text-emerald-600" strokeWidth={3} />
       </div>
     </div>
   );
@@ -136,7 +136,7 @@ function UploadRow({ label, file }: { label: string; file: string }) {
 
 function FakeButton({ children }: { children: React.ReactNode }) {
   return (
-    <div className="td-press mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6b38d4] text-white text-[11px] font-bold shadow-md shadow-[#6b38d4]/25">
+    <div className="td-press mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#10b981] text-white text-[11px] font-bold shadow-md shadow-[#10b981]/25">
       {children}
     </div>
   );
@@ -156,20 +156,20 @@ function Proc({ title, rows, counter }: {
         <span className="td-dots"><span /><span /><span /></span>
         <span className="text-[12px] font-semibold text-[#131b2e]">{title}</span>
         {counter && (
-          <span className="ml-auto text-[10px] font-mono font-bold text-[#6b38d4]">
+          <span className="ml-auto text-[10px] font-mono font-bold text-[#10b981]">
             <span className="td-count"><span>{counter.values[0]}</span><span>{counter.values[1]}</span><span>{counter.values[2]}</span></span> {counter.label}
           </span>
         )}
       </div>
       <div className="h-1.5 rounded-full bg-[#eceef0] overflow-hidden mb-4">
-        <div className="td-fill h-full rounded-full bg-gradient-to-r from-[#6b38d4] to-[#0090a9]" />
+        <div className="td-fill h-full rounded-full bg-gradient-to-r from-[#10b981] to-[#0d9488]" />
       </div>
       <div className="space-y-1.5">
         {rows.map((r, i) => (
           <div key={r.label} className={`td-s${i + 1} flex items-center gap-2 text-[11px] text-[#45464d] bg-[#f7f9fb] border border-[#eceef0] rounded-lg px-2.5 py-1.5`}>
-            <span className="w-3.5 h-3.5 rounded-full bg-[#6b38d4]/10 text-[#6b38d4] flex items-center justify-center shrink-0"><Check size={9} strokeWidth={3.5} /></span>
+            <span className="w-3.5 h-3.5 rounded-full bg-[#10b981]/10 text-[#10b981] flex items-center justify-center shrink-0"><Check size={9} strokeWidth={3.5} /></span>
             <span className="truncate">{r.label}</span>
-            {r.meta && <span className="ml-auto shrink-0 text-[9px] font-bold text-[#6b38d4]">{r.meta}</span>}
+            {r.meta && <span className="ml-auto shrink-0 text-[9px] font-bold text-[#10b981]">{r.meta}</span>}
           </div>
         ))}
       </div>
@@ -204,10 +204,10 @@ function WriteDemo() {
       <div className="td-res">
         <div className="td-r1 text-[12px] font-bold text-[#131b2e] leading-snug mb-1.5">The Impact of Social Media Use on Adolescent Mental Health: A Systematic Perspective</div>
         <p className="td-r2 text-[10px] text-[#45464d] leading-relaxed mb-2">
-          Adolescents reporting more than three hours of daily social-media use show elevated rates of anxiety and depressive symptoms <span className="text-[#6b38d4] font-semibold">(Twenge et al., 2023)</span>, an effect that persists after controlling for baseline mood <span className="text-[#6b38d4] font-semibold">(Orben &amp; Przybylski, 2022)</span>.
+          Adolescents reporting more than three hours of daily social-media use show elevated rates of anxiety and depressive symptoms <span className="text-[#10b981] font-semibold">(Twenge et al., 2023)</span>, an effect that persists after controlling for baseline mood <span className="text-[#10b981] font-semibold">(Orben &amp; Przybylski, 2022)</span>.
         </p>
         <p className="td-r3 text-[9px] text-[#76777d] leading-relaxed mb-2 border-t border-[#eceef0] pt-2">
-          Twenge, J. M., et al. (2023). Worldwide increases in adolescent loneliness. <span className="italic">J. Adolescence, 93</span>, 257–269. <span className="text-[#6b38d4]">doi:10.1016/j.adolescence.2023.06.006 ↗</span>
+          Twenge, J. M., et al. (2023). Worldwide increases in adolescent loneliness. <span className="italic">J. Adolescence, 93</span>, 257–269. <span className="text-[#10b981]">doi:10.1016/j.adolescence.2023.06.006 ↗</span>
         </p>
         <div className="td-r4 flex items-center gap-2 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 w-fit">
           <Check size={11} strokeWidth={3} /> 2,506 words · 12 verified citations · similarity 4.2% · rubric check passed
@@ -248,7 +248,7 @@ function OutlineDemo() {
         <div className="space-y-1.5">
           {rows.map(([n, t, r]) => (
             <div key={n} className={`td-r${r} flex items-start gap-2 bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-3 py-2`}>
-              <span className="text-[11px] font-bold text-[#6b38d4] w-5 shrink-0">{n}</span>
+              <span className="text-[11px] font-bold text-[#10b981] w-5 shrink-0">{n}</span>
               <span className="text-[10.5px] text-[#191c1e] font-medium leading-snug">{t}</span>
             </div>
           ))}
@@ -291,7 +291,7 @@ function RevisionDemo() {
         </div>
         <div className="td-r2 text-[9.5px] leading-relaxed rounded-lg border border-[#e0e3e5] bg-[#f7f9fb] px-3 py-2 mb-2">
           <span className="text-[#dc2626] line-through">Social media is very bad for teenagers…</span>{" "}
-          <span className="text-[#191c1e]">→ Longitudinal cohort data links heavy use to elevated anxiety and depressive symptoms <span className="text-[#6b38d4] font-semibold">(Twenge et al., 2023)</span>.</span>
+          <span className="text-[#191c1e]">→ Longitudinal cohort data links heavy use to elevated anxiety and depressive symptoms <span className="text-[#10b981] font-semibold">(Twenge et al., 2023)</span>.</span>
         </div>
         {["Thesis sharpened & restated in conclusion", "4 citations corrected to APA 7 — every change explained"].map((t, i) => (
           <div key={t} className={`td-r${(i + 3) as 3 | 4} flex items-center gap-2 text-[10.5px] text-[#45464d] mb-1`}>
@@ -336,7 +336,7 @@ function HumanizerDemo() {
         </div>
         <div className="td-r1 flex justify-between text-[10px] font-bold mb-2"><span className="text-[#76777d]">87% before</span><span className="text-emerald-600">4% after</span></div>
         <div className="td-r2 text-[9.5px] text-[#191c1e] leading-relaxed rounded-lg border border-[#e0e3e5] bg-[#f7f9fb] px-3 py-2 mb-2">
-          A lot of forces pull at this at once — some obvious, some not. What matters is which ones actually move the needle, and the evidence points to three <span className="text-[#6b38d4] font-semibold">(Chen &amp; Park, 2023)</span>.
+          A lot of forces pull at this at once — some obvious, some not. What matters is which ones actually move the needle, and the evidence points to three <span className="text-[#10b981] font-semibold">(Chen &amp; Park, 2023)</span>.
         </div>
         <div className="td-r3 flex items-center gap-2 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 w-fit">
           <Check size={11} strokeWidth={3} /> Reads human · citations preserved · meaning intact
@@ -404,7 +404,7 @@ function StemDemo() {
             { label: "Chemistry", icon: <FlaskConical size={9} />, on: false },
             { label: "CS", icon: <Cpu size={9} />, on: false },
           ].map((s) => (
-            <span key={s.label} className={`inline-flex items-center gap-1 text-[9.5px] font-semibold rounded-full px-2 py-1 border ${s.on ? "bg-[#6b38d4] text-white border-[#6b38d4]" : "bg-white text-[#45464d] border-[#e0e3e5]"}`}>
+            <span key={s.label} className={`inline-flex items-center gap-1 text-[9.5px] font-semibold rounded-full px-2 py-1 border ${s.on ? "bg-[#10b981] text-white border-[#10b981]" : "bg-white text-[#45464d] border-[#e0e3e5]"}`}>
               {s.icon} {s.label}
             </span>
           ))}
@@ -412,7 +412,7 @@ function StemDemo() {
         </div>
         <TypeBox mono text="Find the definite integral of x·sin(x) from 0 to π" />
         <div className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-[#45464d] bg-white border border-[#e0e3e5] rounded-lg px-2.5 py-1.5 w-fit">
-          <Camera size={11} className="text-[#6b38d4]" /> IMG_2041.jpg · OCR extracted the problem <Check size={10} className="text-emerald-600" strokeWidth={3} />
+          <Camera size={11} className="text-[#10b981]" /> IMG_2041.jpg · OCR extracted the problem <Check size={10} className="text-emerald-600" strokeWidth={3} />
         </div>
         <FakeButton><Zap size={11} /> Solve</FakeButton>
       </div>
@@ -429,16 +429,16 @@ function StemDemo() {
       </div>
       <div className="td-res">
         <div className="td-r1 text-[10.5px] font-mono text-[#191c1e] bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-3 py-1.5 mb-1.5">
-          <span className="text-[#6b38d4] font-bold">Step 1</span> · u = x, dv = sin(x)dx → du = dx, v = −cos(x)
+          <span className="text-[#10b981] font-bold">Step 1</span> · u = x, dv = sin(x)dx → du = dx, v = −cos(x)
         </div>
         <div className="td-r2 text-[10.5px] font-mono text-[#191c1e] bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-3 py-1.5 mb-1.5">
-          <span className="text-[#6b38d4] font-bold">Step 2</span> · [−x·cos(x)]₀^π + ∫₀^π cos(x)dx = π + [sin(x)]₀^π
+          <span className="text-[#10b981] font-bold">Step 2</span> · [−x·cos(x)]₀^π + ∫₀^π cos(x)dx = π + [sin(x)]₀^π
         </div>
         <div className="td-r3 flex items-center gap-2 text-[11.5px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 mb-2">
           <Check size={12} strokeWidth={3} /> Answer: π ≈ 3.14159 · verified by critic layer
         </div>
         <svg className="td-r4" width="100%" height="30" viewBox="0 0 260 30" fill="none" aria-hidden>
-          <path d="M2 28 C 40 28, 60 2, 130 2 S 220 28, 258 28" stroke="#6b38d4" strokeWidth="2" />
+          <path d="M2 28 C 40 28, 60 2, 130 2 S 220 28, 258 28" stroke="#10b981" strokeWidth="2" />
           <line x1="2" y1="28" x2="258" y2="28" stroke="#d8dadc" strokeWidth="1" />
         </svg>
       </div>
@@ -452,7 +452,7 @@ function StudyDemo() {
       <div className="td-in">
         <div className="flex flex-wrap gap-1 mb-2">
           {["Tutor", "Explain", "Quiz", "Summarize"].map((mo, i) => (
-            <span key={mo} className={`text-[9.5px] font-semibold rounded-full px-2.5 py-1 border ${i === 0 ? "bg-[#6b38d4] text-white border-[#6b38d4]" : "bg-white text-[#45464d] border-[#e0e3e5]"}`}>{mo}</span>
+            <span key={mo} className={`text-[9.5px] font-semibold rounded-full px-2.5 py-1 border ${i === 0 ? "bg-[#10b981] text-white border-[#10b981]" : "bg-white text-[#45464d] border-[#e0e3e5]"}`}>{mo}</span>
           ))}
         </div>
         <Label>Enter a topic, question, or paste your notes here…</Label>
@@ -472,14 +472,14 @@ function StudyDemo() {
         />
       </div>
       <div className="td-res">
-        <div className="td-r1 ml-auto max-w-[85%] bg-[#6b38d4] text-white text-[10.5px] rounded-xl rounded-br-sm px-3 py-1.5 mb-1.5 w-fit">
+        <div className="td-r1 ml-auto max-w-[85%] bg-[#10b981] text-white text-[10.5px] rounded-xl rounded-br-sm px-3 py-1.5 mb-1.5 w-fit">
           Explain photosynthesis like I'm cramming for finals
         </div>
         <div className="td-r2 max-w-[92%] bg-[#f7f9fb] border border-[#e0e3e5] text-[10.5px] text-[#191c1e] rounded-xl rounded-bl-sm px-3 py-2 mb-1.5 leading-relaxed">
           Two stages. <b>Light reactions</b> (thylakoid): capture light → ATP + NADPH. <b>Calvin cycle</b> (stroma): spend that energy to fix CO₂ → glucose. Last week the electron transport chain tripped you up — remember: it's just electrons falling downhill, pumping H⁺ as they go.
         </div>
         <div className="td-r3 flex flex-wrap gap-1.5">
-          <span className="text-[9px] font-bold text-[#5516be] bg-[#e9ddff] rounded-full px-2 py-1">Memory: Bio 201 · exam Friday · weak spot: ETC</span>
+          <span className="text-[9px] font-bold text-[#047857] bg-[#d1fae5] rounded-full px-2 py-1">Memory: Bio 201 · exam Friday · weak spot: ETC</span>
           <span className="text-[9px] font-bold text-[#45464d] bg-white border border-[#e0e3e5] rounded-full px-2 py-1">Quiz me →</span>
           <span className="text-[9px] font-bold text-[#45464d] bg-white border border-[#e0e3e5] rounded-full px-2 py-1">Make flashcards</span>
         </div>
@@ -514,7 +514,7 @@ function EbookDemo() {
       </div>
       <div className="td-res">
         <div className="flex gap-3">
-          <div className="td-r1 w-[74px] h-[104px] rounded-lg bg-gradient-to-br from-[#6b38d4] to-[#0090a9] shrink-0 p-2 flex flex-col justify-between shadow-md">
+          <div className="td-r1 w-[74px] h-[104px] rounded-lg bg-gradient-to-br from-[#10b981] to-[#0d9488] shrink-0 p-2 flex flex-col justify-between shadow-md">
             <Sparkles size={10} className="text-white/80" />
             <span className="text-[6.5px] font-bold text-white leading-tight">HOW TO SCALE A DROPSHIPPING BUSINESS FROM $0 TO $1M</span>
           </div>
@@ -675,7 +675,7 @@ export function ToolDemosSection() {
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
-          <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">One subscription. Seven tools. Watch them work.</p>
+          <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">One subscription. Seven tools. Watch them work.</p>
           <h2 className="text-3xl sm:text-4xl font-bold leading-tight mb-4 text-[#131b2e]">
             Everything you need, built on real research.
           </h2>
@@ -689,10 +689,10 @@ export function ToolDemosSection() {
             <div key={anchor} id={anchor} className="grid lg:grid-cols-2 gap-8 lg:gap-14 items-center scroll-mt-24">
               <div className={i % 2 === 1 ? "lg:order-2" : ""}>
                 <div className="flex flex-wrap items-center gap-2 mb-4">
-                  <div className="w-9 h-9 rounded-lg bg-[#6b38d4]/10 text-[#6b38d4] flex items-center justify-center shrink-0"><Icon size={17} /></div>
-                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#6b38d4]">{kicker}</span>
+                  <div className="w-9 h-9 rounded-lg bg-[#10b981]/10 text-[#10b981] flex items-center justify-center shrink-0"><Icon size={17} /></div>
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#10b981]">{kicker}</span>
                   {badge && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#6b38d4] text-white">{badge}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#10b981] text-white">{badge}</span>
                   )}
                 </div>
                 <h3 className="text-2xl sm:text-[28px] font-bold text-[#131b2e] leading-tight mb-3">{headline}</h3>
@@ -700,7 +700,7 @@ export function ToolDemosSection() {
                 <ul className="space-y-2 mb-5">
                   {bullets.map((p) => (
                     <li key={p} className="flex items-start gap-2.5 text-sm text-[#191c1e]">
-                      <CheckCircle size={15} className="text-[#6b38d4] shrink-0 mt-0.5" />
+                      <CheckCircle size={15} className="text-[#10b981] shrink-0 mt-0.5" />
                       <span>{p}</span>
                     </li>
                   ))}
@@ -714,7 +714,7 @@ export function ToolDemosSection() {
                   </div>
                 </div>
                 <Link href="/auth">
-                  <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-all cursor-pointer shadow-md shadow-[#6b38d4]/25 hover:-translate-y-0.5 text-sm">
+                  <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-all cursor-pointer shadow-md shadow-[#10b981]/25 hover:-translate-y-0.5 text-sm">
                     {cta} <ArrowRight size={14} />
                   </span>
                 </Link>

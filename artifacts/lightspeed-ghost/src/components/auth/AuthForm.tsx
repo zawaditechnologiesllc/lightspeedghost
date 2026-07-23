@@ -116,7 +116,7 @@ export function AuthForm({
         <p className="text-[#45464d] text-sm mb-5">
           If an account exists for {email}, a password-reset link is on its way.
         </p>
-        <button onClick={() => { setForgot(false); reset(); }} className="text-[#6b38d4] hover:text-[#5b2fc0] text-sm font-medium">
+        <button onClick={() => { setForgot(false); reset(); }} className="text-[#10b981] hover:text-[#059669] text-sm font-medium">
           ← Back to sign in
         </button>
       </div>
@@ -165,7 +165,7 @@ export function AuthForm({
             <input
               type="email" value={email} onChange={(e) => setEmail(e.target.value)}
               placeholder="name@email.com" required
-              className="w-full pl-10 py-2.5 bg-white border border-[#c6c6cd] rounded-lg text-[#191c1e] placeholder-[#76777d] text-sm focus:outline-none focus:border-[#6b38d4] focus:ring-1 focus:ring-[#6b38d4] transition-colors"
+              className="w-full pl-10 py-2.5 bg-white border border-[#c6c6cd] rounded-lg text-[#191c1e] placeholder-[#76777d] text-sm focus:outline-none focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981] transition-colors"
             />
           </div>
         </div>
@@ -176,7 +176,7 @@ export function AuthForm({
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-sm font-medium text-[#45464d]">Password</label>
                 {tab === "login" && (
-                  <button type="button" onClick={() => { setForgot(true); reset(); }} className="text-xs text-[#6b38d4] hover:text-[#5b2fc0] font-medium">
+                  <button type="button" onClick={() => { setForgot(true); reset(); }} className="text-xs text-[#10b981] hover:text-[#059669] font-medium">
                     Forgot password?
                   </button>
                 )}
@@ -187,7 +187,7 @@ export function AuthForm({
                   type={showPw ? "text" : "password"} value={password}
                   onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
                   required minLength={8}
-                  className="w-full pl-10 pr-10 py-2.5 bg-white border border-[#c6c6cd] rounded-lg text-[#191c1e] placeholder-[#76777d] text-sm focus:outline-none focus:border-[#6b38d4] focus:ring-1 focus:ring-[#6b38d4] transition-colors"
+                  className="w-full pl-10 pr-10 py-2.5 bg-white border border-[#c6c6cd] rounded-lg text-[#191c1e] placeholder-[#76777d] text-sm focus:outline-none focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981] transition-colors"
                 />
                 <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#76777d] hover:text-[#191c1e] transition-colors">
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -206,7 +206,7 @@ export function AuthForm({
                     className={`w-full pl-10 pr-3 py-2.5 bg-white border rounded-lg text-[#191c1e] placeholder-[#76777d] text-sm focus:outline-none focus:ring-1 transition-colors ${
                       confirmPassword && confirmPassword !== password
                         ? "border-red-400 focus:border-red-500 focus:ring-red-500"
-                        : "border-[#c6c6cd] focus:border-[#6b38d4] focus:ring-[#6b38d4]"
+                        : "border-[#c6c6cd] focus:border-[#10b981] focus:ring-[#10b981]"
                     }`}
                   />
                 </div>
@@ -227,7 +227,7 @@ export function AuthForm({
 
         <button
           type="submit" disabled={status === "loading"}
-          className="w-full py-2.5 bg-[#6b38d4] hover:bg-[#5b2fc0] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 text-sm shadow-md shadow-[#6b38d4]/20"
+          className="w-full py-2.5 bg-[#10b981] hover:bg-[#059669] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 text-sm shadow-md shadow-[#10b981]/20"
         >
           {status === "loading" ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} />}
           {status === "loading" ? "Please wait…" : forgot ? "Send reset link" : tab === "login" ? "Sign in" : "Create free account"}
@@ -237,15 +237,15 @@ export function AuthForm({
       <p className="text-center text-sm text-[#45464d] mt-5">
         {forgot ? (
           <>Remembered it?{" "}
-            <button onClick={() => { setForgot(false); reset(); }} className="text-[#6b38d4] hover:text-[#5b2fc0] font-semibold">Back to sign in</button>
+            <button onClick={() => { setForgot(false); reset(); }} className="text-[#10b981] hover:text-[#059669] font-semibold">Back to sign in</button>
           </>
         ) : tab === "login" ? (
           <>No account?{" "}
-            <button onClick={() => switchTab("signup")} className="text-[#6b38d4] hover:text-[#5b2fc0] font-semibold">Create one free</button>
+            <button onClick={() => switchTab("signup")} className="text-[#10b981] hover:text-[#059669] font-semibold">Create one free</button>
           </>
         ) : (
           <>Already have an account?{" "}
-            <button onClick={() => switchTab("login")} className="text-[#6b38d4] hover:text-[#5b2fc0] font-semibold">Sign in</button>
+            <button onClick={() => switchTab("login")} className="text-[#10b981] hover:text-[#059669] font-semibold">Sign in</button>
           </>
         )}
       </p>

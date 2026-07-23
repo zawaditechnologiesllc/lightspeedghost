@@ -45,7 +45,7 @@ export default function ResetPassword() {
     <div className="min-h-screen bg-[#04080f] flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-md">
         <Link href="/">
-          <Logo size={32} className="mb-10 w-fit" />
+          <Logo size={32} className="mb-10 w-fit" variant="dark" />
         </Link>
 
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8">

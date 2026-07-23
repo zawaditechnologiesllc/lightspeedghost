@@ -20,7 +20,7 @@ const ARTICLES: ArticleMeta[] = [
   {
     slug: "literature-review-guide",
     tag: "Writing",
-    tagColor: "text-[#6b38d4] bg-[#6b38d4]/10 border-[#6b38d4]/20",
+    tagColor: "text-[#10b981] bg-[#10b981]/10 border-[#10b981]/20",
     title: "How to write a literature review that actually holds up",
     excerpt: "A literature review is not a summary dump. Here's how to structure one that makes reviewers take you seriously.",
     readTime: "8 min read",
@@ -99,7 +99,7 @@ const ARTICLES: ArticleMeta[] = [
   {
     slug: "citations-that-are-real",
     tag: "Writing",
-    tagColor: "text-[#6b38d4] bg-[#6b38d4]/10 border-[#6b38d4]/20",
+    tagColor: "text-[#10b981] bg-[#10b981]/10 border-[#10b981]/20",
     title: "Why most AI writers give you fake citations (and what we do instead)",
     excerpt: "Hallucinated references will get a paper failed instantly. We pull citations from Semantic Scholar in real time. Here's how.",
     readTime: "6 min read",
@@ -115,7 +115,7 @@ const ARTICLES: ArticleMeta[] = [
   {
     slug: "how-to-write-a-thesis-statement",
     tag: "Writing",
-    tagColor: "text-[#6b38d4] bg-[#6b38d4]/10 border-[#6b38d4]/20",
+    tagColor: "text-[#10b981] bg-[#10b981]/10 border-[#10b981]/20",
     title: "How to write a thesis statement that professors can't ignore",
     excerpt: "A vague thesis is the fastest way to guarantee a mediocre grade. Here's the formula for a statement that is specific, arguable, and positions your whole paper.",
     readTime: "6 min read",
@@ -338,7 +338,7 @@ const ARTICLE_BODIES: Record<string, React.ReactNode> = {
       <p>Regardless of which tool you use, verify every citation before submitting:</p>
       <ul className="list-disc list-inside space-y-1.5 text-[#45464d]">
         <li>Copy the paper title into Google Scholar and confirm a matching result appears</li>
-        <li>If a DOI is provided, paste it into <code className="text-[#6b38d4]">doi.org</code> and confirm it resolves to the correct paper</li>
+        <li>If a DOI is provided, paste it into <code className="text-[#10b981]">doi.org</code> and confirm it resolves to the correct paper</li>
         <li>Check that the authors, year, and journal match exactly — hallucinations often get the title approximately right but corrupt authors or dates</li>
         <li>For key claims, read at least the abstract to confirm the paper says what the citation implies it says</li>
       </ul>
@@ -535,7 +535,7 @@ export default function BlogPost() {
     return (
       <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased flex flex-col items-center justify-center gap-4">
         <p className="text-[#76777d] text-sm">Article not found.</p>
-        <Link href="/blog"><span className="text-[#6b38d4] text-sm hover:text-[#5b2fc0] cursor-pointer">← All articles</span></Link>
+        <Link href="/blog"><span className="text-[#10b981] text-sm hover:text-[#059669] cursor-pointer">← All articles</span></Link>
       </div>
     );
   }
@@ -582,11 +582,11 @@ export default function BlogPost() {
           </div>
         )}
 
-        <div className="mt-14 p-6 rounded-2xl bg-[#6b38d4]/8 border border-[#6b38d4]/20 text-center">
+        <div className="mt-14 p-6 rounded-2xl bg-[#10b981]/8 border border-[#10b981]/20 text-center">
           <p className="text-[#191c1e] font-semibold mb-2">Try it yourself</p>
           <p className="text-[#76777d] text-sm mb-5">Eight AI academic tools built specifically for students. Starter plan from $9.99/month — cancel any time.</p>
           <Link href="/auth">
-            <span className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-xl transition-all cursor-pointer text-sm">
+            <span className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-xl transition-all cursor-pointer text-sm">
               Get started <ArrowRight size={14} />
             </span>
           </Link>

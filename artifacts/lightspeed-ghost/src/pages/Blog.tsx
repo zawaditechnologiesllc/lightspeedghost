@@ -26,7 +26,7 @@ const ARTICLES: ArticleCard[] = [
   {
     slug: "how-to-write-a-thesis-statement",
     tag: "Writing",
-    tagColor: "text-[#6b38d4] bg-[#6b38d4]/10 border-[#6b38d4]/20",
+    tagColor: "text-[#10b981] bg-[#10b981]/10 border-[#10b981]/20",
     title: "How to write a thesis statement that professors can't ignore",
     excerpt: "A vague thesis guarantees a mediocre grade. Here's the formula for a statement that is specific, arguable, and positions your whole paper.",
     readTime: "6 min read",
@@ -35,7 +35,7 @@ const ARTICLES: ArticleCard[] = [
   {
     slug: "literature-review-guide",
     tag: "Writing",
-    tagColor: "text-[#6b38d4] bg-[#6b38d4]/10 border-[#6b38d4]/20",
+    tagColor: "text-[#10b981] bg-[#10b981]/10 border-[#10b981]/20",
     title: "How to write a literature review that actually holds up",
     excerpt: "A literature review is not a summary dump. Here's how to structure one that makes reviewers take you seriously.",
     readTime: "8 min read",
@@ -80,7 +80,7 @@ const ARTICLES: ArticleCard[] = [
   {
     slug: "citations-that-are-real",
     tag: "Writing",
-    tagColor: "text-[#6b38d4] bg-[#6b38d4]/10 border-[#6b38d4]/20",
+    tagColor: "text-[#10b981] bg-[#10b981]/10 border-[#10b981]/20",
     title: "Why most AI writers give you fake citations (and what we do instead)",
     excerpt: "Hallucinated references will get a paper failed instantly. We pull citations from Semantic Scholar in real time. Here's how.",
     readTime: "6 min read",
@@ -132,13 +132,13 @@ export default function Blog() {
         <Link href="/"><Logo size={28} textSize="text-base" variant="light" className="cursor-pointer" /></Link>
         <div className="flex items-center gap-4">
           <Link href="/auth"><span className="text-sm text-[#76777d] hover:text-[#191c1e] transition-colors cursor-pointer">Sign In</span></Link>
-          <Link href="/auth"><span className="px-4 py-2 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-medium rounded-lg transition-colors cursor-pointer">Get Started</span></Link>
+          <Link href="/auth"><span className="px-4 py-2 text-sm bg-[#10b981] hover:bg-[#059669] text-white font-medium rounded-lg transition-colors cursor-pointer">Get Started</span></Link>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-14 sm:py-20">
         <div className="mb-12">
-          <p className="text-[#6b38d4] text-xs font-semibold uppercase tracking-widest mb-4">Blog</p>
+          <p className="text-[#10b981] text-xs font-semibold uppercase tracking-widest mb-4">Blog</p>
           <h1 className="text-4xl sm:text-5xl font-bold mb-4 leading-tight">Guides for students who want to do better work.</h1>
           <p className="text-[#76777d] text-lg max-w-xl">
             Practical articles on academic writing, AI tools, study techniques, and making the most of the platform.
@@ -154,7 +154,7 @@ export default function Blog() {
                   <Tag size={9} /> {a.tag}
                 </span>
               </div>
-              <h2 className="text-base font-bold text-[#191c1e] group-hover:text-[#5b2fc0] transition-colors mb-2 leading-snug">{a.title}</h2>
+              <h2 className="text-base font-bold text-[#191c1e] group-hover:text-[#059669] transition-colors mb-2 leading-snug">{a.title}</h2>
               <p className="text-[#76777d] text-sm leading-relaxed flex-1">{a.excerpt}</p>
               <div className="flex items-center gap-3 mt-5 text-[#9a9aa1] text-xs">
                 <span>{a.date}</span>
@@ -168,7 +168,7 @@ export default function Blog() {
         <div className="mt-14 py-12 border-t border-[#eceef0] text-center">
           <p className="text-[#76777d] text-sm mb-6">More guides on the way — covering citation management, revision techniques, STEM problem-setting, and more.</p>
           <Link href="/auth">
-            <span className="inline-flex items-center gap-2 px-6 py-3 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-medium rounded-xl transition-all cursor-pointer text-sm">
+            <span className="inline-flex items-center gap-2 px-6 py-3 bg-[#10b981] hover:bg-[#059669] text-white font-medium rounded-xl transition-all cursor-pointer text-sm">
               Try the platform <ArrowRight size={14} />
             </span>
           </Link>

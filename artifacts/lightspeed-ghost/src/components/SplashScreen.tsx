@@ -37,7 +37,7 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
             transform: logoVisible ? "scale(1) translateY(0)" : "scale(0.8) translateY(12px)",
           }}
         >
-          <Logo size={64} textSize="text-2xl" />
+          <Logo size={64} textSize="text-2xl" variant="dark" />
         </div>
 
         <div

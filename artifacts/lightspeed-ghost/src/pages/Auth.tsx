@@ -15,7 +15,7 @@ export default function Auth() {
             <Logo size={30} textSize="text-base" variant="light" className="cursor-pointer select-none" />
           </Link>
           <Link href="/">
-            <span className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] transition-colors cursor-pointer">
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors cursor-pointer">
               <ArrowLeft size={15} /> Back to home
             </span>
           </Link>

@@ -35,7 +35,7 @@ const TABS: Array<{ id: Tab; label: string; icon: typeof Wand2 }> = [
 // Tool actions shown beneath the box. The first runs the free in-browser
 // analyzer; the rest deep-link into the real tools (AuthGuard prompts sign-up).
 const ACTIONS: Array<{ label: string; icon: typeof Wand2; href?: string; accent: string }> = [
-  { label: "Check my writing", icon: Sparkles,    accent: "text-[#6b38d4]" },
+  { label: "Check my writing", icon: Sparkles,    accent: "text-[#10b981]" },
   { label: "AI & Plagiarism",  icon: ShieldCheck, href: "/plagiarism", accent: "text-emerald-600" },
   { label: "Humanizer",        icon: Wand2,       href: "/humanizer",  accent: "text-purple-600" },
   { label: "Write Paper",      icon: PenLine,     href: "/write",      accent: "text-blue-600" },
@@ -99,7 +99,7 @@ export function HeroAnalyzer() {
   return (
     <div className="w-full max-w-3xl mx-auto">
       {/* ── The command box ── */}
-      <div className="rounded-[26px] border border-[#e0e3e5] bg-white shadow-[0_18px_50px_-20px_rgba(19,27,46,0.28)] focus-within:border-[#6b38d4]/50 focus-within:shadow-[0_18px_50px_-16px_rgba(107,56,212,0.35)] transition-all overflow-hidden">
+      <div className="rounded-[26px] border border-[#e0e3e5] bg-white shadow-[0_18px_50px_-20px_rgba(19,27,46,0.28)] focus-within:border-[#10b981]/50 focus-within:shadow-[0_18px_50px_-16px_rgba(107,56,212,0.35)] transition-all overflow-hidden">
         <textarea
           ref={taRef}
           value={text}
@@ -113,7 +113,7 @@ export function HeroAnalyzer() {
             type="button"
             onClick={() => loadSample(SAMPLE_AI)}
             title="Load a sample to try it"
-            className="w-9 h-9 rounded-full border border-[#e0e3e5] text-[#45464d] hover:border-[#6b38d4] hover:text-[#6b38d4] flex items-center justify-center transition-colors shrink-0"
+            className="w-9 h-9 rounded-full border border-[#e0e3e5] text-[#45464d] hover:border-[#10b981] hover:text-[#10b981] flex items-center justify-center transition-colors shrink-0"
           >
             <Plus size={17} />
           </button>
@@ -131,7 +131,7 @@ export function HeroAnalyzer() {
             type="button"
             onClick={() => analyze()}
             aria-label="Check my writing"
-            className="w-9 h-9 rounded-full bg-[#6b38d4] hover:bg-[#5b2fc0] text-white flex items-center justify-center transition-colors shadow-md shadow-[#6b38d4]/30 shrink-0"
+            className="w-9 h-9 rounded-full bg-[#10b981] hover:bg-[#059669] text-white flex items-center justify-center transition-colors shadow-md shadow-[#10b981]/30 shrink-0"
           >
             <ArrowRight size={17} />
           </button>
@@ -142,7 +142,7 @@ export function HeroAnalyzer() {
       <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
         {ACTIONS.map(({ label, icon: Icon, href, accent }) => {
           const inner = (
-            <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e3e5] bg-white text-sm font-semibold text-[#191c1e] hover:border-[#6b38d4]/50 hover:bg-[#faf9ff] cursor-pointer transition-all shadow-sm">
+            <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e3e5] bg-white text-sm font-semibold text-[#191c1e] hover:border-[#10b981]/50 hover:bg-[#faf9ff] cursor-pointer transition-all shadow-sm">
               <Icon size={15} className={accent} /> {label}
             </span>
           );
@@ -154,7 +154,7 @@ export function HeroAnalyzer() {
         })}
         <a
           href="#tools"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e3e5] bg-white text-sm font-semibold text-[#45464d] hover:border-[#6b38d4]/50 hover:bg-[#faf9ff] transition-all shadow-sm"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e3e5] bg-white text-sm font-semibold text-[#45464d] hover:border-[#10b981]/50 hover:bg-[#faf9ff] transition-all shadow-sm"
         >
           <LayoutGrid size={15} className="text-[#76777d]" /> More
         </a>
@@ -164,8 +164,8 @@ export function HeroAnalyzer() {
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 mt-3.5 text-[11px] text-[#76777d]">
         <span className="inline-flex items-center gap-1.5"><Lock size={11} className="text-emerald-600" /> Runs in your browser · never sent to an AI model</span>
         <span className="hidden sm:inline text-[#c6c6cd]">·</span>
-        <button type="button" onClick={() => loadSample(SAMPLE_AI)} className="font-semibold text-[#6b38d4] hover:underline">Try an AI-written sample</button>
-        <button type="button" onClick={() => loadSample(SAMPLE_HUMAN)} className="font-semibold text-[#6b38d4] hover:underline">Try a human sample</button>
+        <button type="button" onClick={() => loadSample(SAMPLE_AI)} className="font-semibold text-[#10b981] hover:underline">Try an AI-written sample</button>
+        <button type="button" onClick={() => loadSample(SAMPLE_HUMAN)} className="font-semibold text-[#10b981] hover:underline">Try a human sample</button>
       </div>
 
       {/* ── Results ── */}
@@ -179,7 +179,7 @@ export function HeroAnalyzer() {
                 type="button"
                 onClick={() => setTab(id)}
                 className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-[12px] font-semibold whitespace-nowrap transition-colors ${
-                  tab === id ? "text-[#6b38d4] border-b-2 border-[#6b38d4] -mb-px" : "text-[#45464d] hover:text-[#191c1e]"
+                  tab === id ? "text-[#10b981] border-b-2 border-[#10b981] -mb-px" : "text-[#45464d] hover:text-[#191c1e]"
                 }`}
               >
                 <Icon size={13} /> {label}
@@ -276,12 +276,12 @@ export function HeroAnalyzer() {
             )}
 
             {/* Upgrade path */}
-            <div className="mt-3.5 flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-[#e9ddff] bg-[#f7f4ff] px-3.5 py-2.5">
+            <div className="mt-3.5 flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-[#d1fae5] bg-[#f7f4ff] px-3.5 py-2.5">
               <p className="text-[10.5px] text-[#45464d] leading-snug flex-1">
-                <span className="font-bold text-[#5516be]">Want the full deep scan?</span> Check against 10B+ academic sources, humanize, or write from real research.
+                <span className="font-bold text-[#047857]">Want the full deep scan?</span> Check against 10B+ academic sources, humanize, or write from real research.
               </p>
               <Link href="/auth">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#6b38d4] hover:text-[#5b2fc0] cursor-pointer whitespace-nowrap">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#10b981] hover:text-[#059669] cursor-pointer whitespace-nowrap">
                   Create free account <ArrowRight size={11} />
                 </span>
               </Link>

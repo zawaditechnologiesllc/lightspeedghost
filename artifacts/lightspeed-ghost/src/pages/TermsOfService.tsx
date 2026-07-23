@@ -11,7 +11,7 @@ export default function TermsOfService() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-16">
-        <p className="text-[#6b38d4] text-xs font-semibold uppercase tracking-widest mb-3">Legal</p>
+        <p className="text-[#10b981] text-xs font-semibold uppercase tracking-widest mb-3">Legal</p>
         <h1 className="text-4xl font-bold mb-3">Terms of Service</h1>
         <p className="text-[#76777d] text-sm mb-12">Last updated: January 2025</p>
 
@@ -36,7 +36,7 @@ export default function TermsOfService() {
               <li>Comply with your institution's academic integrity policies</li>
               <li>Accept full responsibility for any content you submit academically</li>
             </ul>
-            <p className="mt-3">See our full <Link href="/academic-use"><span className="text-[#6b38d4] hover:text-[#5b2fc0] cursor-pointer">Academic Use Policy</span></Link>.</p>
+            <p className="mt-3">See our full <Link href="/academic-use"><span className="text-[#10b981] hover:text-[#059669] cursor-pointer">Academic Use Policy</span></Link>.</p>
           </section>
 
           <section>
@@ -76,7 +76,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-[#191c1e] text-xl font-semibold mb-4">11. Contact</h2>
-            <p>Questions? Email <a href="mailto:info@lightspeedghost.com" className="text-[#6b38d4] hover:text-[#5b2fc0]">info@lightspeedghost.com</a> or write to us at 500 Oracle Pkwy, Redwood City, CA 94065.</p>
+            <p>Questions? Email <a href="mailto:info@lightspeedghost.com" className="text-[#10b981] hover:text-[#059669]">info@lightspeedghost.com</a> or write to us at 500 Oracle Pkwy, Redwood City, CA 94065.</p>
           </section>
         </div>
       </main>

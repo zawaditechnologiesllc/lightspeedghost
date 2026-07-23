@@ -892,7 +892,7 @@ export default function Admin() {
           <div className="absolute bottom-0 right-0 w-[300px] h-[200px] bg-blue-600/6 rounded-full blur-[100px]" />
         </div>
         <div className="relative w-full max-w-sm">
-          <Link href="/"><Logo size={28} textSize="text-sm" className="mb-12 w-fit cursor-pointer opacity-80 hover:opacity-100 transition-opacity" /></Link>
+          <Link href="/"><Logo size={28} textSize="text-sm" variant="dark" className="mb-12 w-fit cursor-pointer opacity-80 hover:opacity-100 transition-opacity" /></Link>
           <div className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/40">
             <div className="px-8 pt-8 pb-6 border-b border-white/8">
               <div className="w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
@@ -1018,7 +1018,7 @@ export default function Admin() {
         {/* Sidebar */}
         <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-56 bg-white/[0.02] border-r border-white/8 flex flex-col transition-transform duration-200 ${mobileNav ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
           <div className="px-4 py-5 border-b border-white/8">
-            <Logo size={24} textSize="text-xs" className="opacity-80" />
+            <Logo size={24} textSize="text-xs" variant="dark" className="opacity-80" />
             <div className="mt-2 flex items-center gap-1.5">
               <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${adminRole === "super" ? "bg-red-400" : "bg-emerald-400"}`} />
               <span className="text-[10px] text-white/35 font-medium uppercase tracking-widest">

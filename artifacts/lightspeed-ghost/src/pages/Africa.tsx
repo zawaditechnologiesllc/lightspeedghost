@@ -201,7 +201,7 @@ export default function Africa() {
 
   return (
     <LazyMotion features={domAnimation}>
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#6b38d4]/20">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
 
       {/* ─── NAV ─── */}
       <header className={`fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#e0e3e5] transition-all duration-300 ${scrolled ? "shadow-md bg-white/95 backdrop-blur-md" : ""}`}>
@@ -212,7 +212,7 @@ export default function Africa() {
 
           <nav className="hidden md:flex items-center gap-0.5">
             {navItems.map((item) => (
-              <a key={item.label} href={item.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] transition-colors whitespace-nowrap">
+              <a key={item.label} href={item.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors whitespace-nowrap">
                 {item.label}
               </a>
             ))}
@@ -220,10 +220,10 @@ export default function Africa() {
 
           <div className="hidden md:flex items-center gap-2.5">
             <Link href="/auth">
-              <span className="px-4 py-2 text-sm text-[#45464d] hover:text-[#6b38d4] transition-colors cursor-pointer">Sign In</span>
+              <span className="px-4 py-2 text-sm text-[#45464d] hover:text-[#10b981] transition-colors cursor-pointer">Sign In</span>
             </Link>
             <Link href="/auth">
-              <span className="px-5 py-2.5 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-colors cursor-pointer shadow-md shadow-[#6b38d4]/20 whitespace-nowrap">
+              <span className="px-5 py-2.5 text-sm bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-colors cursor-pointer shadow-md shadow-[#10b981]/20 whitespace-nowrap">
                 Get Started
               </span>
             </Link>
@@ -248,7 +248,7 @@ export default function Africa() {
               transition={{ duration: 0.2 }}
             >
               {navItems.map((item) => (
-                <a key={item.label} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center px-3 py-3 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] transition-colors">
+                <a key={item.label} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors">
                   {item.label}
                 </a>
               ))}
@@ -257,7 +257,7 @@ export default function Africa() {
                   <span className="block text-center px-4 py-2.5 text-sm border border-[#c6c6cd] text-[#191c1e] rounded-lg cursor-pointer hover:bg-[#f2f4f6] transition-colors">Sign In</span>
                 </Link>
                 <Link href="/auth">
-                  <span className="block text-center px-4 py-2.5 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg cursor-pointer transition-colors">Get Started</span>
+                  <span className="block text-center px-4 py-2.5 text-sm bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg cursor-pointer transition-colors">Get Started</span>
                 </Link>
               </div>
             </m.div>
@@ -282,7 +282,7 @@ export default function Africa() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#e9ddff] text-[#5516be] text-xs font-bold uppercase tracking-wider mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d1fae5] text-[#047857] text-xs font-bold uppercase tracking-wider mb-6">
               <CheckCircle size={14} />
               Built for African Students
             </div>
@@ -302,12 +302,12 @@ export default function Africa() {
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-8">
               <Link href="/auth">
-                <span className="inline-flex items-center gap-2 px-7 py-4 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all shadow-lg shadow-[#6b38d4]/25 hover:-translate-y-0.5 text-sm sm:text-base cursor-pointer">
+                <span className="inline-flex items-center gap-2 px-7 py-4 bg-[#10b981] hover:bg-[#059669] text-white font-bold rounded-lg transition-all shadow-lg shadow-[#10b981]/25 hover:-translate-y-0.5 text-sm sm:text-base cursor-pointer">
                   Get started — from $9.99/mo
                   <ArrowRight size={16} />
                 </span>
               </Link>
-              <a href="#pricing" className="inline-flex items-center gap-2 px-7 py-4 border border-[#76777d] hover:border-[#6b38d4] text-[#191c1e] hover:text-[#6b38d4] font-bold rounded-lg transition-all hover:bg-[#eceef0] text-sm sm:text-base">
+              <a href="#pricing" className="inline-flex items-center gap-2 px-7 py-4 border border-[#76777d] hover:border-[#10b981] text-[#191c1e] hover:text-[#10b981] font-bold rounded-lg transition-all hover:bg-[#eceef0] text-sm sm:text-base">
                 See pricing
               </a>
             </div>
@@ -336,7 +336,7 @@ export default function Africa() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="absolute -inset-4 bg-[#e9ddff]/40 rounded-[2rem] blur-2xl pointer-events-none" />
+            <div className="absolute -inset-4 bg-[#d1fae5]/40 rounded-[2rem] blur-2xl pointer-events-none" />
             <div className="relative bg-white rounded-2xl shadow-2xl border border-[#e0e3e5] overflow-hidden">
               <div className="h-12 border-b border-[#e0e3e5] px-4 flex items-center justify-between bg-[#f2f4f6]">
                 <div className="flex gap-1.5">
@@ -351,11 +351,11 @@ export default function Africa() {
                 <div className="h-3 bg-[#eceef0] w-full rounded animate-pulse" />
                 <div className="h-3 bg-[#eceef0] w-5/6 rounded animate-pulse" />
                 <div className="pt-4 border-t border-[#e0e3e5]">
-                  <div className="text-[#6b38d4] font-bold mb-2 text-sm">Generating Outline…</div>
+                  <div className="text-[#10b981] font-bold mb-2 text-sm">Generating Outline…</div>
                   <div className="pl-2 space-y-2">
                     <div className="flex items-center gap-2 text-sm text-[#45464d]"><CheckCircle size={16} className="text-emerald-600 shrink-0" /> 1. Socio-economic impact of tech in Kenya</div>
                     <div className="flex items-center gap-2 text-sm text-[#45464d]"><CheckCircle size={16} className="text-emerald-600 shrink-0" /> 2. Mobile money revolution 2010–2024</div>
-                    <div className="flex items-center gap-2 text-sm text-[#76777d]"><div className="w-4 h-4 rounded-full border-2 border-[#c6c6cd] border-t-[#6b38d4] animate-spin shrink-0" /> 3. Future of regional digital trade</div>
+                    <div className="flex items-center gap-2 text-sm text-[#76777d]"><div className="w-4 h-4 rounded-full border-2 border-[#c6c6cd] border-t-[#10b981] animate-spin shrink-0" /> 3. Future of regional digital trade</div>
                   </div>
                 </div>
               </div>
@@ -375,7 +375,7 @@ export default function Africa() {
               { value: "3", label: "Local Money Networks" },
             ].map(({ value, label }) => (
               <div key={label}>
-                <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#c4b5fd] mb-1">{value}</div>
+                <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#6ee7b7] mb-1">{value}</div>
                 <p className="text-xs sm:text-sm text-white/70">{label}</p>
               </div>
             ))}
@@ -385,7 +385,7 @@ export default function Africa() {
               {["Nairobi","Lagos","Cape Town","Makerere","Ghana","Dar es Salaam","Witwatersrand","Cairo","Addis Ababa","Ibadan","KNUST"].map(city => (
                 <span key={city}>{city}</span>
               ))}
-              <span className="text-[#c4b5fd]">+ 200 more</span>
+              <span className="text-[#6ee7b7]">+ 200 more</span>
             </div>
           </div>
         </div>
@@ -437,8 +437,8 @@ export default function Africa() {
                 { icon: Smartphone, title: "No VPN required", desc: "Works on local IP addresses" },
               ].map(({ icon: Icon, title, desc }) => (
                 <div key={title} className="flex items-center gap-3 rounded-xl border border-[#e0e3e5] bg-[#f7f9fb] p-4">
-                  <div className="w-9 h-9 rounded-lg bg-[#6b38d4]/10 flex items-center justify-center shrink-0">
-                    <Icon size={16} className="text-[#6b38d4]" />
+                  <div className="w-9 h-9 rounded-lg bg-[#10b981]/10 flex items-center justify-center shrink-0">
+                    <Icon size={16} className="text-[#10b981]" />
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-[#191c1e]">{title}</p>
@@ -459,7 +459,7 @@ export default function Africa() {
         <div className="max-w-7xl mx-auto">
           <FadeUp>
             <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
-              <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3">What you get</p>
+              <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">What you get</p>
               <h2 className="text-3xl sm:text-4xl font-bold leading-tight mb-4 text-[#131b2e]">
                 Seven tools. One subscription.
               </h2>
@@ -475,16 +475,16 @@ export default function Africa() {
                 <Link href="/auth">
                   <div className="group relative p-6 sm:p-7 rounded-xl bg-white border border-[#e0e3e5] shadow-sm hover:shadow-md hover:-translate-y-1 transition-all cursor-pointer h-full">
                     {badge && (
-                      <span className="absolute top-4 right-4 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e9ddff] text-[#5516be]">
+                      <span className="absolute top-4 right-4 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#d1fae5] text-[#047857]">
                         {badge}
                       </span>
                     )}
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-5 bg-[#6b38d4]/10 text-[#6b38d4] group-hover:bg-[#6b38d4] group-hover:text-white transition-colors">
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-5 bg-[#10b981]/10 text-[#10b981] group-hover:bg-[#10b981] group-hover:text-white transition-colors">
                       <Icon size={20} />
                     </div>
                     <h3 className="font-semibold text-lg text-[#191c1e] mb-2">{name}</h3>
                     <p className="text-sm text-[#45464d] leading-relaxed">{desc}</p>
-                    <div className="mt-4 flex items-center gap-1 text-[11px] text-[#6b38d4] font-semibold">
+                    <div className="mt-4 flex items-center gap-1 text-[11px] text-[#10b981] font-semibold">
                       Try this tool <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </div>
@@ -500,7 +500,7 @@ export default function Africa() {
         <div className="max-w-6xl mx-auto">
           <FadeUp>
             <div className="text-center mb-10 sm:mb-14">
-              <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3">The honest comparison</p>
+              <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">The honest comparison</p>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-[#131b2e]">Why LightSpeed Ghost beats Western tools for African students</h2>
               <p className="text-[#45464d] text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
                 Grammarly, Chegg, and ChatGPT Plus cost $30–$40/month and require a foreign debit or credit card. That's not a viable option for most students at African universities.
@@ -524,7 +524,7 @@ export default function Africa() {
               <div className="min-w-[560px]">
                 <div className="grid grid-cols-4 bg-[#f2f4f6] border-b border-[#e0e3e5] text-xs font-bold text-[#76777d] uppercase tracking-wider">
                   <div className="p-4 col-span-2">Feature</div>
-                  <div className="p-4 text-center text-[#6b38d4]">LightSpeed Ghost</div>
+                  <div className="p-4 text-center text-[#10b981]">LightSpeed Ghost</div>
                   <div className="p-4 text-center">ChatGPT Plus</div>
                 </div>
                 {[
@@ -539,7 +539,7 @@ export default function Africa() {
                 ].map(({ feature, lsg, chatgpt }, i) => (
                   <div key={feature} className={`grid grid-cols-4 text-sm border-b border-[#eceef0] last:border-0 ${i % 2 === 0 ? "" : "bg-[#f7f9fb]"}`}>
                     <div className="p-4 col-span-2 text-[#191c1e] font-medium">{feature}</div>
-                    <div className="p-4 text-center text-[#6b38d4] font-semibold">{lsg}</div>
+                    <div className="p-4 text-center text-[#10b981] font-semibold">{lsg}</div>
                     <div className="p-4 text-center text-[#76777d]">{chatgpt}</div>
                   </div>
                 ))}
@@ -554,7 +554,7 @@ export default function Africa() {
         <div className="max-w-6xl mx-auto">
           <FadeUp>
             <div className="text-center mb-10 sm:mb-14">
-              <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3">Ready to excel?</p>
+              <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">Ready to excel?</p>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-[#131b2e]">Priced for students, not enterprise</h2>
               <p className="text-[#45464d] max-w-xl mx-auto text-sm sm:text-base">
                 Choose the plan that fits your semester budget. All plans payable with M-Pesa, MTN MoMo, Airtel Money, or card. Cancel anytime. 7-day money-back guarantee.
@@ -570,7 +570,7 @@ export default function Africa() {
                 className={`relative rounded-2xl p-6 sm:p-7 flex flex-col ${highlight ? "bg-[#131b2e] text-white shadow-2xl md:-mt-4 md:mb-4" : "bg-white border border-[#e0e3e5] shadow-sm"}`}
               >
                 {badge && (
-                  <span className={`absolute -top-3 left-6 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wide ${highlight ? "bg-[#6b38d4] text-white" : "bg-[#eceef0] text-[#45464d] border border-[#d8dadc]"}`}>
+                  <span className={`absolute -top-3 left-6 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wide ${highlight ? "bg-[#10b981] text-white" : "bg-[#eceef0] text-[#45464d] border border-[#d8dadc]"}`}>
                     {badge}
                   </span>
                 )}
@@ -583,13 +583,13 @@ export default function Africa() {
                 <ul className="space-y-2.5 flex-1 mb-6">
                   {features.map((f) => (
                     <li key={f} className={`flex items-start gap-2.5 text-sm ${highlight ? "text-white/85" : "text-[#45464d]"}`}>
-                      <CheckCircle size={14} className={`shrink-0 mt-0.5 ${highlight ? "text-[#a78bfa]" : "text-[#6b38d4]"}`} />
+                      <CheckCircle size={14} className={`shrink-0 mt-0.5 ${highlight ? "text-[#6ee7b7]" : "text-[#10b981]"}`} />
                       {f}
                     </li>
                   ))}
                 </ul>
                 <Link href="/auth">
-                  <span className={`block text-center py-3 rounded-lg font-bold text-sm transition-all cursor-pointer ${highlight ? "bg-[#6b38d4] hover:bg-[#5b2fc0] text-white shadow-lg shadow-[#6b38d4]/30" : "border border-[#6b38d4] text-[#6b38d4] hover:bg-[#6b38d4]/5"}`}>
+                  <span className={`block text-center py-3 rounded-lg font-bold text-sm transition-all cursor-pointer ${highlight ? "bg-[#10b981] hover:bg-[#059669] text-white shadow-lg shadow-[#10b981]/30" : "border border-[#10b981] text-[#10b981] hover:bg-[#10b981]/5"}`}>
                     {cta}
                   </span>
                 </Link>
@@ -601,7 +601,7 @@ export default function Africa() {
             <p className="text-sm text-[#45464d]">
               Need just one tool without a subscription?{" "}
               <Link href="/auth">
-                <span className="text-[#6b38d4] hover:text-[#5b2fc0] cursor-pointer font-semibold underline underline-offset-2">Pay-as-you-go from $1.99</span>
+                <span className="text-[#10b981] hover:text-[#059669] cursor-pointer font-semibold underline underline-offset-2">Pay-as-you-go from $1.99</span>
               </Link>
               {" "}— credits never expire.
             </p>
@@ -614,7 +614,7 @@ export default function Africa() {
         <div className="max-w-7xl mx-auto">
           <FadeUp>
             <div className="text-center mb-10 sm:mb-14">
-              <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3">Student voices</p>
+              <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">Student voices</p>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-[#131b2e]">From Nairobi to Cape Town to Lagos</h2>
               <p className="text-[#45464d] max-w-xl mx-auto text-sm sm:text-base">Real students. Real African universities. Real results.</p>
             </div>
@@ -623,7 +623,7 @@ export default function Africa() {
           <StaggerGrid className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {africanTestimonials.map(({ name, role, location, text, stars, flag }) => (
               <m.div key={name} variants={cardVariant} className="p-5 sm:p-6 rounded-xl bg-white border border-[#e0e3e5] shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
-                <Quote size={16} className="text-[#6b38d4]/40 shrink-0" />
+                <Quote size={16} className="text-[#10b981]/40 shrink-0" />
                 <p className="text-sm text-[#45464d] leading-relaxed flex-1 italic">"{text}"</p>
                 <div className="flex items-center gap-0.5">
                   {Array.from({ length: stars }).map((_, i) => (
@@ -650,7 +650,7 @@ export default function Africa() {
       </section>
 
       {/* ─── FINAL CTA — purple ─── */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden bg-[#6b38d4] text-white">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden bg-[#10b981] text-white">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-white/10 rounded-full blur-[100px]" />
         </div>
@@ -664,7 +664,7 @@ export default function Africa() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/auth">
-                <span className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#6b38d4] hover:bg-[#f2f4f6] font-bold rounded-lg transition-all shadow-xl hover:-translate-y-0.5 text-sm sm:text-base cursor-pointer">
+                <span className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#10b981] hover:bg-[#f2f4f6] font-bold rounded-lg transition-all shadow-xl hover:-translate-y-0.5 text-sm sm:text-base cursor-pointer">
                   <Zap size={15} />
                   Create your free account
                 </span>
@@ -688,11 +688,11 @@ export default function Africa() {
               <Logo size={24} textSize="text-sm" variant="light" className="cursor-pointer opacity-80 hover:opacity-100 transition-opacity" />
             </Link>
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-[#76777d]">
-              <Link href="/about"><span className="hover:text-[#6b38d4] cursor-pointer transition-colors">About</span></Link>
-              <Link href="/contact"><span className="hover:text-[#6b38d4] cursor-pointer transition-colors">Contact</span></Link>
-              <Link href="/enterprise"><span className="hover:text-[#6b38d4] cursor-pointer transition-colors">For Institutions</span></Link>
-              <Link href="/privacy"><span className="hover:text-[#6b38d4] cursor-pointer transition-colors">Privacy</span></Link>
-              <Link href="/terms"><span className="hover:text-[#6b38d4] cursor-pointer transition-colors">Terms</span></Link>
+              <Link href="/about"><span className="hover:text-[#10b981] cursor-pointer transition-colors">About</span></Link>
+              <Link href="/contact"><span className="hover:text-[#10b981] cursor-pointer transition-colors">Contact</span></Link>
+              <Link href="/enterprise"><span className="hover:text-[#10b981] cursor-pointer transition-colors">For Institutions</span></Link>
+              <Link href="/privacy"><span className="hover:text-[#10b981] cursor-pointer transition-colors">Privacy</span></Link>
+              <Link href="/terms"><span className="hover:text-[#10b981] cursor-pointer transition-colors">Terms</span></Link>
             </div>
           </div>
           <div className="border-t border-[#d8dadc] pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
