@@ -4,7 +4,7 @@ Eight AI tools built for students. One platform, purpose-built for academic writ
 
 **Live site:** https://lightspeedghost.com  
 **Stack:** React + Vite · Express + TypeScript · PostgreSQL (Supabase) · Drizzle ORM  
-**Deployments:** Cloudflare Pages (frontend) · Render (API)
+**Deployments:** Vercel (frontend — current) · Cloudflare Pages (staged for cutover) · Render (API)
 
 ---
 
