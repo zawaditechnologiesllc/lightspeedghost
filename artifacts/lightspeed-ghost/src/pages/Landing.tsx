@@ -18,6 +18,9 @@ import {
 import { Logo } from "@/components/Logo";
 import { HeroAnalyzer } from "@/components/HeroAnalyzer";
 import { ProductSidebar, ProductSidebarDrawer } from "@/components/ProductSidebar";
+import { PricingModal } from "@/components/PricingModal";
+import { AuthModal } from "@/components/auth/AuthModal";
+import type { AuthTab } from "@/components/auth/AuthForm";
 import { ToolDemosSection } from "@/components/ToolDemos";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
@@ -356,7 +359,16 @@ export default function Landing() {
   const [billingAnnual, setBillingAnnual] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<PlanId | null>(null);
   const [paygCheckout, setPaygCheckout] = useState<{ tool: PaygTool; tier?: DocumentTier } | null>(null);
+  const [pricingOpen, setPricingOpen] = useState(false);
+  const [authModal, setAuthModal] = useState<{ tab: AuthTab; next: string } | null>(null);
   const [, setLocation] = useLocation();
+
+  // Auth popup helper — logged-in users skip straight to the destination.
+  function openAuth(tab: AuthTab, next = "/app") {
+    setPricingOpen(false);
+    if (user) { setLocation(next); return; }
+    setAuthModal({ tab, next });
+  }
   const { state: installState } = useInstallPrompt();
   const [showIOSModal, setShowIOSModal] = useState(false);
   const [showAndroidModal, setShowAndroidModal] = useState(false);
@@ -539,16 +551,20 @@ export default function Landing() {
             </span>
           </div>
 
-          {/* Right: sign in + one primary CTA (no nav menu) */}
+          {/* Right: Upgrade + Start for free — both open the pricing popup */}
           <div className="flex items-center gap-1.5 ml-auto md:ml-0">
-            <Link href="/auth">
-              <span className="hidden sm:inline px-3 py-2 text-sm text-[#45464d] hover:text-[#6b38d4] transition-colors cursor-pointer">Sign In</span>
-            </Link>
-            <Link href="/auth">
-              <span className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-all cursor-pointer shadow-md shadow-[#6b38d4]/20 active:scale-95 whitespace-nowrap">
-                Get Started — Free
-              </span>
-            </Link>
+            <button
+              onClick={() => setPricingOpen(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-sm text-[#6b38d4] hover:text-[#5b2fc0] font-semibold rounded-lg hover:bg-[#6b38d4]/5 transition-colors"
+            >
+              Upgrade
+            </button>
+            <button
+              onClick={() => setPricingOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-all shadow-md shadow-[#6b38d4]/20 active:scale-95 whitespace-nowrap"
+            >
+              Start for free
+            </button>
           </div>
         </div>
       </header>
@@ -1353,6 +1369,28 @@ export default function Landing() {
           onSuccess={() => { setCheckoutPlan(null); setLocation("/app"); }}
         />
       )}
+
+      {/* ─── PRICING POPUP (opened from Upgrade / Start for free) ─── */}
+      <PricingModal
+        open={pricingOpen}
+        onClose={() => setPricingOpen(false)}
+        onStartFree={() => openAuth("signup", "/app")}
+        onGetPro={() => openAuth("signup", "/app")}
+        onInstitution={() => { setPricingOpen(false); setLocation("/enterprise"); }}
+        onPayg={() => {
+          setPricingOpen(false);
+          document.getElementById("payg")?.scrollIntoView({ behavior: "smooth" });
+        }}
+        onLogin={() => openAuth("login", "/app")}
+      />
+
+      {/* ─── AUTH POPUP (all login options, no beautification) ─── */}
+      <AuthModal
+        open={!!authModal}
+        onClose={() => setAuthModal(null)}
+        initialTab={authModal?.tab ?? "login"}
+        next={authModal?.next ?? "/app"}
+      />
 
       {/* ─── EXIT INTENT MODAL ─── */}
       <AnimatePresence>
