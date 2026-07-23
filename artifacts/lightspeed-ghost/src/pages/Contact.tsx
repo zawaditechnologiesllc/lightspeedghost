@@ -48,7 +48,7 @@ export default function Contact() {
 
       <main className="max-w-4xl mx-auto px-6 py-16 sm:py-24">
         <div className="text-center mb-16">
-          <p className="text-[#6b38d4] text-xs font-semibold uppercase tracking-widest mb-4">Contact</p>
+          <p className="text-[#10b981] text-xs font-semibold uppercase tracking-widest mb-4">Contact</p>
           <h1 className="text-4xl sm:text-5xl font-bold mb-5">We're here to help.</h1>
           <p className="text-[#76777d] text-lg">Reach out with questions about the platform, your account, pricing, or anything else. We respond within 24 hours on business days.</p>
         </div>
@@ -78,13 +78,13 @@ export default function Contact() {
             },
           ].map(({ icon: Icon, title, body, sub, href }) => (
             <div key={title} className="p-6 rounded-2xl bg-white border border-[#e0e3e5] text-center">
-              <div className="w-11 h-11 rounded-xl bg-[#6b38d4]/10 border border-[#6b38d4]/20 flex items-center justify-center mx-auto mb-4">
-                <Icon size={20} className="text-[#6b38d4]" />
+              <div className="w-11 h-11 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 flex items-center justify-center mx-auto mb-4">
+                <Icon size={20} className="text-[#10b981]" />
               </div>
               <h3 className="font-semibold text-[#191c1e] mb-2">{title}</h3>
               {href ? (
                 <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"
-                  className="text-[#6b38d4] hover:text-[#5b2fc0] text-sm block mb-1">{body}</a>
+                  className="text-[#10b981] hover:text-[#059669] text-sm block mb-1">{body}</a>
               ) : (
                 <p className="text-[#45464d] text-sm mb-1">{body}</p>
               )}
@@ -100,28 +100,28 @@ export default function Contact() {
               <CheckCircle2 size={40} className="text-emerald-400 mx-auto mb-4" />
               <p className="text-[#191c1e] font-medium mb-1">Message sent — thank you!</p>
               <p className="text-[#76777d] text-sm mb-6">We'll get back to you within 24 hours on business days.</p>
-              <button onClick={() => setSent(false)} className="text-[#6b38d4] hover:text-[#5b2fc0] text-sm">Send another message</button>
+              <button onClick={() => setSent(false)} className="text-[#10b981] hover:text-[#059669] text-sm">Send another message</button>
             </div>
           ) : (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-[#45464d] mb-1.5">Your email</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com"
-                  className="w-full px-4 py-2.5 rounded-lg bg-[#eceef0] border border-[#e0e3e5] text-[#191c1e] placeholder-[#9a9aa1] text-sm focus:outline-none focus:border-[#6b38d4]/50 focus:bg-white transition-colors" />
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#eceef0] border border-[#e0e3e5] text-[#191c1e] placeholder-[#9a9aa1] text-sm focus:outline-none focus:border-[#10b981]/50 focus:bg-white transition-colors" />
               </div>
               <div>
                 <label className="block text-sm text-[#45464d] mb-1.5">Subject</label>
                 <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Question about my account..."
-                  className="w-full px-4 py-2.5 rounded-lg bg-[#eceef0] border border-[#e0e3e5] text-[#191c1e] placeholder-[#9a9aa1] text-sm focus:outline-none focus:border-[#6b38d4]/50 transition-colors" />
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#eceef0] border border-[#e0e3e5] text-[#191c1e] placeholder-[#9a9aa1] text-sm focus:outline-none focus:border-[#10b981]/50 transition-colors" />
               </div>
               <div>
                 <label className="block text-sm text-[#45464d] mb-1.5">Message</label>
                 <textarea rows={5} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Tell us what's going on..."
-                  className="w-full px-4 py-2.5 rounded-lg bg-[#eceef0] border border-[#e0e3e5] text-[#191c1e] placeholder-[#9a9aa1] text-sm focus:outline-none focus:border-[#6b38d4]/50 transition-colors resize-none" />
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#eceef0] border border-[#e0e3e5] text-[#191c1e] placeholder-[#9a9aa1] text-sm focus:outline-none focus:border-[#10b981]/50 transition-colors resize-none" />
               </div>
               {error && <p className="text-red-400 text-xs">{error}</p>}
               <button onClick={submit} disabled={sending}
-                className="flex items-center justify-center gap-2 w-full text-center py-2.5 bg-[#6b38d4] hover:bg-[#5b2fc0] disabled:opacity-50 text-white font-medium rounded-lg transition-colors text-sm">
+                className="flex items-center justify-center gap-2 w-full text-center py-2.5 bg-[#10b981] hover:bg-[#059669] disabled:opacity-50 text-white font-medium rounded-lg transition-colors text-sm">
                 {sending ? <><Loader2 size={15} className="animate-spin" /> Sending…</> : "Send Message"}
               </button>
               <p className="text-[#9a9aa1] text-xs text-center">Or email us directly at info@lightspeedghost.com</p>

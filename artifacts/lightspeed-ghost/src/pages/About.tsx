@@ -7,7 +7,7 @@ import {
 import { Logo } from "@/components/Logo";
 
 // ── About — the LightSpeed Ghost story ─────────────────────────────────────────
-// Light landing palette throughout: #f7f9fb bg · #131b2e ink · #6b38d4 primary.
+// Light landing palette throughout: #f7f9fb bg · #131b2e ink · #10b981 primary.
 
 const JOURNEY = [
   {
@@ -38,27 +38,27 @@ const LEADERS = [
   {
     slug: "michael-harrington", name: "Michael Harrington", role: "Co-founder & CEO",
     note: "Started the first draft the night a chatbot invented his bibliography.",
-    from: "#6b38d4", to: "#0090a9", skin: "#f1c9a5", hair: "#3d2e26", shirt: "#131b2e", style: "short" as const,
+    from: "#10b981", to: "#0d9488", skin: "#f1c9a5", hair: "#3d2e26", shirt: "#131b2e", style: "short" as const,
   },
   {
     slug: "tyler-brooks", name: "Tyler Brooks", role: "Co-founder & CTO",
     note: "Built the 35-database research engine that makes every citation real.",
-    from: "#0090a9", to: "#6b38d4", skin: "#e8b48c", hair: "#1f1a17", shirt: "#3b3f8f", style: "glasses" as const,
+    from: "#0d9488", to: "#10b981", skin: "#e8b48c", hair: "#1f1a17", shirt: "#3b3f8f", style: "glasses" as const,
   },
   {
     slug: "john-muriuki", name: "John Muriuki", role: "Chief Operating Officer",
     note: "Runs the machine — payouts, partners, and 200+ university rollouts.",
-    from: "#131b2e", to: "#6b38d4", skin: "#7a4a2b", hair: "#0d0a08", shirt: "#1f2a44", style: "short" as const,
+    from: "#131b2e", to: "#10b981", skin: "#7a4a2b", hair: "#0d0a08", shirt: "#1f2a44", style: "short" as const,
   },
   {
     slug: "james-caldwell", name: "James Caldwell", role: "Head of AI Research",
     note: "Owns the reasoning loop and the critic layer that checks the math.",
-    from: "#5516be", to: "#a78bfa", skin: "#8d5a3b", hair: "#14100d", shirt: "#0f4c5c", style: "short" as const,
+    from: "#047857", to: "#6ee7b7", skin: "#8d5a3b", hair: "#14100d", shirt: "#0f4c5c", style: "short" as const,
   },
   {
     slug: "emily-sanders", name: "Emily Sanders", role: "Head of Student Success",
     note: "Makes sure the tool earns its grade with real students, every semester.",
-    from: "#a78bfa", to: "#0090a9", skin: "#f5d3b3", hair: "#6b4423", shirt: "#7a1f3d", style: "long" as const,
+    from: "#6ee7b7", to: "#0d9488", skin: "#f5d3b3", hair: "#6b4423", shirt: "#7a1f3d", style: "long" as const,
   },
 ];
 
@@ -132,20 +132,20 @@ export default function About() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#6b38d4]/20">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
       {/* ─── NAV ─── */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#e0e3e5]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <Link href="/"><Logo size={30} textSize="text-base" variant="light" className="cursor-pointer select-none shrink-0" /></Link>
           <nav className="hidden md:flex items-center gap-0.5">
             {navLinks.map((i) => i.href.startsWith("#") ? (
-              <a key={i.label} href={i.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] transition-colors">{i.label}</a>
+              <a key={i.label} href={i.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors">{i.label}</a>
             ) : (
-              <Link key={i.label} href={i.href}><span className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] transition-colors cursor-pointer">{i.label}</span></Link>
+              <Link key={i.label} href={i.href}><span className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors cursor-pointer">{i.label}</span></Link>
             ))}
           </nav>
           <div className="hidden md:flex items-center gap-2.5">
-            <Link href="/auth"><span className="px-5 py-2.5 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-colors cursor-pointer shadow-md shadow-[#6b38d4]/20">Get started</span></Link>
+            <Link href="/auth"><span className="px-5 py-2.5 text-sm bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-colors cursor-pointer shadow-md shadow-[#10b981]/20">Get started</span></Link>
           </div>
           <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-[#45464d] rounded-lg hover:bg-[#f2f4f6]" aria-label="Menu">
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
@@ -154,12 +154,12 @@ export default function About() {
         {mobileOpen && (
           <div className="md:hidden bg-white border-t border-[#e0e3e5] px-4 py-4 space-y-1 shadow-lg">
             {navLinks.map((i) => i.href.startsWith("#") ? (
-              <a key={i.label} href={i.href} onClick={() => setMobileOpen(false)} className="block px-3 py-3 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6]">{i.label}</a>
+              <a key={i.label} href={i.href} onClick={() => setMobileOpen(false)} className="block px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6]">{i.label}</a>
             ) : (
-              <Link key={i.label} href={i.href}><span onClick={() => setMobileOpen(false)} className="block px-3 py-3 text-sm text-[#45464d] hover:text-[#6b38d4] rounded-lg hover:bg-[#f2f4f6] cursor-pointer">{i.label}</span></Link>
+              <Link key={i.label} href={i.href}><span onClick={() => setMobileOpen(false)} className="block px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] cursor-pointer">{i.label}</span></Link>
             ))}
             <div className="pt-3 border-t border-[#e0e3e5] mt-2">
-              <Link href="/auth"><span onClick={() => setMobileOpen(false)} className="block text-center px-4 py-2.5 text-sm bg-[#6b38d4] text-white font-semibold rounded-lg cursor-pointer">Get started</span></Link>
+              <Link href="/auth"><span onClick={() => setMobileOpen(false)} className="block text-center px-4 py-2.5 text-sm bg-[#10b981] text-white font-semibold rounded-lg cursor-pointer">Get started</span></Link>
             </div>
           </div>
         )}
@@ -170,11 +170,11 @@ export default function About() {
         <section className="relative overflow-hidden pt-28 pb-12 sm:pt-32 sm:pb-16 px-4 sm:px-6">
           <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(at 0% 0%, rgba(107,56,212,0.06) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(0,144,169,0.06) 0px, transparent 50%)" }} />
           <div className="relative max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#e9ddff] text-[#5516be] text-xs font-bold uppercase tracking-wider mb-6">
-              <Sparkles size={12} className="text-[#6b38d4]" /> Our story
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d1fae5] text-[#047857] text-xs font-bold uppercase tracking-wider mb-6">
+              <Sparkles size={12} className="text-[#10b981]" /> Our story
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold leading-[1.1] tracking-tight mb-5 text-[#131b2e]" style={{ letterSpacing: "-0.02em" }}>
-              Built by Harvard students tired of <span className="text-[#6b38d4]">AI that doesn't deliver.</span>
+              Built by Harvard students tired of <span className="text-[#10b981]">AI that doesn't deliver.</span>
             </h1>
             <p className="text-base sm:text-lg text-[#45464d] leading-relaxed max-w-2xl mx-auto">
               LightSpeed Ghost exists to end a very specific struggle: working with AI that sounds confident and gets you nowhere — invented citations, robotic prose, wrong math. We built the tool we needed and couldn't find.
@@ -191,7 +191,7 @@ export default function About() {
                   <linearGradient id="ab-sky" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#131b2e" />
                     <stop offset="70%" stopColor="#2a2350" />
-                    <stop offset="100%" stopColor="#5516be" />
+                    <stop offset="100%" stopColor="#047857" />
                   </linearGradient>
                   <linearGradient id="ab-glow" x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor="#ffd166" />
@@ -209,7 +209,7 @@ export default function About() {
                 {/* clock-tower nod */}
                 <rect x="362" y="98" width="16" height="46" fill="#0d1322" />
                 <polygon points="358,100 382,100 370,78" fill="#0d1322" />
-                <circle cx="370" cy="112" r="6" fill="#a78bfa" opacity="0.9" />
+                <circle cx="370" cy="112" r="6" fill="#6ee7b7" opacity="0.9" />
                 {/* the one lit window */}
                 <rect x="612" y="196" width="22" height="18" rx="2" fill="url(#ab-glow)">
                   <animate attributeName="opacity" values="1;0.75;1" dur="3.2s" repeatCount="indefinite" />
@@ -230,7 +230,7 @@ export default function About() {
         <section id="story" className="py-14 sm:py-20 px-4 sm:px-6 bg-white border-y border-[#e0e3e5] scroll-mt-20">
           <div className="max-w-3xl mx-auto space-y-10">
             <div>
-              <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3">Chapter one</p>
+              <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">Chapter one</p>
               <h2 className="text-2xl sm:text-3xl font-bold text-[#131b2e] mb-4">The night it started</h2>
               <p className="text-[#45464d] leading-relaxed mb-4">
                 It was finals week at Harvard, and a psychology paper was due in nine hours. The chatbot's draft looked perfect — until the citation check. Of twelve references, five didn't exist. Two more said the opposite of what the paper claimed. The prose read like a machine apologizing for itself, and a plagiarism scan flagged phrasing lifted from a textbook the AI had never actually read.
@@ -240,7 +240,7 @@ export default function About() {
               </p>
             </div>
             <div>
-              <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3">Chapter two</p>
+              <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">Chapter two</p>
               <h2 className="text-2xl sm:text-3xl font-bold text-[#131b2e] mb-4">The rule we set</h2>
               <p className="text-[#45464d] leading-relaxed mb-4">
                 LightSpeed Ghost was built around one non-negotiable rule: <strong className="text-[#131b2e]">never write from memory.</strong> Every paragraph is grounded in real papers pulled live from 35+ academic databases. Every citation is verified against the actual source before it reaches you. Every STEM solution shows its method and is re-checked by a second critic layer. Every output is measured against your rubric — not a vibe.
@@ -250,7 +250,7 @@ export default function About() {
               </p>
             </div>
             <div>
-              <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3">Chapter three</p>
+              <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">Chapter three</p>
               <h2 className="text-2xl sm:text-3xl font-bold text-[#131b2e] mb-4">What it became</h2>
               <p className="text-[#45464d] leading-relaxed">
                 What started as one desperate prototype is now the academic workspace for 6.5 million people — 4M+ students at 200+ universities from MIT to Makerere, and 2.5M+ publishers writing research-grounded ebooks. The team is bigger, the databases are deeper, and the struggle we set out to end is ending: AI that delivers, with receipts.
@@ -264,7 +264,7 @@ export default function About() {
           <div className="max-w-5xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4">
             {STATS.map(({ icon: Icon, value, label }) => (
               <div key={label} className="rounded-2xl border border-[#e0e3e5] bg-white p-5 text-center shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-[#6b38d4]/10 flex items-center justify-center mx-auto mb-3"><Icon size={18} className="text-[#6b38d4]" /></div>
+                <div className="w-10 h-10 rounded-xl bg-[#10b981]/10 flex items-center justify-center mx-auto mb-3"><Icon size={18} className="text-[#10b981]" /></div>
                 <div className="text-2xl font-bold text-[#131b2e]">{value}</div>
                 <div className="text-xs text-[#45464d] mt-1">{label}</div>
               </div>
@@ -276,19 +276,19 @@ export default function About() {
         <section id="journey" className="py-14 sm:py-20 px-4 sm:px-6 bg-[#f2f4f6] border-y border-[#e0e3e5] scroll-mt-20">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-10 sm:mb-14">
-              <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3">The journey</p>
+              <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">The journey</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-[#131b2e]">From one lit window to 6.5M users</h2>
             </div>
             <div className="relative">
-              <div className="absolute left-[19px] sm:left-1/2 top-2 bottom-2 w-px bg-[#d0bcff] sm:-translate-x-px" />
+              <div className="absolute left-[19px] sm:left-1/2 top-2 bottom-2 w-px bg-[#a7f3d0] sm:-translate-x-px" />
               <div className="space-y-8">
                 {JOURNEY.map((j, i) => (
                   <div key={j.year} className={`relative flex flex-col sm:flex-row gap-4 sm:gap-10 ${i % 2 === 1 ? "sm:flex-row-reverse" : ""}`}>
-                    <div className="absolute left-[11px] sm:left-1/2 sm:-translate-x-1/2 w-4 h-4 rounded-full bg-[#6b38d4] border-4 border-[#f2f4f6] mt-1.5" />
+                    <div className="absolute left-[11px] sm:left-1/2 sm:-translate-x-1/2 w-4 h-4 rounded-full bg-[#10b981] border-4 border-[#f2f4f6] mt-1.5" />
                     <div className="sm:w-1/2" />
                     <div className="sm:w-1/2 pl-10 sm:pl-0">
                       <div className="rounded-2xl border border-[#e0e3e5] bg-white p-5 shadow-sm text-left">
-                        <span className="inline-block text-[11px] font-bold text-[#5516be] bg-[#e9ddff] rounded-full px-2.5 py-0.5 mb-2">{j.year}</span>
+                        <span className="inline-block text-[11px] font-bold text-[#047857] bg-[#d1fae5] rounded-full px-2.5 py-0.5 mb-2">{j.year}</span>
                         <h3 className="font-bold text-[#191c1e] mb-1.5">{j.title}</h3>
                         <p className="text-sm text-[#45464d] leading-relaxed">{j.body}</p>
                       </div>
@@ -304,7 +304,7 @@ export default function About() {
         <section id="leaders" className="py-14 sm:py-20 px-4 sm:px-6 scroll-mt-20">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-10 sm:mb-14">
-              <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3">Leadership</p>
+              <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">Leadership</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-[#131b2e]">The people keeping the rule</h2>
               <p className="text-[#45464d] text-sm mt-3 max-w-xl mx-auto">Students first, builders second. Everyone on this team has submitted a paper at 4 a.m. — that's the standard we build for.</p>
             </div>
@@ -313,7 +313,7 @@ export default function About() {
                 <div key={l.name} className="rounded-2xl border border-[#e0e3e5] bg-white p-5 shadow-sm text-center">
                   <Portrait {...l} />
                   <h3 className="font-bold text-[#191c1e]">{l.name}</h3>
-                  <p className="text-[11px] font-semibold text-[#6b38d4] uppercase tracking-wide mb-2">{l.role}</p>
+                  <p className="text-[11px] font-semibold text-[#10b981] uppercase tracking-wide mb-2">{l.role}</p>
                   <p className="text-xs text-[#45464d] leading-relaxed">{l.note}</p>
                 </div>
               ))}
@@ -330,7 +330,7 @@ export default function About() {
               { icon: BookOpen, t: "Every level, every subject", d: "High school to PhD, essays to dissertations, calculus to corporate finance — guardrails tuned to your level." },
             ].map(({ icon: Icon, t, d }) => (
               <div key={t} className="rounded-2xl border border-[#e0e3e5] bg-[#f7f9fb] p-5">
-                <div className="w-10 h-10 rounded-xl bg-[#6b38d4]/10 flex items-center justify-center mb-3"><Icon size={17} className="text-[#6b38d4]" /></div>
+                <div className="w-10 h-10 rounded-xl bg-[#10b981]/10 flex items-center justify-center mb-3"><Icon size={17} className="text-[#10b981]" /></div>
                 <h3 className="font-bold text-[#191c1e] mb-1.5 text-sm">{t}</h3>
                 <p className="text-xs text-[#45464d] leading-relaxed">{d}</p>
               </div>
@@ -340,16 +340,16 @@ export default function About() {
 
         {/* ─── CTA ─── */}
         <section className="py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden bg-[#131b2e] text-white">
-          <div className="absolute inset-0 pointer-events-none"><div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#6b38d4]/20 rounded-full blur-[100px]" /></div>
+          <div className="absolute inset-0 pointer-events-none"><div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#10b981]/20 rounded-full blur-[100px]" /></div>
           <div className="relative max-w-2xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 leading-tight" style={{ letterSpacing: "-0.02em" }}>Join the version of AI that delivers.</h2>
             <p className="text-[#9aa3bd] mb-8 text-base sm:text-lg">Real research. Verified citations. Shown work. The tool we wished existed that night in Cambridge.</p>
             <Link href="/auth">
-              <span className="inline-flex items-center gap-2 px-8 py-4 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all cursor-pointer shadow-2xl hover:-translate-y-0.5 text-base">
+              <span className="inline-flex items-center gap-2 px-8 py-4 bg-[#10b981] hover:bg-[#059669] text-white font-bold rounded-lg transition-all cursor-pointer shadow-2xl hover:-translate-y-0.5 text-base">
                 Get started free <ArrowRight size={18} />
               </span>
             </Link>
-            <p className="text-[#9aa3bd]/70 text-xs mt-6">Questions? We actually respond — <a href="mailto:info@lightspeedghost.com" className="text-[#a78bfa] hover:text-white transition-colors">info@lightspeedghost.com</a>, usually within 24 hours.</p>
+            <p className="text-[#9aa3bd]/70 text-xs mt-6">Questions? We actually respond — <a href="mailto:info@lightspeedghost.com" className="text-[#6ee7b7] hover:text-white transition-colors">info@lightspeedghost.com</a>, usually within 24 hours.</p>
           </div>
         </section>
       </main>
@@ -359,11 +359,11 @@ export default function About() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <Link href="/"><Logo size={24} textSize="text-sm" variant="light" className="cursor-pointer opacity-80 hover:opacity-100 transition-opacity" /></Link>
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-[#76777d]">
-            <Link href="/"><span className="hover:text-[#6b38d4] cursor-pointer transition-colors">Home</span></Link>
-            <Link href="/careers"><span className="hover:text-[#6b38d4] cursor-pointer transition-colors">Careers</span></Link>
-            <Link href="/contact"><span className="hover:text-[#6b38d4] cursor-pointer transition-colors">Contact</span></Link>
-            <Link href="/terms"><span className="hover:text-[#6b38d4] cursor-pointer transition-colors">Terms</span></Link>
-            <Link href="/privacy"><span className="hover:text-[#6b38d4] cursor-pointer transition-colors">Privacy</span></Link>
+            <Link href="/"><span className="hover:text-[#10b981] cursor-pointer transition-colors">Home</span></Link>
+            <Link href="/careers"><span className="hover:text-[#10b981] cursor-pointer transition-colors">Careers</span></Link>
+            <Link href="/contact"><span className="hover:text-[#10b981] cursor-pointer transition-colors">Contact</span></Link>
+            <Link href="/terms"><span className="hover:text-[#10b981] cursor-pointer transition-colors">Terms</span></Link>
+            <Link href="/privacy"><span className="hover:text-[#10b981] cursor-pointer transition-colors">Privacy</span></Link>
           </div>
           <p className="text-[#76777d] text-xs">© {new Date().getFullYear()} Light Speed Ghost · 500 Oracle Pkwy, Redwood City, CA 94065</p>
         </div>

@@ -11,7 +11,7 @@ export default function CookiePolicy() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-16">
-        <p className="text-[#6b38d4] text-xs font-semibold uppercase tracking-widest mb-3">Legal</p>
+        <p className="text-[#10b981] text-xs font-semibold uppercase tracking-widest mb-3">Legal</p>
         <h1 className="text-4xl font-bold mb-3">Cookie Policy</h1>
         <p className="text-[#76777d] text-sm mb-12">Last updated: January 2025</p>
 
@@ -46,7 +46,7 @@ export default function CookiePolicy() {
 
           <section>
             <h2 className="text-[#191c1e] text-xl font-semibold mb-4">Contact</h2>
-            <p>Questions about cookies? Email <a href="mailto:info@lightspeedghost.com" className="text-[#6b38d4] hover:text-[#5b2fc0]">info@lightspeedghost.com</a>.</p>
+            <p>Questions about cookies? Email <a href="mailto:info@lightspeedghost.com" className="text-[#10b981] hover:text-[#059669]">info@lightspeedghost.com</a>.</p>
           </section>
         </div>
       </main>

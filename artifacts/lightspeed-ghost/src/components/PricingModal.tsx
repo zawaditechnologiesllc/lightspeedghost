@@ -92,7 +92,7 @@ export function PricingModal({ open, onClose, onStartFree, onGetPro, onInstituti
           <button
             type="button" role="switch" aria-checked={annual} aria-label="Bill annually"
             onClick={() => setAnnual((a) => !a)}
-            className={`relative w-11 h-6 rounded-full transition-colors ${annual ? "bg-[#6b38d4]" : "bg-[#c6c6cd]"}`}
+            className={`relative w-11 h-6 rounded-full transition-colors ${annual ? "bg-[#10b981]" : "bg-[#c6c6cd]"}`}
           >
             <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200 shadow ${annual ? "left-6" : "left-1"}`} />
           </button>
@@ -105,13 +105,13 @@ export function PricingModal({ open, onClose, onStartFree, onGetPro, onInstituti
           {plans.map(({ key, name, icon: Icon, price, per, desc, features, cta, onClick, highlight }) => (
             <div
               key={key}
-              className={`relative rounded-xl p-4 flex flex-col bg-white border ${highlight ? "border-2 border-[#6b38d4] shadow-lg shadow-[#6b38d4]/10" : "border-[#e0e3e5]"}`}
+              className={`relative rounded-xl p-4 flex flex-col bg-white border ${highlight ? "border-2 border-[#10b981] shadow-lg shadow-[#10b981]/10" : "border-[#e0e3e5]"}`}
             >
               {highlight && (
-                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-[#6b38d4] text-white uppercase tracking-wide">Most popular</span>
+                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-[#10b981] text-white uppercase tracking-wide">Most popular</span>
               )}
               <div className="flex items-center gap-2 mb-2">
-                <Icon size={15} className={highlight ? "text-[#6b38d4]" : "text-[#45464d]"} />
+                <Icon size={15} className={highlight ? "text-[#10b981]" : "text-[#45464d]"} />
                 <span className="font-bold text-[#191c1e]">{name}</span>
               </div>
               <div className="flex items-end gap-1 mb-1">
@@ -122,7 +122,7 @@ export function PricingModal({ open, onClose, onStartFree, onGetPro, onInstituti
               <ul className="space-y-1.5 mb-4 flex-1">
                 {features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-[12px] text-[#45464d]">
-                    <Check size={13} className={`shrink-0 mt-0.5 ${highlight ? "text-[#6b38d4]" : "text-emerald-600"}`} strokeWidth={3} />
+                    <Check size={13} className={`shrink-0 mt-0.5 ${highlight ? "text-[#10b981]" : "text-emerald-600"}`} strokeWidth={3} />
                     {f}
                   </li>
                 ))}
@@ -130,7 +130,7 @@ export function PricingModal({ open, onClose, onStartFree, onGetPro, onInstituti
               <button
                 onClick={onClick}
                 className={`w-full py-2.5 rounded-lg text-sm font-bold transition-colors ${
-                  highlight ? "bg-[#6b38d4] hover:bg-[#5b2fc0] text-white shadow-md shadow-[#6b38d4]/20" : "border border-[#6b38d4] text-[#6b38d4] hover:bg-[#6b38d4]/5"
+                  highlight ? "bg-[#10b981] hover:bg-[#059669] text-white shadow-md shadow-[#10b981]/20" : "border border-[#10b981] text-[#10b981] hover:bg-[#10b981]/5"
                 }`}
               >
                 {cta}
@@ -161,7 +161,7 @@ export function PricingModal({ open, onClose, onStartFree, onGetPro, onInstituti
 
           <p className="text-center text-[12px] text-[#76777d] mt-4">
             Already have an account?{" "}
-            <button onClick={onLogin} className="text-[#6b38d4] hover:text-[#5b2fc0] font-semibold">Log in</button>
+            <button onClick={onLogin} className="text-[#10b981] hover:text-[#059669] font-semibold">Log in</button>
           </p>
         </div>
       </div>

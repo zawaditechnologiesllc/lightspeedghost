@@ -11,7 +11,7 @@ export default function RefundPolicy() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-16">
-        <p className="text-[#6b38d4] text-xs font-semibold uppercase tracking-widest mb-3">Legal</p>
+        <p className="text-[#10b981] text-xs font-semibold uppercase tracking-widest mb-3">Legal</p>
         <h1 className="text-4xl font-bold mb-3">Refund Policy</h1>
         <p className="text-[#76777d] text-sm mb-12">Last updated: April 2025 · Effective immediately</p>
 
@@ -90,7 +90,7 @@ export default function RefundPolicy() {
 
           <section>
             <h2 className="text-[#191c1e] text-xl font-semibold mb-4">7. How to Request a Refund</h2>
-            <p>To submit a refund request, email us at <a href="mailto:billing@lightspeedghost.com" className="text-[#6b38d4] hover:text-[#5b2fc0]">billing@lightspeedghost.com</a> with the following information:</p>
+            <p>To submit a refund request, email us at <a href="mailto:billing@lightspeedghost.com" className="text-[#10b981] hover:text-[#059669]">billing@lightspeedghost.com</a> with the following information:</p>
             <ul className="list-disc pl-5 space-y-2 mt-3">
               <li>The email address associated with your account</li>
               <li>The date and approximate amount of the charge</li>
@@ -124,12 +124,12 @@ export default function RefundPolicy() {
             <p>Questions about this policy or a specific charge should be directed to:</p>
             <div className="mt-4 p-5 rounded-xl bg-white border border-[#e0e3e5]">
               <p className="text-[#191c1e] font-medium">Light Speed Ghost — Billing Support</p>
-              <p className="mt-1"><a href="mailto:billing@lightspeedghost.com" className="text-[#6b38d4] hover:text-[#5b2fc0]">billing@lightspeedghost.com</a></p>
+              <p className="mt-1"><a href="mailto:billing@lightspeedghost.com" className="text-[#10b981] hover:text-[#059669]">billing@lightspeedghost.com</a></p>
               <p className="mt-1 text-[#76777d] text-sm">500 Oracle Pkwy, Redwood City, CA 94065</p>
               <p className="mt-1 text-[#76777d] text-sm">Response time: within 2 business days</p>
             </div>
             <p className="mt-5">
-              For general support enquiries, visit our <Link href="/contact"><span className="text-[#6b38d4] hover:text-[#5b2fc0] cursor-pointer">Contact page</span></Link>. For details on how we handle your data in connection with payments, see our <Link href="/privacy"><span className="text-[#6b38d4] hover:text-[#5b2fc0] cursor-pointer">Privacy Policy</span></Link>.
+              For general support enquiries, visit our <Link href="/contact"><span className="text-[#10b981] hover:text-[#059669] cursor-pointer">Contact page</span></Link>. For details on how we handle your data in connection with payments, see our <Link href="/privacy"><span className="text-[#10b981] hover:text-[#059669] cursor-pointer">Privacy Policy</span></Link>.
             </p>
           </section>
 

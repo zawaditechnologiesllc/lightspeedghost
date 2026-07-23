@@ -79,7 +79,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error
     if (this.state.error) {
       return (
         <div className="min-h-screen bg-[#04080f] flex flex-col items-center justify-center gap-4 p-6 text-center">
-          <Logo size={32} />
+          <Logo size={32} variant="dark" />
           <p className="text-white/70 text-sm">Something went wrong loading this page.</p>
           <button
             onClick={() => { sessionStorage.removeItem("lsg_chunk_reload"); window.location.reload(); }}
@@ -178,7 +178,7 @@ function MaintenanceScreen({ onRetry }: { onRetry: () => void }) {
         <div className="w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
           <Wrench size={28} className="text-orange-400" />
         </div>
-        <Logo size={36} />
+        <Logo size={36} variant="dark" />
         <div className="space-y-2">
           <h1 className="text-xl font-bold text-white">Down for Maintenance</h1>
           <p className="text-sm text-white/45 leading-relaxed">
@@ -367,7 +367,7 @@ function App() {
   });
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}

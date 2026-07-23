@@ -289,9 +289,9 @@ function FAQItem({ q, a }: { q: string; a: string }) {
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-5 sm:p-6 text-left gap-4 group"
       >
-        <span className="text-[#191c1e] font-bold group-hover:text-[#6b38d4] transition-colors">{q}</span>
+        <span className="text-[#191c1e] font-bold group-hover:text-[#10b981] transition-colors">{q}</span>
         <m.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }}>
-          <ChevronDown size={18} className={`${open ? "text-[#6b38d4]" : "text-[#76777d] group-hover:text-[#6b38d4]"} shrink-0 transition-colors`} />
+          <ChevronDown size={18} className={`${open ? "text-[#10b981]" : "text-[#76777d] group-hover:text-[#10b981]"} shrink-0 transition-colors`} />
         </m.div>
       </button>
       <AnimatePresence initial={false}>
@@ -466,7 +466,7 @@ export default function Landing() {
 
   return (
     <LazyMotion features={domAnimation}>
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#6b38d4]/20">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
 
       {/* ── iOS Install Modal ──────────────────────────────────────────── */}
       {showIOSModal && (
@@ -477,7 +477,7 @@ export default function Landing() {
             <p className="text-xs text-[#45464d] mb-5">Add to your home screen for the full app experience</p>
             <button
               onClick={() => setShowIOSModal(false)}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-xl transition-colors text-sm"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-xl transition-colors text-sm"
             >
               <Share size={15} />
               Tap Share then "Add to Home Screen"
@@ -514,17 +514,10 @@ export default function Landing() {
       )}
 
 
-      {/* ─── PRODUCT SIDEBAR (fixed left tool rail) ─── */}
-      <ProductSidebar />
-      <ProductSidebarDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
-
-      {/* Everything sits to the right of the fixed rail on desktop */}
-      <div className="lg:pl-[84px]">
-
-      {/* ─── MINIMAL TOP BAR (no nav menu — a single CTA, like an app shell) ─── */}
-      <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#e0e3e5] transition-shadow ${scrolled ? "shadow-sm" : ""}`}>
+      {/* ─── FULL-WIDTH TOP HEADER — logo + wordmark top-left ─── */}
+      <header className={`sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#e0e3e5] transition-shadow ${scrolled ? "shadow-sm" : ""}`}>
         <div className="flex items-center gap-3 h-16 px-4 sm:px-6">
-          {/* Mobile: hamburger opens the tool drawer, plus a small wordmark */}
+          {/* Mobile hamburger opens the tool drawer */}
           <button
             onClick={() => setMobileOpen(true)}
             className="lg:hidden p-2 -ml-2 rounded-lg text-[#45464d] hover:bg-[#f2f4f6] transition-colors"
@@ -532,14 +525,15 @@ export default function Landing() {
           >
             <Menu size={20} />
           </button>
+          {/* Logo + wordmark, top-left */}
           <Link href="/">
-            <span className="lg:hidden cursor-pointer select-none"><Logo size={24} textSize="text-sm" variant="light" /></span>
+            <span className="cursor-pointer select-none shrink-0"><Logo size={26} textSize="text-base" variant="light" /></span>
           </Link>
 
           {/* Center trust badges */}
           <div className="hidden md:flex items-center gap-4 mx-auto text-[#45464d]">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
-              <Database size={13} className="text-[#6b38d4]" /> Writes from real research
+              <Database size={13} className="text-[#10b981]" /> Writes from real research
             </span>
             <span className="w-px h-4 bg-[#e0e3e5]" />
             <span className="inline-flex items-center gap-1 text-xs font-semibold">
@@ -555,19 +549,26 @@ export default function Landing() {
           <div className="flex items-center gap-1.5 ml-auto md:ml-0">
             <button
               onClick={() => setPricingOpen(true)}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-sm text-[#6b38d4] hover:text-[#5b2fc0] font-semibold rounded-lg hover:bg-[#6b38d4]/5 transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-sm text-[#10b981] hover:text-[#059669] font-semibold rounded-lg hover:bg-[#10b981]/5 transition-colors"
             >
               Upgrade
             </button>
             <button
               onClick={() => setPricingOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-all shadow-md shadow-[#6b38d4]/20 active:scale-95 whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-all shadow-md shadow-[#10b981]/20 active:scale-95 whitespace-nowrap"
             >
               Start for free
             </button>
           </div>
         </div>
       </header>
+
+      {/* ─── FIXED TOOL RAIL (sits below the header) ─── */}
+      <ProductSidebar />
+      <ProductSidebarDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
+
+      {/* Content sits to the right of the rail on desktop */}
+      <div className="lg:pl-[84px]">
 
       <main>
       {/* ─── HERO — centered command box (the open, no-login tool) ─── */}
@@ -580,11 +581,11 @@ export default function Landing() {
               "radial-gradient(at 50% 0%, rgba(107,56,212,0.07) 0px, transparent 55%), radial-gradient(at 100% 0%, rgba(0,144,169,0.05) 0px, transparent 45%)",
           }}
         />
-        <div className="absolute -top-24 right-10 w-72 h-72 bg-[#4cd7f6]/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 right-10 w-72 h-72 bg-[#5eead4]/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#e9ddff] text-[#5516be] text-[10px] sm:text-[11px] font-bold uppercase tracking-wide mb-5">
-            <Zap size={12} className="text-[#6b38d4]" /> Free forever · your text never touches an AI model
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#d1fae5] text-[#047857] text-[10px] sm:text-[11px] font-bold uppercase tracking-wide mb-5">
+            <Zap size={12} className="text-[#10b981]" /> Free forever · your text never touches an AI model
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-bold leading-[1.1] tracking-tight mb-4 text-[#131b2e]" style={{ letterSpacing: "-0.02em" }}>
@@ -593,7 +594,7 @@ export default function Landing() {
             ) : (
               <>
                 Your whole academic toolkit,{" "}
-                <span className="text-[#6b38d4]">in one place.</span>
+                <span className="text-[#10b981]">in one place.</span>
               </>
             )}
           </h1>
@@ -616,7 +617,7 @@ export default function Landing() {
                 { icon: FlaskConical,title: "Solve a STEM problem",       body: "Step-by-step, photo upload, answers verified",       href: "/stem",       accent: "text-cyan-600" },
               ].map(({ icon: Icon, title, body, href, accent }) => (
                 <Link key={title} href={href}>
-                  <span className="block h-full rounded-xl border border-[#e0e3e5] bg-white p-4 hover:border-[#6b38d4]/50 hover:shadow-md transition-all cursor-pointer">
+                  <span className="block h-full rounded-xl border border-[#e0e3e5] bg-white p-4 hover:border-[#10b981]/50 hover:shadow-md transition-all cursor-pointer">
                     <span className="flex items-center gap-2 mb-1.5">
                       <Icon size={15} className={accent} />
                       <span className="text-sm font-bold text-[#191c1e]">{title}</span>
@@ -640,7 +641,7 @@ export default function Landing() {
             {["MIT","UCL","Georgia Tech","Edinburgh","Columbia","Nairobi","Witwatersrand","Makerere","Lagos","Melbourne","Toronto"].map(uni => (
               <span key={uni} className="font-bold text-sm sm:text-lg text-[#45464d] uppercase tracking-wide">{uni}</span>
             ))}
-            <span className="text-xs font-semibold text-[#6b38d4] whitespace-nowrap">+ 200 more</span>
+            <span className="text-xs font-semibold text-[#10b981] whitespace-nowrap">+ 200 more</span>
           </div>
 
           <div className="mt-12 grid grid-cols-3 gap-4 sm:gap-8 border-t border-[#d8dadc] pt-12 text-center">
@@ -650,7 +651,7 @@ export default function Landing() {
               { value: "2.5M+", label: "Ebook publishers", sub: "Selling on Amazon, Apple Books & more" },
             ].map(({ value, label, sub }) => (
               <div key={label} className="flex flex-col items-center gap-1">
-                <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#6b38d4]">{value}</div>
+                <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#10b981]">{value}</div>
                 <div className="text-xs sm:text-sm font-semibold text-[#191c1e] mt-1">{label}</div>
                 <div className="text-[10px] sm:text-xs text-[#76777d] leading-snug max-w-[160px]">{sub}</div>
               </div>
@@ -671,8 +672,8 @@ export default function Landing() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6b38d4] opacity-60" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#6b38d4]" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-60" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10b981]" />
                 </span>
                 <span className="text-xs text-[#45464d]">
                   <span className="font-bold text-[#191c1e] tabular-nums">{liveStats.signupsThisWeek.toLocaleString()}</span> new students joined this week
@@ -699,7 +700,7 @@ export default function Landing() {
                 value: "92%+",
                 label: "Grade target",
                 sub: "Cross-checked against your rubric — or a preset Grade A standard from Harvard, Oxford, Yale, Princeton, MIT & Cambridge",
-                color: "text-[#6b38d4]",
+                color: "text-[#10b981]",
               },
               {
                 value: "< 8%",
@@ -728,7 +729,7 @@ export default function Landing() {
       <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#131b2e] text-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10 sm:mb-16">
-            <p className="text-[#a78bfa] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">The problem with every other AI</p>
+            <p className="text-[#6ee7b7] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">The problem with every other AI</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight" style={{ letterSpacing: "-0.01em" }}>
               Here is what writing from memory actually costs you.
             </h2>
@@ -753,8 +754,8 @@ export default function Landing() {
               },
             ].map(({ icon: Icon, title, body }) => (
               <div key={title} className="rounded-2xl border border-white/10 bg-white/5 p-6 sm:p-8">
-                <div className="w-11 h-11 rounded-xl bg-[#6b38d4]/25 flex items-center justify-center mb-5">
-                  <Icon size={22} className="text-[#c4b5fd]" />
+                <div className="w-11 h-11 rounded-xl bg-[#10b981]/25 flex items-center justify-center mb-5">
+                  <Icon size={22} className="text-[#6ee7b7]" />
                 </div>
                 <h3 className="font-bold text-white text-lg mb-3">{title}</h3>
                 <p className="text-sm text-[#9aa3bd] leading-relaxed">{body}</p>
@@ -777,7 +778,7 @@ export default function Landing() {
       <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#f7f9fb]">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10 sm:mb-14">
-            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">Why choose it</p>
+            <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">Why choose it</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3 text-[#131b2e]">Every alternative has one gap. We close it.</h2>
             <p className="text-[#45464d] text-sm max-w-xl mx-auto">The villain is the same everywhere: AI that writes from nothing. Here is exactly where each alternative falls short — and what we do instead.</p>
           </div>
@@ -788,7 +789,7 @@ export default function Landing() {
                 <tr>
                   <th className="text-left py-4 px-4 text-[#45464d] font-semibold text-xs uppercase tracking-wider w-40 border-b-2 border-[#c6c6cd]">Instead of</th>
                   <th className="text-left py-4 px-4 text-[#45464d] font-semibold text-xs uppercase tracking-wider border-b-2 border-[#c6c6cd]">Their gap</th>
-                  <th className="text-left py-4 px-4 bg-[#e9ddff]/40 text-[#6b38d4] font-bold text-xs uppercase tracking-wider border-b-2 border-[#6b38d4]">Light Speed Ghost's edge</th>
+                  <th className="text-left py-4 px-4 bg-[#d1fae5]/40 text-[#10b981] font-bold text-xs uppercase tracking-wider border-b-2 border-[#10b981]">Light Speed Ghost's edge</th>
                 </tr>
               </thead>
               <tbody>
@@ -804,9 +805,9 @@ export default function Landing() {
                   <tr key={vs} className={i % 2 === 0 ? "" : "bg-[#f7f9fb]"}>
                     <td className="py-3.5 px-4 text-[#191c1e] font-semibold text-xs leading-snug border-b border-[#eceef0] align-top">{vs}</td>
                     <td className="py-3.5 px-4 text-[#76777d] text-xs leading-snug border-b border-[#eceef0] align-top">{gap}</td>
-                    <td className="py-3.5 px-4 text-[#191c1e] text-xs leading-snug border-b border-[#eceef0] bg-[#e9ddff]/20 align-top">
+                    <td className="py-3.5 px-4 text-[#191c1e] text-xs leading-snug border-b border-[#eceef0] bg-[#d1fae5]/20 align-top">
                       <span className="inline-flex items-start gap-1.5">
-                        <CheckCircle size={13} className="text-[#6b38d4] shrink-0 mt-0.5" />
+                        <CheckCircle size={13} className="text-[#10b981] shrink-0 mt-0.5" />
                         {edge}
                       </span>
                     </td>
@@ -818,7 +819,7 @@ export default function Landing() {
 
           <div className="mt-8 text-center">
             <a href="#payg">
-              <span className="inline-flex items-center gap-2 px-6 py-3 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-all cursor-pointer shadow-lg shadow-[#6b38d4]/20 hover:-translate-y-0.5 text-sm">
+              <span className="inline-flex items-center gap-2 px-6 py-3 bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-all cursor-pointer shadow-lg shadow-[#10b981]/20 hover:-translate-y-0.5 text-sm">
                 Try it for $3.99 — no subscription needed
                 <ArrowRight size={15} />
               </span>
@@ -833,7 +834,7 @@ export default function Landing() {
 
           {/* Header + toggle */}
           <div className="text-center mb-10 sm:mb-14">
-            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">How it works · Pricing</p>
+            <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">How it works · Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 text-[#131b2e]">Start free — upgrade when you need AI power</h2>
             <p className="text-[#45464d] text-sm sm:text-base max-w-xl mx-auto">
               Free forever for checking your work. Pro at $29.99/mo for weekly deadlines. Pay-as-you-go when you just need one thing done. Honest pricing. No dark patterns.
@@ -846,7 +847,7 @@ export default function Landing() {
                 aria-checked={billingAnnual}
                 aria-label="Bill annually"
                 onClick={() => setBillingAnnual(b => !b)}
-                className={`relative w-11 h-6 rounded-full transition-colors ${billingAnnual ? "bg-[#6b38d4]" : "bg-[#c6c6cd]"}`}
+                className={`relative w-11 h-6 rounded-full transition-colors ${billingAnnual ? "bg-[#10b981]" : "bg-[#c6c6cd]"}`}
               >
                 <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200 shadow ${billingAnnual ? "left-6" : "left-1"}`} />
               </button>
@@ -864,12 +865,12 @@ export default function Landing() {
             {/* Path A — Subscribe */}
             <div className="rounded-2xl border border-[#e0e3e5] bg-white p-6 sm:p-8 shadow-sm">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-9 h-9 rounded-xl bg-[#6b38d4]/10 flex items-center justify-center">
-                  <Sparkles size={15} className="text-[#6b38d4]" />
+                <div className="w-9 h-9 rounded-xl bg-[#10b981]/10 flex items-center justify-center">
+                  <Sparkles size={15} className="text-[#10b981]" />
                 </div>
                 <div>
                   <p className="text-[#191c1e] font-semibold text-sm">Subscribe</p>
-                  <p className="text-[#6b38d4] text-[11px] font-medium">Free forever · Pro $29.99 / month</p>
+                  <p className="text-[#10b981] text-[11px] font-medium">Free forever · Pro $29.99 / month</p>
                 </div>
               </div>
               <div className="space-y-6">
@@ -888,7 +889,7 @@ export default function Landing() {
                 ))}
               </div>
               <Link href="/auth">
-                <span className="mt-7 block text-center py-3 rounded-lg text-sm font-bold bg-[#6b38d4] hover:bg-[#5b2fc0] text-white transition-colors cursor-pointer shadow-md shadow-[#6b38d4]/20">
+                <span className="mt-7 block text-center py-3 rounded-lg text-sm font-bold bg-[#10b981] hover:bg-[#059669] text-white transition-colors cursor-pointer shadow-md shadow-[#10b981]/20">
                   Start free — upgrade anytime
                 </span>
               </Link>
@@ -943,12 +944,12 @@ export default function Landing() {
                     isInstitution
                       ? "bg-[#131b2e] text-white border border-[#131b2e]"
                       : highlight
-                      ? "bg-white border-2 border-[#6b38d4] shadow-xl shadow-[#6b38d4]/10"
+                      ? "bg-white border-2 border-[#10b981] shadow-xl shadow-[#10b981]/10"
                       : "bg-white border border-[#e0e3e5] shadow-sm hover:shadow-md"
                   }`}
                 >
                   {badge && (
-                    <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap uppercase tracking-wide ${highlight ? "bg-[#6b38d4] text-white" : isInstitution ? "bg-white text-[#131b2e]" : "bg-[#eceef0] text-[#45464d] border border-[#d8dadc]"}`}>
+                    <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap uppercase tracking-wide ${highlight ? "bg-[#10b981] text-white" : isInstitution ? "bg-white text-[#131b2e]" : "bg-[#eceef0] text-[#45464d] border border-[#d8dadc]"}`}>
                       {badge}
                     </div>
                   )}
@@ -964,7 +965,7 @@ export default function Landing() {
                   <ul className="space-y-2 mb-6 flex-1">
                     {features.map(feat => (
                       <li key={feat} className={`flex items-start gap-2.5 text-sm ${isInstitution ? "text-white/85" : "text-[#45464d]"}`}>
-                        <CheckCircle size={13} className={`shrink-0 mt-0.5 ${isInstitution ? "text-[#a78bfa]" : highlight ? "text-[#6b38d4]" : "text-emerald-600"}`} />
+                        <CheckCircle size={13} className={`shrink-0 mt-0.5 ${isInstitution ? "text-[#6ee7b7]" : highlight ? "text-[#10b981]" : "text-emerald-600"}`} />
                         {feat}
                       </li>
                     ))}
@@ -983,7 +984,7 @@ export default function Landing() {
                   {name === "Pro" ? (
                     <button
                       onClick={() => setCheckoutPlan(billingAnnual ? "pro_annual" : "pro_monthly")}
-                      className="w-full block text-center py-3 rounded-lg text-sm font-bold transition-colors cursor-pointer bg-[#6b38d4] hover:bg-[#5b2fc0] text-white shadow-md shadow-[#6b38d4]/20"
+                      className="w-full block text-center py-3 rounded-lg text-sm font-bold transition-colors cursor-pointer bg-[#10b981] hover:bg-[#059669] text-white shadow-md shadow-[#10b981]/20"
                     >
                       {cta}
                     </button>
@@ -995,7 +996,7 @@ export default function Landing() {
                     </a>
                   ) : (
                     <Link href="/auth">
-                      <span className="block text-center py-3 rounded-lg text-sm font-bold transition-colors cursor-pointer border border-[#6b38d4] text-[#6b38d4] hover:bg-[#6b38d4]/5">
+                      <span className="block text-center py-3 rounded-lg text-sm font-bold transition-colors cursor-pointer border border-[#10b981] text-[#10b981] hover:bg-[#10b981]/5">
                         {cta}
                       </span>
                     </Link>
@@ -1088,7 +1089,7 @@ export default function Landing() {
       <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#f7f9fb]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8 sm:mb-10">
-            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">Real students</p>
+            <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">Real students</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-[#131b2e]">Tested by the best.</h2>
             <p className="text-[#45464d] text-sm mt-3">It's not perfect. But it gets the job done.</p>
           </div>
@@ -1113,7 +1114,7 @@ export default function Landing() {
           <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
             {testimonials.map(({ name, role, text, stars }, idx) => {
               const avatarColors = [
-                "bg-[#e9ddff] text-[#5516be]",
+                "bg-[#d1fae5] text-[#047857]",
                 "bg-[#acedff] text-[#004e5c]",
                 "bg-[#dae2fd] text-[#131b2e]",
               ];
@@ -1125,7 +1126,7 @@ export default function Landing() {
                     <Star key={i} size={12} className="fill-amber-400 text-amber-400" />
                   ))}
                 </div>
-                <Quote size={16} className="text-[#6b38d4]/30 mb-3" />
+                <Quote size={16} className="text-[#10b981]/30 mb-3" />
                 <p className="text-[#45464d] text-sm leading-relaxed flex-1 mb-5 italic">"{text}"</p>
                 <div className="flex items-center gap-3 mt-auto pt-4 border-t border-[#eceef0]">
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColors[idx % 3]}`}>
@@ -1146,14 +1147,14 @@ export default function Landing() {
       <section id="faq" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#f2f4f6] border-t border-[#e0e3e5]">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-8 sm:mb-12">
-            <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">FAQ</p>
+            <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">FAQ</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-[#131b2e]">Questions we actually get asked</h2>
           </div>
           <div className="space-y-4">
             {faqs.map(faq => <FAQItem key={faq.q} {...faq} />)}
           </div>
           <div className="mt-10 text-center">
-            <p className="text-[#45464d] text-sm">Still have questions? <a href="mailto:info@lightspeedghost.com" className="text-[#6b38d4] hover:text-[#5b2fc0] font-medium">Email us</a> or <Link href="/contact"><span className="text-[#6b38d4] hover:text-[#5b2fc0] font-medium cursor-pointer">visit our contact page</span></Link>.</p>
+            <p className="text-[#45464d] text-sm">Still have questions? <a href="mailto:info@lightspeedghost.com" className="text-[#10b981] hover:text-[#059669] font-medium">Email us</a> or <Link href="/contact"><span className="text-[#10b981] hover:text-[#059669] font-medium cursor-pointer">visit our contact page</span></Link>.</p>
           </div>
         </div>
       </section>
@@ -1161,7 +1162,7 @@ export default function Landing() {
       {/* ─── FINAL CTA ─── */}
       <section className="py-16 sm:py-24 md:py-28 px-4 sm:px-6 relative overflow-hidden bg-[#131b2e] text-white">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[600px] h-[300px] sm:h-[400px] bg-[#6b38d4]/20 rounded-full blur-[100px]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[600px] h-[300px] sm:h-[400px] bg-[#10b981]/20 rounded-full blur-[100px]" />
         </div>
         <div className="relative max-w-2xl mx-auto text-center">
           <div className="flex justify-center mb-6 sm:mb-8">
@@ -1175,7 +1176,7 @@ export default function Landing() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link href="/auth">
-              <span className="inline-flex items-center gap-2 px-8 sm:px-10 py-4 sm:py-5 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all cursor-pointer shadow-2xl hover:-translate-y-1 text-base sm:text-lg">
+              <span className="inline-flex items-center gap-2 px-8 sm:px-10 py-4 sm:py-5 bg-[#10b981] hover:bg-[#059669] text-white font-bold rounded-lg transition-all cursor-pointer shadow-2xl hover:-translate-y-1 text-base sm:text-lg">
                 Start Free — Write From Real Research
                 <ArrowRight size={18} />
               </span>
@@ -1230,20 +1231,20 @@ export default function Landing() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail size={12} className="shrink-0 text-[#76777d]" />
-                  <a href="mailto:info@lightspeedghost.com" className="hover:text-[#6b38d4] transition-colors">info@lightspeedghost.com</a>
+                  <a href="mailto:info@lightspeedghost.com" className="hover:text-[#10b981] transition-colors">info@lightspeedghost.com</a>
                 </div>
               </div>
               <div className="flex items-center gap-3 mt-4">
                 <a href={siteContent.socialX || "https://x.com/lightspeedghost"} target="_blank" rel="noreferrer" aria-label="Light Speed Ghost on X"
-                  className="w-7 h-7 rounded-lg bg-white border border-[#d8dadc] hover:border-[#6b38d4] flex items-center justify-center text-[#45464d] hover:text-[#6b38d4] transition-all">
+                  className="w-7 h-7 rounded-lg bg-white border border-[#d8dadc] hover:border-[#10b981] flex items-center justify-center text-[#45464d] hover:text-[#10b981] transition-all">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
                 </a>
                 <a href={siteContent.socialInstagram || "https://instagram.com/lightspeedghost"} target="_blank" rel="noreferrer" aria-label="Light Speed Ghost on Instagram"
-                  className="w-7 h-7 rounded-lg bg-white border border-[#d8dadc] hover:border-[#6b38d4] flex items-center justify-center text-[#45464d] hover:text-[#6b38d4] transition-all">
+                  className="w-7 h-7 rounded-lg bg-white border border-[#d8dadc] hover:border-[#10b981] flex items-center justify-center text-[#45464d] hover:text-[#10b981] transition-all">
                   <Instagram size={13} aria-hidden="true" />
                 </a>
                 <a href={siteContent.socialYoutube || "https://youtube.com/@lightspeedghost"} target="_blank" rel="noreferrer" aria-label="Light Speed Ghost on YouTube"
-                  className="w-7 h-7 rounded-lg bg-white border border-[#d8dadc] hover:border-[#6b38d4] flex items-center justify-center text-[#45464d] hover:text-[#6b38d4] transition-all">
+                  className="w-7 h-7 rounded-lg bg-white border border-[#d8dadc] hover:border-[#10b981] flex items-center justify-center text-[#45464d] hover:text-[#10b981] transition-all">
                   <Youtube size={13} aria-hidden="true" />
                 </a>
               </div>
@@ -1264,7 +1265,7 @@ export default function Landing() {
                 ].map(({ label, href }) => (
                   <li key={label}>
                     <Link href={href}>
-                      <span className="text-[#45464d] hover:text-[#6b38d4] text-sm transition-colors cursor-pointer">{label}</span>
+                      <span className="text-[#45464d] hover:text-[#10b981] text-sm transition-colors cursor-pointer">{label}</span>
                     </Link>
                   </li>
                 ))}
@@ -1287,10 +1288,10 @@ export default function Landing() {
                 ].map(({ label, href }) => (
                   <li key={label}>
                     {href.startsWith("#") ? (
-                      <a href={href} className="text-[#45464d] hover:text-[#6b38d4] text-sm transition-colors">{label}</a>
+                      <a href={href} className="text-[#45464d] hover:text-[#10b981] text-sm transition-colors">{label}</a>
                     ) : (
                       <Link href={href}>
-                        <span className="text-[#45464d] hover:text-[#6b38d4] text-sm transition-colors cursor-pointer">{label}</span>
+                        <span className="text-[#45464d] hover:text-[#10b981] text-sm transition-colors cursor-pointer">{label}</span>
                       </Link>
                     )}
                   </li>
@@ -1311,7 +1312,7 @@ export default function Landing() {
                 ].map(({ label, href }) => (
                   <li key={label}>
                     <Link href={href}>
-                      <span className="text-[#45464d] hover:text-[#6b38d4] text-sm transition-colors cursor-pointer">{label}</span>
+                      <span className="text-[#45464d] hover:text-[#10b981] text-sm transition-colors cursor-pointer">{label}</span>
                     </Link>
                   </li>
                 ))}
@@ -1340,11 +1341,11 @@ export default function Landing() {
 
             {/* Get the app — small badges */}
             <div className="flex items-center gap-2.5">
-              <button onClick={handleIOSInstall} aria-label="Download on the App Store" className="flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 bg-white border border-[#d8dadc] hover:border-[#6b38d4] rounded-lg transition-all">
+              <button onClick={handleIOSInstall} aria-label="Download on the App Store" className="flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 bg-white border border-[#d8dadc] hover:border-[#10b981] rounded-lg transition-all">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-[#191c1e] shrink-0" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" /></svg>
                 <span className="text-xs font-semibold text-[#191c1e]">App Store</span>
               </button>
-              <button onClick={handleAndroidInstall} aria-label="Get it on Google Play" className="flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 bg-white border border-[#d8dadc] hover:border-[#6b38d4] rounded-lg transition-all">
+              <button onClick={handleAndroidInstall} aria-label="Get it on Google Play" className="flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 bg-white border border-[#d8dadc] hover:border-[#10b981] rounded-lg transition-all">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" aria-hidden="true"><path d="M3.18 23.76c.33.18.71.24 1.08.15L16.5 12 4.26.09C3.89 0 3.51.06 3.18.24 2.65.54 2.29 1.1 2.29 1.8v20.4c0 .7.36 1.26.89 1.56z" fill="#4285F4"/><path d="M20.94 10.78 18.5 9.38 16.5 12l2 2.62 2.44-1.4c.83-.45.83-1.99 0-2.44z" fill="#FBBC04"/><path d="M16.5 9.38 4.26.09c-.33-.18-.69-.27-1.08-.15l13.32 11.44L16.5 9.38z" fill="#34A853"/><path d="M16.5 14.62l-13.32 9.14c.39.12.75.21 1.08.15L16.5 14.62z" fill="#EA4335"/></svg>
                 <span className="text-xs font-semibold text-[#191c1e]">Google Play</span>
               </button>
@@ -1454,7 +1455,7 @@ export default function Landing() {
               <Link href="/auth">
                 <span
                   onClick={() => setShowExitIntent(false)}
-                  className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 border border-[#d8dadc] hover:border-[#6b38d4] text-[#45464d] hover:text-[#6b38d4] rounded-xl transition-all text-sm cursor-pointer"
+                  className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 border border-[#d8dadc] hover:border-[#10b981] text-[#45464d] hover:text-[#10b981] rounded-xl transition-all text-sm cursor-pointer"
                 >
                   Or start free — no card required
                 </span>

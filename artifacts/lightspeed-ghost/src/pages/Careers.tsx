@@ -82,7 +82,7 @@ export default function Careers() {
 
         {/* Hero */}
         <div className="max-w-2xl">
-          <p className="text-[#6b38d4] text-xs font-semibold uppercase tracking-widest mb-4">Careers</p>
+          <p className="text-[#10b981] text-xs font-semibold uppercase tracking-widest mb-4">Careers</p>
           <h1 className="text-4xl sm:text-5xl font-bold mb-6 leading-tight">Work on something students actually use and actually need.</h1>
           <p className="text-[#45464d] text-lg leading-relaxed">
             Light Speed Ghost is a small, focused team building the academic writing tools we wish we'd had as students. We're not trying to be the biggest AI company. We're trying to be the most useful one for students worldwide.
@@ -95,8 +95,8 @@ export default function Careers() {
           <div className="grid sm:grid-cols-2 gap-5">
             {VALUES.map(({ icon: Icon, title, body }) => (
               <div key={title} className="p-6 rounded-2xl bg-white border border-[#e0e3e5]">
-                <div className="w-10 h-10 rounded-xl bg-[#6b38d4]/10 border border-[#6b38d4]/20 flex items-center justify-center mb-4">
-                  <Icon size={18} className="text-[#6b38d4]" />
+                <div className="w-10 h-10 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 flex items-center justify-center mb-4">
+                  <Icon size={18} className="text-[#10b981]" />
                 </div>
                 <h3 className="font-semibold text-[#191c1e] mb-2">{title}</h3>
                 <p className="text-[#76777d] text-sm leading-relaxed">{body}</p>
@@ -125,7 +125,7 @@ export default function Careers() {
               ))}
             </div>
           </div>
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-600/10 to-violet-600/10 border border-[#6b38d4]/20">
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-600/10 to-violet-600/10 border border-[#10b981]/20">
             <p className="text-[#45464d] text-sm font-semibold mb-3">Team snapshot</p>
             <div className="space-y-3">
               {[
@@ -174,7 +174,7 @@ export default function Careers() {
                     <p className="text-xs text-[#76777d] mt-0.5">{role.type}</p>
                   </div>
                   <a href={`mailto:info@lightspeedghost.com?subject=Application: ${encodeURIComponent(role.title)}`}
-                    className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6b38d4]/15 border border-[#6b38d4]/25 text-[#6b38d4] text-xs font-semibold hover:bg-[#5b2fc0]/25 transition-colors">
+                    className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#10b981]/15 border border-[#10b981]/25 text-[#10b981] text-xs font-semibold hover:bg-[#059669]/25 transition-colors">
                     Apply <ArrowRight size={12} />
                   </a>
                 </div>
@@ -182,7 +182,7 @@ export default function Careers() {
                 <ul className="space-y-1.5">
                   {role.requirements.map((req) => (
                     <li key={req} className="flex items-start gap-2 text-[#76777d] text-xs leading-relaxed">
-                      <span className="text-[#6b38d4] mt-0.5 shrink-0">→</span> {req}
+                      <span className="text-[#10b981] mt-0.5 shrink-0">→</span> {req}
                     </li>
                   ))}
                 </ul>
@@ -198,7 +198,7 @@ export default function Careers() {
             We're always interested in genuinely exceptional people, especially in AI engineering, educational content, and growth. If that's you, send us a note — tell us what you'd build if you were here.
           </p>
           <a href="mailto:info@lightspeedghost.com?subject=Open application — Light Speed Ghost"
-            className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-[#6b38d4]/25 hover:scale-[1.02] text-sm">
+            className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xl shadow-[#10b981]/25 hover:scale-[1.02] text-sm">
             Send an open application <ArrowRight size={15} />
           </a>
           <p className="mt-4 text-[#9a9aa1] text-xs">info@lightspeedghost.com · we respond to every application</p>
