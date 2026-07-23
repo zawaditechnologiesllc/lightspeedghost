@@ -6,9 +6,9 @@ import MarkdownIt from "markdown-it";
 // (405 on POST, HTML on GET) instead of the Express backend on Render.
 const API = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
-// Public SEO pages live on the main domain at /seo/<slug>. A Vercel function
-// (api/seo-proxy.js) proxies them to the backend renderer, so we link to the
-// main domain and never expose the backend URL.
+// Public SEO pages live on the main domain at /seo/<slug>. A Cloudflare Pages
+// Function (functions/seo/[slug].js) proxies them to the backend renderer, so
+// we link to the main domain and never expose the backend URL.
 const seoPageUrl = (slug: string) => `/seo/${slug}`;
 
 // Markdown → HTML for the manual page author. `html:false` keeps writers from

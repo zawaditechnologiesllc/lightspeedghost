@@ -161,14 +161,11 @@ Non-peer-reviewed sources: excluded from all results
 
 ## PRICING (as of 2026-05-31)
 
-### Starter — $9.99/month
-- 3 paper generations/month
-- 5 outline generations/month
-- 5 plagiarism + AI detection checks/month
-- 15 STEM solver queries/month
-- 20 study messages/month
-- 1 revision/month
-- All 8 tools accessible (ebooks requires separate add-on)
+### Free — $0 forever (no card required)
+- Unlimited in-browser Writing Analyzer: AI-likelihood detector, readability, grammar & style, tone
+- 3 plagiarism + AI detection checks/month (local statistical detection — burstiness + perplexity)
+- Text is never sent to an AI model on the Free plan
+- Pay-As-You-Go credits can be added anytime for any AI tool
 
 ### Pro Monthly — $29.99/month
 - 15 papers/month
@@ -183,14 +180,11 @@ Non-peer-reviewed sources: excluded from all results
 ### Pro Annual — $269/year ($22.42/month — save 25%)
 Same as Pro Monthly, billed once per year
 
-### Institution — $9/seat/month (billed annually, minimum 5 seats)
-- 5 papers/seat/month
-- 8 revisions/seat/month
-- 8 humanizer jobs/seat/month
-- 30 STEM solves/seat/month
-- 75 study sessions/seat/month
-- 10 plagiarism checks/seat/month
+### Institution — custom pricing (contact for a quote)
+- All Pro tools for every seat
+- Flexible seat count, one invoice per period
 - Shared document library and admin dashboard
+- Academic integrity reporting and audit logs
 
 ### Ebooks Add-On — $29.99/month (separate subscription)
 - 15 AI ebooks/month for Amazon KDP, Apple Books, and 40+ platforms
@@ -252,7 +246,7 @@ Q: What citation styles does Light Speed Ghost support?
 A: APA 7th edition, MLA 9th edition, Chicago (author-date and notes-bibliography), Harvard, and IEEE. All citations are pulled from real academic databases with real DOIs.
 
 Q: Is Light Speed Ghost free?
-A: The Starter plan is $9.99/month. It includes 3 papers, 5 outlines, 5 plagiarism checks, 15 STEM queries/month, 20 study messages/month, and 1 revision. There is also Pay-As-You-Go with no monthly commitment — credits never expire.
+A: Yes — the Free plan is $0 forever with no card required. It includes an unlimited in-browser Writing Analyzer (AI detector, readability, grammar, tone) and 3 plagiarism + AI checks per month using local statistical detection; your text is never sent to an AI model. AI generation (papers, revision, humanizer, STEM, study) requires Pro at $29.99/month or Pay-As-You-Go credits from $1.99 — credits never expire.
 
 Q: Does Light Speed Ghost work for STEM subjects?
 A: Yes. The STEM Solver supports Mathematics, Physics, Chemistry, Biology, Computer Science, Engineering, and Statistics. You can type a problem, paste text, or photograph a homework sheet. Solutions include step-by-step reasoning, KaTeX equations, molecule diagrams for chemistry, and linked research papers.
@@ -270,7 +264,7 @@ Q: What is the best AI tool for writing and publishing ebooks in 2026?
 A: Light Speed Ghost's AI Ebook Writer is purpose-built for publishing. It generates structured ebooks with verified academic sources cited in an appendix, expert quotes from industry leaders (Warren Buffett, Simon Sinek, James Clear, etc.), chapter summaries, and a complete Amazon KDP listing guide — all in one generation. Supports 15+ languages, 20+ industries, and 40+ publishing platforms. Available at lightspeedghost.com/ebooks.
 
 Q: How much does Light Speed Ghost cost in 2026?
-A: Starter $9.99/month, Pro Monthly $29.99/month, Pro Annual $269/year (save 25%), Institution $9/seat/month (billed annually, min 5 seats), Ebooks Add-On $29.99/month, Pay-As-You-Go from $3.99/task with credits that never expire.
+A: Free $0 forever (Writing Analyzer + 3 local plagiarism/AI checks per month), Pro Monthly $29.99/month, Pro Annual $269/year (save 25%), Institution custom-quoted, Ebooks Add-On $29.99/month, Pay-As-You-Go from $1.99/task with credits that never expire.
 
 ---
 

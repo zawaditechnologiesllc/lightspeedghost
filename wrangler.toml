@@ -1,0 +1,16 @@
+# Cloudflare Pages project configuration.
+#
+# The frontend deploys to Cloudflare Pages:
+#   - Static build output: artifacts/lightspeed-ghost/dist/public (Vite build + prerender)
+#   - Pages Functions:     functions/ (repo root) — SEO proxy for /seo/<slug> and /seo-sitemap.xml
+#
+# Deploys run from the repo root:
+#   pnpm --filter @workspace/lightspeed-ghost run build
+#   npx wrangler pages deploy
+#
+# Optional Pages env var (Settings → Environment variables, or [vars] below):
+#   SEO_BACKEND_ORIGIN — overrides the Render backend origin the SEO proxy targets.
+
+name = "lightspeedghost"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "artifacts/lightspeed-ghost/dist/public"

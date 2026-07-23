@@ -233,7 +233,7 @@ export default function Auth() {
                       ? "Enter your account email and we'll send you a link to set a new password."
                       : tab === "login"
                       ? "Sign in to your Light Speed Ghost account"
-                      : "Starter plan from $9.99/month — cancel any time"}
+                      : "Free plan included — no card required, upgrade any time"}
                   </p>
                 </div>
 

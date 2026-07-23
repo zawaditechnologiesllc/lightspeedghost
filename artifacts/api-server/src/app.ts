@@ -188,7 +188,7 @@ if (process.env.ALLOWED_ORIGINS) {
 }
 
 // Dev / preview patterns — only applied in non-production to avoid letting
-// arbitrary third-party Vercel deployments call the production API.
+// arbitrary third-party preview deployments call the production API.
 const KNOWN_DEV_ORIGINS =
   process.env.NODE_ENV !== "production"
     ? [
@@ -196,7 +196,7 @@ const KNOWN_DEV_ORIGINS =
         /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
         /\.replit\.dev$/,
         /\.repl\.co$/,
-        /\.vercel\.app$/,
+        /\.pages\.dev$/,
       ]
     : [];
 
@@ -210,7 +210,7 @@ app.use(
       }
       // Explicit allowlist from env var always wins (includes auto-added www variant)
       if (ENV_ORIGINS.has(origin)) return cb(null, true);
-      // Dev/Replit/Vercel preview pattern match
+      // Dev/Replit/Cloudflare Pages preview pattern match
       if (KNOWN_DEV_ORIGINS.some((pat) => pat.test(origin))) return cb(null, true);
       cb(new Error(`CORS: origin '${origin}' is not allowed`), false);
     },

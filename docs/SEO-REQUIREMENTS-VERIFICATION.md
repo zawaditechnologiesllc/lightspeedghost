@@ -35,8 +35,8 @@ Last verified: 2026-06-26 · branch `claude/seo-project-qa-c0s35z`
 | # | Requirement | Implementation | Status |
 |---|---|---|---|
 | R3.1 | Pages served server-rendered at `/seo/<slug>` | `GET /seo/:slug` → `renderFullPage` (`seo-public.ts`, `html-renderer.ts`) | ✅ |
-| R3.2 | Reachable on the main domain via Vercel proxy | `api/seo-proxy.js` + `vercel.json` rewrites | ✅ |
-| R3.3 | Proxy is allow-listed (not an open proxy) | `seo-proxy.js` regex allow-list | ✅ |
+| R3.2 | Reachable on the main domain via Cloudflare Pages proxy | `functions/seo/[slug].js` + `functions/seo-sitemap.xml.js` | ✅ |
+| R3.3 | Proxy is allow-listed (not an open proxy) | `functions/seo/[slug].js` slug regex allow-list | ✅ |
 | R3.4 | SEO sitemap auto-includes every published page at `/seo-sitemap.xml` | `GET /sitemap.xml` → `renderSitemapXml`; proxied as `/seo-sitemap.xml` | ✅ |
 | R3.5 | robots.txt allows search + AI crawlers, disallows `/api/` + gated routes, advertises both sitemaps | `renderRobotsTxt` (`html-renderer.ts`); static `public/robots.txt` | 🔧 |
 | R3.6 | Canonical URL, OpenGraph, Twitter card, article meta | `renderFullPage` head block | ✅ |

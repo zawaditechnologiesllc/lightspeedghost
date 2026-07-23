@@ -62,7 +62,9 @@ export function PaywallGate({ tool, tier, children }: PaywallGateProps) {
             <p className="text-white/45 text-xs leading-relaxed mb-5">
               {isPro
                 ? `You've reached the ${label} limit for your plan.`
-                : `Your ${plan ?? "Starter"} plan includes a limited number of ${label}s ${period}. Upgrade to Pro or pay for this one.`}
+                : plan === "free"
+                ? `The Free plan doesn't include AI ${label}s — it never touches an AI model. Upgrade to Pro or pay for this one.`
+                : `Your ${plan ?? "Free"} plan includes a limited number of ${label}s ${period}. Upgrade to Pro or pay for this one.`}
             </p>
 
             <div className="flex flex-col gap-2">

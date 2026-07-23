@@ -17,6 +17,22 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     assistant:  0,
     ebook:      0,
   },
+  // Free plan: never touches an LLM. Every AI-generation tool is 0 (paywall →
+  // Pro or PAYG). Plagiarism checks run in local-detection mode (cosine
+  // similarity + burstiness/perplexity — no GPT call; enforced in the route).
+  // The in-browser Writing Analyzer (readability/grammar/tone) is client-side
+  // and costs nothing, so it needs no quota row at all.
+  free: {
+    paper:      0,
+    revision:   0,
+    humanizer:  0,
+    stem:       0,
+    study:      0,
+    plagiarism: 3,   // per month — local (non-LLM) detection mode
+    outline:    0,
+    assistant:  0,
+    ebook:      0,
+  },
   starter: {
     paper:      3,
     revision:   1,
@@ -123,25 +139,31 @@ export async function getUsage(userId: string): Promise<Record<string, number>> 
   return usage;
 }
 
-// Builds the user-facing message when a quota check fails. With no free plan,
-// "none" users get a subscribe/PAYG prompt instead of a confusing "0 used" line.
+// Builds the user-facing message when a quota check fails. Free-plan users
+// hitting an LLM tool get an upgrade/PAYG prompt instead of a confusing
+// "0 used" line.
 export function quotaExceededMessage(
   quota: { plan: string; limit: number | null },
   what: string,
 ): string {
+  if (quota.plan === "free" && quota.limit === 0) {
+    return `The Free plan doesn't include AI ${what}. Upgrade to Pro ($29.99/mo) for monthly ${what}, or pay per use — credits never expire.`;
+  }
   if (quota.plan === "none" || quota.limit === 0) {
     return `You don't have an active subscription. Subscribe to a plan for monthly ${what}, or pay per use — credits never expire.`;
   }
   return `You've used all ${quota.limit} ${what} for this month on your ${quota.plan} plan. Upgrade your plan or use Pay-As-You-Go.`;
 }
 
-// There is no free plan: anything other than an active, unexpired, paid
-// subscription resolves to "none" (zero included quota — PAYG/credits only).
+// Anything other than an active, unexpired, paid subscription resolves to
+// "free": the no-cost plan whose quota covers ONLY non-LLM features (local
+// plagiarism/AI detection + the client-side Writing Analyzer). AI generation
+// on Free is 0 — the paywall prompts to Pro or PAYG.
 // Normalise legacy / alternate plan keys to their canonical PLAN_LIMITS entry.
 // Legacy rows from the old free-tier era (plan 'free' or empty) carry no paid
-// entitlement — they must NOT resolve to Starter, which is now a $9.99 plan.
+// entitlement — they resolve to the new Free plan, never to a paid tier.
 function normalisePlan(plan: string | null | undefined): string {
-  if (!plan || plan === "free") return "none";
+  if (!plan || plan === "free") return "free";
   if (plan === "campus" || plan === "campus_annual") return "institution";
   if (plan === "student_pro") return "student_pro_monthly";
   if (plan === "starter_monthly") return "starter";
@@ -156,17 +178,16 @@ export async function getUserPlan(userId: string): Promise<string> {
     );
     const sub = rows[0];
 
-    // No subscription row = signed up but not yet subscribed. There is NO free
-    // plan — smallest plan is Starter at $9.99/mo — so they resolve to "none"
-    // (zero included quota). They can still buy Pay-As-You-Go credits, and the
-    // quota message tells them to subscribe or pay per use — this is a plan
-    // prompt, not a ban.
-    if (!sub) return "none";
+    // No subscription row = signed up but not yet subscribed → Free plan.
+    // Free never touches an LLM: local plagiarism/AI detection only, plus the
+    // client-side Writing Analyzer. They can also buy Pay-As-You-Go credits,
+    // and the quota message prompts Pro or PAYG for AI generation.
+    if (!sub) return "free";
 
     const periodEnded =
       !!sub.current_period_end && new Date(sub.current_period_end) < new Date();
 
-    // Lazily expire subscriptions whose period has ended → back to no-plan.
+    // Lazily expire subscriptions whose period has ended → back to Free.
     // If Stripe later collects a retried payment, the invoice.payment_succeeded
     // webhook reactivates the plan and extends the period.
     if (sub.status === "active" && periodEnded) {
@@ -174,22 +195,22 @@ export async function getUserPlan(userId: string): Promise<string> {
         `UPDATE user_subscriptions SET status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'active'`,
         [userId],
       );
-      return "none";
+      return "free";
     }
 
     // Payment failed and Stripe is retrying (Smart Retries): the customer keeps
     // the paid access they already paid for until the period runs out, then
-    // resets to no-plan until a retry succeeds.
+    // resets to Free until a retry succeeds.
     if (sub.status === "past_due") {
-      return periodEnded ? "none" : normalisePlan(sub.plan);
+      return periodEnded ? "free" : normalisePlan(sub.plan);
     }
 
-    // Cancelled / expired / anything else inactive → no-plan.
-    if (sub.status !== "active") return "none";
+    // Cancelled / expired / anything else inactive → Free.
+    if (sub.status !== "active") return "free";
 
     return normalisePlan(sub.plan);
   } catch {
-    return "none";
+    return "free";
   }
 }
 

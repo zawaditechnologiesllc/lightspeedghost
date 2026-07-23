@@ -40,7 +40,7 @@ export interface AIDetectionResult {
   meetsMinimumWordCount: boolean;
   /** True if text shows systematic AI humanizer tool patterns (Turnitin 2025 bypasser detection) */
   bypasserDetected?: boolean;
-  mode?: "blended" | "burstiness_fallback";
+  mode?: "blended" | "burstiness_fallback" | "local";
 }
 
 const DETECTION_SYSTEM = (burstiness: number, stdDev: number, perplexity: number) => `\
@@ -88,6 +88,7 @@ HUMAN WRITING SIGNALS — reduce the score:
 export async function detectAIScore(
   text: string,
   context = "ai-detection",
+  opts: { localOnly?: boolean } = {},
 ): Promise<AIDetectionResult> {
   const { score: burstiness, stdDev } = computeBurstiness(text);
   const { score: perplexity } = computePerplexityProxy(text);
@@ -95,6 +96,25 @@ export async function detectAIScore(
   const wordCount = text.split(/\s+/).filter(Boolean).length;
   const meetsMinimumWordCount = wordCount >= 400;
   const sample = sampleTextSections(text);
+
+  // Local-only mode (Free plan): score deterministically from burstiness +
+  // perplexity — the same signals Turnitin weighs most — without any LLM call.
+  if (opts.localOnly) {
+    const burstinessContrib = (100 - burstiness) * 0.6;
+    const perplexityContrib = perplexity * 0.4;
+    const localScore = Math.min(98, Math.max(0, Math.round(burstinessContrib + perplexityContrib)));
+    return {
+      score: localScore,
+      indicators: ["Local statistical detection — burstiness + perplexity (no AI model used)"],
+      burstiness,
+      stdDev,
+      perplexity,
+      sentenceScores,
+      falsePositiveSuppressed: localScore < 20,
+      meetsMinimumWordCount,
+      mode: "local",
+    };
+  }
 
   const MAX_RETRIES = 2;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {

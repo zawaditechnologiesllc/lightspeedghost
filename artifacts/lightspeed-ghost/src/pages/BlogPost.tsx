@@ -73,10 +73,10 @@ const ARTICLES: ArticleMeta[] = [
     readTime: "5 min read",
     date: "February 12, 2025",
     dateIso: "2025-02-12",
-    metaDescription: "Compare pay-as-you-go credits vs. Light Speed Ghost's monthly Starter and Pro plans. Find out which saves more money based on your actual writing frequency.",
+    metaDescription: "Compare pay-as-you-go credits vs. Light Speed Ghost's free and Pro plans. Find out which saves more money based on your actual writing frequency.",
     faqSchema: [
       { q: "Do Light Speed Ghost credits expire?", a: "No. Credits purchased on the pay-as-you-go model never expire. They remain in your account until you use them, with no monthly reset." },
-      { q: "What's included in the Starter plan?", a: "The Starter plan at $9.99/month includes 3 paper generations, 5 outlines, 5 plagiarism + AI checks, 1 revision, 15 STEM solves per month, and 20 study sessions per month. The LightSpeed Humanizer is not included in Starter — upgrade to Pro or pay per use." },
+      { q: "What's included in the Free plan?", a: "The Free plan is $0 forever and includes the unlimited in-browser Writing Analyzer (AI detector, readability, grammar, tone) plus 3 plagiarism + AI checks per month using local detection. Your text never touches an AI model on the Free plan. AI generation requires Pro or pay-as-you-go credits." },
       { q: "When does it make sense to upgrade to Pro?", a: "If you're using 3 or more paper generations per month consistently, Pro at $29.99/month saves money over pay-as-you-go. If your usage is seasonal — heavy during finals, light otherwise — credits usually cost less." },
     ],
   },
@@ -266,10 +266,10 @@ const ARTICLE_BODIES: Record<string, React.ReactNode> = {
         <li>You want to test the platform before committing to a subscription</li>
         <li>You're mid-semester and need help with one or two difficult assignments</li>
       </ul>
-      <p>The math: a standard essay-length paper (500–1,500 words) costs $7.99 PAYG. A research paper (1,500–3,500 words) is $14.99. If you write one essay a month, PAYG costs roughly $96/year. Starter at $9.99/month is $119.88/year for 3 papers per month — Starter almost always wins on cost, but PAYG wins on flexibility if your usage is truly unpredictable.</p>
+      <p>The math: a standard essay-length paper (500–1,500 words) costs $7.99 PAYG. A research paper (1,500–3,500 words) is $14.99. If you write one or two papers a month, PAYG stays well under a subscription — and you pay nothing at all in the months you don't write.</p>
 
-      <h3 className="text-[#191c1e] font-semibold text-base mt-7">When the Starter plan makes more sense</h3>
-      <p>The Starter plan at $9.99/month gives you 3 papers, 5 outlines, 5 plagiarism + AI checks, 15 STEM solves per month, 20 study sessions per month, and 1 revision per month. The LightSpeed Humanizer is not included — it requires Pro or a PAYG purchase. If you're regularly using those tools, Starter is almost always cheaper than PAYG for the same volume.</p>
+      <h3 className="text-[#191c1e] font-semibold text-base mt-7">Where the Free plan fits</h3>
+      <p>Every account starts on the Free plan: the unlimited in-browser Writing Analyzer (AI detector, readability, grammar, tone) plus 3 plagiarism + AI checks per month with local detection — and your text never touches an AI model. It's the right home base if you mostly need to check your own writing, topping up with PAYG credits only when you need a paper generated, revised, or humanized.</p>
 
       <h3 className="text-[#191c1e] font-semibold text-base mt-7">When Pro is worth it</h3>
       <ul className="list-disc list-inside space-y-1.5 text-[#45464d]">
@@ -281,7 +281,7 @@ const ARTICLE_BODIES: Record<string, React.ReactNode> = {
       <p>At $29.99/month, Pro provides 15 papers, 20 revisions, 20 humanizer jobs, 60 STEM solves, 150 study sessions, and 20 plagiarism checks per month. If you write three papers a month, that's $10 per paper — significantly below PAYG rates for equivalent output length. The math strongly favors Pro once you're consistently at or above that volume.</p>
 
       <h3 className="text-[#191c1e] font-semibold text-base mt-7">The honest recommendation</h3>
-      <p>Start on PAYG if you're testing the platform or if your usage is genuinely unpredictable. Move to Starter once you're using it regularly — even one paper per month makes Starter cheaper annually than PAYG. Upgrade to Pro when you're using 3+ papers per month consistently or when you need the higher limits on revisions and humanizations.</p>
+      <p>Stay on the Free plan with PAYG top-ups if you're testing the platform or your usage is genuinely unpredictable — you'll pay only for what you actually generate. Upgrade to Pro when you're using 3+ papers per month consistently or when you need the higher limits on revisions and humanizations.</p>
       <p>PAYG credits from any prior purchases carry over regardless of plan status, so you never lose what you've already paid for. There's no penalty for switching between models.</p>
     </div>
   ),

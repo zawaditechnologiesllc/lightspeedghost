@@ -180,6 +180,11 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
     const body = CheckPlagiarismBody.parse(req.body);
     const text = body.text;
 
+    // Free plan never touches an LLM: AI detection runs in deterministic
+    // local mode (burstiness + perplexity). Paid plans get the blended
+    // GPT-4o-mini + burstiness score.
+    const localOnlyDetection = quota.plan === "free";
+
     send("step", { id: "tokenise", message: "Tokenising document and building word frequency map…", status: "running" });
 
     const localAnalysisPromise = Promise.resolve(analyseTextPlagiarism(text));
@@ -197,7 +202,7 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       openSourceResult,
     ] = await Promise.all([
       localAnalysisPromise,
-      detectAIScore(text, "plagiarism-check").then(r => { send("step", { id: "ai-detect", message: `AI detection complete — score: ${r.score >= 0 ? r.score + "%" : "unavailable"}`, status: "done" }); return r; }),
+      detectAIScore(text, "plagiarism-check", { localOnly: localOnlyDetection }).then(r => { send("step", { id: "ai-detect", message: `AI detection complete — score: ${r.score >= 0 ? r.score + "%" : "unavailable"}`, status: "done" }); return r; }),
       readabilityPromise,
       fetchLiveAcademicMatches(text),
       runOpenSourcePlagiarismCheck(text).then(r => { send("step", { id: "plag-scan", message: `Plagiarism scan complete — ${r.totalSentencesChecked} sentences checked`, status: "done" }); return r; }),
@@ -321,7 +326,9 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       perplexity: aiPerplexity ?? null,
       bypasserDetected: aiBypasserDetected ?? false,
       readability,
-      detectionModel: "gpt-4o-mini + burstiness",
+      detectionModel: localOnlyDetection
+        ? "burstiness + perplexity (local — Free plan)"
+        : "gpt-4o-mini + burstiness",
       sourcesScanned: [
         "OpenAlex (250M+ papers)", "Semantic Scholar (200M+ papers)", "CrossRef (145M+ DOIs)",
         "Open Library (20M+ books)", "Wikipedia", "Google Books", "Internet Archive",
