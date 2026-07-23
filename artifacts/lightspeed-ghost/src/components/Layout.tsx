@@ -1,5 +1,5 @@
 import { Link, useRoute, useLocation } from "wouter";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   LayoutDashboard,
   PenLine,
@@ -13,35 +13,41 @@ import {
   Moon,
   Sun,
   LogOut,
-  PanelLeftClose,
-  PanelLeftOpen,
   Menu,
+  X,
   Wallet,
   ShoppingCart,
   BookMarked,
   DollarSign,
+  Plus,
+  Sparkles,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
 import { cn } from "@/lib/utils";
 import { ManageFundsModal } from "@/components/ManageFundsModal";
 import { PAYGMarketModal } from "@/components/PAYGMarketModal";
 import { AnnouncementBanner, NotificationBell } from "@/components/AnnouncementBanner";
 import OfflineBanner from "@/components/OfflineBanner";
 
+// The logged-in app shell shares the same left tool rail as the marketing
+// landing (see ProductSidebar.tsx) so signing in never changes the frame —
+// the tools stay exactly where they were, now with an active-state highlight.
+
 const navItems = [
-  { path: "/app",        label: "Dashboard",           icon: LayoutDashboard },
-  { path: "/write",      label: "Write Paper",          icon: PenLine },
-  { path: "/outline",    label: "Outline",              icon: BookOpen },
-  { path: "/revision",   label: "Revision",             icon: Files },
-  { path: "/humanizer",  label: "Humanizer", icon: Wand2 },
-  { path: "/plagiarism", label: "AI & Plagiarism",      icon: ShieldCheck },
-  { path: "/stem",       label: "STEM Solver",          icon: FlaskConical },
-  { path: "/study",      label: "AI Study Assistant",   icon: GraduationCap },
-  { path: "/ebooks",     label: "Ebooks",               icon: BookMarked, badge: "Business" },
-  { path: "/documents",  label: "History",              icon: Files },
-  { path: "/earnings",   label: "Influencer",           icon: DollarSign, badge: "Earn" },
+  { path: "/app",        label: "Dashboard",   icon: LayoutDashboard },
+  { path: "/write",      label: "Write",       icon: PenLine },
+  { path: "/outline",    label: "Outline",     icon: BookOpen },
+  { path: "/revision",   label: "Revision",    icon: Files },
+  { path: "/humanizer",  label: "Humanizer",   icon: Wand2 },
+  { path: "/plagiarism", label: "AI & Plag.",  icon: ShieldCheck },
+  { path: "/stem",       label: "STEM",        icon: FlaskConical },
+  { path: "/study",      label: "Study",       icon: GraduationCap },
+  { path: "/ebooks",     label: "Ebooks",      icon: BookMarked },
+  { path: "/documents",  label: "History",     icon: Files },
+  { path: "/earnings",   label: "Influencer",  icon: DollarSign },
 ];
 
 const mobileBottomNav = [
@@ -52,44 +58,58 @@ const mobileBottomNav = [
   { path: "/study",      label: "Study",    icon: GraduationCap },
 ];
 
-function NavItem({
-  path,
-  label,
-  icon: Icon,
-  badge,
-  collapsed,
-  forceExpanded,
-  onClick,
-}: (typeof navItems)[0] & { collapsed: boolean; forceExpanded?: boolean; onClick?: () => void }) {
+// Desktop rail item — icon square + tiny label, matching the landing rail.
+function RailItem({ path, label, icon: Icon }: { path: string; label: string; icon: React.ElementType }) {
   const [isActive] = useRoute(path === "/app" ? "/app" : path + "*");
-  const showLabel = forceExpanded || !collapsed;
-
   return (
     <Link href={path}>
-      <div
+      <span
+        title={label}
+        className="group flex flex-col items-center gap-1 px-1 py-2 rounded-xl cursor-pointer transition-colors"
+      >
+        <span
+          className={cn(
+            "w-9 h-9 rounded-lg flex items-center justify-center border transition-colors",
+            isActive
+              ? "bg-sidebar-primary border-transparent text-sidebar-primary-foreground shadow-sm"
+              : "bg-sidebar-accent/40 border-sidebar-border text-sidebar-foreground/70 group-hover:text-sidebar-foreground group-hover:border-sidebar-primary/40",
+          )}
+        >
+          <Icon size={17} />
+        </span>
+        <span
+          className={cn(
+            "text-[9px] font-semibold leading-tight text-center",
+            isActive ? "text-sidebar-primary" : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground",
+          )}
+        >
+          {label}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+// Mobile drawer row — icon + full label.
+function DrawerItem({ path, label, icon: Icon, onClick }: { path: string; label: string; icon: React.ElementType; onClick: () => void }) {
+  const [isActive] = useRoute(path === "/app" ? "/app" : path + "*");
+  return (
+    <Link href={path}>
+      <span
         onClick={onClick}
-        title={!showLabel ? label : undefined}
         className={cn(
-          "relative flex items-center rounded-lg text-sm font-medium transition-all cursor-pointer group",
-          showLabel ? "gap-3 px-3 py-2" : "justify-center px-0 py-2.5 mx-1",
-          isActive
-            ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-            : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors",
+          isActive ? "bg-sidebar-primary/10" : "hover:bg-sidebar-accent",
         )}
       >
-        <Icon size={17} className="shrink-0" />
-        {showLabel && <span className="truncate flex-1">{label}</span>}
-        {showLabel && badge && (
-          <span className="px-1.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-600 dark:text-purple-300 text-[9px] font-bold leading-none shrink-0">
-            {badge}
-          </span>
-        )}
-        {!showLabel && (
-          <div className="absolute left-full ml-2.5 px-2.5 py-1.5 bg-popover border border-border text-popover-foreground text-xs font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
-            {label}
-          </div>
-        )}
-      </div>
+        <span className={cn(
+          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border",
+          isActive ? "bg-sidebar-primary border-transparent text-sidebar-primary-foreground" : "bg-sidebar-accent/40 border-sidebar-border text-sidebar-foreground/70",
+        )}>
+          <Icon size={16} />
+        </span>
+        <span className={cn("text-sm font-medium", isActive ? "text-sidebar-primary" : "text-sidebar-foreground")}>{label}</span>
+      </span>
     </Link>
   );
 }
@@ -110,25 +130,13 @@ function MobileBottomNavItem({ path, label, icon: Icon }: { path: string; label:
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem("sidebar-collapsed") !== "false";
-    } catch {
-      return true;
-    }
-  });
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
+  const { plan } = useSubscription();
   const [, navigate] = useLocation();
   const [fundsOpen, setFundsOpen] = useState(false);
   const [paygOpen, setPaygOpen] = useState(false);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("sidebar-collapsed", String(collapsed));
-    } catch {}
-  }, [collapsed]);
 
   async function handleSignOut() {
     await signOut();
@@ -139,144 +147,125 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const userName = userEmail.split("@")[0] ?? userEmail;
   const userInitial = userName[0]?.toUpperCase() ?? "?";
 
+  // Free / no-plan / legacy-Starter users see an Upgrade button; Pro &
+  // Institution have everything unlocked already.
+  const canUpgrade = !["pro", "institution", "campus"].includes(plan ?? "");
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+      {/* ── Desktop tool rail (matches the landing rail) ─────────────────── */}
+      <aside className="hidden lg:flex w-[86px] shrink-0 bg-sidebar border-r border-sidebar-border flex-col">
+        <Link href="/app">
+          <span className="flex items-center justify-center h-16 border-b border-sidebar-border cursor-pointer shrink-0" title="Dashboard">
+            <Logo size={26} showText={false} />
+          </span>
+        </Link>
 
-      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
-      <aside
-        className={cn(
-          "fixed lg:static inset-y-0 left-0 z-30 bg-sidebar flex flex-col",
-          "transition-[width,transform] duration-200 ease-in-out overflow-hidden",
-          collapsed ? "lg:w-14" : "lg:w-60",
-          mobileOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0"
-        )}
-      >
-        {/* Logo / toggle row */}
-        <div
-          className={cn(
-            "flex items-center border-b border-sidebar-border shrink-0",
-            collapsed ? "justify-center py-[13px] px-0" : "justify-between px-4 py-3.5"
-          )}
-        >
-          {!collapsed && (
-            <Logo size={26} textSize="text-sm" className="min-w-0" />
-          )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex p-1.5 rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors shrink-0"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-          </button>
-          {/* Mobile close button */}
-          {mobileOpen && (
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="lg:hidden ml-auto p-1.5 rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
-            >
-              <PanelLeftClose size={16} />
-            </button>
-          )}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-1.5 space-y-0.5">
+          {/* New — start writing */}
+          <Link href="/write">
+            <span className="group flex flex-col items-center gap-1 px-1 py-2 rounded-xl cursor-pointer" title="New paper">
+              <span className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center shadow-sm group-hover:opacity-90 transition-opacity">
+                <Plus size={18} className="text-sidebar-primary-foreground" strokeWidth={2.5} />
+              </span>
+              <span className="text-[9px] font-semibold leading-tight text-sidebar-foreground/60 group-hover:text-sidebar-foreground">New</span>
+            </span>
+          </Link>
+
+          <div className="my-1.5 mx-3 border-t border-sidebar-border" />
+
+          {navItems.map((item) => (
+            <RailItem key={item.path} {...item} />
+          ))}
         </div>
 
-        {/* Nav */}
-        <nav
-          className={cn(
-            "flex-1 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden",
-            collapsed && !mobileOpen ? "px-0" : "px-2"
-          )}
-        >
-          {navItems.map((item) => (
-            <NavItem
-              key={item.path}
-              {...item}
-              collapsed={collapsed}
-              forceExpanded={mobileOpen}
-              onClick={() => setMobileOpen(false)}
-            />
-          ))}
-        </nav>
-
-        {/* User / sign out */}
-        <div
-          className={cn(
-            "border-t border-sidebar-border shrink-0",
-            (collapsed && !mobileOpen) ? "py-3 flex flex-col items-center gap-2" : "px-3 py-3"
-          )}
-        >
-          {user && (
-            (collapsed && !mobileOpen) ? (
-              <>
-                <button
-                  onClick={() => navigate("/billing")}
-                  title={`${userName} — Billing`}
-                  className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
-                >
-                  <span className="text-sidebar-primary-foreground text-xs font-bold">{userInitial}</span>
-                </button>
-                <button
-                  onClick={handleSignOut}
-                  title="Sign out"
-                  className="p-1.5 rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-                >
-                  <LogOut size={14} />
-                </button>
-              </>
-            ) : (
-              <div className="flex items-center gap-2.5 mb-2 px-1">
-                <button
-                  onClick={() => navigate("/billing")}
-                  title="Billing"
-                  className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
-                >
-                  <span className="text-sidebar-primary-foreground text-xs font-bold">{userInitial}</span>
-                </button>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sidebar-foreground text-xs font-medium truncate">{userName}</p>
-                  <p className="text-sidebar-foreground/40 text-[10px]">Account</p>
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  title="Sign out"
-                  className="p-1 rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors shrink-0"
-                >
-                  <LogOut size={13} />
-                </button>
-              </div>
-            )
-          )}
-          {(!collapsed || mobileOpen) && (
-            <div className="text-sidebar-foreground/30 text-[10px] px-1">
-              AI Academic Writing Platform
-            </div>
-          )}
+        {/* Account + sign out */}
+        <div className="border-t border-sidebar-border shrink-0 py-3 flex flex-col items-center gap-2">
+          <button
+            onClick={() => navigate("/billing")}
+            title={`${userName} — Billing`}
+            className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
+          >
+            <span className="text-sidebar-primary-foreground text-xs font-bold">{userInitial}</span>
+          </button>
+          <button
+            onClick={handleSignOut}
+            title="Sign out"
+            className="p-1.5 rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+          >
+            <LogOut size={14} />
+          </button>
         </div>
       </aside>
 
+      {/* ── Mobile drawer ────────────────────────────────────────────────── */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-[100]" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
+          <div className="absolute top-0 left-0 bottom-0 w-72 max-w-[80%] bg-sidebar shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
+            <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border shrink-0">
+              <Logo size={26} textSize="text-sm" />
+              <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="p-2 rounded-lg text-sidebar-foreground/50 hover:bg-sidebar-accent transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3 space-y-1">
+              <Link href="/write">
+                <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-sidebar-primary/10 cursor-pointer">
+                  <span className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">
+                    <Plus size={16} className="text-sidebar-primary-foreground" strokeWidth={2.5} />
+                  </span>
+                  <span className="text-sm font-semibold text-sidebar-foreground">New paper</span>
+                </span>
+              </Link>
+              {navItems.map((item) => (
+                <DrawerItem key={item.path} {...item} onClick={() => setMobileOpen(false)} />
+              ))}
+            </div>
+            <div className="border-t border-sidebar-border p-3 flex items-center gap-2.5">
+              <button onClick={() => { setMobileOpen(false); navigate("/billing"); }} className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0">
+                <span className="text-sidebar-primary-foreground text-xs font-bold">{userInitial}</span>
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sidebar-foreground text-xs font-medium truncate">{userName}</p>
+                <p className="text-sidebar-foreground/40 text-[10px]">Account</p>
+              </div>
+              <button onClick={handleSignOut} title="Sign out" className="p-1.5 rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors">
+                <LogOut size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Main area ───────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 bg-card border-b border-border shadow-sm shrink-0">
-          {/* Mobile hamburger */}
+        <header className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-card border-b border-border shadow-sm shrink-0">
+          {/* Mobile hamburger + wordmark */}
           <button
             className="lg:hidden p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground"
-            onClick={() => setMobileOpen(!mobileOpen)}
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open menu"
           >
             <Menu size={18} />
           </button>
-          <div className="hidden lg:block" />
+          <Logo size={22} textSize="text-sm" className="lg:hidden" />
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-1">
+          {/* Right actions */}
+          <div className="flex items-center gap-1.5 ml-auto">
+            {canUpgrade && (
+              <button
+                onClick={() => setFundsOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-xs font-bold shadow-sm"
+                title="Upgrade to Pro"
+              >
+                <Sparkles size={13} />
+                Upgrade
+              </button>
+            )}
             <button
               onClick={() => setPaygOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 transition-colors text-xs font-semibold"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-500 hover:bg-orange-500/20 transition-colors text-xs font-semibold"
               title="Pay-As-You-Go Market"
             >
               <ShoppingCart size={13} />
@@ -294,6 +283,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground"
+              title="Toggle theme"
             >
               {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
             </button>
