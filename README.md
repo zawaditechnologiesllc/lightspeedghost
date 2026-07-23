@@ -4,7 +4,7 @@ Eight AI tools built for students. One platform, purpose-built for academic writ
 
 **Live site:** https://lightspeedghost.com  
 **Stack:** React + Vite · Express + TypeScript · PostgreSQL (Supabase) · Drizzle ORM  
-**Deployments:** Vercel (frontend) · Render (API)
+**Deployments:** Cloudflare Pages (frontend) · Render (API)
 
 ---
 
@@ -51,8 +51,9 @@ Eight AI tools built for students. One platform, purpose-built for academic writ
 │   └── api-client-react/          # Generated React query hooks
 ├── supabase/
 │   └── schema.sql                 # Full database schema — run this first
+├── functions/                     # Cloudflare Pages Functions (SEO proxy)
 ├── render.yaml                    # Render service definition
-├── vercel.json                    # Vercel build + rewrite config
+├── wrangler.toml                  # Cloudflare Pages project config
 ├── DEPLOYMENT.md                  # Step-by-step deploy guide
 ├── PAYMENT_ENV_VARS.md            # All payment gateway env vars
 └── SYSTEM_DOCUMENTATION.md       # Full architecture + API reference
@@ -66,7 +67,7 @@ Eight AI tools built for students. One platform, purpose-built for academic writ
 Browser
   │
   ▼
-Vercel (React + Vite)
+Cloudflare Pages (React + Vite)
   │  /api/*
   ▼
 Render (Express API — port 8080)
@@ -147,11 +148,12 @@ Frontend dev server proxies `/api/*` to `http://localhost:8080`.
 
 Full list of all gateway variables: see [`PAYMENT_ENV_VARS.md`](./PAYMENT_ENV_VARS.md)
 
-### Vercel (frontend)
+### Cloudflare Pages (frontend)
 
 | Variable | Description |
 |---|---|
 | `VITE_API_URL` | Render backend URL, no trailing slash |
+| `SEO_BACKEND_ORIGIN` | Optional — backend origin for the `/seo/*` Pages Function proxy |
 
 ---
 
@@ -162,22 +164,29 @@ Full step-by-step instructions: [`DEPLOYMENT.md`](./DEPLOYMENT.md)
 **Short version:**
 1. Run `supabase/schema.sql` in your Supabase SQL editor
 2. Deploy `artifacts/api-server` to Render — set env vars
-3. Deploy root to Vercel — set `VITE_API_URL`
-4. Add DNS records for `lightspeedghost.com` in Vercel → Domains
+3. Deploy repo root to Cloudflare Pages — set `VITE_API_URL`
+4. Add `lightspeedghost.com` in Cloudflare Pages → Custom domains
 
-Push to `main` triggers both Vercel (production) and Render (auto-deploy) simultaneously.
+Push to `main` triggers both Cloudflare Pages (production) and Render (auto-deploy) simultaneously.
 
 ---
 
 ## Pricing
 
-| Plan | Price | Papers | Humanizer | Revisions | STEM | Study |
-|---|---|---|---|---|---|---|
-| Starter | $9.99/mo | 3 | — | 1 | 15 | 20 msgs |
-| Pro Monthly | $29.99/mo | 15 | 20 | 20 | 60 | 150 sessions |
-| Pro Annual | $269/yr | 15 | 20 | 20 | 60 | 150 sessions |
-| Ebooks Add-On | $29.99/mo | — | — | — | — | 15 ebooks |
-| Pay-as-you-go | From $1.99 | per use | per use | per use | $1.99 | $2.99/day |
+| Plan | Price | Papers | Humanizer | Revisions | STEM | Study | Plagiarism |
+|---|---|---|---|---|---|---|---|
+| Free | $0 forever | — | — | — | — | — | 3 local checks + unlimited in-browser Writing Analyzer |
+| Pro Monthly | $29.99/mo | 15 | 20 | 20 | 60 | 150 sessions | 20 |
+| Pro Annual | $269/yr | 15 | 20 | 20 | 60 | 150 sessions | 20 |
+| Institution | Custom quote | custom | custom | custom | custom | custom | custom |
+| Ebooks Add-On | $29.99/mo | — | — | — | — | 15 ebooks | — |
+| Pay-as-you-go | From $1.99 | per use | per use | per use | $1.99 | $2.99/day | $1.99 |
+
+> The Free plan never touches an LLM: the Writing Analyzer runs entirely in the
+> browser, and its plagiarism/AI checks use local statistical detection
+> (burstiness + perplexity) instead of a model call. Legacy Starter ($9.99) and
+> Student Pro ($19.99) subscribers keep their entitlements, but those plans are
+> no longer offered for new purchase.
 
 ---
 

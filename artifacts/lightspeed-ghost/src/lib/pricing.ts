@@ -11,23 +11,11 @@ export interface SubscriptionPlan {
   description: string;
 }
 
+// The plan lineup is Free / Pro $29.99 / Institution (+ the Ebooks add-on and
+// PAYG). Free is not listed here because it has no checkout — every account
+// starts on it. Retired plans (Starter $9.99, Student Pro $19.99) are gone from
+// this purchase list; existing subscribers keep their entitlements server-side.
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
-  {
-    id: "starter_monthly",
-    name: "Starter — Monthly",
-    amountCents: 999,
-    interval: "month",
-    displayPrice: "$9.99/mo",
-    description: "Essential access to LightSpeed Ghost tools",
-  },
-  {
-    id: "student_pro_monthly",
-    name: "Student Pro — Monthly",
-    amountCents: 1999,
-    interval: "month",
-    displayPrice: "$19.99/mo",
-    description: "Humanizer + priority processing, papers up to 3,500 words",
-  },
   {
     id: "pro_monthly",
     name: "Pro — Monthly",

@@ -24,6 +24,7 @@ const TOOL_LABELS = [
 
 const PLAN_ICON: Record<string, React.ElementType> = {
   none:                Zap,
+  free:                Zap,
   starter:             Zap,
   student_pro_monthly: Star,
   pro:                 Crown,
@@ -33,6 +34,7 @@ const PLAN_ICON: Record<string, React.ElementType> = {
 
 const PLAN_COLOR: Record<string, string> = {
   none:                "text-muted-foreground",
+  free:                "text-sky-400",
   starter:             "text-blue-400",
   student_pro_monthly: "text-violet-400",
   pro:                 "text-amber-400",
@@ -42,6 +44,7 @@ const PLAN_COLOR: Record<string, string> = {
 
 function getPlanName(p: string | null): string {
   if (!p || p === "none") return "No active plan";
+  if (p === "free") return "Free";
   if (p === "starter") return "Starter";
   if (p === "student_pro_monthly") return "Student Pro";
   if (p === "pro") return "Pro";
@@ -122,6 +125,11 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                     PAYG only
                   </span>
                 )}
+                {!planLoading && resolvedPlan === "free" && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/20 font-medium">
+                    $0/mo
+                  </span>
+                )}
                 {!planLoading && resolvedPlan === "starter" && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20 font-medium">
                     $9.99/mo
@@ -151,6 +159,7 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
               <p className="text-[11px] text-muted-foreground">
                 {planLoading                  && "Fetching your plan…"}
                 {!planLoading && (resolvedPlan === "none" || !resolvedPlan) && "No active subscription — use Pay-As-You-Go credits for any tool. Credits never expire."}
+                {!planLoading && resolvedPlan === "free" && "3 plagiarism + AI checks (local detection) + unlimited Writing Analyzer per month. AI generation needs Pro or PAYG credits."}
                 {!planLoading && resolvedPlan === "starter" && "3 papers · 1 revision · 15 STEM · 20 study · 5 plagiarism/outlines per month"}
                 {!planLoading && resolvedPlan === "student_pro_monthly" && "8 papers (≤3,500 words) · 4 revisions · 6 humanizations · 40 STEM · 75 study · 10 plagiarism · 10 outlines per month"}
                 {!planLoading && resolvedPlan === "pro"     && "15 papers · 20 revisions · 20 humanizations · 20 outlines · 60 STEM · 150 study · 20 plagiarism per month"}
@@ -188,25 +197,9 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
               })}
             </div>
 
-            {/* Upgrade CTA for none/starter */}
-            {!planLoading && (resolvedPlan === "none" || resolvedPlan === "starter") && (
+            {/* Upgrade CTA for free/none/starter */}
+            {!planLoading && (resolvedPlan === "none" || resolvedPlan === "free" || resolvedPlan === "starter") && (
               <div className="space-y-2">
-                {/* Student Pro CTA */}
-                <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star size={14} className="text-violet-400" />
-                    <p className="text-sm font-semibold text-violet-400">Student Pro — $19.99/mo</p>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mb-3">
-                    8 papers (≤3,500 words) · 4 revisions · 6 humanizer jobs · 40 STEM · 75 study · 10 plagiarism checks · 10 outlines
-                  </p>
-                  <button
-                    onClick={() => setCheckoutPlan("student_pro_monthly")}
-                    className="w-full py-2 rounded-lg bg-violet-500/20 border border-violet-500/30 text-violet-400 text-xs font-semibold hover:bg-violet-500/30 transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    Get Student Pro <ChevronRight size={12} />
-                  </button>
-                </div>
                 {/* Pro CTA */}
                 <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
                   <div className="flex items-center gap-2 mb-2">

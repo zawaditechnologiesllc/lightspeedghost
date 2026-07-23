@@ -654,6 +654,13 @@ router.post("/payments/create", async (req: Request, res: Response) => {
         res.status(400).json({ error: "Invalid plan" });
         return;
       }
+      // Retired plans: existing subscribers keep their entitlements (PLAN_LIMITS
+      // still carries them and webhooks still renew them), but new checkouts are
+      // no longer offered — the lineup is Free / Pro $29.99 / Institution.
+      if (plan === "starter_monthly" || plan === "student_pro_monthly") {
+        res.status(400).json({ error: "This plan is no longer offered. Choose Pro ($29.99/mo) or Pay-As-You-Go." });
+        return;
+      }
       amountCents = SUBSCRIPTION_PLANS[plan].amountCents;
       if (plan === "institution_annual" || (plan as string) === "campus_annual") {
         const numSeats = Math.max(5, seats ?? 5);

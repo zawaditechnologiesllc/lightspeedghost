@@ -119,42 +119,20 @@ const africanTestimonials = [
 
 const pricingPlans = [
   {
-    name: "Starter",
-    price: "$9.99",
-    per: "/ month",
-    desc: "All core tools. Low commitment.",
+    name: "Free",
+    price: "$0",
+    per: "forever · no card, no mobile money needed",
+    desc: "Check your work without spending a shilling.",
     features: [
-      "3 paper generations / month",
-      "5 plagiarism + AI detection checks",
-      "15 STEM solver queries",
-      "20 study messages / month",
-      "1 revision / month",
-      "5 outline generations",
-      "7-day document history",
+      "Instant Writing Analyzer — AI detector, readability, grammar & tone",
+      "Unlimited — runs in your browser, even on 3G",
+      "3 plagiarism + AI checks / month (local detection)",
+      "Your text never touches an AI model",
+      "Add Pay-As-You-Go credits via M-Pesa anytime",
     ],
-    cta: "Get Starter",
+    cta: "Start Free",
     highlight: false,
     badge: null,
-  },
-  {
-    name: "Student Pro",
-    price: "$19.99",
-    per: "/ month · or $14.99 billed annually",
-    desc: "Everything in Starter, plus the Humanizer and priority processing.",
-    features: [
-      "8 papers / month",
-      "4 revisions / month",
-      "20 outline generations",
-      "20 plagiarism + AI checks",
-      "40 STEM solver problems",
-      "Unlimited study messages",
-      "LightSpeed Humanizer (up to 5,000 words)",
-      "Priority AI processing",
-      "Citation export (BibTeX / RIS)",
-    ],
-    cta: "Get Pro",
-    highlight: true,
-    badge: "Most popular",
   },
   {
     name: "Pro",
@@ -171,9 +149,9 @@ const pricingPlans = [
       "90-day history + export formats",
       "Priority AI processing",
     ],
-    cta: "Get Researcher",
-    highlight: false,
-    badge: null,
+    cta: "Get Pro",
+    highlight: true,
+    badge: "Most popular",
   },
 ];
 
@@ -200,7 +178,7 @@ const africanAdvantages = [
   },
   {
     title: "Western tools weren't built for you",
-    desc: "Tools like Grammarly Premium and Chegg cost $30–$40/month and require a foreign card. LightSpeed Ghost starts at $9.99 and accepts mobile money.",
+    desc: "Tools like Grammarly Premium and Chegg cost $30–$40/month and require a foreign card. LightSpeed Ghost starts free and accepts mobile money for everything else.",
     icon: "🌍",
   },
   {
@@ -315,7 +293,7 @@ export default function Africa() {
 
             <p className="text-lg font-semibold text-[#45464d] mb-4">
               M-Pesa · MTN MoMo · Airtel Money accepted.<br className="hidden sm:block" />
-              Priced for African realities. Starting at $9.99/month.
+              Priced for African realities. Start free — pay per task from $1.99.
             </p>
 
             <p className="text-base text-[#45464d] max-w-xl leading-relaxed mb-8">

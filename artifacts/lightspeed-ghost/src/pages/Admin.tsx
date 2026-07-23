@@ -293,6 +293,7 @@ function countryName(code: string): string {
 
 const PLAN_COLORS: Record<string, string> = {
   none:                "bg-muted/20 text-muted-foreground border-border",
+  free:                "bg-sky-500/12 text-sky-300 border-sky-500/20",
   starter:             "bg-blue-500/12 text-blue-300 border-blue-500/20",
   student_pro_monthly: "bg-violet-500/12 text-violet-300 border-violet-500/20",
   pro:                 "bg-amber-500/12 text-amber-300 border-amber-500/20",
@@ -301,7 +302,8 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 function planDisplayName(plan: string): string {
-  if (plan === "none" || plan === "free") return "No Plan";
+  if (plan === "none") return "No Plan";
+  if (plan === "free") return "Free";
   if (plan === "student_pro_monthly" || plan === "student_pro") return "Student Pro";
   if (plan === "campus" || plan === "campus_annual" || plan === "institution" || plan === "institution_annual") return "Institution";
   if (plan === "starter" || plan === "starter_monthly") return "Starter";

@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 // Per-route <head> metadata for the public, indexable marketing routes.
 //
 // This app is a client-rendered SPA on every route except `/seo/*` (which the
-// backend server-renders). Vercel rewrites all SPA routes to the same
+// backend server-renders). Cloudflare Pages serves all SPA routes from the same
 // index.html, so without this component every route would inherit the homepage's
 // <title> and — previously — a static `canonical` pointing at the homepage,
 // telling Google that /about, /pricing, /africa, … are duplicates of "/".
@@ -27,7 +27,7 @@ const ROUTE_META: Record<string, { title: string; description: string }> = {
   "/": {
     title: "Light Speed Ghost — AI Academic Writing for Students",
     description:
-      "AI academic platform for students: write papers with real citations from 35+ databases, refine AI-assisted writing to read naturally, check plagiarism, and solve STEM step by step. From $9.99/mo.",
+      "AI academic platform for students: write papers with real citations from 35+ databases, refine AI-assisted writing to read naturally, check plagiarism, and solve STEM step by step. Free plan available — Pro $29.99/mo.",
   },
   "/about": {
     title: "About Light Speed Ghost — Ethical AI Academic Writing",

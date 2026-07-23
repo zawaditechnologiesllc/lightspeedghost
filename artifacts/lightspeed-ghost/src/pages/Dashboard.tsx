@@ -178,7 +178,7 @@ export default function Dashboard() {
       </div>
 
       {/* PAYG → subscription upgrade nudge */}
-      {paygCount >= 2 && plan === "none" && (
+      {paygCount >= 2 && (plan === "none" || plan === "free") && (
         <div className="relative overflow-hidden bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 rounded-2xl p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex-1 min-w-0">
@@ -190,7 +190,7 @@ export default function Dashboard() {
                 You've generated {paygCount} papers pay-as-you-go.
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                A Starter subscription ($9.99/mo) includes 3 papers + revisions + STEM + study — likely cheaper than what you're paying per paper.
+                A Pro subscription ($29.99/mo) includes 15 papers + revisions + humanizer + STEM + study — likely cheaper than what you're paying per paper.
               </p>
             </div>
             <button
@@ -205,13 +205,15 @@ export default function Dashboard() {
       )}
 
       {/* Plan / credits nudge */}
-      {(plan === "none" || plan === "starter") && (
+      {(plan === "none" || plan === "free" || plan === "starter") && (
         <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
           <div className="flex items-center gap-2">
             <Wallet size={14} className="text-primary" />
             <span className="text-sm text-muted-foreground">
               {plan === "none"
                 ? "No active plan — save money with a subscription."
+                : plan === "free"
+                ? <><span className="text-foreground font-medium">Free</span> plan active — upgrade to Pro to unlock AI writing, humanizer &amp; more.</>
                 : <><span className="text-foreground font-medium">Starter</span> plan active — upgrade to unlock humanizer &amp; more.</>}
             </span>
           </div>

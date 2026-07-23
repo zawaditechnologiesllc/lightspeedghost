@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
-export type PlanTier = "none" | "starter" | "student_pro_monthly" | "pro" | "campus" | "institution" | "payg" | null;
+export type PlanTier = "none" | "free" | "starter" | "student_pro_monthly" | "pro" | "campus" | "institution" | "payg" | null;
 
 export interface UsageData {
   paper: number;
@@ -23,6 +23,17 @@ const PLAN_LIMITS: Record<string, Partial<Record<keyof UsageData, number | null>
     stem:       0,
     study:      0,
     plagiarism: 0,
+    outline:    0,
+  },
+  // Free plan — non-LLM features only: local plagiarism/AI detection plus the
+  // client-side Writing Analyzer (which needs no quota at all).
+  free: {
+    paper:      0,
+    revision:   0,
+    humanizer:  0,
+    stem:       0,
+    study:      0,
+    plagiarism: 3,
     outline:    0,
   },
   starter: {
@@ -134,6 +145,7 @@ export function useSubscription() {
 
   function planDisplayName(): string {
     if (!plan || plan === "none") return "No active plan";
+    if (plan === "free") return "Free";
     if (plan === "starter") return "Starter";
     if (plan === "student_pro_monthly") return "Student Pro";
     if (plan === "pro") return "Pro";

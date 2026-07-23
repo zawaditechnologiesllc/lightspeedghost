@@ -16,6 +16,7 @@ import {
   Database, Layers, Clock, AlertTriangle,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { HeroAnalyzer } from "@/components/HeroAnalyzer";
 import { ToolDemosSection } from "@/components/ToolDemos";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
@@ -139,8 +140,8 @@ const faqs = [
     a: "ChatGPT is a general-purpose chatbot. Light Speed Ghost is purpose-built for academic work: real, verifiable citations, specific citation formats, plagiarism checking, grade-targeted revision, and a STEM solver with step-by-step verification — all in one platform with a student-focused interface.",
   },
   {
-    q: "What's the cheapest plan?",
-    a: "The Starter plan is $9.99/month. It includes 3 papers, 1 revision, 5 outline generations, 5 plagiarism + AI checks, 15 STEM solves, and 20 study messages per month. The LightSpeed Humanizer is not included in Starter — upgrade to Pro or use Pay-As-You-Go. There is no free plan — but PAYG means you can use just one tool for as little as $1.99 without any commitment.",
+    q: "Is there a free plan?",
+    a: "Yes. The Free plan is $0 forever — no card required. It includes the instant Writing Analyzer (AI detector, readability, grammar and tone — unlimited, running entirely in your browser) and 3 plagiarism + AI checks per month using local statistical detection. Your text is never sent to an AI model on the Free plan. For AI paper generation, revision, the Humanizer, STEM and study tools, upgrade to Pro at $29.99/month — or use Pay-As-You-Go from $1.99 with no subscription at all.",
   },
   {
     q: "What's the difference between Pro monthly and annual?",
@@ -154,50 +155,23 @@ const faqs = [
 
 const pricingPlans = [
   {
-    name: "Starter",
-    priceMonthly: "$9.99",
-    priceAnnual: "$9.99",
-    perMonthly: "/ month",
-    perAnnual: "/ month",
-    desc: "All core tools. Low commitment. No hidden gotchas.",
+    name: "Free",
+    priceMonthly: "$0",
+    priceAnnual: "$0",
+    perMonthly: "forever · no card required",
+    perAnnual: "forever · no card required",
+    desc: "Check your own work without spending a cent — and without your text ever touching an AI model.",
     features: [
-      "3 paper generations / month (any type)",
-      "5 plagiarism + AI detection checks / month",
-      "15 STEM solver queries / month",
-      "20 study messages / month",
-      "1 revision / month",
-      "5 outline generations / month",
-      "7-day document history",
+      "Instant Writing Analyzer — AI detector, readability, grammar & tone (unlimited, runs in your browser)",
+      "3 plagiarism + AI checks / month (local detection)",
+      "Your text is never sent to an AI model",
+      "Buy Pay-As-You-Go credits anytime — no subscription",
     ],
-    locked: ["LightSpeed Humanizer", "Priority AI processing", "Citation export (BibTeX / RIS)"],
-    cta: "Start for $9.99",
+    locked: ["AI paper generation & revision", "LightSpeed Humanizer", "STEM Solver & Study Assistant"],
+    cta: "Start Free",
     ctaLink: "/auth",
     highlight: false,
     badge: null,
-  },
-  {
-    name: "Student Pro",
-    priceMonthly: "$19.99",
-    priceAnnual: "$14.99",
-    perMonthly: "/ month",
-    perAnnual: "/ month  ·  billed annually",
-    desc: "Everything in Starter, plus the Humanizer and priority processing.",
-    features: [
-      "8 papers / month (up to 3,500 words each)",
-      "4 revisions / month",
-      "10 outline generations / month",
-      "10 plagiarism + AI checks / month",
-      "40 STEM solver problems / month",
-      "75 study messages / month",
-      "LightSpeed Humanizer — 6 jobs / month",
-      "Priority AI processing",
-      "Citation export (BibTeX / RIS)",
-    ],
-    locked: [],
-    cta: "Start for $19.99",
-    ctaLink: "/auth",
-    highlight: true,
-    badge: "Most popular",
   },
   {
     name: "Pro",
@@ -220,8 +194,8 @@ const pricingPlans = [
     locked: [],
     cta: "Get Pro",
     ctaLink: "/auth",
-    highlight: false,
-    badge: null,
+    highlight: true,
+    badge: "Most popular",
   },
   {
     name: "Institution",
@@ -333,9 +307,6 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-const previewNavItems = ["Dashboard", "Write Paper", "Outline", "Revision", "Humanizer", "AI & Plagiarism", "STEM Solver", "Study Assistant"];
-const previewUrls = ["write", "outline", "revision", "humanizer", "plagiarism", "stem", "study"];
-
 // ── Scroll-triggered reveal (CSS + IntersectionObserver, no framer-motion) ─────
 // The reveal class is added in an effect (not in render), so content is always
 // visible if JS fails, and the styles only hide-then-reveal once observed.
@@ -381,8 +352,6 @@ export default function Landing() {
   const scrolled = useScrolled();
   const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [previewIdx, setPreviewIdx] = useState(0);
-  const [fading, setFading] = useState(false);
   const [billingAnnual, setBillingAnnual] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<PlanId | null>(null);
   const [paygCheckout, setPaygCheckout] = useState<{ tool: PaygTool; tier?: DocumentTier } | null>(null);
@@ -465,17 +434,6 @@ export default function Landing() {
     if (!user) { setLocation("/auth"); return; }
     setPaygCheckout({ tool, tier });
   }
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setFading(true);
-      setTimeout(() => {
-        setPreviewIdx(i => (i + 1) % 7);
-        setFading(false);
-      }, 350);
-    }, 3500);
-    return () => clearInterval(id);
-  }, []);
 
   // Exit intent — fires once per session when mouse leaves top of viewport
   useEffect(() => {
@@ -706,7 +664,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <Link href="/auth">
                 <span className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-semibold rounded-lg transition-all cursor-pointer shadow-md shadow-[#6b38d4]/25 hover:-translate-y-0.5 text-sm">
-                  Write From Real Research — $9.99
+                  Start Free — No Card Needed
                   <ArrowRight size={15} />
                 </span>
               </Link>
@@ -716,269 +674,18 @@ export default function Landing() {
               </a>
             </div>
 
-            <p className="mt-4 text-xs text-[#76777d]">Starter $9.99/mo · Pay per use from $1.99 · 7-day money-back guarantee</p>
+            <p className="mt-4 text-xs text-[#76777d]">Free plan forever · Pro $29.99/mo · Pay per use from $1.99 · 7-day money-back guarantee</p>
           </m.div>
 
-          {/* Right — animated product preview */}
+          {/* Right — open interactive analyzer (QuillBot-style). The hero IS
+              the product: paste text, get an instant AI-likelihood + writing
+              report. 100% client-side (lib/textAnalysis.ts) — no login, no
+              server call, and it never touches an AI model. */}
           <div className="relative">
             <div className="absolute -top-12 -left-12 w-64 h-64 bg-[#4cd7f6]/25 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="relative z-10 rounded-2xl border border-[#e0e3e5] overflow-hidden shadow-2xl bg-white">
-              {/* Browser chrome — URL updates with tool */}
-              <div className="flex items-center gap-1.5 px-4 py-3 border-b border-[#e0e3e5] bg-[#f2f4f6]">
-                <span className="w-3 h-3 rounded-full bg-red-400" />
-                <span className="w-3 h-3 rounded-full bg-yellow-400" />
-                <span className="w-3 h-3 rounded-full bg-green-400" />
-                <span
-                  className="ml-3 text-xs text-[#45464d] font-mono hidden sm:block transition-opacity duration-300"
-                  style={{ opacity: fading ? 0 : 1 }}
-                >
-                  lightspeedghost.com/{previewUrls[previewIdx]}
-                </span>
-              </div>
-
-              <div className="flex" style={{ minHeight: "300px" }}>
-                {/* Sidebar — highlights active tool */}
-                <div className="w-44 bg-[#f7f9fb] border-r border-[#e0e3e5] p-3 shrink-0 hidden sm:block">
-                  <div className="mb-4 px-2">
-                    <Logo size={20} textSize="text-[10px]" variant="light" />
-                  </div>
-                  {previewNavItems.map((label, i) => (
-                    <div
-                      key={label}
-                      className={`px-3 py-2 rounded-lg text-xs mb-0.5 font-medium transition-all duration-300 ${
-                        i === previewIdx + 1 ? "bg-[#6b38d4] text-white" : "text-[#45464d]"
-                      }`}
-                    >
-                      {label}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Main content — fades between tools */}
-                <div
-                  className="flex-1 p-4 sm:p-5 transition-opacity duration-300"
-                  style={{ opacity: fading ? 0 : 1 }}
-                >
-                  {previewIdx === 0 && (
-                    /* Write Paper — grounded in real papers, cited inline */
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <PenLine size={13} className="text-blue-600" />
-                        <span className="text-[11px] font-semibold text-[#191c1e]">Write Your Paper</span>
-                        <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" /> Streaming
-                        </span>
-                      </div>
-                      {/* Draft text with a live inline citation */}
-                      <p className="text-[10px] text-[#45464d] leading-relaxed">
-                        Sustained attention degrades measurably after prolonged screen exposure, with reaction times
-                        slowing by up to 14%{" "}
-                        <span className="bg-[#e9ddff] text-[#6b38d4] px-1 rounded font-medium">(Okafor &amp; Lin, 2023)</span>.
-                        This effect is amplified in adolescents{" "}
-                        <span className="bg-[#e9ddff] text-[#6b38d4] px-1 rounded font-medium">(Mensah et al., 2024)</span>,
-                        suggesting developmental
-                        <span className="inline-block w-1 h-3 align-middle bg-[#6b38d4] ml-0.5 animate-pulse" />
-                      </p>
-                      {/* Source it's pulling from right now */}
-                      <div className="p-2 rounded-lg border border-[#e0e3e5] bg-[#f7f9fb] space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <BookOpen size={10} className="text-[#6b38d4]" />
-                          <span className="text-[9px] font-semibold text-[#191c1e]">Grounded in 2 indexed sources</span>
-                          <CheckCircle size={10} className="text-emerald-600 ml-auto" />
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[9px] text-[#45464d]">
-                          <span className="font-mono text-[#76777d] shrink-0">DOI</span>
-                          <span className="truncate">Okafor &amp; Lin (2023), <span className="italic">J. Cognitive Science</span></span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[9px] text-[#45464d]">
-                          <span className="font-mono text-[#76777d] shrink-0">DOI</span>
-                          <span className="truncate">Mensah et al. (2024), <span className="italic">Dev. Psychology Rev.</span></span>
-                        </div>
-                      </div>
-                      <div className="text-[9px] text-[#76777d]">APA 7th · 1,500 words · every claim traceable to a real paper</div>
-                    </div>
-                  )}
-
-                  {previewIdx === 1 && (
-                    /* Outline Builder */
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 mb-3">
-                        <BookOpen size={13} className="text-indigo-600" />
-                        <span className="text-[11px] font-semibold text-[#191c1e]">Outline Builder</span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {[
-                          { depth: 0, marker: "I.", text: "Introduction & Background" },
-                          { depth: 1, marker: "A.", text: "Historical context" },
-                          { depth: 1, marker: "B.", text: "Problem statement" },
-                          { depth: 0, marker: "II.", text: "Literature Review" },
-                          { depth: 1, marker: "A.", text: "Prior studies (2018–2024)" },
-                          { depth: 1, marker: "B.", text: "Theoretical framework" },
-                          { depth: 0, marker: "III.", text: "Methodology" },
-                          { depth: 1, marker: "A.", text: "Data collection" },
-                          { depth: 0, marker: "IV.", text: "Conclusion & Implications" },
-                        ].map(({ depth, marker, text }, i) => (
-                          <div key={i} className={`flex items-center gap-2 ${depth === 1 ? "pl-5" : ""}`}>
-                            <span className={`font-mono text-[9px] shrink-0 ${depth === 0 ? "text-indigo-600" : "text-[#76777d]"}`}>{marker}</span>
-                            <span className={`text-[10px] ${depth === 0 ? "text-[#191c1e] font-medium" : "text-[#45464d]"}`}>{text}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {previewIdx === 2 && (
-                    /* Revision */
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <FileText size={13} className="text-violet-600" />
-                          <span className="text-[11px] font-semibold text-[#191c1e]">Paper Revision</span>
-                        </div>
-                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 border border-violet-200">Target: A</span>
-                      </div>
-                      <p className="text-[10px] text-[#45464d] leading-relaxed">
-                        The results{" "}
-                        <span className="line-through text-red-500/70">shows</span>{" "}
-                        <span className="text-emerald-600">demonstrate</span>{" "}
-                        a significant correlation between{" "}
-                        <span className="bg-emerald-100 text-emerald-700 px-0.5 rounded">neural pathway activation and cognitive outcomes</span>
-                        {" "}across all three cohorts.{" "}
-                        <span className="text-emerald-600">Furthermore, the longitudinal data suggests a causal</span>{" "}
-                        <span className="line-through text-red-500/70">link</span>{" "}
-                        <span className="text-emerald-600">relationship</span>…
-                      </p>
-                      <div className="flex items-center gap-3 mt-2">
-                        <div className="flex items-center gap-1.5 text-[9px] text-emerald-600">
-                          <div className="w-2 h-2 rounded bg-emerald-200" /> 14 improvements
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[9px] text-red-500/80">
-                          <div className="w-2 h-2 rounded bg-red-200" /> 3 removed
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {previewIdx === 3 && (
-                    /* LightSpeed Humanizer */
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Wand2 size={13} className="text-purple-600" />
-                        <span className="text-[11px] font-semibold text-[#191c1e]">LightSpeed Humanizer</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] text-[#76777d]">Reads robotic</span>
-                        <span className="text-[9px] font-mono font-bold text-red-500">Stiff</span>
-                      </div>
-                      <div className="h-1.5 bg-[#eceef0] rounded-full overflow-hidden mb-3">
-                        <div className="h-full bg-red-500 rounded-full" style={{ width: "73%" }} />
-                      </div>
-                      <div className="p-2 bg-purple-50 border border-purple-200 rounded-lg text-[9px] text-purple-700 leading-relaxed italic">
-                        "The findings demonstrate…" →{" "}
-                        <span className="text-emerald-600 not-italic font-medium">"What emerges from this data is…"</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] text-[#76777d]">Natural academic voice</span>
-                        <span className="text-[9px] font-mono font-bold text-emerald-600">Authentic</span>
-                      </div>
-                      <div className="h-1.5 bg-[#eceef0] rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: "96%" }} />
-                      </div>
-                      <div className="mt-1.5 text-[9px] text-[#45464d] flex items-center gap-1.5">
-                        <CheckCircle size={10} className="text-emerald-600" />
-                        Reads naturally in your own voice
-                      </div>
-                    </div>
-                  )}
-
-                  {previewIdx === 4 && (
-                    /* AI & Plagiarism */
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 mb-3">
-                        <ShieldCheck size={13} className="text-emerald-600" />
-                        <span className="text-[11px] font-semibold text-[#191c1e]">AI & Plagiarism Check</span>
-                        <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">PASS</span>
-                      </div>
-                      {[
-                        { label: "AI Content", pct: 6, color: "bg-emerald-500", txt: "text-emerald-600" },
-                        { label: "Plagiarism", pct: 3, color: "bg-emerald-500", txt: "text-emerald-600" },
-                        { label: "Similarity",  pct: 11, color: "bg-amber-500",  txt: "text-amber-600" },
-                      ].map(({ label, pct, color, txt }) => (
-                        <div key={label}>
-                          <div className="flex justify-between text-[9px] mb-1">
-                            <span className="text-[#76777d]">{label}</span>
-                            <span className={`font-mono font-semibold ${txt}`}>{pct}%</span>
-                          </div>
-                          <div className="h-1.5 bg-[#eceef0] rounded-full overflow-hidden">
-                            <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct * 4}%` }} />
-                          </div>
-                        </div>
-                      ))}
-                      <div className="mt-2 text-[9px] text-[#45464d] flex items-center gap-1.5">
-                        <CheckCircle size={10} className="text-emerald-600" />
-                        Safe to submit — humanization not required
-                      </div>
-                    </div>
-                  )}
-
-                  {previewIdx === 5 && (
-                    /* STEM Solver */
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <FlaskConical size={13} className="text-cyan-600" />
-                        <span className="text-[11px] font-semibold text-[#191c1e]">STEM Solver</span>
-                      </div>
-                      <div className="flex gap-1.5 flex-wrap mb-3">
-                        {["Math", "Physics", "Chemistry", "Biology", "CS"].map((s, i) => (
-                          <span key={s} className={`text-[9px] px-2 py-0.5 rounded-full border font-medium ${i === 1 ? "bg-cyan-50 text-cyan-700 border-cyan-300" : "bg-[#f2f4f6] text-[#45464d] border-[#e0e3e5]"}`}>{s}</span>
-                        ))}
-                      </div>
-                      <div className="space-y-1.5">
-                        {["Identify all forces acting on the body", "Apply Newton's 2nd law: F = ma", "Solve for acceleration: a = 4 m/s²"].map((step, i) => (
-                          <div key={step} className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full bg-cyan-100 border border-cyan-300 text-cyan-700 text-[8px] flex items-center justify-center shrink-0">{i + 1}</div>
-                            <span className="text-[10px] text-[#45464d]">{step}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="p-2 bg-cyan-50 border border-cyan-200 rounded-lg text-[10px] text-cyan-700 font-mono mt-1">
-                        F = ma → a = 12/3 = <span className="text-cyan-800 font-bold">4 m/s²</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {previewIdx === 6 && (
-                    /* Study Assistant */
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 mb-3">
-                        <GraduationCap size={13} className="text-amber-600" />
-                        <span className="text-[11px] font-semibold text-[#191c1e]">AI Study Assistant</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-end">
-                          <div className="bg-[#e9ddff] border border-[#d0bcff] rounded-xl rounded-tr-sm px-3 py-1.5 text-[10px] text-[#45464d] max-w-[78%]">
-                            Explain the Krebs cycle simply
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <div className="w-5 h-5 rounded-full bg-[#6b38d4] flex items-center justify-center shrink-0 mt-0.5">
-                            <Zap size={9} className="text-white" />
-                          </div>
-                          <div className="bg-white border border-[#e0e3e5] rounded-xl rounded-tl-sm px-3 py-1.5 text-[10px] text-[#45464d] leading-relaxed shadow-sm">
-                            The Krebs cycle runs in the mitochondria, breaking down acetyl-CoA to produce ATP, NADH, and CO₂ across 8 enzymatic steps…
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-1.5 mt-1 flex-wrap">
-                        {["Quiz me", "Simplify more", "Key takeaways"].map(s => (
-                          <span key={s} className="text-[8px] px-2 py-0.5 rounded-full bg-[#f2f4f6] border border-[#e0e3e5] text-[#45464d] cursor-pointer">{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="relative z-10">
+              <HeroAnalyzer />
             </div>
 
             {/* Floating live stat card */}
@@ -987,28 +694,6 @@ export default function Landing() {
               <p className="text-xl font-bold">
                 {liveStats ? `${liveStats.documentsThisWeek.toLocaleString()} papers this week` : "35+ databases live"}
               </p>
-            </div>
-
-            {/* Progress dots */}
-            <div className="flex items-center justify-center gap-2 mt-5 relative z-20">
-              {Array.from({ length: 7 }).map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  aria-label={`Show ${previewNavItems[i + 1]} preview`}
-                  aria-current={i === previewIdx ? "true" : undefined}
-                  onClick={() => { setFading(true); setTimeout(() => { setPreviewIdx(i); setFading(false); }, 200); }}
-                  className="flex items-center justify-center p-2 group"
-                >
-                  <span
-                    className={`block rounded-full transition-all duration-300 ${
-                      i === previewIdx
-                        ? "w-6 h-1.5 bg-[#6b38d4]"
-                        : "w-1.5 h-1.5 bg-[#c6c6cd] group-hover:bg-[#76777d]"
-                    }`}
-                  />
-                </button>
-              ))}
             </div>
           </div>
         </div>
@@ -1216,9 +901,9 @@ export default function Landing() {
           {/* Header + toggle */}
           <div className="text-center mb-10 sm:mb-14">
             <p className="text-[#6b38d4] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">How it works · Pricing</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 text-[#131b2e]">Two ways to get started — priced for students</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 text-[#131b2e]">Start free — upgrade when you need AI power</h2>
             <p className="text-[#45464d] text-sm sm:text-base max-w-xl mx-auto">
-              Starter at $9.99/mo. Pro for weekly deadlines. Pay-as-you-go when you just need one thing done. Honest pricing. No dark patterns.
+              Free forever for checking your work. Pro at $29.99/mo for weekly deadlines. Pay-as-you-go when you just need one thing done. Honest pricing. No dark patterns.
             </p>
             <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8">
               <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-[#191c1e]" : "text-[#76777d]"}`}>Monthly</span>
@@ -1251,12 +936,12 @@ export default function Landing() {
                 </div>
                 <div>
                   <p className="text-[#191c1e] font-semibold text-sm">Subscribe</p>
-                  <p className="text-[#6b38d4] text-[11px] font-medium">From $9.99 / month</p>
+                  <p className="text-[#6b38d4] text-[11px] font-medium">Free forever · Pro $29.99 / month</p>
                 </div>
               </div>
               <div className="space-y-6">
                 {[
-                  { num: "01", title: "Sign up — takes 30 seconds", body: "Create your account with your email. Starter plan at $9.99/month or Pro at $29.99/month. Or pay per use with no subscription. Cancel any time." },
+                  { num: "01", title: "Sign up free — takes 30 seconds", body: "Create your account with your email — you start on the Free plan, no card required. Upgrade to Pro at $29.99/month for AI generation, or pay per use with no subscription. Cancel any time." },
                   { num: "02", title: "Upload your brief or describe your task", body: "Drag in your assignment PDF, paste the rubric, or just type what you need. The platform detects citation style, length, and subject automatically." },
                   { num: "03", title: "Generate, revise, humanize, and submit", body: "Run any tool in sequence — paper → plagiarism check → LightSpeed Humanizer → revision. Each output feeds cleanly into the next. Review, add your voice, submit." },
                 ].map(({ num, title, body }) => (
@@ -1271,7 +956,7 @@ export default function Landing() {
               </div>
               <Link href="/auth">
                 <span className="mt-7 block text-center py-3 rounded-lg text-sm font-bold bg-[#6b38d4] hover:bg-[#5b2fc0] text-white transition-colors cursor-pointer shadow-md shadow-[#6b38d4]/20">
-                  Start for $9.99 / month
+                  Start free — upgrade anytime
                 </span>
               </Link>
             </div>
@@ -1312,7 +997,7 @@ export default function Landing() {
           </div>
 
           {/* ── Subscription plan cards ── */}
-          <StaggerGrid className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-16 sm:mb-24">
+          <StaggerGrid className="grid md:grid-cols-3 gap-4 sm:gap-6 mb-16 sm:mb-24">
             {pricingPlans.map(({ name, priceMonthly, priceAnnual, perMonthly, perAnnual, desc, features, locked, cta, highlight, badge }) => {
               const showAnnual = billingAnnual || priceMonthly === null;
               const price = showAnnual ? priceAnnual : priceMonthly;
@@ -1365,16 +1050,10 @@ export default function Landing() {
                   {name === "Pro" ? (
                     <button
                       onClick={() => setCheckoutPlan(billingAnnual ? "pro_annual" : "pro_monthly")}
-                      className="w-full block text-center py-3 rounded-lg text-sm font-bold transition-colors cursor-pointer border border-[#6b38d4] text-[#6b38d4] hover:bg-[#6b38d4]/5"
+                      className="w-full block text-center py-3 rounded-lg text-sm font-bold transition-colors cursor-pointer bg-[#6b38d4] hover:bg-[#5b2fc0] text-white shadow-md shadow-[#6b38d4]/20"
                     >
                       {cta}
                     </button>
-                  ) : name === "Student Pro" ? (
-                    <Link href="/auth">
-                      <span className="block text-center py-3 rounded-lg text-sm font-bold transition-colors cursor-pointer bg-[#6b38d4] hover:bg-[#5b2fc0] text-white shadow-md shadow-[#6b38d4]/20">
-                        {cta}
-                      </span>
-                    </Link>
                   ) : isInstitution ? (
                     <a href="/enterprise#contact">
                       <span className="w-full block text-center py-3 rounded-lg text-sm font-bold transition-colors cursor-pointer bg-white text-[#131b2e] hover:bg-[#eceef0]">
@@ -1564,7 +1243,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link href="/auth">
               <span className="inline-flex items-center gap-2 px-8 sm:px-10 py-4 sm:py-5 bg-[#6b38d4] hover:bg-[#5b2fc0] text-white font-bold rounded-lg transition-all cursor-pointer shadow-2xl hover:-translate-y-1 text-base sm:text-lg">
-                Write From Real Research — From $9.99
+                Start Free — Write From Real Research
                 <ArrowRight size={18} />
               </span>
             </Link>
@@ -1821,7 +1500,7 @@ export default function Landing() {
                   onClick={() => setShowExitIntent(false)}
                   className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 border border-[#d8dadc] hover:border-[#6b38d4] text-[#45464d] hover:text-[#6b38d4] rounded-xl transition-all text-sm cursor-pointer"
                 >
-                  Or subscribe from $9.99/mo
+                  Or start free — no card required
                 </span>
               </Link>
               <p className="text-center text-[#76777d] text-xs mt-3">No credit card required to create an account</p>

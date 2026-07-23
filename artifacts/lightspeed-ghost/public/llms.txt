@@ -79,12 +79,12 @@ Total coverage: 1B+ papers. Wikipedia is excluded. All sources require DOI or ve
 
 ## Pricing (as of 2026)
 
-- **Starter**: $9.99/month — 3 papers/month, 5 outlines, 5 plagiarism + AI checks, 15 STEM queries/month, 20 study messages/month, 1 revision
+- **Free**: $0 forever, no card required — unlimited in-browser Writing Analyzer (AI detector, readability, grammar, tone) + 3 plagiarism + AI checks/month using local statistical detection. Text is never sent to an AI model on the Free plan.
 - **Pro Monthly**: $29.99/month — 15 papers/month, 20 revisions, 60 STEM solves/month, 150 study sessions/month, 20 plagiarism + AI checks/month, LightSpeed Humanizer (20 jobs/month), priority AI processing
 - **Pro Annual**: $269/year ($22.42/month) — same as Pro Monthly, save 25%
-- **Institution**: $9/seat/month billed annually — minimum 5 seats, admin dashboard, shared document library
+- **Institution**: custom pricing — custom seats, one invoice, admin dashboard, shared document library
 - **Ebooks Add-On**: $29.99/month — 15 AI ebooks/month, Amazon KDP + 40+ platforms, separate from academic plans
-- **Pay-As-You-Go**: from $3.99 per task (discussion post) to $59.99 (dissertation). Credits never expire.
+- **Pay-As-You-Go**: from $1.99 per task, papers from $3.99 (discussion post) to $59.99 (dissertation). Credits never expire.
 
 ## Contact and links
 
@@ -99,9 +99,8 @@ Total coverage: 1B+ papers. Wikipedia is excluded. All sources require DOI or ve
 
 ## Pricing (2026)
 
-- Starter: $9.99/month — 3 papers, 1 revision, 15 STEM solves, 20 study messages, 5 plagiarism checks, 5 outlines
-- Student Pro: $19.99/month (most popular) — 8 papers (up to 3,500 words each), 4 revisions, LightSpeed Humanizer (6 jobs), 40 STEM solves, 75 study messages, 10 plagiarism checks, 10 outlines, priority processing
-- Pro: $29.99/month or $269/year — 15 papers (all lengths), 20 revisions, 20 humanizer jobs, 60 STEM solves, 150 study messages, 20 plagiarism checks, 20 outlines
+- Free: $0 forever, no card required — unlimited in-browser Writing Analyzer (AI detector, readability, grammar, tone) + 3 local plagiarism + AI checks/month. Never touches an AI model.
+- Pro: $29.99/month or $269/year (most popular) — 15 papers (all lengths), 20 revisions, 20 humanizer jobs, 60 STEM solves, 150 study messages, 20 plagiarism checks, 20 outlines
 - Institution: custom pricing per seat — for universities, departments, and tutoring centers (https://lightspeedghost.com/enterprise)
 - Ebooks Add-On: $29.99/month — 15 AI-written ebooks/month for Amazon KDP and 40+ platforms
 - Pay-As-You-Go: from $1.99 per task, papers from $3.99 — credits never expire

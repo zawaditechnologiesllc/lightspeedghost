@@ -99,7 +99,7 @@ export function PaywallPicker({
             {mode === "buy"
               ? `Purchase a single ${TOOL_LABELS[tool]} without upgrading your plan — credits never expire.`
               : <>You've used all your {TOOL_LABELS[tool]}s for this period on your{" "}
-                  <span className="text-white/70 font-medium capitalize">{currentPlan ?? "Starter"}</span> plan.
+                  <span className="text-white/70 font-medium capitalize">{currentPlan ?? "Free"}</span> plan.
                   {" "}Choose how to continue:</>
             }
           </p>

@@ -7,7 +7,7 @@ and what you'll actually achieve.
 > **Find it at:** Admin → **SEO** tab.
 > **Pages go live at:** `https://lightspeedghost.com/seo/<slug>` (real, crawlable
 > pages on your own domain — server-rendered by the backend and proxied through
-> Vercel).
+> Cloudflare Pages).
 
 ---
 

@@ -354,6 +354,129 @@ export function scoreSentences(text: string, overallAiScore: number): SentenceSc
   });
 }
 
+// ── AI-likelihood detection (local, deterministic — never touches an LLM) ────
+// Ported from the API server's textAnalysis.ts so the numbers shown here match
+// what the Free plan's local detection mode reports server-side.
+//
+// Signals:
+//  - Burstiness (Turnitin's primary signal): AI text has uniformly-lengthed
+//    sentences (stdDev 3–6 words); human writing varies wildly (stdDev 8–15).
+//  - Perplexity proxy: fraction of 3-grams matching known AI-generated
+//    patterns. High match rate → low perplexity → likely AI.
+
+export function computeBurstiness(text: string): { score: number; avgLen: number; stdDev: number } {
+  const sentences = text
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim().split(/\s+/).length)
+    .filter((n) => n >= 3);
+
+  if (sentences.length < 4) return { score: 0, avgLen: 0, stdDev: 0 };
+
+  const mean = sentences.reduce((a, b) => a + b, 0) / sentences.length;
+  const variance = sentences.reduce((sum, l) => sum + (l - mean) ** 2, 0) / sentences.length;
+  const stdDev = Math.sqrt(variance);
+
+  const burstinessScore = Math.min(100, Math.round(stdDev * 6.5));
+  return { score: burstinessScore, avgLen: Math.round(mean), stdDev: Math.round(stdDev * 10) / 10 };
+}
+
+const AI_TRIGRAMS = new Set([
+  "it is important","it should be","it is worth","in today s","in the realm",
+  "in conclusion it","furthermore it is","moreover it","additionally it",
+  "it is evident","it can be","it is clear","this essay will","this paper will",
+  "this study will","this report will","in order to","due to the",
+  "as a result","with respect to","in terms of","it is also","can be seen",
+  "can be found","plays a crucial","plays a vital","plays an important",
+  "of great importance","it is essential","it is necessary","needs to be",
+  "has been shown","has been found","research has shown","studies have shown",
+  "one of the","in the context","in the field","the fact that","the ability to",
+  "the importance of","the role of","is a key","is an important",
+  "have a significant","have a major","this is a","this is an","there is a",
+  "this can be","this may be","this could be","this would be","this should be",
+]);
+
+export function computePerplexityProxy(text: string): { score: number; aiTrigramCount: number; totalTrigrams: number } {
+  const words = text.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter((w) => w.length > 0);
+  if (words.length < 6) return { score: 0, aiTrigramCount: 0, totalTrigrams: 0 };
+
+  let aiTrigramCount = 0;
+  const totalTrigrams = Math.max(1, words.length - 2);
+
+  for (let i = 0; i < words.length - 2; i++) {
+    const trigram = `${words[i]} ${words[i + 1]} ${words[i + 2]}`;
+    if (AI_TRIGRAMS.has(trigram)) aiTrigramCount++;
+  }
+
+  const fraction = aiTrigramCount / totalTrigrams;
+  const score = Math.min(100, Math.round(fraction * 650));
+
+  return { score, aiTrigramCount, totalTrigrams };
+}
+
+const AI_PHRASE_LIST = [
+  "it is important to note","it should be noted","it is worth noting",
+  "in today's","in the realm of","furthermore","moreover","additionally",
+  "in conclusion","delve into","crucial","pivotal","underscore",
+  "it is evident","it can be argued","navigate the complexities",
+  "shed light on","multifaceted","nuanced approach","tapestry",
+  "it goes without saying","at the end of the day","it is clear that",
+  "plays a vital role","plays a crucial role","has been shown to",
+  "it is essential","one of the most important","it is necessary to",
+];
+
+export interface AiLikelihoodResult {
+  /** 0–100 — probability the text is AI-generated */
+  score: number;
+  verdict: "human" | "mixed" | "ai";
+  burstiness: number;
+  stdDev: number;
+  perplexity: number;
+  wordCount: number;
+  /** Reliable detection needs ~100+ words */
+  meetsMinimumWordCount: boolean;
+  flaggedSentences: Array<{ text: string; score: number }>;
+}
+
+export function analyzeAiLikelihood(text: string): AiLikelihoodResult {
+  const { score: burstiness, stdDev } = computeBurstiness(text);
+  const { score: perplexity } = computePerplexityProxy(text);
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+  // Same deterministic blend the server uses in local (Free plan) mode.
+  const burstinessContrib = (100 - burstiness) * 0.6;
+  const perplexityContrib = perplexity * 0.4;
+  const score = Math.min(98, Math.max(0, Math.round(burstinessContrib + perplexityContrib)));
+
+  const flaggedSentences = tokenizeSentences(text)
+    .map((sentence) => {
+      const lower = sentence.toLowerCase();
+      const words = sentence.split(/\s+/).length;
+      let s = 0;
+      for (const phrase of AI_PHRASE_LIST) {
+        if (lower.includes(phrase)) s += 25;
+      }
+      if (words >= 20 && words <= 30) s += 10;
+      if (words >= 23 && words <= 27) s += 15;
+      if (words <= 7) s = Math.max(0, s - 20);
+      const aiOpeners = ["furthermore,","moreover,","additionally,","therefore,","consequently,","it is important","in conclusion,","in summary,"];
+      if (aiOpeners.some((w) => lower.startsWith(w))) s += 25;
+      return { text: sentence, score: Math.min(100, s) };
+    })
+    .filter((s) => s.score >= 30)
+    .slice(0, 5);
+
+  return {
+    score,
+    verdict: score < 35 ? "human" : score < 65 ? "mixed" : "ai",
+    burstiness,
+    stdDev,
+    perplexity,
+    wordCount,
+    meetsMinimumWordCount: wordCount >= 100,
+    flaggedSentences,
+  };
+}
+
 export function generateCitation(
   metadata: { title: string; authors: string[]; year: string; url: string; publisher?: string; accessDate?: string },
   style: "apa" | "mla" | "chicago" | "harvard" | "ieee"

@@ -48,30 +48,52 @@ Three services, three platforms. Do them in this order.
 
 ---
 
-## 3. Vercel (Frontend)
+## 3. Cloudflare Pages (Frontend)
 
 **Goal:** Deploy the React frontend, connect your domain, and point it at the Render API.
 
-### Deploy
+### Deploy (Git integration — recommended)
 
-1. Go to [vercel.com](https://vercel.com) → **Add New → Project**
-2. Import your GitHub repository
-3. Vercel will auto-detect the `vercel.json` at the repo root — no framework preset needed
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages → Create → Pages → Connect to Git**
+2. Select your GitHub repository
+3. Configure the build:
+   | Setting | Value |
+   |---|---|
+   | **Project name** | `lightspeedghost` (must match `name` in `wrangler.toml`) |
+   | **Production branch** | `main` |
+   | **Build command** | `pnpm --filter @workspace/lightspeed-ghost run build` |
+   | **Build output directory** | `artifacts/lightspeed-ghost/dist/public` |
+   | **Root directory** | `/` (repo root — the `functions/` SEO proxy lives here) |
 4. Under **Environment Variables**, add:
    | Key | Value |
    |---|---|
    | `VITE_API_URL` | Your Render URL from step 2 (e.g. `https://lightspeedghost-api.onrender.com`) |
-5. Click **Deploy** — first deploy takes ~2 min
+   | `SEO_BACKEND_ORIGIN` | *(optional)* overrides the backend origin the `/seo/*` proxy targets |
+5. Click **Save and Deploy** — first deploy takes ~2 min
+
+> **Alternative — CI deploy:** `.github/workflows/deploy.yml` deploys on every push
+> to `main` via `wrangler pages deploy`. It needs two repo secrets:
+> `CLOUDFLARE_API_TOKEN` (with *Cloudflare Pages: Edit* permission) and
+> `CLOUDFLARE_ACCOUNT_ID`. Use either Git integration **or** the workflow — not both,
+> or every push deploys twice.
+
+### How the pieces map (formerly vercel.json)
+
+| Concern | Where it lives now |
+|---|---|
+| `/seo/:slug` → backend proxy | `functions/seo/[slug].js` (Pages Function) |
+| `/seo-sitemap.xml` → backend proxy | `functions/seo-sitemap.xml.js` (Pages Function) |
+| SPA fallback to `index.html` | Automatic — Pages serves `index.html` for unmatched routes when no `404.html` exists |
+| Cache + security headers | `artifacts/lightspeed-ghost/public/_headers` (copied into the build output) |
 
 ### Connect your domain
 
-1. In Vercel → your project → **Settings → Domains**
-2. Click **Add Domain** → type `lightspeedghost.com`
-3. Vercel shows you two DNS records to add:
-   - An `A` record pointing to `76.76.21.21`
-   - A `CNAME` for `www` pointing to `cname.vercel-dns.com`
-4. Log into your domain registrar (GoDaddy, Namecheap, Cloudflare, etc.) and add both records
-5. Back in Vercel, click **Verify** — SSL is issued automatically within a few minutes
+1. In Cloudflare Pages → your project → **Custom domains → Set up a custom domain**
+2. Add `lightspeedghost.com`, then repeat for `www.lightspeedghost.com`
+3. If the domain's DNS is already on Cloudflare, the records are created automatically.
+   Otherwise either move the nameservers to Cloudflare (recommended) or add the
+   `CNAME` records Pages shows you (`<project>.pages.dev`) at your registrar
+4. SSL is issued automatically within a few minutes
 
 ### Set up CORS on Render
 
@@ -95,15 +117,16 @@ The API server already reads this variable — no code changes needed. Without i
 | `SESSION_SECRET` | Random 32+ character secret |
 | `ALLOWED_ORIGINS` | Comma-separated list of allowed frontend origins |
 
-### Vercel (Frontend)
+### Cloudflare Pages (Frontend)
 | Variable | Description |
 |---|---|
 | `VITE_API_URL` | Render backend URL (no trailing slash) |
+| `SEO_BACKEND_ORIGIN` | Optional — backend origin for the `/seo/*` Pages Function proxy |
 
 ---
 
 ## Redeployment
 
-- **Frontend changes** → push to `main` → Vercel auto-deploys
+- **Frontend changes** → push to `main` → Cloudflare Pages auto-deploys
 - **Backend changes** → push to `main` → Render auto-deploys (if you connected the repo)
 - **Schema changes** → run updated SQL in Supabase SQL Editor, or use `pnpm --filter @workspace/db run push` with `DATABASE_URL` pointing at Supabase

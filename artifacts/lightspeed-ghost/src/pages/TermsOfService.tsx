@@ -51,7 +51,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-[#191c1e] text-xl font-semibold mb-4">6. Subscriptions and Billing</h2>
-            <p>The Starter plan is $9.99/month. Pro and Campus plans are billed monthly or annually. You may cancel at any time; cancellation takes effect at the end of the current billing period. We do not offer refunds for partial months. Pricing is subject to change with 30 days notice.</p>
+            <p>The Free plan is provided at no charge. The Pro plan is billed monthly ($29.99/month) or annually ($269/year), and Institution plans are custom-quoted. Legacy plans no longer offered for new purchase continue on their existing terms for current subscribers. You may cancel at any time; cancellation takes effect at the end of the current billing period. We do not offer refunds for partial months. Pricing is subject to change with 30 days notice.</p>
           </section>
 
           <section>
