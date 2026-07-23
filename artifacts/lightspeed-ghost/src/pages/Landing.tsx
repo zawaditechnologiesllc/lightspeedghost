@@ -514,17 +514,10 @@ export default function Landing() {
       )}
 
 
-      {/* ─── PRODUCT SIDEBAR (fixed left tool rail) ─── */}
-      <ProductSidebar />
-      <ProductSidebarDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
-
-      {/* Everything sits to the right of the fixed rail on desktop */}
-      <div className="lg:pl-[84px]">
-
-      {/* ─── MINIMAL TOP BAR (no nav menu — a single CTA, like an app shell) ─── */}
-      <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#e0e3e5] transition-shadow ${scrolled ? "shadow-sm" : ""}`}>
+      {/* ─── FULL-WIDTH TOP HEADER — logo + wordmark top-left ─── */}
+      <header className={`sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#e0e3e5] transition-shadow ${scrolled ? "shadow-sm" : ""}`}>
         <div className="flex items-center gap-3 h-16 px-4 sm:px-6">
-          {/* Mobile: hamburger opens the tool drawer, plus a small wordmark */}
+          {/* Mobile hamburger opens the tool drawer */}
           <button
             onClick={() => setMobileOpen(true)}
             className="lg:hidden p-2 -ml-2 rounded-lg text-[#45464d] hover:bg-[#f2f4f6] transition-colors"
@@ -532,8 +525,9 @@ export default function Landing() {
           >
             <Menu size={20} />
           </button>
+          {/* Logo + wordmark, top-left */}
           <Link href="/">
-            <span className="lg:hidden cursor-pointer select-none"><Logo size={24} textSize="text-sm" variant="light" /></span>
+            <span className="cursor-pointer select-none shrink-0"><Logo size={26} textSize="text-base" variant="light" /></span>
           </Link>
 
           {/* Center trust badges */}
@@ -568,6 +562,13 @@ export default function Landing() {
           </div>
         </div>
       </header>
+
+      {/* ─── FIXED TOOL RAIL (sits below the header) ─── */}
+      <ProductSidebar />
+      <ProductSidebarDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
+
+      {/* Content sits to the right of the rail on desktop */}
+      <div className="lg:pl-[84px]">
 
       <main>
       {/* ─── HERO — centered command box (the open, no-login tool) ─── */}

@@ -50,16 +50,11 @@ function RailItem({ item, onNavigate }: { item: ToolNavItem; onNavigate?: () => 
   );
 }
 
-// Desktop rail — fixed to the viewport's left edge.
+// Desktop rail — fixed to the left edge, below the full-width top header
+// (which carries the logo + wordmark).
 export function ProductSidebar() {
   return (
-    <aside className="hidden lg:flex fixed top-0 left-0 bottom-0 w-[84px] bg-white border-r border-[#e0e3e5] flex-col z-40">
-      <Link href="/">
-        <span className="flex items-center justify-center h-16 border-b border-[#e0e3e5] cursor-pointer shrink-0" title="Light Speed Ghost">
-          <Logo size={26} showText={false} variant="light" />
-        </span>
-      </Link>
-
+    <aside className="hidden lg:flex fixed top-16 left-0 bottom-0 w-[84px] bg-white border-r border-[#e0e3e5] flex-col z-30">
       <div className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5">
         {/* New — start a fresh document */}
         <Link href="/app">
