@@ -126,11 +126,20 @@ Frontend dev server proxies `/api/*` to `http://localhost:8080`.
 
 | Variable | Description |
 |---|---|
-| `DATABASE_URL` | Supabase PostgreSQL connection string |
+| `DATABASE_URL` | Supabase PostgreSQL connection string — **use the connection pooler endpoint (`:6543`, transaction mode)** for high concurrency |
 | `SESSION_SECRET` | Random 32+ character string |
 | `ALLOWED_ORIGINS` | `https://lightspeedghost.com,https://www.lightspeedghost.com` |
 | `NODE_ENV` | `production` |
 | `ANTHROPIC_API_KEY` | Claude API key |
+| `DB_POOL_MAX` | *(optional)* Max pg pool connections per instance. Defaults to `20`. Raise with the Supabase tier for higher throughput; keep the total across all Render instances under the DB's connection limit. |
+
+**Scaling to 2,000+ users/hour:** the frontend is fully static (Vercel/Cloudflare CDN) and
+imagery is served from Pexels' CDN, so the only stateful path is the API + Postgres. The pg pool
+is tuned (`max` = `DB_POOL_MAX` or 20, with idle/connect timeouts and a crash-safe error handler),
+plan/settings lookups are cached (30s TTL) to keep the DB cold on the hot path, and rate limiting
+is per-IP (120 req/min global, 20/min AI) so distinct users are never throttled. For headroom,
+run the API on ≥2 Render instances behind its load balancer and point `DATABASE_URL` at the
+Supabase transaction pooler.
 
 ### Render — Stripe (primary payment gateway)
 
