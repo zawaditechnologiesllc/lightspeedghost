@@ -115,7 +115,7 @@ export function BuyCreditsModal({ open, onClose, onSuccess }: BuyCreditsModalPro
             <div className="grid grid-cols-2 gap-2">
               {[
                 { label: "STEM solve",        cost: "99 cr" },
-                { label: "Plagiarism check",  cost: "99 cr" },
+                { label: "Study day pass",    cost: "299 cr" },
                 { label: "Outline",           cost: "49 cr" },
                 { label: "Essay humanize",    cost: "199 cr" },
               ].map(({ label, cost }) => (
