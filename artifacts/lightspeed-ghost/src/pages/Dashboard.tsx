@@ -8,6 +8,7 @@ import {
 import { useGetDocumentStats } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/apiFetch";
 import { ManageFundsModal } from "@/components/ManageFundsModal";
+import { HeroAnalyzer } from "@/components/HeroAnalyzer";
 
 const quickActions = [
   {
@@ -99,26 +100,18 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5 sm:space-y-7">
-      {/* Hero header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-4 sm:p-6">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-accent/5 rounded-full translate-y-1/2 pointer-events-none" />
-        <div className="relative">
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles size={16} className="text-primary" />
-            <span className="text-xs font-semibold text-primary uppercase tracking-widest">LightSpeed Ghost</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Your Academic AI Workspace</h1>
-          <p className="text-muted-foreground text-sm mt-2 max-w-lg">
-            Real AI writing, verified citations, ReAct-powered STEM solving, and a tutor that remembers your progress.
-          </p>
-          <Link href="/write">
-            <button className="mt-4 inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
-              <Zap size={14} />
-              Start Writing
-            </button>
-          </Link>
+      {/* Free command box — the same instant, in-browser check as the landing
+          hero. Start here for free; the paid tools are the cards below. */}
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles size={16} className="text-primary" />
+          <span className="text-xs font-semibold text-primary uppercase tracking-widest">Your workspace</span>
         </div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Check your writing free — or pick a tool</h1>
+        <p className="text-muted-foreground text-sm mt-1.5 mb-4 max-w-2xl">
+          Paste any text below for an instant AI, readability, grammar &amp; tone check — free and private, it never touches an AI model. Need the full deep scan, humanizing, or a paper from real research? Use the tools below.
+        </p>
+        <HeroAnalyzer ctaMode="tool" />
       </div>
 
       {/* First-visit onboarding banner */}
