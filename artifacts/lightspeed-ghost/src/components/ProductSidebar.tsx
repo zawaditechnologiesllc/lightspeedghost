@@ -38,10 +38,10 @@ function RailItem({ item, onNavigate }: { item: ToolNavItem; onNavigate?: () => 
     <Link href={href}>
       <span
         onClick={onNavigate}
-        className="group flex flex-col items-center gap-1 px-1 py-2.5 rounded-xl cursor-pointer hover:bg-[#f2f4f6] transition-colors"
+        className="group flex flex-col items-center gap-1 px-1 py-2.5 rounded-xl cursor-pointer hover:bg-[#e8f3ed] transition-colors"
         title={label}
       >
-        <span className="w-9 h-9 rounded-lg bg-[#f7f9fb] border border-[#e0e3e5] flex items-center justify-center group-hover:border-[#10b981]/40 group-hover:bg-white transition-colors">
+        <span className="w-9 h-9 rounded-lg bg-[#eef7f1] border border-[#e0e3e5] flex items-center justify-center group-hover:border-[#10b981]/40 group-hover:bg-white transition-colors">
           <Icon size={17} className={accent} />
         </span>
         <span className="text-[9px] font-semibold text-[#45464d] leading-tight text-center group-hover:text-[#10b981] transition-colors">
@@ -87,7 +87,7 @@ export function ProductSidebarDrawer({ open, onClose }: { open: boolean; onClose
       <div className="absolute top-0 left-0 bottom-0 w-72 max-w-[80%] bg-white shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
         <div className="flex items-center justify-between h-16 px-4 border-b border-[#e0e3e5] shrink-0">
           <Logo size={26} textSize="text-sm" variant="light" />
-          <button onClick={onClose} aria-label="Close menu" className="p-2 rounded-lg text-[#45464d] hover:bg-[#f2f4f6] transition-colors">
+          <button onClick={onClose} aria-label="Close menu" className="p-2 rounded-lg text-[#45464d] hover:bg-[#e8f3ed] transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -103,8 +103,8 @@ export function ProductSidebarDrawer({ open, onClose }: { open: boolean; onClose
           <p className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-[#76777d]">Tools</p>
           {TOOL_NAV.map(({ label, href, icon: Icon, accent }) => (
             <Link key={href} href={href}>
-              <span onClick={onClose} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f6] cursor-pointer transition-colors">
-                <span className="w-8 h-8 rounded-lg bg-[#f7f9fb] border border-[#e0e3e5] flex items-center justify-center shrink-0">
+              <span onClick={onClose} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#e8f3ed] cursor-pointer transition-colors">
+                <span className="w-8 h-8 rounded-lg bg-[#eef7f1] border border-[#e0e3e5] flex items-center justify-center shrink-0">
                   <Icon size={16} className={accent} />
                 </span>
                 <span className="text-sm font-medium text-[#191c1e]">{label}</span>

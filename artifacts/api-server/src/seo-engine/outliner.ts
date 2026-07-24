@@ -33,54 +33,57 @@ export interface ArticleOutline {
 }
 
 // Maps toolFocus → internal tool path + CTA copy
+// Pricing reflects the live plan structure: a $0 Free plan (includes the
+// AI & Plagiarism Checker, which never touches an LLM), Pro at $29.99/month,
+// a custom Institution plan, and Pay-As-You-Go from $1.99 with no subscription.
 const TOOL_PATHS: Record<string, { name: string; path: string; cta: string; pricing: string }> = {
   "paper-writer": {
     name:    "AI Paper Writer",
     path:    "/write",
     cta:     "Write my paper with verified citations →",
-    pricing: "from $4.99 · Starter from $9.99/month",
+    pricing: "Pay-as-you-go from $3.99 · included in Pro $29.99/month",
   },
   humanizer: {
     name:    "LightSpeed Humanizer",
     path:    "/humanizer",
-    cta:     "Humanize my writing to 0% AI score →",
-    pricing: "from $1.99 per document",
+    cta:     "Humanize my writing to a natural academic voice →",
+    pricing: "Pay-as-you-go from $1.99 · included in Pro $29.99/month",
   },
   plagiarism: {
     name:    "AI & Plagiarism Checker",
     path:    "/plagiarism",
-    cta:     "Check my work for AI & plagiarism →",
-    pricing: "$1.99 per check",
+    cta:     "Check my work free for AI & plagiarism →",
+    pricing: "Free — never touches an AI model (Pro adds 20 deep scans/month)",
   },
   stem: {
     name:    "STEM Solver",
     path:    "/stem",
     cta:     "Solve my STEM problem step-by-step →",
-    pricing: "$1.99 per problem",
+    pricing: "Pay-as-you-go $1.99 per problem · included in Pro $29.99/month",
   },
   study: {
     name:    "AI Study Assistant",
     path:    "/study",
     cta:     "Start studying smarter today →",
-    pricing: "included in Starter from $9.99/month",
+    pricing: "Study day pass $2.99 · included in Pro $29.99/month",
   },
   revision: {
     name:    "Paper Revision Tool",
     path:    "/revision",
     cta:     "Improve my paper to an A grade →",
-    pricing: "from $4.99 per revision",
+    pricing: "Pay-as-you-go from $1.99 · included in Pro $29.99/month",
   },
   outline: {
     name:    "Outline Builder",
     path:    "/outline",
     cta:     "Build my paper outline in seconds →",
-    pricing: "$1.99 per outline",
+    pricing: "Pay-as-you-go $1.99 per outline · included in Pro $29.99/month",
   },
   ebook: {
     name:    "Ebook Generator",
     path:    "/ebooks",
     cta:     "Create my publish-ready ebook →",
-    pricing: "$29.99/month add-on",
+    pricing: "$29.99/month ebook plan (separate from academic plans)",
   },
 };
 
@@ -99,7 +102,7 @@ export function getToolInfo(toolFocus: string) {
     name:    "LightSpeed Ghost",
     path:    "/app",
     cta:     "Get started free →",
-    pricing: "from $9.99/month",
+    pricing: "Free plan forever · Pro $29.99/month · Pay-as-you-go from $1.99",
   };
 }
 

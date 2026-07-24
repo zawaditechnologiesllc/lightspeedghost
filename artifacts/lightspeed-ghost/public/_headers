@@ -1,13 +1,23 @@
 # Cloudflare Pages headers (replaces the old vercel.json "headers" config).
 # Note: no Cache-Control on /* — Pages' default (etag revalidation) is correct
 # for HTML, and setting one here would merge badly with the /assets/* rule.
+#
+# Defense-in-depth: these headers complement the API server's helmet + strict
+# CORS + rate limiting. The CSP is intentionally protective-but-compatible: it
+# shuts down the highest-impact vectors (clickjacking via frame-ancestors,
+# <object>/<embed>, base-uri hijack, mixed content) while allowing the SPA's
+# own inline styles/scripts and its https/wss calls to Supabase + the API.
+# A nonce-based strict-dynamic CSP is the documented next hardening step.
 
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   X-XSS-Protection: 1; mode=block
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests; img-src 'self' data: blob: https:; media-src 'self' https:; font-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; connect-src 'self' https: wss:; frame-src 'self' https:; worker-src 'self' blob:; manifest-src 'self'
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

@@ -26,7 +26,7 @@ export function AuthModal({
       <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-[#e0e3e5] p-6 animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between mb-4">
           <Logo size={24} textSize="text-sm" variant="light" />
-          <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg text-[#76777d] hover:text-[#191c1e] hover:bg-[#f2f4f6] transition-colors">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg text-[#76777d] hover:text-[#191c1e] hover:bg-[#e8f3ed] transition-colors">
             <X size={18} />
           </button>
         </div>

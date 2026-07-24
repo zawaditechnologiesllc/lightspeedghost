@@ -83,7 +83,7 @@ function riskBadge(risk: "low" | "medium" | "high") {
 
 function Metric({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg border border-[#e0e3e5] bg-[#f7f9fb] px-3 py-2">
+    <div className="rounded-lg border border-[#e0e3e5] bg-[#eef7f1] px-3 py-2">
       <p className="text-[9px] font-bold text-[#76777d] uppercase tracking-wider">{label}</p>
       <p className="text-sm font-bold text-[#131b2e]">{value}</p>
       {sub && <p className="text-[9px] text-[#76777d]">{sub}</p>}
@@ -230,7 +230,7 @@ export function HeroAnalyzer({
             <button
               type="button"
               onClick={() => { setText(""); setReport(null); setScanResult(null); setScanError(null); taRef.current?.focus(); }}
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-[#76777d] hover:text-[#45464d] px-2 py-1 rounded-md hover:bg-[#f2f4f6] transition-colors"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-[#76777d] hover:text-[#45464d] px-2 py-1 rounded-md hover:bg-[#e8f3ed] transition-colors"
             >
               <X size={12} /> Clear
             </button>
@@ -359,7 +359,7 @@ export function HeroAnalyzer({
                 ) : (
                   <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
                     {report.grammar.slice(0, 6).map((iss, i) => (
-                      <div key={i} className="flex items-start gap-2 text-[10.5px] bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5">
+                      <div key={i} className="flex items-start gap-2 text-[10.5px] bg-[#eef7f1] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5">
                         <span className={`shrink-0 mt-0.5 w-1.5 h-1.5 rounded-full ${iss.severity === "error" ? "bg-red-500" : iss.severity === "warning" ? "bg-amber-500" : "bg-emerald-500"}`} />
                         <span className="text-[#45464d] leading-snug">{iss.message}</span>
                       </div>
@@ -375,7 +375,7 @@ export function HeroAnalyzer({
                 <p className="text-[11px] text-[#45464d] leading-relaxed mb-2">{report.tone.suggestion}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {report.tone.scores.slice(0, 4).map((s) => (
-                    <span key={s.tone} className="text-[9.5px] font-semibold text-[#45464d] bg-[#f7f9fb] border border-[#e0e3e5] rounded-full px-2 py-0.5 capitalize">
+                    <span key={s.tone} className="text-[9.5px] font-semibold text-[#45464d] bg-[#eef7f1] border border-[#e0e3e5] rounded-full px-2 py-0.5 capitalize">
                       {s.tone} {s.score}
                     </span>
                   ))}
@@ -447,7 +447,7 @@ export function HeroAnalyzer({
                         href={s.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center justify-between gap-2 text-[10.5px] bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5 hover:border-[#10b981]/40 transition-colors"
+                        className="flex items-center justify-between gap-2 text-[10.5px] bg-[#eef7f1] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5 hover:border-[#10b981]/40 transition-colors"
                       >
                         <span className="truncate text-[#45464d]">
                           {s.title || s.url}

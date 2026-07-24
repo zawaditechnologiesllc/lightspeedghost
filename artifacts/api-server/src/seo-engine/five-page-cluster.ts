@@ -222,8 +222,8 @@ LIGHTSPEEDGHOST ADVANTAGES TO HIGHLIGHT:
 - Humanizer improves natural readability and reduces FALSE AI-detection flags (NEVER frame as evading detection or "0% AI score")
 - Plagiarism check ≤8% similarity built in
 - 35+ paper types, 11 citation styles (APA, MLA, Harvard, Chicago, OSCOLA, Vancouver, IEEE)
-- Starter plan $9.99/month — PAYG from $1.99
-- Purpose-built tools: Paper Writer, Humanizer, STEM Solver, Study Assistant, Plagiarism Checker, Revision Tool
+- Free plan forever ($0, includes the AI & Plagiarism Checker which never touches an AI model) — Pro $29.99/month — custom Institution plan — PAYG from $1.99
+- Purpose-built tools: Paper Writer, Humanizer, STEM Solver, Study Assistant, free AI & Plagiarism Checker, Revision Tool, Outline Builder
 
 COMPETITOR (${competitor}) WEAKNESSES TO ADDRESS HONESTLY:
 ${research.painPoints.filter((p) => p.toLowerCase().includes(competitor.toLowerCase()) || p.toLowerCase().includes("generic") || p.toLowerCase().includes("hallucin") || p.toLowerCase().includes("citation")).slice(0, 3).join(" | ") || `Generic responses, hallucinated citations, not built for academic integrity, no plagiarism checking, no grade targeting`}
@@ -289,7 +289,7 @@ TRUST SIGNALS TO INCLUDE (for LightspeedGhost):
 - Plagiarism ceiling: ≤8% (industry standard is ≤20%)
 - Writing reads naturally and reflects the student's own voice; the Humanizer reduces FALSE AI-detection flags (NEVER frame as "0% AI score" or evading detection — note that detectors are unreliable)
 - Grade-focused tooling that helps lift a draft toward First Class / A standard
-- Price transparency: $9.99/month Starter, PAYG $1.99 minimum
+- Price transparency: Free plan forever ($0), Pro $29.99/month, custom Institution plan, PAYG from $1.99 — the AI & Plagiarism Checker is free because it never touches an AI model
 - No lock-in: cancel anytime
 - Academic integrity-compliant: writing assistance you review and edit, not content for verbatim submission
 

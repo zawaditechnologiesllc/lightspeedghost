@@ -7,7 +7,7 @@ import {
 import { Logo } from "@/components/Logo";
 
 // ── About — the LightSpeed Ghost story ─────────────────────────────────────────
-// Light landing palette throughout: #f7f9fb bg · #131b2e ink · #10b981 primary.
+// Light landing palette throughout: #eef7f1 bg · #131b2e ink · #10b981 primary.
 
 const JOURNEY = [
   {
@@ -87,7 +87,7 @@ function Portrait({ slug, name, from, to, skin, hair, shirt, style }: (typeof LE
           <rect width="96" height="96" fill={`url(#${gid})`} opacity="0.9" />
           {/* shoulders / blazer */}
           <path d="M14 96 C14 74 32 65 48 65 C64 65 82 74 82 96 Z" fill={shirt} />
-          <path d="M42 66 L48 78 L54 66 Z" fill="#f7f9fb" />
+          <path d="M42 66 L48 78 L54 66 Z" fill="#eef7f1" />
           {/* neck */}
           <rect x="41" y="50" width="14" height="16" rx="6" fill={skin} />
           {/* head */}
@@ -132,31 +132,31 @@ export default function About() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
+    <div className="min-h-screen bg-[#eef7f1] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
       {/* ─── NAV ─── */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#e0e3e5]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <Link href="/"><Logo size={30} textSize="text-base" variant="light" className="cursor-pointer select-none shrink-0" /></Link>
           <nav className="hidden md:flex items-center gap-0.5">
             {navLinks.map((i) => i.href.startsWith("#") ? (
-              <a key={i.label} href={i.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors">{i.label}</a>
+              <a key={i.label} href={i.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed] transition-colors">{i.label}</a>
             ) : (
-              <Link key={i.label} href={i.href}><span className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors cursor-pointer">{i.label}</span></Link>
+              <Link key={i.label} href={i.href}><span className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed] transition-colors cursor-pointer">{i.label}</span></Link>
             ))}
           </nav>
           <div className="hidden md:flex items-center gap-2.5">
             <Link href="/auth"><span className="px-5 py-2.5 text-sm bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-colors cursor-pointer shadow-md shadow-[#10b981]/20">Get started</span></Link>
           </div>
-          <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-[#45464d] rounded-lg hover:bg-[#f2f4f6]" aria-label="Menu">
+          <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-[#45464d] rounded-lg hover:bg-[#e8f3ed]" aria-label="Menu">
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
         {mobileOpen && (
           <div className="md:hidden bg-white border-t border-[#e0e3e5] px-4 py-4 space-y-1 shadow-lg">
             {navLinks.map((i) => i.href.startsWith("#") ? (
-              <a key={i.label} href={i.href} onClick={() => setMobileOpen(false)} className="block px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6]">{i.label}</a>
+              <a key={i.label} href={i.href} onClick={() => setMobileOpen(false)} className="block px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed]">{i.label}</a>
             ) : (
-              <Link key={i.label} href={i.href}><span onClick={() => setMobileOpen(false)} className="block px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] cursor-pointer">{i.label}</span></Link>
+              <Link key={i.label} href={i.href}><span onClick={() => setMobileOpen(false)} className="block px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed] cursor-pointer">{i.label}</span></Link>
             ))}
             <div className="pt-3 border-t border-[#e0e3e5] mt-2">
               <Link href="/auth"><span onClick={() => setMobileOpen(false)} className="block text-center px-4 py-2.5 text-sm bg-[#10b981] text-white font-semibold rounded-lg cursor-pointer">Get started</span></Link>
@@ -202,7 +202,7 @@ export default function About() {
                 {[[60, 40], [140, 70], [230, 30], [340, 60], [430, 25], [520, 55], [640, 35], [720, 70], [770, 45], [90, 110], [690, 105]].map(([x, y], i) => (
                   <circle key={i} cx={x} cy={y} r={i % 3 === 0 ? 2 : 1.3} fill="#ffffff" opacity={0.75} />
                 ))}
-                <circle cx="700" cy="60" r="22" fill="#f7f9fb" opacity="0.95" />
+                <circle cx="700" cy="60" r="22" fill="#eef7f1" opacity="0.95" />
                 <circle cx="692" cy="54" r="20" fill="url(#ab-sky)" opacity="0.55" />
                 {/* Cambridge rooftops silhouette */}
                 <path d="M0 240 L70 240 L70 190 L110 160 L150 190 L150 240 L230 240 L230 200 L260 200 L260 240 L330 240 L330 170 L370 140 L410 170 L410 240 L480 240 L480 210 L520 210 L520 240 L600 240 L600 185 L640 155 L680 185 L680 240 L800 240 L800 300 L0 300 Z" fill="#0d1322" />
@@ -218,7 +218,7 @@ export default function About() {
                 <rect x="618" y="201" width="7" height="5" rx="0.8" fill="#131b2e" />
                 <polygon points="612,214 634,214 660,300 586,300" fill="url(#ab-glow)" opacity="0.14" />
               </svg>
-              <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5 border-t border-[#e0e3e5] bg-[#f7f9fb]">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5 border-t border-[#e0e3e5] bg-[#eef7f1]">
                 <p className="text-xs text-[#45464d] font-medium">Cambridge, Massachusetts — finals week, spring 2023. One window stayed lit.</p>
                 <p className="text-[11px] text-[#76777d]">The first prototype was finished before sunrise.</p>
               </div>
@@ -273,7 +273,7 @@ export default function About() {
         </section>
 
         {/* ─── JOURNEY ─── */}
-        <section id="journey" className="py-14 sm:py-20 px-4 sm:px-6 bg-[#f2f4f6] border-y border-[#e0e3e5] scroll-mt-20">
+        <section id="journey" className="py-14 sm:py-20 px-4 sm:px-6 bg-[#e8f3ed] border-y border-[#e0e3e5] scroll-mt-20">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-10 sm:mb-14">
               <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">The journey</p>
@@ -284,7 +284,7 @@ export default function About() {
               <div className="space-y-8">
                 {JOURNEY.map((j, i) => (
                   <div key={j.year} className={`relative flex flex-col sm:flex-row gap-4 sm:gap-10 ${i % 2 === 1 ? "sm:flex-row-reverse" : ""}`}>
-                    <div className="absolute left-[11px] sm:left-1/2 sm:-translate-x-1/2 w-4 h-4 rounded-full bg-[#10b981] border-4 border-[#f2f4f6] mt-1.5" />
+                    <div className="absolute left-[11px] sm:left-1/2 sm:-translate-x-1/2 w-4 h-4 rounded-full bg-[#10b981] border-4 border-[#e8f3ed] mt-1.5" />
                     <div className="sm:w-1/2" />
                     <div className="sm:w-1/2 pl-10 sm:pl-0">
                       <div className="rounded-2xl border border-[#e0e3e5] bg-white p-5 shadow-sm text-left">
@@ -329,7 +329,7 @@ export default function About() {
               { icon: ShieldCheck, t: "Your integrity first", d: "Plagiarism measured under 8% before delivery, AI-detection tools you run yourself, and revision that teaches." },
               { icon: BookOpen, t: "Every level, every subject", d: "High school to PhD, essays to dissertations, calculus to corporate finance — guardrails tuned to your level." },
             ].map(({ icon: Icon, t, d }) => (
-              <div key={t} className="rounded-2xl border border-[#e0e3e5] bg-[#f7f9fb] p-5">
+              <div key={t} className="rounded-2xl border border-[#e0e3e5] bg-[#eef7f1] p-5">
                 <div className="w-10 h-10 rounded-xl bg-[#10b981]/10 flex items-center justify-center mb-3"><Icon size={17} className="text-[#10b981]" /></div>
                 <h3 className="font-bold text-[#191c1e] mb-1.5 text-sm">{t}</h3>
                 <p className="text-xs text-[#45464d] leading-relaxed">{d}</p>

@@ -8,14 +8,14 @@ import { AuthForm } from "@/components/auth/AuthForm";
 // ?next= is read by AuthForm to return the user where they were headed.
 export default function Auth() {
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased flex flex-col">
+    <div className="min-h-screen bg-[#eef7f1] text-[#191c1e] antialiased flex flex-col">
       <header className="w-full border-b border-[#e0e3e5] bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link href="/">
             <Logo size={30} textSize="text-base" variant="light" className="cursor-pointer select-none" />
           </Link>
           <Link href="/">
-            <span className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors cursor-pointer">
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed] transition-colors cursor-pointer">
               <ArrowLeft size={15} /> Back to home
             </span>
           </Link>

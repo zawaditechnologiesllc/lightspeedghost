@@ -74,8 +74,8 @@
   --elevate-1: rgba(0,0,0, .05);
   --elevate-2: rgba(0,0,0, .10);
 
-  /* Page canvas — clean off-white with a faint mint tint */
-  --background: 160 30% 98%;
+  /* Page canvas — soft mint (matches the landing's #eef7f1), never stark white */
+  --background: 150 39% 95%;
   /* Text — deep slate, high contrast */
   --foreground: 220 42% 10%;
   /* Borders — soft green-gray */

@@ -143,7 +143,7 @@ Set all of these in your hosting provider (Render → Environment Variables):
 | Plan | Price | Limits |
 |---|---|---|
 | **Free** | $0 forever | Unlimited in-browser Writing Analyzer + 3 plagiarism/AI checks per month in local (non-LLM) detection mode. All AI-generation tools are 0 — paywall prompts Pro or PAYG. |
-| **Pro Monthly** | $29.99/mo | 15 papers, 20 revisions, 20 humanize, 60 STEM, 150 study, 20 plagiarism, 20 outlines |
+| **Pro Monthly** | $29.99/mo | 15 papers, 20 revisions, 20 humanize, 40 STEM, 150 study, 30 plagiarism, 20 outlines |
 | **Pro Annual** | $269/yr | Same as Pro Monthly (saves 25%) |
 | **Institution** | Custom quote | Custom seats, one invoice — request via /enterprise contact |
 | **Ebooks Monthly** | $29.99/mo | 15 AI ebooks/month for publishing |
