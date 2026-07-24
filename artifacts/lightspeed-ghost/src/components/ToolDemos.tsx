@@ -610,9 +610,9 @@ const SHOWCASES: Showcase[] = [
     demo: <HumanizerDemo />,
   },
   {
-    anchor: "tool-plagiarism", icon: ShieldCheck, kicker: "Verify Before You Submit · AI & Plagiarism Checker",
-    headline: "Know before your professor does.",
-    desc: "Verify your own work for originality and accuracy before you submit. Every similarity match is traced back to its real source so you can check and correct it yourself — plus an AI-content probability score on the same scan.",
+    anchor: "tool-plagiarism", icon: ShieldCheck, kicker: "Free · Verify Before You Submit · AI & Plagiarism Checker", badge: "Free — no AI model",
+    headline: "Know before your professor does — free.",
+    desc: "The free tool at the top of the page. Verify your own work for originality and accuracy before you submit. Every similarity match is traced back to its real source so you can check and correct it yourself — plus an AI-content probability score on the same scan. It never touches an AI model, so it's free.",
     bullets: [
       "Similarity measured against 10B+ indexed pages",
       "Every match traced to its real source, sentence by sentence",
@@ -620,7 +620,8 @@ const SHOWCASES: Showcase[] = [
       "Downloadable report you can keep as evidence",
     ],
     capabilities: ["Structural code plagiarism — MOSS-style fingerprinting", "Catches renamed variables & reshuffled logic"],
-    cta: "Check my paper",
+    cta: "Check your writing free",
+    ctaNote: "Free forever · never touches an AI model · sign in to run the full scan",
     demo: <PlagiarismDemo />,
   },
   {
@@ -675,7 +676,7 @@ export function ToolDemosSection() {
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
-          <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">One subscription. Seven tools. Watch them work.</p>
+          <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">One workspace · a free checker + every writing tool · watch them work</p>
           <h2 className="text-3xl sm:text-4xl font-bold leading-tight mb-4 text-[#131b2e]">
             Everything you need, built on real research.
           </h2>

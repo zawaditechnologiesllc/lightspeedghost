@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  X, PenLine, BookOpen, Files, ShieldCheck, FlaskConical,
+  X, PenLine, BookOpen, Files, FlaskConical,
   GraduationCap, Wand2, ShoppingCart, ChevronDown,
 } from "lucide-react";
 import {
@@ -30,7 +30,6 @@ const TOOLS: ToolItem[] = [
   { key: "humanizer",  label: "LightSpeed Humanizer",  desc: "A natural, authentic academic voice",         icon: Wand2,         color: "text-purple-400",  bg: "bg-purple-500/10",  tiered: true },
   { key: "stem",       label: "STEM Problem",          desc: "Step-by-step solve with graphs — $1.99",      icon: FlaskConical,  color: "text-cyan-400",    bg: "bg-cyan-500/10",    tiered: false },
   { key: "study",      label: "Study Day Pass",        desc: "Unlimited AI tutor for 24 hours — $2.99",     icon: GraduationCap, color: "text-amber-400",   bg: "bg-amber-500/10",   tiered: false },
-  { key: "plagiarism", label: "Plagiarism Check",      desc: "Full AI + similarity scan — $1.99",           icon: ShieldCheck,   color: "text-emerald-400", bg: "bg-emerald-500/10", tiered: false },
   { key: "outline",    label: "Outline",               desc: "Structured outline for any paper — $1.99",    icon: BookOpen,      color: "text-indigo-400",  bg: "bg-indigo-500/10",  tiered: false },
 ];
 

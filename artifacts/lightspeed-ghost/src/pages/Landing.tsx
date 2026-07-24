@@ -117,7 +117,7 @@ const testimonials = [
 const faqs = [
   {
     q: "What is Light Speed Ghost?",
-    a: "Light Speed Ghost is an AI-powered academic toolkit for students from high school through to PhD. Unlike general AI that writes from memory, the research-facing tools write from real academic papers pulled from 35+ live databases (OpenAlex, PubMed, JSTOR, Scopus, arXiv and more) — 10 billion+ indexed sources. One subscription includes seven tools: Paper Writer, Outline Builder, Paper Revision, AI & Plagiarism Checker, LightSpeed Humanizer (for a natural academic voice in your own words), STEM Solver with step-by-step working, and a Study Assistant that reads your own materials.",
+    a: "Light Speed Ghost is an AI-powered academic toolkit for students from high school through to PhD. Unlike general AI that writes from memory, the research-facing tools write from real academic papers pulled from 35+ live databases (OpenAlex, PubMed, JSTOR, Scopus, arXiv and more) — 10 billion+ indexed sources. A free AI & Plagiarism Checker is built into the command box and open to everyone — no subscription and no card needed, because it never touches an AI model. One subscription then unlocks six AI tools: Paper Writer, Outline Builder, Paper Revision, LightSpeed Humanizer (for a natural academic voice in your own words), STEM Solver with step-by-step working, and a Study Assistant that reads your own materials.",
   },
   {
     q: "What is the AI Study Assistant and what can it generate?",
@@ -153,7 +153,7 @@ const faqs = [
   },
   {
     q: "How does Pay-As-You-Go work?",
-    a: "No subscription needed. You pay per job at the time of use. Paper generation is priced by document type — from $3.99 for a short discussion post up to $59.99 for a full dissertation. Plagiarism checks are $1.99 per submission (Scribbr charges $19.95 for the same thing). Credits never expire.",
+    a: "No subscription needed. You pay per job at the time of use. Paper generation is priced by document type — from $3.99 for a short discussion post up to $59.99 for a full dissertation. STEM solves and outlines start at $1.99. The AI & Plagiarism Checker is free for everyone — it never touches an AI model, so there's nothing to pay per use (Scribbr charges $19.95 for the same thing). Credits never expire.",
   },
 ];
 
@@ -268,11 +268,6 @@ const paygFlatTools = [
     tool: "Study Assistant", toolId: "study" as PaygTool, Icon: GraduationCap, color: "amber",
     price: "$2.99", unit: "/ day pass",
     note: "Unlimited Q&A turns for 24 hours. Flashcards, summaries, quiz mode.",
-  },
-  {
-    tool: "Plagiarism + AI Check", toolId: "plagiarism" as PaygTool, Icon: ShieldCheck, color: "emerald",
-    price: "$1.99", unit: "per submission",
-    note: "Similarity detection across 99B+ academic sources. Includes AI-generated content scoring.",
   },
   {
     tool: "Outline Generator", toolId: "outline" as PaygTool, Icon: BookOpen, color: "orange",
@@ -545,7 +540,7 @@ export default function Landing() {
             </span>
           </div>
 
-          {/* Right: Upgrade + Start for free — both open the pricing popup */}
+          {/* Right: Upgrade → plans · Start for free → login / sign-up */}
           <div className="flex items-center gap-1.5 ml-auto md:ml-0">
             <button
               onClick={() => setPricingOpen(true)}
@@ -554,7 +549,7 @@ export default function Landing() {
               Upgrade
             </button>
             <button
-              onClick={() => setPricingOpen(true)}
+              onClick={() => openAuth("signup")}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-all shadow-md shadow-[#10b981]/20 active:scale-95 whitespace-nowrap"
             >
               Start for free
@@ -602,14 +597,38 @@ export default function Landing() {
           {/* The open, in-browser analyzer */}
           <HeroAnalyzer authed={!!user} onRequireAuth={() => openAuth("login")} />
 
+          {/* Free AI & Plagiarism Checker — the free tool's power, spelled out */}
+          <div className="mt-6 max-w-3xl mx-auto rounded-2xl border border-[#d1fae5] bg-[#f0fdf4] px-4 sm:px-5 py-4 text-left">
+            <div className="flex flex-wrap items-center gap-2 mb-2.5">
+              <ShieldCheck size={15} className="text-[#10b981]" />
+              <span className="text-sm font-bold text-[#131b2e]">Free AI &amp; Plagiarism Checker — built into the box above</span>
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#10b981] text-white uppercase tracking-wide">Free</span>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-x-5 gap-y-1.5">
+              {[
+                "Similarity measured against 10B+ indexed pages",
+                "Every match traced to its real source, sentence by sentence",
+                "AI-content probability on the same report",
+                "Downloadable report you can keep as evidence",
+                "Structural code plagiarism — MOSS-style fingerprinting",
+                "Catches renamed variables & reshuffled logic",
+              ].map((f) => (
+                <span key={f} className="flex items-start gap-2 text-[12px] text-[#45464d]">
+                  <CheckCircle size={13} className="text-[#10b981] shrink-0 mt-0.5" /> {f}
+                </span>
+              ))}
+            </div>
+            <p className="text-[11px] text-[#76777d] mt-2.5">Never touches an AI model — so it's free. Sign in to run the full scan against live academic sources and download your report.</p>
+          </div>
+
           {/* Suggestion starters */}
           <div className="mt-10">
             <p className="text-xs text-[#76777d] mb-3">Need a starting point? Try one of these…</p>
             <div className="grid sm:grid-cols-3 gap-3 max-w-3xl mx-auto text-left">
               {[
-                { icon: PenLine,     title: "Write a research paper",     body: "Grounded in real citations from 35+ databases",     href: "/write",      accent: "text-emerald-600" },
-                { icon: ShieldCheck, title: "Check for AI & plagiarism",  body: "Similarity + AI-content score, every source traced", href: "/plagiarism", accent: "text-emerald-600" },
-                { icon: FlaskConical,title: "Solve a STEM problem",       body: "Step-by-step, photo upload, answers verified",       href: "/stem",       accent: "text-teal-600" },
+                { icon: PenLine,       title: "Write a research paper", body: "Grounded in real citations from 35+ databases", href: "/write", accent: "text-emerald-600" },
+                { icon: GraduationCap, title: "AI Study Assistant",     body: "A tutor that remembers you — flashcards, quizzes, summaries", href: "/study", accent: "text-emerald-600" },
+                { icon: FlaskConical,  title: "Solve a STEM problem",   body: "Step-by-step, photo upload, answers verified", href: "/stem", accent: "text-teal-600" },
               ].map(({ icon: Icon, title, body, href, accent }) => (
                 <Link key={title} href={href}>
                   <span className="block h-full rounded-xl border border-[#e0e3e5] bg-white p-4 hover:border-[#10b981]/50 hover:shadow-md transition-all cursor-pointer">
@@ -903,7 +922,7 @@ export default function Landing() {
               </div>
               <div className="space-y-6">
                 {[
-                  { num: "01", title: "Pick exactly what you need", body: "One paper, one plagiarism check, one STEM problem. Browse the pricing table below and choose the tool and tier that matches your task." },
+                  { num: "01", title: "Pick exactly what you need", body: "One paper, one STEM solve, one study pass. Browse the pricing table below and choose the tool and tier that matches your task — the AI & Plagiarism Checker stays free." },
                   { num: "02", title: "Pay once — instant access", body: "Checkout takes under a minute. Pay by card or mobile money (M-Pesa, MTN, Airtel). Your access unlocks immediately after payment." },
                   { num: "03", title: "Use it, download it, done", body: "No account required beyond signup. Your PAYG purchase never expires — come back whenever you need it. No recurring charge, ever." },
                 ].map(({ num, title, body }) => (

@@ -37,14 +37,6 @@ const quickActions = [
     glow: "group-hover:shadow-cyan-500/20",
   },
   {
-    path: "/plagiarism",
-    label: "AI Checker",
-    desc: "Detect & humanize AI content",
-    icon: ShieldCheck,
-    gradient: "from-sky-400 to-blue-500",
-    glow: "group-hover:shadow-sky-500/20",
-  },
-  {
     path: "/humanizer",
     label: "LightSpeed Humanizer",
     desc: "Make AI text sound genuinely human",
@@ -101,18 +93,16 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5 sm:space-y-7">
-      {/* Green lightning bolt + benefit heading, then the free command box —
-          the same instant, in-browser check as the landing hero. */}
-      <div>
-        <div className="flex items-center gap-2.5 mb-3">
-          <Logo size={32} showText={false} />
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground leading-tight">The AI Workspace for Students</h1>
-            <p className="text-muted-foreground text-[13px] sm:text-sm mt-0.5">
-              Study, write, and solve STEM using evidence from 35+ databases. Check your writing free below.
-            </p>
-          </div>
+      {/* Green lightning bolt + benefit heading (centered), then the free
+          command box — the same instant, in-browser check as the landing hero. */}
+      <div className="text-center">
+        <div className="flex items-center justify-center gap-2.5 mb-2">
+          <Logo size={30} showText={false} />
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground leading-tight">The AI Workspace for Students</h1>
         </div>
+        <p className="text-muted-foreground text-[13px] sm:text-sm mb-4 max-w-2xl mx-auto">
+          Study, write, and solve STEM using evidence from 35+ databases. Check your writing free below.
+        </p>
         <HeroAnalyzer authed />
       </div>
 
@@ -133,7 +123,7 @@ export default function Dashboard() {
           <div className="grid sm:grid-cols-3 gap-2.5">
             {[
               { step: "1", title: "Write your first paper", desc: "Upload a rubric for best results", href: "/write", color: "text-emerald-600 border-emerald-500/20 bg-emerald-500/5" },
-              { step: "2", title: "Check for AI & plagiarism", desc: "See your similarity and AI score", href: "/plagiarism", color: "text-teal-600 border-teal-500/20 bg-teal-500/5" },
+              { step: "2", title: "Run a free AI & plagiarism check", desc: "Free — see your similarity and AI score", href: "/plagiarism", color: "text-teal-600 border-teal-500/20 bg-teal-500/5" },
               { step: "3", title: "Solve a STEM problem", desc: "Step-by-step with LaTeX & graphs", href: "/stem", color: "text-green-600 border-green-500/20 bg-green-500/5" },
             ].map(({ step, title, desc, href, color }) => (
               <Link key={step} href={href}>
