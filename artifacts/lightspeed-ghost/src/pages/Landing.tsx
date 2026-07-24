@@ -41,7 +41,7 @@ const tools = [
     desc: "Writes from real academic papers, never from memory. Every paragraph is grounded in 35+ live databases (10B+ indexed papers) with real, clickable DOI citations. Upload your rubric — or we apply a preset Grade A standard — and cross-check every output against the A-grade criteria, targeting 92%+. Covers 35+ paper types, high school to PhD.",
     badge: "Most used",
     href: "/auth",
-    color: "bg-blue-50 text-blue-600 border-blue-200",
+    color: "bg-emerald-50 text-emerald-600 border-emerald-200",
   },
   {
     icon: BookOpen,
@@ -49,7 +49,7 @@ const tools = [
     desc: "Structure your argument before writing a single sentence. Upload your assignment brief and get a complete hierarchical outline built for your topic in seconds.",
     badge: null,
     href: "/auth",
-    color: "bg-indigo-50 text-indigo-600 border-indigo-200",
+    color: "bg-green-50 text-green-600 border-green-200",
   },
   {
     icon: FileText,
@@ -57,7 +57,7 @@ const tools = [
     desc: "Paste your draft, upload the rubric, set your target grade. We rewrite what needs rewriting and explain every change so you actually learn from it.",
     badge: "Grade booster",
     href: "/auth",
-    color: "bg-violet-50 text-violet-600 border-violet-200",
+    color: "bg-teal-50 text-teal-600 border-teal-200",
   },
   {
     icon: ShieldCheck,
@@ -73,7 +73,7 @@ const tools = [
     desc: "Photograph your problem set or upload a dataset. Get full step-by-step solutions with equations, graphs, and linked research papers — Math, Physics, Chemistry, CS, and more. Drop in lab data and it analyses it for you.",
     badge: "Photo upload",
     href: "/auth",
-    color: "bg-cyan-50 text-cyan-600 border-cyan-200",
+    color: "bg-teal-50 text-teal-600 border-teal-200",
   },
   {
     icon: GraduationCap,
@@ -89,7 +89,7 @@ const tools = [
     desc: "AI-assisted drafts can read stiff and robotic. The Humanizer rewrites them into natural, authentic academic prose in your own voice — varied rhythm, genuine phrasing — so your writing reads as authentically human, never machine-generated.",
     badge: "Authentic voice",
     href: "/auth",
-    color: "bg-purple-50 text-purple-600 border-purple-200",
+    color: "bg-teal-50 text-teal-600 border-teal-200",
   },
 ];
 
@@ -584,24 +584,19 @@ export default function Landing() {
         <div className="absolute -top-24 right-10 w-72 h-72 bg-[#5eead4]/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#d1fae5] text-[#047857] text-[10px] sm:text-[11px] font-bold uppercase tracking-wide mb-5">
-            <Zap size={12} className="text-[#10b981]" /> Free forever · your text never touches an AI model
-          </div>
-
           <h1 className="text-3xl sm:text-5xl font-bold leading-[1.1] tracking-tight mb-4 text-[#131b2e]" style={{ letterSpacing: "-0.02em" }}>
             {siteContent.heroHeadline ? (
               siteContent.heroHeadline
             ) : (
               <>
-                Your whole academic toolkit,{" "}
-                <span className="text-[#10b981]">in one place.</span>
+                The AI Workspace <span className="text-[#10b981]">for Students</span>
               </>
             )}
           </h1>
 
           <p className="text-base sm:text-lg text-[#45464d] max-w-2xl mx-auto leading-relaxed mb-8">
             {siteContent.heroSubtext ||
-              "Check your writing free in the box below — or pick a tool on the left to write from real research, humanize, revise, and solve STEM. High school to PhD. No card required to start."}
+              "Study, write, and solve STEM problems using evidence from 35+ academic databases with over 10 billion research papers."}
           </p>
 
           {/* The open, in-browser analyzer */}
@@ -612,9 +607,9 @@ export default function Landing() {
             <p className="text-xs text-[#76777d] mb-3">Need a starting point? Try one of these…</p>
             <div className="grid sm:grid-cols-3 gap-3 max-w-3xl mx-auto text-left">
               {[
-                { icon: PenLine,     title: "Write a research paper",     body: "Grounded in real citations from 35+ databases",     href: "/write",      accent: "text-blue-600" },
+                { icon: PenLine,     title: "Write a research paper",     body: "Grounded in real citations from 35+ databases",     href: "/write",      accent: "text-emerald-600" },
                 { icon: ShieldCheck, title: "Check for AI & plagiarism",  body: "Similarity + AI-content score, every source traced", href: "/plagiarism", accent: "text-emerald-600" },
-                { icon: FlaskConical,title: "Solve a STEM problem",       body: "Step-by-step, photo upload, answers verified",       href: "/stem",       accent: "text-cyan-600" },
+                { icon: FlaskConical,title: "Solve a STEM problem",       body: "Step-by-step, photo upload, answers verified",       href: "/stem",       accent: "text-teal-600" },
               ].map(({ icon: Icon, title, body, href, accent }) => (
                 <Link key={title} href={href}>
                   <span className="block h-full rounded-xl border border-[#e0e3e5] bg-white p-4 hover:border-[#10b981]/50 hover:shadow-md transition-all cursor-pointer">
@@ -694,7 +689,7 @@ export default function Landing() {
                 value: "10B+",
                 label: "Real indexed papers",
                 sub: "Every output traces to a real source you can click through and verify — OpenAlex, PubMed, JSTOR, Scopus, arXiv + 30 more",
-                color: "text-blue-600",
+                color: "text-emerald-600",
               },
               {
                 value: "92%+",
@@ -1022,8 +1017,8 @@ export default function Landing() {
             {/* Writing tools — tiered by document type */}
             <div className="grid md:grid-cols-3 gap-4 sm:gap-5 mb-4 sm:mb-5">
               {paygWritingTools.map(({ tool, toolId, color, Icon, tiers }) => {
-                const iconCls: Record<string,string> = { blue: "text-blue-600", violet: "text-violet-600", indigo: "text-indigo-600" };
-                const btnCls: Record<string,string>  = { blue: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100", violet: "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100", indigo: "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100" };
+                const iconCls: Record<string,string> = { blue: "text-emerald-600", violet: "text-teal-600", indigo: "text-green-600" };
+                const btnCls: Record<string,string>  = { blue: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100", violet: "bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100", indigo: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" };
                 return (
                   <div key={tool} className="bg-white border border-[#e0e3e5] rounded-xl overflow-hidden shadow-sm">
                     <div className="flex items-center gap-2 px-5 py-3.5 bg-[#f2f4f6] border-b border-[#e0e3e5]">
@@ -1055,8 +1050,8 @@ export default function Landing() {
             {/* Flat-rate tools */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
               {paygFlatTools.map(({ tool, toolId, Icon, color, price, unit, note }) => {
-                const iconCls: Record<string,string> = { cyan: "text-cyan-600", amber: "text-amber-600", emerald: "text-emerald-600", orange: "text-orange-600" };
-                const btnBg: Record<string,string>   = { cyan: "bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100", amber: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100", emerald: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100", orange: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100" };
+                const iconCls: Record<string,string> = { cyan: "text-teal-600", amber: "text-amber-600", emerald: "text-emerald-600", orange: "text-orange-600" };
+                const btnBg: Record<string,string>   = { cyan: "bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100", amber: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100", emerald: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100", orange: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100" };
                 return (
                   <div key={tool} className="border border-[#e0e3e5] bg-white rounded-xl p-4 sm:p-5 flex flex-col shadow-sm">
                     <Icon size={16} className={`${iconCls[color]} mb-3`} />

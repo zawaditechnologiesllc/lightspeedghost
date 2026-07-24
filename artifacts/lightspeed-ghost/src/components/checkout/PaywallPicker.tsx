@@ -108,23 +108,23 @@ export function PaywallPicker({
           {!isPro && (
             <button
               onClick={onChooseSubscription}
-              className="w-full group text-left p-4 rounded-xl bg-gradient-to-br from-blue-900/30 to-blue-800/20 border border-blue-500/25 hover:border-blue-400/40 hover:from-blue-900/40 transition-all"
+              className="w-full group text-left p-4 rounded-xl bg-gradient-to-br from-emerald-900/30 to-emerald-800/20 border border-emerald-500/25 hover:border-emerald-400/40 hover:from-emerald-900/40 transition-all"
             >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
-                    <Sparkles size={13} className="text-blue-400" />
+                    <Sparkles size={13} className="text-emerald-400" />
                     <span className="text-sm font-bold text-white">Pro Plan</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-semibold">BEST VALUE</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">BEST VALUE</span>
                   </div>
                   <div className="text-xs text-white/40">$29.99/month · cancel anytime</div>
                 </div>
-                <ArrowRight size={14} className="text-blue-400/70 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all mt-0.5 shrink-0" />
+                <ArrowRight size={14} className="text-emerald-400/70 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all mt-0.5 shrink-0" />
               </div>
               <div className="grid grid-cols-2 gap-1">
                 {perks.map((p) => (
                   <div key={p} className="flex items-center gap-1.5 text-[11px] text-white/55">
-                    <CheckCircle size={10} className="text-blue-400/80 shrink-0" />
+                    <CheckCircle size={10} className="text-emerald-400/80 shrink-0" />
                     {p}
                   </div>
                 ))}

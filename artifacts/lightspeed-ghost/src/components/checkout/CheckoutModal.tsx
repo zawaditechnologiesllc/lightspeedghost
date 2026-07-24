@@ -331,15 +331,15 @@ export function CheckoutModal({
                     onClick={() => { setUseCardFallback(true); setPayWithCredits(false); }}
                     className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 border transition-all ${
                       useCardFallback
-                        ? "border-blue-500/40 bg-blue-900/10"
+                        ? "border-emerald-500/40 bg-emerald-900/10"
                         : "border-white/8 bg-white/[0.02] hover:bg-white/5"
                     }`}
                   >
                     <div className="w-9 h-9 rounded-lg bg-white/8 flex items-center justify-center shrink-0">
-                      <CreditCard size={16} className={useCardFallback ? "text-blue-400" : "text-white/50"} />
+                      <CreditCard size={16} className={useCardFallback ? "text-emerald-400" : "text-white/50"} />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className={`text-sm font-semibold ${useCardFallback ? "text-blue-400" : "text-white"}`}>
+                      <div className={`text-sm font-semibold ${useCardFallback ? "text-emerald-400" : "text-white"}`}>
                         Pay by Card
                       </div>
                       <div className="text-xs text-white/35 mt-0.5">
@@ -347,7 +347,7 @@ export function CheckoutModal({
                       </div>
                     </div>
                     {useCardFallback && (
-                      <div className="shrink-0 w-4 h-4 rounded-full border-2 border-blue-400 bg-blue-400/30" />
+                      <div className="shrink-0 w-4 h-4 rounded-full border-2 border-emerald-400 bg-emerald-400/30" />
                     )}
                   </button>
                 ) : !gatewayInfo.isMobileMoney ? (

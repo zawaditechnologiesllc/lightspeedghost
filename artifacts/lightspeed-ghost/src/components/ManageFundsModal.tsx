@@ -13,13 +13,13 @@ interface ManageFundsModalProps {
 }
 
 const TOOL_LABELS = [
-  { key: "paper",      label: "Papers",           color: "bg-blue-500" },
-  { key: "revision",   label: "Revisions",         color: "bg-violet-500" },
-  { key: "humanizer",  label: "Humanizer",         color: "bg-purple-500" },
-  { key: "stem",       label: "STEM Solves",        color: "bg-cyan-500" },
+  { key: "paper",      label: "Papers",           color: "bg-emerald-500" },
+  { key: "revision",   label: "Revisions",         color: "bg-teal-500" },
+  { key: "humanizer",  label: "Humanizer",         color: "bg-teal-500" },
+  { key: "stem",       label: "STEM Solves",        color: "bg-teal-500" },
   { key: "study",      label: "Study Sessions",    color: "bg-amber-500" },
   { key: "plagiarism", label: "Plagiarism Checks", color: "bg-emerald-500" },
-  { key: "outline",    label: "Outlines",          color: "bg-indigo-500" },
+  { key: "outline",    label: "Outlines",          color: "bg-green-500" },
 ] as const;
 
 const PLAN_ICON: Record<string, React.ElementType> = {
@@ -34,9 +34,9 @@ const PLAN_ICON: Record<string, React.ElementType> = {
 
 const PLAN_COLOR: Record<string, string> = {
   none:                "text-muted-foreground",
-  free:                "text-sky-400",
-  starter:             "text-blue-400",
-  student_pro_monthly: "text-violet-400",
+  free:                "text-emerald-400",
+  starter:             "text-emerald-400",
+  student_pro_monthly: "text-teal-400",
   pro:                 "text-amber-400",
   campus:              "text-emerald-400",
   institution:         "text-emerald-400",
@@ -126,17 +126,17 @@ export function ManageFundsModal({ open, onClose }: ManageFundsModalProps) {
                   </span>
                 )}
                 {!planLoading && resolvedPlan === "free" && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/20 font-medium">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium">
                     $0/mo
                   </span>
                 )}
                 {!planLoading && resolvedPlan === "starter" && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20 font-medium">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium">
                     $9.99/mo
                   </span>
                 )}
                 {!planLoading && resolvedPlan === "student_pro_monthly" && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-400 border border-violet-500/20 font-medium flex items-center gap-1">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-400 border border-teal-500/20 font-medium flex items-center gap-1">
                     <Star size={9} /> $19.99/mo
                   </span>
                 )}

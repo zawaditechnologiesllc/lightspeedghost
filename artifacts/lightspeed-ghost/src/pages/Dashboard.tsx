@@ -9,6 +9,7 @@ import { useGetDocumentStats } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/apiFetch";
 import { ManageFundsModal } from "@/components/ManageFundsModal";
 import { HeroAnalyzer } from "@/components/HeroAnalyzer";
+import { Logo } from "@/components/Logo";
 
 const quickActions = [
   {
@@ -70,7 +71,7 @@ const quickActions = [
 ];
 
 export default function Dashboard() {
-  const { data: stats, isLoading } = useGetDocumentStats();
+  const { data: stats } = useGetDocumentStats();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [paygCount, setPaygCount] = useState<number>(0);
   const [plan, setPlan] = useState<string>("none");
@@ -100,39 +101,40 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5 sm:space-y-7">
-      {/* Free command box — the same instant, in-browser check as the landing
-          hero. Start here for free; the paid tools are the cards below. */}
+      {/* Green lightning bolt + benefit heading, then the free command box —
+          the same instant, in-browser check as the landing hero. */}
       <div>
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles size={16} className="text-primary" />
-          <span className="text-xs font-semibold text-primary uppercase tracking-widest">Your workspace</span>
+        <div className="flex items-center gap-2.5 mb-3">
+          <Logo size={32} showText={false} />
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground leading-tight">The AI Workspace for Students</h1>
+            <p className="text-muted-foreground text-[13px] sm:text-sm mt-0.5">
+              Study, write, and solve STEM using evidence from 35+ databases. Check your writing free below.
+            </p>
+          </div>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Check your writing free — or pick a tool</h1>
-        <p className="text-muted-foreground text-sm mt-1.5 mb-4 max-w-2xl">
-          Paste any text below for an instant AI, readability, grammar &amp; tone check — free and private, it never touches an AI model. Need the full deep scan, humanizing, or a paper from real research? Use the tools below.
-        </p>
         <HeroAnalyzer ctaMode="tool" />
       </div>
 
       {/* First-visit onboarding banner */}
       {showOnboarding && (
-        <div className="relative bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border border-blue-500/20 rounded-2xl p-4 sm:p-5">
+        <div className="relative bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 rounded-2xl p-4 sm:p-5">
           <button
             onClick={() => { setShowOnboarding(false); localStorage.setItem("lsg_onboarding_done", "1"); }}
-            className="absolute top-3 right-3 p-1.5 text-white/30 hover:text-white/70 rounded-lg hover:bg-white/5 transition-all"
+            className="absolute top-3 right-3 p-1.5 text-muted-foreground/50 hover:text-foreground rounded-lg hover:bg-muted transition-all"
           >
             <X size={14} />
           </button>
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles size={13} className="text-blue-400" />
-            <span className="text-xs font-semibold text-blue-400 uppercase tracking-widest">Get started</span>
+            <Sparkles size={13} className="text-emerald-500" />
+            <span className="text-xs font-semibold text-emerald-600 uppercase tracking-widest">Get started</span>
           </div>
           <p className="text-sm font-semibold text-foreground mb-3">Complete your first 3 actions to unlock your academic workflow:</p>
           <div className="grid sm:grid-cols-3 gap-2.5">
             {[
-              { step: "1", title: "Write your first paper", desc: "Upload a rubric for best results", href: "/write", color: "text-blue-400 border-blue-500/20 bg-blue-500/5" },
-              { step: "2", title: "Check for AI & plagiarism", desc: "See your similarity and AI score", href: "/plagiarism", color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" },
-              { step: "3", title: "Solve a STEM problem", desc: "Step-by-step with LaTeX & graphs", href: "/stem", color: "text-violet-400 border-violet-500/20 bg-violet-500/5" },
+              { step: "1", title: "Write your first paper", desc: "Upload a rubric for best results", href: "/write", color: "text-emerald-600 border-emerald-500/20 bg-emerald-500/5" },
+              { step: "2", title: "Check for AI & plagiarism", desc: "See your similarity and AI score", href: "/plagiarism", color: "text-teal-600 border-teal-500/20 bg-teal-500/5" },
+              { step: "3", title: "Solve a STEM problem", desc: "Step-by-step with LaTeX & graphs", href: "/stem", color: "text-green-600 border-green-500/20 bg-green-500/5" },
             ].map(({ step, title, desc, href, color }) => (
               <Link key={step} href={href}>
                 <div className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-80 transition-opacity ${color}`}>
@@ -149,26 +151,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {isLoading
-          ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-card border border-border rounded-xl p-4 animate-pulse">
-                <div className="h-6 w-10 bg-muted rounded mb-2" />
-                <div className="h-3 w-20 bg-muted rounded" />
-              </div>
-            ))
-          : (
-            <>
-              <StatCard label="Documents" value={stats?.totalDocuments ?? 0} icon={<Files size={15} />} color="text-blue-500" />
-              <StatCard label="Papers" value={stats?.papersWritten ?? 0} icon={<PenLine size={15} />} color="text-indigo-500" />
-              <StatCard label="Revisions" value={stats?.revisionsCompleted ?? 0} icon={<TrendingUp size={15} />} color="text-violet-500" />
-              <StatCard label="STEM Solved" value={stats?.stemSolved ?? 0} icon={<FlaskConical size={15} />} color="text-cyan-500" />
-              <StatCard label="Study Sessions" value={stats?.studySessions ?? 0} icon={<GraduationCap size={15} />} color="text-sky-500" />
-            </>
-          )}
-      </div>
 
       {/* PAYG → subscription upgrade nudge */}
       {paygCount >= 2 && (plan === "none" || plan === "free") && (
@@ -283,16 +265,6 @@ export default function Dashboard() {
 
       {/* Plans & funds popup — opened from the upgrade nudge */}
       <ManageFundsModal open={plansOpen} onClose={() => setPlansOpen(false)} />
-    </div>
-  );
-}
-
-function StatCard({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: string }) {
-  return (
-    <div className="bg-card border border-border rounded-xl p-4 hover:border-primary/30 transition-colors">
-      <div className={`mb-2 ${color}`}>{icon}</div>
-      <div className="text-2xl font-bold text-foreground tabular-nums">{value}</div>
-      <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
     </div>
   );
 }
