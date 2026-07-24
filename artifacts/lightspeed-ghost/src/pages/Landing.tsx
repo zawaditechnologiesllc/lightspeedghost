@@ -10,7 +10,7 @@ import type { PlanId, PaygTool, DocumentTier } from "@/lib/pricing";
 import {
   Zap, ArrowRight, CheckCircle, Star, Menu, X,
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
-  FileText, ChevronDown, Sparkles, BarChart3,
+  FileText, ChevronDown, Sparkles, BarChart3, Crown,
   Quote, MapPin, Mail, Instagram, Youtube, Wand2,
   Linkedin, Facebook, Share,
   Database, Layers, Clock, AlertTriangle,
@@ -35,6 +35,7 @@ function pexels(id: number, w: number, h: number, dpr = 1): string {
 // Student-life photo set (provided). Portrait-leaning IDs first for avatars.
 const STUDENT_PHOTOS = [
   { id: 36608621, alt: "Student writing notes indoors" },
+  { id: 5537535,  alt: "Positive student with workbooks" },
   { id: 6256139,  alt: "Two students studying together" },
   { id: 5538573,  alt: "Friends studying together outdoors" },
   { id: 7683898,  alt: "College students celebrating with hands raised" },
@@ -44,6 +45,7 @@ const STUDENT_PHOTOS = [
   { id: 30779621, alt: "Cheerful graduation celebration outdoors" },
   { id: 6146979,  alt: "Students writing in a notebook on the street" },
   { id: 5537996,  alt: "Students walking and chatting in a park" },
+  { id: 7972489,  alt: "Two students sitting together on a bench" },
 ];
 
 function useScrolled(threshold = 20) {
@@ -531,8 +533,8 @@ export default function Landing() {
       )}
 
 
-      {/* ─── FULL-WIDTH TOP HEADER — logo + wordmark top-left ─── */}
-      <header className={`sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#e0e3e5] transition-shadow ${scrolled ? "shadow-sm" : ""}`}>
+      {/* ─── FULL-WIDTH TOP HEADER — logo + wordmark top-left (soft-green chrome) ─── */}
+      <header className={`sticky top-0 z-40 bg-[#e6f4ec]/95 backdrop-blur-md border-b border-[#cfe8d9] transition-shadow ${scrolled ? "shadow-sm" : ""}`}>
         <div className="flex items-center gap-3 h-16 px-4 sm:px-6">
           {/* Mobile hamburger opens the tool drawer */}
           <button
@@ -562,13 +564,17 @@ export default function Landing() {
             </span>
           </div>
 
-          {/* Right: Upgrade → plans · Start for free → login / sign-up */}
-          <div className="flex items-center gap-1.5 ml-auto md:ml-0">
+          {/* Right: Upgrade to Premium → plans · Start for free → login / sign-up.
+              Premium is a clearly-visible outlined pill (crown + emerald border);
+              Start for free stays the solid-green primary conversion CTA. */}
+          <div className="flex items-center gap-2 ml-auto md:ml-0">
             <button
               onClick={() => setPricingOpen(true)}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-sm text-[#10b981] hover:text-[#059669] font-semibold rounded-lg hover:bg-[#10b981]/5 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 text-sm font-bold text-[#0d9488] bg-white border-[1.5px] border-[#10b981] rounded-lg hover:bg-[#eef7f1] shadow-sm hover:shadow transition-all active:scale-95 whitespace-nowrap"
             >
-              Upgrade to Premium
+              <Crown size={14} className="text-amber-500 fill-amber-400 shrink-0" />
+              <span className="sm:hidden">Premium</span>
+              <span className="hidden sm:inline">Upgrade to Premium</span>
             </button>
             <button
               onClick={() => openAuth("signup")}
@@ -618,28 +624,6 @@ export default function Landing() {
 
           {/* The open, in-browser analyzer */}
           <HeroAnalyzer authed={!!user} onRequireAuth={() => openAuth("login")} />
-
-          {/* Social proof — real student faces, overlapping avatars */}
-          <div className="mt-5 flex items-center justify-center gap-3">
-            <div className="flex -space-x-2.5">
-              {STUDENT_PHOTOS.slice(0, 5).map((p) => (
-                <img
-                  key={p.id}
-                  src={pexels(p.id, 48, 48)}
-                  srcSet={`${pexels(p.id, 48, 48)} 1x, ${pexels(p.id, 48, 48, 2)} 2x`}
-                  alt={p.alt}
-                  width={32}
-                  height={32}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-8 h-8 rounded-full object-cover border-2 border-white bg-[#e8f3ed] shadow-sm"
-                />
-              ))}
-            </div>
-            <span className="text-[13px] text-[#45464d]">
-              <span className="font-bold text-[#191c1e]">4M+ students</span> already writing smarter
-            </span>
-          </div>
 
           {/* Free AI & Plagiarism Checker — the free tool's power, spelled out */}
           <div className="mt-6 max-w-3xl mx-auto rounded-2xl border border-[#d1fae5] bg-[#f0fdf4] px-4 sm:px-5 py-4 text-left">
@@ -1219,16 +1203,19 @@ export default function Landing() {
             <h2 className="text-3xl sm:text-4xl font-bold text-[#131b2e]">From all-nighters to graduation day.</h2>
             <p className="text-[#45464d] text-sm mt-3 max-w-xl mx-auto">Millions of students in libraries, dorms, cafés and lecture halls trust Light Speed Ghost to get the work done.</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-            {STUDENT_PHOTOS.map((p, i) => (
+          {/* 12 uniform square tiles → perfect rows at every breakpoint
+              (2 cols = 6 rows · 3 cols = 4 rows · 4 cols = 3 rows). All lazy +
+              sized below the fold, so they never affect LCP or cause layout shift. */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            {STUDENT_PHOTOS.map((p) => (
               <div
                 key={p.id}
-                className={`relative rounded-2xl overflow-hidden bg-[#e8f3ed] shadow-sm ${i === 0 || i === 6 ? "col-span-2 row-span-1" : ""}`}
-                style={{ aspectRatio: i === 0 || i === 6 ? "2 / 1" : "1 / 1" }}
+                className="relative rounded-2xl overflow-hidden bg-[#e8f3ed] shadow-sm"
+                style={{ aspectRatio: "1 / 1" }}
               >
                 <img
-                  src={pexels(p.id, i === 0 || i === 6 ? 640 : 360, i === 0 || i === 6 ? 320 : 360)}
-                  srcSet={`${pexels(p.id, i === 0 || i === 6 ? 640 : 360, i === 0 || i === 6 ? 320 : 360)} 1x, ${pexels(p.id, i === 0 || i === 6 ? 640 : 360, i === 0 || i === 6 ? 320 : 360, 2)} 2x`}
+                  src={pexels(p.id, 400, 400)}
+                  srcSet={`${pexels(p.id, 400, 400)} 1x, ${pexels(p.id, 400, 400, 2)} 2x`}
                   alt={p.alt}
                   loading="lazy"
                   decoding="async"

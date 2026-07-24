@@ -84,10 +84,10 @@
   --card: 0 0% 100%;
   --card-foreground: 220 42% 10%;
   --card-border: 155 16% 90%;
-  /* Sidebar — light/white to match the landing */
-  --sidebar: 0 0% 100%;
+  /* Sidebar / tool rail — soft-green chrome to match the landing (#e6f4ec) */
+  --sidebar: 150 33% 93%;
   --sidebar-foreground: 220 25% 22%;
-  --sidebar-border: 155 16% 90%;
+  --sidebar-border: 150 28% 87%;
   --sidebar-primary: 160 84% 39%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 152 44% 94%;
