@@ -56,12 +56,14 @@ export const PLAN_LIMITS: Record<string, Record<ToolName, number | null>> = {
     ebook:      0,
   },
   pro: {
-    paper:      15,  // per month
+    paper:      15,  // per month — headline value (Sonnet, ~$0.35 worst-case each)
     revision:   20,  // per month — paired with papers
     humanizer:  20,  // per month — paired with papers
-    stem:       60,  // per month
-    study:      150, // per month
-    plagiarism: 20,  // per month — ~1 check per paper + buffer
+    stem:       40,  // per month — trimmed from 60: STEM (Sonnet/ReAct) was the top
+                     // worst-case cost driver; 40/mo is still >1/day and generous
+    study:      150, // per month — Haiku text, ~$0.01 each: cheap, keep generous
+    plagiarism: 30,  // per month — raised from 20: the free checker is near-zero
+                     // marginal cost, so Pro gets a bigger deep-scan allowance
     outline:    20,  // per month — paired with papers
     assistant:  300, // per month — Haiku text; Sonnet image/doc (Pro only)
     ebook:      0,   // not included — requires ebooks_monthly add-on

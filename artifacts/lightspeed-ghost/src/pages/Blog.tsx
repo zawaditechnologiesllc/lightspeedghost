@@ -127,7 +127,7 @@ export default function Blog() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased">
+    <div className="min-h-screen bg-[#eef7f1] text-[#191c1e] antialiased">
       <header className="border-b border-[#eceef0] px-6 h-16 flex items-center justify-between max-w-7xl mx-auto">
         <Link href="/"><Logo size={28} textSize="text-base" variant="light" className="cursor-pointer" /></Link>
         <div className="flex items-center gap-4">
@@ -148,7 +148,7 @@ export default function Blog() {
         <div className="grid sm:grid-cols-2 gap-5">
           {ARTICLES.map((a) => (
             <a key={a.slug} href={`/blog/${a.slug}`}
-              className="group flex flex-col p-6 rounded-2xl bg-white border border-[#e0e3e5] hover:border-[#c6c6cd] hover:bg-[#f2f4f6] transition-all cursor-pointer">
+              className="group flex flex-col p-6 rounded-2xl bg-white border border-[#e0e3e5] hover:border-[#c6c6cd] hover:bg-[#e8f3ed] transition-all cursor-pointer">
               <div className="flex items-center gap-2 mb-4">
                 <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${a.tagColor}`}>
                   <Tag size={9} /> {a.tag}

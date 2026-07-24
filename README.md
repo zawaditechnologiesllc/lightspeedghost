@@ -13,10 +13,10 @@ Eight AI tools built for students. One platform, purpose-built for academic writ
 | Tool | URL | What it does |
 |---|---|---|
 | AI Paper Writer | `/write` | Full academic papers grounded in 10 live databases (1B+ papers), DOI-verified citations, rubric upload |
-| LightSpeed Humanizer | `/humanizer` | Detect-rewrite-redetect loop; passes Turnitin, GPTZero, Originality.ai |
+| LightSpeed Humanizer | `/humanizer` | Refines AI-assisted text into a natural, authentic academic voice in your own words (reduces the false flags unreliable detectors produce — not framed as evasion) |
 | Paper Revision | `/revision` | Upload a draft + target grade; AI revises every section that falls short |
 | Outline Builder | `/outline` | Hierarchical Roman-numeral outlines with thesis statement |
-| AI & Plagiarism Checker | `/plagiarism` | Lexical-diversity AI detection + cosine-similarity plagiarism scan |
+| AI & Plagiarism Checker | `/plagiarism` | **Free** — never touches an LLM. Lexical-diversity AI detection + cosine-similarity plagiarism scan against 10B+ pages, every match traced to its source. Blended into the free command box on the landing/dashboard |
 | STEM Solver | `/stem` | Step-by-step solutions with KaTeX equations, molecule diagrams, photo upload |
 | AI Study Assistant | `/study` | Persistent-memory tutor; remembers your history across every session |
 | AI Ebook Writer | `/ebooks` | Full ebooks for KDP, Apple Books, Gumroad — multiple genres and tones |
@@ -176,11 +176,17 @@ Push to `main` triggers both Cloudflare Pages (production) and Render (auto-depl
 | Plan | Price | Papers | Humanizer | Revisions | STEM | Study | Plagiarism |
 |---|---|---|---|---|---|---|---|
 | Free | $0 forever | — | — | — | — | — | 3 local checks + unlimited in-browser Writing Analyzer |
-| Pro Monthly | $29.99/mo | 15 | 20 | 20 | 60 | 150 sessions | 20 |
-| Pro Annual | $269/yr | 15 | 20 | 20 | 60 | 150 sessions | 20 |
+| Pro Monthly | $29.99/mo | 15 | 20 | 20 | 40 | 150 sessions | 30 |
+| Pro Annual | $269/yr | 15 | 20 | 20 | 40 | 150 sessions | 30 |
 | Institution | Custom quote | custom | custom | custom | custom | custom | custom |
 | Ebooks Add-On | $29.99/mo | — | — | — | — | 15 ebooks | — |
-| Pay-as-you-go | From $1.99 | per use | per use | per use | $1.99 | $2.99/day | $1.99 |
+| Pay-as-you-go | From $1.99 | from $3.99 | from $1.99 | from $1.99 | $1.99 | $2.99/day | Free |
+
+> **Limits are economics-tuned and admin-overridable** (`/mwaramuriuki-login` → plan
+> limits, backed by `systemSettings.ts` → `usageTracker.ts`). STEM is capped at 40/mo
+> (was 60) because it's the top per-unit cost driver (Sonnet + ReAct); plagiarism is
+> raised to 30/mo because the checker is near-zero marginal cost. See
+> **Unit Economics** below for the full margin analysis.
 
 > The Free plan never touches an LLM: the Writing Analyzer runs entirely in the
 > browser, and its plagiarism/AI checks use local statistical detection
@@ -190,11 +196,68 @@ Push to `main` triggers both Cloudflare Pages (production) and Render (auto-depl
 
 ---
 
+## Unit Economics (2026)
+
+Model prices (`aiGateway.ts`, per 1M tokens): gpt-4o-mini `$0.15/$0.60` · claude-haiku-4-5
+`$0.25/$1.25` · gpt-4o `$2.50/$10` · claude-sonnet-4-5 `$3/$15`. Routing: `fast`→mini,
+`standard`/`power`→Sonnet. Estimated worst-case cost per unit (Sonnet-heavy, no cache):
+
+| Tool | Model tier | ~Cost/unit | Notes |
+|---|---|---|---|
+| Paper | power (Sonnet) | ~$0.35 | Research context + draft + quality/plagiarism passes; dissertations up to ~$1.50 |
+| Revision | standard | ~$0.12 | |
+| Humanizer | standard | ~$0.08 | |
+| STEM | power (Sonnet/ReAct) | ~$0.15 | **Top cost driver at scale** |
+| Study msg | fast (Haiku) | ~$0.01 | Cheap → keep generous |
+| Assistant msg | fast (Haiku) | ~$0.01 | Cheap → keep generous |
+| Outline | standard | ~$0.03 | |
+| Plagiarism | none / local | ~$0.00–0.01 | Free tool: no LLM |
+
+**Free plan:** ~$0 marginal COGS (never touches an LLM) — the scalable acquisition engine.
+
+**Pro ($29.99/mo) worst-case (100% utilization):** old limits ≈ **$23.6** COGS (STEM 60 = $9
+alone) → razor-thin margin for power users. New limits (STEM 60→40, others held, plagiarism
+20→30) ≈ **$20.7** worst-case. Typical Pro user (~20–30% utilization, Haiku for study/assistant)
+≈ **$4–7** COGS → **~80% gross margin**. After Stripe (~2.9% + $0.30 ≈ $1.17) the floor stays
+positive even for power users.
+
+**PAYG margins:** paper $3.99–$59.99 → 96–98% · STEM $1.99 → ~92% · outline $1.99 → ~98%.
+The **Study Day Pass ($2.99, unlimited 24h)** is the one unbounded item — recommend a soft cap
+(~40 tutor messages / 24h) to bound worst-case at ~$0.40.
+
+**Highest-ROI optimization:** enable Anthropic prompt caching on the paper/STEM research
+context (90% input discount) — cuts paper + STEM COGS ~40–50%, the single biggest lever.
+
+---
+
+## Security
+
+Defense-in-depth across the frontend host and the API:
+
+- **Frontend (`public/_headers`, Cloudflare Pages):** Content-Security-Policy that hard-blocks the
+  high-impact vectors (`frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`,
+  `form-action 'self'`, `upgrade-insecure-requests`) while allowing `https:` scripts/styles/images so
+  Google Fonts, Stripe.js, and the chat widget keep working (nonce-based strict-dynamic is the next
+  hardening step); `Strict-Transport-Security`
+  (2-year, preload), `Cross-Origin-Opener-Policy: same-origin-allow-popups` (keeps OAuth popups
+  working), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, hardened `Permissions-Policy`.
+- **API (`app.ts`):** `helmet`, strict CORS allowlist (no wildcard; auto www/non-www), hardened
+  sessions (`httpOnly` + `secure` + `sameSite`), and rate limiting — global **120 req/min/IP**,
+  AI routes **20 req/min/IP**, admin-login limiter.
+- **Injection:** SEO/generated HTML is escaped (`escapeHtml`) and run through
+  `sanitizeContent`/`checkAcademicIntegrity`; no unsanitized `dangerouslySetInnerHTML` on user input.
+- **Cloudflare dashboard (operator action, not code):** enable WAF Managed Rules, Bot Fight Mode,
+  DDoS protection, and rate-limiting rules; set SSL/TLS to **Full (strict)** and turn on
+  **Always Use HTTPS** + **Automatic HTTPS Rewrites**. These are account-level toggles the code
+  cannot set.
+
+---
+
 ## Quality Gates (hard blocks before delivery)
 
 1. **Citation verification** — every source must have a real DOI
 2. **Plagiarism gate** — cosine similarity < 8%; rewrites and re-checks until clear
-3. **AI detection gate** — multi-pass humanization until score reaches 0%
+3. **AI detection gate** — multi-pass humanization toward a natural, authentic academic voice (detectors are unreliable, so the goal is genuine writing quality, never evasion; always review and edit before submitting)
 4. **Word count gate** — output must be 95–105% of the target (body text only)
 5. **Rubric alignment** — if rubric uploaded, cross-checked against A-grade criteria
 

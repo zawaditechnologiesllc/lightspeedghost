@@ -74,7 +74,7 @@ export function PricingModal({ open, onClose, onStartFree, onGetPro, onInstituti
   return (
     <div className="fixed inset-0 z-[300] flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-[#131b2e]/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-4xl bg-[#f7f9fb] rounded-2xl shadow-2xl border border-[#e0e3e5] my-4 sm:my-0 animate-in fade-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-4xl bg-[#eef7f1] rounded-2xl shadow-2xl border border-[#e0e3e5] my-4 sm:my-0 animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex items-center justify-between px-5 sm:px-7 pt-5 pb-3">
           <div>

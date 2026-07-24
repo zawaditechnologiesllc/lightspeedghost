@@ -184,7 +184,7 @@ export default function Enterprise() {
 
   return (
     <LazyMotion features={domAnimation}>
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
+    <div className="min-h-screen bg-[#eef7f1] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
 
       {/* ─── NAV ─── */}
       <header className={`fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#e0e3e5] transition-all duration-300 ${scrolled ? "shadow-md bg-white/95 backdrop-blur-md" : ""}`}>
@@ -200,7 +200,7 @@ export default function Enterprise() {
               { label: "Pricing", href: "#pricing" },
               { label: "Contact", href: "#contact" },
             ].map((item) => (
-              <a key={item.label} href={item.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors whitespace-nowrap">
+              <a key={item.label} href={item.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed] transition-colors whitespace-nowrap">
                 {item.label}
               </a>
             ))}
@@ -215,7 +215,7 @@ export default function Enterprise() {
 
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 text-[#45464d] hover:text-[#191c1e] rounded-lg hover:bg-[#f2f4f6] transition-colors"
+            className="md:hidden p-2 text-[#45464d] hover:text-[#191c1e] rounded-lg hover:bg-[#e8f3ed] transition-colors"
             aria-label="Toggle menu"
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
@@ -237,12 +237,12 @@ export default function Enterprise() {
                 { label: "Pricing", href: "#pricing" },
                 { label: "Contact", href: "#contact" },
               ].map((item) => (
-                <a key={item.label} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors">
+                <a key={item.label} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed] transition-colors">
                   {item.label}
                 </a>
               ))}
               <div className="pt-3 flex flex-col gap-2.5 border-t border-[#e0e3e5] mt-2">
-                <a href="#contact" onClick={() => setMobileOpen(false)} className="block text-center px-4 py-2.5 text-sm border border-[#c6c6cd] text-[#191c1e] rounded-lg hover:bg-[#f2f4f6] transition-colors">Talk to sales</a>
+                <a href="#contact" onClick={() => setMobileOpen(false)} className="block text-center px-4 py-2.5 text-sm border border-[#c6c6cd] text-[#191c1e] rounded-lg hover:bg-[#e8f3ed] transition-colors">Talk to sales</a>
                 <a href="#contact" onClick={() => setMobileOpen(false)} className="block text-center px-4 py-2.5 text-sm bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-colors">Request a quote</a>
               </div>
             </m.div>
@@ -314,7 +314,7 @@ export default function Enterprise() {
           >
             <div className="absolute -inset-4 bg-[#d1fae5]/40 rounded-[2rem] blur-2xl pointer-events-none" />
             <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-[#e0e3e5] bg-white">
-              <div className="flex items-center gap-1.5 px-4 py-3 border-b border-[#e0e3e5] bg-[#f2f4f6]">
+              <div className="flex items-center gap-1.5 px-4 py-3 border-b border-[#e0e3e5] bg-[#e8f3ed]">
                 <span className="w-3 h-3 rounded-full bg-red-400" />
                 <span className="w-3 h-3 rounded-full bg-yellow-400" />
                 <span className="w-3 h-3 rounded-full bg-green-400" />
@@ -334,14 +334,14 @@ export default function Enterprise() {
                     { label: "Tools used", value: "7 / 7", color: "text-emerald-600" },
                     { label: "Uptime", value: "99.9%", color: "text-blue-600" },
                   ].map(({ label, value, color }) => (
-                    <div key={label} className="rounded-lg border border-[#e0e3e5] bg-[#f7f9fb] p-3">
+                    <div key={label} className="rounded-lg border border-[#e0e3e5] bg-[#eef7f1] p-3">
                       <p className={`text-lg font-bold ${color}`}>{value}</p>
                       <p className="text-[9px] text-[#76777d] uppercase tracking-wide">{label}</p>
                     </div>
                   ))}
                 </div>
                 {/* Fake bar chart */}
-                <div className="rounded-lg border border-[#e0e3e5] bg-[#f7f9fb] p-4">
+                <div className="rounded-lg border border-[#e0e3e5] bg-[#eef7f1] p-4">
                   <div className="flex items-end justify-between gap-2 h-24">
                     {[40, 65, 52, 80, 72, 95, 60].map((h, i) => (
                       <div key={i} className="flex-1 rounded-t bg-[#10b981]" style={{ height: `${h}%`, opacity: 0.35 + (h / 200) }} />
@@ -356,7 +356,7 @@ export default function Enterprise() {
       </section>
 
       {/* ─── SOCIAL PROOF STRIP ─── */}
-      <section className="border-y border-[#e0e3e5] bg-[#f2f4f6] py-8">
+      <section className="border-y border-[#e0e3e5] bg-[#e8f3ed] py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <p className="text-[11px] font-semibold text-[#76777d] uppercase tracking-[0.2em] text-center mb-5">Trusted by leading global institutions</p>
           <div className="flex flex-wrap items-center justify-center gap-x-8 sm:gap-x-12 gap-y-3 opacity-70">
@@ -425,7 +425,7 @@ export default function Enterprise() {
       </section>
 
       {/* ─── TOOLS ─── */}
-      <section id="tools" className="py-14 sm:py-20 px-4 sm:px-6 border-y border-[#e0e3e5] bg-[#f2f4f6]">
+      <section id="tools" className="py-14 sm:py-20 px-4 sm:px-6 border-y border-[#e0e3e5] bg-[#e8f3ed]">
         <div className="max-w-6xl mx-auto">
           <FadeUp>
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-10 sm:mb-12">
@@ -528,7 +528,7 @@ export default function Enterprise() {
       </section>
 
       {/* ─── CONTACT FORM ─── */}
-      <section id="contact" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-t border-[#e0e3e5] bg-[#f2f4f6]">
+      <section id="contact" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-t border-[#e0e3e5] bg-[#e8f3ed]">
         <div className="max-w-2xl mx-auto">
           <FadeUp>
             <div className="text-center mb-10">

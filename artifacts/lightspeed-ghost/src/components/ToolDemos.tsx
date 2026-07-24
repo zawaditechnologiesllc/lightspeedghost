@@ -74,7 +74,7 @@ const css = `
 function Window({ url, height, children }: { url: string; height: number; children: React.ReactNode }) {
   return (
     <div className="relative rounded-2xl border border-[#e0e3e5] bg-white shadow-xl overflow-hidden">
-      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-[#e0e3e5] bg-[#f2f4f6]">
+      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-[#e0e3e5] bg-[#e8f3ed]">
         <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
         <span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
         <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
@@ -91,7 +91,7 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function TypeBox({ text, mono }: { text: string; mono?: boolean }) {
   return (
-    <div className={`px-3 py-2.5 rounded-lg border border-[#c6c6cd] bg-[#f7f9fb] text-[12px] text-[#191c1e] ${mono ? "font-mono" : ""} overflow-hidden whitespace-nowrap`}>
+    <div className={`px-3 py-2.5 rounded-lg border border-[#c6c6cd] bg-[#eef7f1] text-[12px] text-[#191c1e] ${mono ? "font-mono" : ""} overflow-hidden whitespace-nowrap`}>
       <span className="td-type">{text}</span><span className="td-caret" />
     </div>
   );
@@ -166,7 +166,7 @@ function Proc({ title, rows, counter }: {
       </div>
       <div className="space-y-1.5">
         {rows.map((r, i) => (
-          <div key={r.label} className={`td-s${i + 1} flex items-center gap-2 text-[11px] text-[#45464d] bg-[#f7f9fb] border border-[#eceef0] rounded-lg px-2.5 py-1.5`}>
+          <div key={r.label} className={`td-s${i + 1} flex items-center gap-2 text-[11px] text-[#45464d] bg-[#eef7f1] border border-[#eceef0] rounded-lg px-2.5 py-1.5`}>
             <span className="w-3.5 h-3.5 rounded-full bg-[#10b981]/10 text-[#10b981] flex items-center justify-center shrink-0"><Check size={9} strokeWidth={3.5} /></span>
             <span className="truncate">{r.label}</span>
             {r.meta && <span className="ml-auto shrink-0 text-[9px] font-bold text-[#10b981]">{r.meta}</span>}
@@ -247,7 +247,7 @@ function OutlineDemo() {
       <div className="td-res">
         <div className="space-y-1.5">
           {rows.map(([n, t, r]) => (
-            <div key={n} className={`td-r${r} flex items-start gap-2 bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-3 py-2`}>
+            <div key={n} className={`td-r${r} flex items-start gap-2 bg-[#eef7f1] border border-[#e0e3e5] rounded-lg px-3 py-2`}>
               <span className="text-[11px] font-bold text-[#10b981] w-5 shrink-0">{n}</span>
               <span className="text-[10.5px] text-[#191c1e] font-medium leading-snug">{t}</span>
             </div>
@@ -264,7 +264,7 @@ function RevisionDemo() {
     <Window url="revision" height={336}>
       <div className="td-in">
         <Label>Paste your paper text here…</Label>
-        <div className="rounded-lg border border-[#c6c6cd] bg-[#f7f9fb] px-3 py-2 text-[9.5px] text-[#76777d] leading-relaxed">
+        <div className="rounded-lg border border-[#c6c6cd] bg-[#eef7f1] px-3 py-2 text-[9.5px] text-[#76777d] leading-relaxed">
           Social media is very bad for teenagers mental health. Many studies show that it causes problems. This paper will discuss the problems it causes and why it is bad…
         </div>
         <SelectRow fields={[["Current Grade", "62/100"], ["Target Grade", "A"]]} />
@@ -289,7 +289,7 @@ function RevisionDemo() {
           <span className="text-2xl font-bold text-emerald-600">A−</span>
           <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">Estimated grade</span>
         </div>
-        <div className="td-r2 text-[9.5px] leading-relaxed rounded-lg border border-[#e0e3e5] bg-[#f7f9fb] px-3 py-2 mb-2">
+        <div className="td-r2 text-[9.5px] leading-relaxed rounded-lg border border-[#e0e3e5] bg-[#eef7f1] px-3 py-2 mb-2">
           <span className="text-[#dc2626] line-through">Social media is very bad for teenagers…</span>{" "}
           <span className="text-[#191c1e]">→ Longitudinal cohort data links heavy use to elevated anxiety and depressive symptoms <span className="text-[#10b981] font-semibold">(Twenge et al., 2023)</span>.</span>
         </div>
@@ -309,7 +309,7 @@ function HumanizerDemo() {
     <Window url="humanizer" height={336}>
       <div className="td-in">
         <Label>Paste your AI-generated essay, paper, or any text you want to humanize…</Label>
-        <div className="rounded-lg border border-[#c6c6cd] bg-[#f7f9fb] px-3 py-2 text-[9.5px] text-[#76777d] leading-relaxed">
+        <div className="rounded-lg border border-[#c6c6cd] bg-[#eef7f1] px-3 py-2 text-[9.5px] text-[#76777d] leading-relaxed">
           Furthermore, it is imperative to acknowledge that numerous multifaceted factors contribute significantly to the aforementioned phenomenon. Moreover, it is essential to note that…
         </div>
         <div className="mt-2">
@@ -335,7 +335,7 @@ function HumanizerDemo() {
           <div className="td-shrink h-full rounded-full" />
         </div>
         <div className="td-r1 flex justify-between text-[10px] font-bold mb-2"><span className="text-[#76777d]">87% before</span><span className="text-emerald-600">4% after</span></div>
-        <div className="td-r2 text-[9.5px] text-[#191c1e] leading-relaxed rounded-lg border border-[#e0e3e5] bg-[#f7f9fb] px-3 py-2 mb-2">
+        <div className="td-r2 text-[9.5px] text-[#191c1e] leading-relaxed rounded-lg border border-[#e0e3e5] bg-[#eef7f1] px-3 py-2 mb-2">
           A lot of forces pull at this at once — some obvious, some not. What matters is which ones actually move the needle, and the evidence points to three <span className="text-[#10b981] font-semibold">(Chen &amp; Park, 2023)</span>.
         </div>
         <div className="td-r3 flex items-center gap-2 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 w-fit">
@@ -351,7 +351,7 @@ function PlagiarismDemo() {
     <Window url="plagiarism" height={336}>
       <div className="td-in">
         <Label>Paste your text here to check for AI content and plagiarism…</Label>
-        <div className="rounded-lg border border-[#c6c6cd] bg-[#f7f9fb] px-3 py-2 text-[9.5px] text-[#76777d] leading-relaxed">
+        <div className="rounded-lg border border-[#c6c6cd] bg-[#eef7f1] px-3 py-2 text-[9.5px] text-[#76777d] leading-relaxed">
           The bystander effect describes the phenomenon in which individuals are less likely to offer help when other people are present. Darley and Latané first demonstrated this in laboratory conditions…
         </div>
         <Chips items={["Essay · 1,842 words", "Text check", "Code check (A vs B)"]} />
@@ -380,10 +380,10 @@ function PlagiarismDemo() {
           </div>
         </div>
         <div className="td-r3 space-y-1 mb-1.5">
-          <div className="flex items-center justify-between text-[9.5px] text-[#45464d] bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5">
+          <div className="flex items-center justify-between text-[9.5px] text-[#45464d] bg-[#eef7f1] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5">
             <span className="truncate">en.wikipedia.org/wiki/Bystander_effect — "less likely to offer help"</span><span className="font-bold text-[#76777d] shrink-0 ml-2">1.8%</span>
           </div>
-          <div className="flex items-center justify-between text-[9.5px] text-[#45464d] bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5">
+          <div className="flex items-center justify-between text-[9.5px] text-[#45464d] bg-[#eef7f1] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5">
             <span className="truncate">psycnet.apa.org — Darley &amp; Latané (1968) definition</span><span className="font-bold text-[#76777d] shrink-0 ml-2">1.3%</span>
           </div>
         </div>
@@ -428,10 +428,10 @@ function StemDemo() {
         />
       </div>
       <div className="td-res">
-        <div className="td-r1 text-[10.5px] font-mono text-[#191c1e] bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-3 py-1.5 mb-1.5">
+        <div className="td-r1 text-[10.5px] font-mono text-[#191c1e] bg-[#eef7f1] border border-[#e0e3e5] rounded-lg px-3 py-1.5 mb-1.5">
           <span className="text-[#10b981] font-bold">Step 1</span> · u = x, dv = sin(x)dx → du = dx, v = −cos(x)
         </div>
-        <div className="td-r2 text-[10.5px] font-mono text-[#191c1e] bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-3 py-1.5 mb-1.5">
+        <div className="td-r2 text-[10.5px] font-mono text-[#191c1e] bg-[#eef7f1] border border-[#e0e3e5] rounded-lg px-3 py-1.5 mb-1.5">
           <span className="text-[#10b981] font-bold">Step 2</span> · [−x·cos(x)]₀^π + ∫₀^π cos(x)dx = π + [sin(x)]₀^π
         </div>
         <div className="td-r3 flex items-center gap-2 text-[11.5px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 mb-2">
@@ -475,7 +475,7 @@ function StudyDemo() {
         <div className="td-r1 ml-auto max-w-[85%] bg-[#10b981] text-white text-[10.5px] rounded-xl rounded-br-sm px-3 py-1.5 mb-1.5 w-fit">
           Explain photosynthesis like I'm cramming for finals
         </div>
-        <div className="td-r2 max-w-[92%] bg-[#f7f9fb] border border-[#e0e3e5] text-[10.5px] text-[#191c1e] rounded-xl rounded-bl-sm px-3 py-2 mb-1.5 leading-relaxed">
+        <div className="td-r2 max-w-[92%] bg-[#eef7f1] border border-[#e0e3e5] text-[10.5px] text-[#191c1e] rounded-xl rounded-bl-sm px-3 py-2 mb-1.5 leading-relaxed">
           Two stages. <b>Light reactions</b> (thylakoid): capture light → ATP + NADPH. <b>Calvin cycle</b> (stroma): spend that energy to fix CO₂ → glucose. Last week the electron transport chain tripped you up — remember: it's just electrons falling downhill, pumping H⁺ as they go.
         </div>
         <div className="td-r3 flex flex-wrap gap-1.5">
@@ -520,7 +520,7 @@ function EbookDemo() {
           </div>
           <div className="flex-1 min-w-0">
             {["1 · The $0 → $1M roadmap", "2 · Products that actually sell", "3 · \"Efficiency is doing things right…\" — Drucker"].map((c, i) => (
-              <div key={c} className={`td-r${(i + 1) as 1 | 2 | 3} text-[9.5px] text-[#45464d] bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5 mb-1.5 truncate`}>{c}</div>
+              <div key={c} className={`td-r${(i + 1) as 1 | 2 | 3} text-[9.5px] text-[#45464d] bg-[#eef7f1] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5 mb-1.5 truncate`}>{c}</div>
             ))}
             <div className="td-r4 space-y-1">
               <div className="flex items-center gap-2 text-[9.5px] font-semibold text-emerald-700"><Check size={10} strokeWidth={3} /> 12 chapters · 15,214 words · DOCX ready</div>
@@ -710,7 +710,7 @@ export function ToolDemosSection() {
                   <p className="text-[10px] font-bold text-[#76777d] uppercase tracking-widest mb-2">Powered by</p>
                   <div className="flex flex-wrap gap-1.5">
                     {capabilities.map((c) => (
-                      <span key={c} className="text-[11px] font-semibold text-[#45464d] bg-[#f7f9fb] border border-[#e0e3e5] rounded-full px-2.5 py-1">{c}</span>
+                      <span key={c} className="text-[11px] font-semibold text-[#45464d] bg-[#eef7f1] border border-[#e0e3e5] rounded-full px-2.5 py-1">{c}</span>
                     ))}
                   </div>
                 </div>

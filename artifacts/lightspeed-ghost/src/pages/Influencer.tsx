@@ -57,34 +57,34 @@ export default function Influencer() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
+    <div className="min-h-screen bg-[#eef7f1] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
       {/* ─── NAV ─── */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#e0e3e5]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <Link href="/"><Logo size={30} textSize="text-base" variant="light" className="cursor-pointer select-none shrink-0" /></Link>
           <nav className="hidden md:flex items-center gap-0.5">
             {navLinks.map((i) => (
-              <a key={i.label} href={i.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors">{i.label}</a>
+              <a key={i.label} href={i.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed] transition-colors">{i.label}</a>
             ))}
           </nav>
           <div className="hidden md:flex items-center gap-2.5">
             {user ? (
               <>
-                <Link href="/app"><span className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors cursor-pointer">Open app</span></Link>
+                <Link href="/app"><span className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed] transition-colors cursor-pointer">Open app</span></Link>
                 <Link href="/earnings"><span className="px-5 py-2.5 text-sm bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-colors cursor-pointer shadow-md shadow-[#10b981]/20">Your dashboard</span></Link>
               </>
             ) : (
               <Link href="/auth?next=/earnings"><span className="px-5 py-2.5 text-sm bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-colors cursor-pointer shadow-md shadow-[#10b981]/20">Get your link</span></Link>
             )}
           </div>
-          <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-[#45464d] rounded-lg hover:bg-[#f2f4f6]" aria-label="Menu">
+          <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-[#45464d] rounded-lg hover:bg-[#e8f3ed]" aria-label="Menu">
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
         {mobileOpen && (
           <div className="md:hidden bg-white border-t border-[#e0e3e5] px-4 py-4 space-y-1 shadow-lg">
             {navLinks.map((i) => (
-              <a key={i.label} href={i.href} onClick={() => setMobileOpen(false)} className="block px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6]">{i.label}</a>
+              <a key={i.label} href={i.href} onClick={() => setMobileOpen(false)} className="block px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed]">{i.label}</a>
             ))}
             <div className="pt-3 border-t border-[#e0e3e5] mt-2 space-y-1.5">
               {user && (
@@ -157,7 +157,7 @@ export default function Influencer() {
         </section>
 
         {/* ─── TERMS ─── */}
-        <section id="terms" className="py-14 sm:py-20 px-4 sm:px-6 bg-[#f2f4f6] border-y border-[#e0e3e5]">
+        <section id="terms" className="py-14 sm:py-20 px-4 sm:px-6 bg-[#e8f3ed] border-y border-[#e0e3e5]">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-10 sm:mb-14">
               <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">The deal</p>
@@ -205,7 +205,7 @@ export default function Influencer() {
         </section>
 
         {/* ─── FAQ ─── */}
-        <section id="faq" className="py-14 sm:py-20 px-4 sm:px-6 bg-[#f2f4f6] border-y border-[#e0e3e5]">
+        <section id="faq" className="py-14 sm:py-20 px-4 sm:px-6 bg-[#e8f3ed] border-y border-[#e0e3e5]">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-8 sm:mb-12">
               <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">FAQ</p>

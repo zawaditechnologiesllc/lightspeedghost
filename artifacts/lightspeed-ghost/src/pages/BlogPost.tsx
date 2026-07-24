@@ -533,7 +533,7 @@ export default function BlogPost() {
 
   if (!article || !body) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-[#eef7f1] text-[#191c1e] antialiased flex flex-col items-center justify-center gap-4">
         <p className="text-[#76777d] text-sm">Article not found.</p>
         <Link href="/blog"><span className="text-[#10b981] text-sm hover:text-[#059669] cursor-pointer">← All articles</span></Link>
       </div>
@@ -543,7 +543,7 @@ export default function BlogPost() {
   const otherArticles = ARTICLES.filter((a) => a.slug !== slug).slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased">
+    <div className="min-h-screen bg-[#eef7f1] text-[#191c1e] antialiased">
       <header className="border-b border-[#eceef0] px-6 h-16 flex items-center justify-between max-w-7xl mx-auto">
         <Link href="/"><Logo size={28} textSize="text-base" variant="light" className="cursor-pointer" /></Link>
         <Link href="/blog">

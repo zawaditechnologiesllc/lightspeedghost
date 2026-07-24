@@ -38,6 +38,11 @@
          cold DNS+TLS handshake (Lighthouse: ~310 ms LCP saving on mobile). -->
     <link rel="preconnect" href="https://lightspeedghost-5szz.onrender.com" crossorigin="anonymous" />
 
+    <!-- Student-life photos load from Pexels' CDN, lazily and below the fold, so a
+         lightweight DNS prefetch (not a full preconnect) is the right trade-off —
+         it resolves DNS ahead of time without spending one of the ~4 preconnect slots. -->
+    <link rel="dns-prefetch" href="https://images.pexels.com" />
+
     <!-- Handwritten font for STEM + Study math rendering — loaded async so it never blocks first paint -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
@@ -242,7 +247,12 @@
       ],
       "sameAs": [
         "https://twitter.com/lightspeedghost",
-        "https://linkedin.com/company/lightspeedghost"
+        "https://x.com/lightspeedghost",
+        "https://linkedin.com/company/lightspeedghost",
+        "https://instagram.com/lightspeedghost",
+        "https://youtube.com/@lightspeedghost",
+        "https://www.facebook.com/lightspeedghost",
+        "https://www.tiktok.com/@lightspeedghost"
       ]
     }
     </script>
@@ -523,7 +533,7 @@
           "@type": "ListItem",
           "position": 5,
           "name": "AI and Plagiarism Checker",
-          "description": "Detects AI-generated content using lexical diversity analysis. Detects plagiarism using cosine similarity. Highlights flagged sections with one-click humanization.",
+          "description": "Free for everyone — never touches an AI model, so there is nothing to pay per use. Detects AI-generated content using lexical diversity analysis and plagiarism using cosine similarity against 10B+ indexed pages, traces every match to its real source, and highlights flagged sections. Built into the free command box; Pro adds 20 deep scans per month.",
           "url": "https://lightspeedghost.com/plagiarism"
         },
         {
@@ -576,7 +586,12 @@
       },
       "sameAs": [
         "https://twitter.com/lightspeedghost",
-        "https://linkedin.com/company/lightspeedghost"
+        "https://x.com/lightspeedghost",
+        "https://linkedin.com/company/lightspeedghost",
+        "https://instagram.com/lightspeedghost",
+        "https://youtube.com/@lightspeedghost",
+        "https://www.facebook.com/lightspeedghost",
+        "https://www.tiktok.com/@lightspeedghost"
       ]
     }
     </script>

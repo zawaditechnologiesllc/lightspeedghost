@@ -12,7 +12,7 @@ import {
   PenLine, BookOpen, ShieldCheck, FlaskConical, GraduationCap,
   FileText, ChevronDown, Sparkles, BarChart3,
   Quote, MapPin, Mail, Instagram, Youtube, Wand2,
-  Share,
+  Linkedin, Facebook, Share,
   Database, Layers, Clock, AlertTriangle,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -23,6 +23,28 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import type { AuthTab } from "@/components/auth/AuthForm";
 import { ToolDemosSection } from "@/components/ToolDemos";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+
+// ── Optimized Pexels imagery ─────────────────────────────────────────────────
+// Real student-life photos served from Pexels' CDN. `auto=compress&cs=tinysrgb`
+// hands back a compressed, right-sized JPEG (Pexels also negotiates WebP/AVIF via
+// Accept), so we ship small bytes. Always pair with width/height + loading="lazy"
+// at the call site to protect LCP/CLS. IDs are stable Pexels photo IDs.
+function pexels(id: number, w: number, h: number, dpr = 1): string {
+  return `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=${w}&h=${h}&dpr=${dpr}`;
+}
+// Student-life photo set (provided). Portrait-leaning IDs first for avatars.
+const STUDENT_PHOTOS = [
+  { id: 36608621, alt: "Student writing notes indoors" },
+  { id: 6256139,  alt: "Two students studying together" },
+  { id: 5538573,  alt: "Friends studying together outdoors" },
+  { id: 7683898,  alt: "College students celebrating with hands raised" },
+  { id: 7973213,  alt: "Graduates in caps and gowns" },
+  { id: 6147219,  alt: "Friends with a laptop on the stairs" },
+  { id: 7972963,  alt: "Students studying outside on campus" },
+  { id: 30779621, alt: "Cheerful graduation celebration outdoors" },
+  { id: 6146979,  alt: "Students writing in a notebook on the street" },
+  { id: 5537996,  alt: "Students walking and chatting in a park" },
+];
 
 function useScrolled(threshold = 20) {
   const [scrolled, setScrolled] = useState(false);
@@ -461,7 +483,7 @@ export default function Landing() {
 
   return (
     <LazyMotion features={domAnimation}>
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
+    <div className="min-h-screen bg-[#eef7f1] text-[#191c1e] antialiased overflow-x-clip selection:bg-[#10b981]/20">
 
       {/* ── iOS Install Modal ──────────────────────────────────────────── */}
       {showIOSModal && (
@@ -515,7 +537,7 @@ export default function Landing() {
           {/* Mobile hamburger opens the tool drawer */}
           <button
             onClick={() => setMobileOpen(true)}
-            className="lg:hidden p-2 -ml-2 rounded-lg text-[#45464d] hover:bg-[#f2f4f6] transition-colors"
+            className="lg:hidden p-2 -ml-2 rounded-lg text-[#45464d] hover:bg-[#e8f3ed] transition-colors"
             aria-label="Open tools menu"
           >
             <Menu size={20} />
@@ -546,7 +568,7 @@ export default function Landing() {
               onClick={() => setPricingOpen(true)}
               className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-sm text-[#10b981] hover:text-[#059669] font-semibold rounded-lg hover:bg-[#10b981]/5 transition-colors"
             >
-              Upgrade
+              Upgrade to Premium
             </button>
             <button
               onClick={() => openAuth("signup")}
@@ -596,6 +618,28 @@ export default function Landing() {
 
           {/* The open, in-browser analyzer */}
           <HeroAnalyzer authed={!!user} onRequireAuth={() => openAuth("login")} />
+
+          {/* Social proof — real student faces, overlapping avatars */}
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <div className="flex -space-x-2.5">
+              {STUDENT_PHOTOS.slice(0, 5).map((p) => (
+                <img
+                  key={p.id}
+                  src={pexels(p.id, 48, 48)}
+                  srcSet={`${pexels(p.id, 48, 48)} 1x, ${pexels(p.id, 48, 48, 2)} 2x`}
+                  alt={p.alt}
+                  width={32}
+                  height={32}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-8 h-8 rounded-full object-cover border-2 border-white bg-[#e8f3ed] shadow-sm"
+                />
+              ))}
+            </div>
+            <span className="text-[13px] text-[#45464d]">
+              <span className="font-bold text-[#191c1e]">4M+ students</span> already writing smarter
+            </span>
+          </div>
 
           {/* Free AI & Plagiarism Checker — the free tool's power, spelled out */}
           <div className="mt-6 max-w-3xl mx-auto rounded-2xl border border-[#d1fae5] bg-[#f0fdf4] px-4 sm:px-5 py-4 text-left">
@@ -648,7 +692,7 @@ export default function Landing() {
       </section>
 
       {/* ─── UNIVERSITY TRUST STRIP + SCALE SOCIAL PROOF ─── */}
-      <section className="border-y border-[#e0e3e5] bg-[#f2f4f6] py-12">
+      <section className="border-y border-[#e0e3e5] bg-[#e8f3ed] py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <p className="text-center text-[11px] font-semibold text-[#76777d] uppercase tracking-[0.2em] mb-8">Used by students and researchers at</p>
           <div className="flex flex-wrap justify-center items-center gap-x-8 sm:gap-x-12 gap-y-4 opacity-70">
@@ -789,7 +833,7 @@ export default function Landing() {
       <ToolDemosSection />
 
       {/* ─── COMPETITOR COMPARISON ─── */}
-      <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#f7f9fb]">
+      <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#eef7f1]">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10 sm:mb-14">
             <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">Why choose it</p>
@@ -816,7 +860,7 @@ export default function Landing() {
                   { vs: "STEM tools", gap: "Answers only, no working shown", edge: "Full step-by-step working across every technical subject" },
                   { vs: "Study apps", gap: "Generic content, no personalization", edge: "Reads your materials, builds your study tools, identifies your weak points" },
                 ].map(({ vs, gap, edge }, i) => (
-                  <tr key={vs} className={i % 2 === 0 ? "" : "bg-[#f7f9fb]"}>
+                  <tr key={vs} className={i % 2 === 0 ? "" : "bg-[#eef7f1]"}>
                     <td className="py-3.5 px-4 text-[#191c1e] font-semibold text-xs leading-snug border-b border-[#eceef0] align-top">{vs}</td>
                     <td className="py-3.5 px-4 text-[#76777d] text-xs leading-snug border-b border-[#eceef0] align-top">{gap}</td>
                     <td className="py-3.5 px-4 text-[#191c1e] text-xs leading-snug border-b border-[#eceef0] bg-[#d1fae5]/20 align-top">
@@ -1040,7 +1084,7 @@ export default function Landing() {
                 const btnCls: Record<string,string>  = { blue: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100", violet: "bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100", indigo: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" };
                 return (
                   <div key={tool} className="bg-white border border-[#e0e3e5] rounded-xl overflow-hidden shadow-sm">
-                    <div className="flex items-center gap-2 px-5 py-3.5 bg-[#f2f4f6] border-b border-[#e0e3e5]">
+                    <div className="flex items-center gap-2 px-5 py-3.5 bg-[#e8f3ed] border-b border-[#e0e3e5]">
                       <Icon size={14} className={iconCls[color]} />
                       <span className="text-sm font-bold text-[#191c1e]">{tool}</span>
                     </div>
@@ -1054,7 +1098,7 @@ export default function Landing() {
                           <span className={`text-xs font-bold shrink-0 ${iconCls[color]}`}>{price}</span>
                           <button
                             onClick={() => handleBuyPayg(toolId, tier)}
-                            className={`shrink-0 px-2.5 py-1 text-[10px] font-semibold rounded-lg border transition-all ${btnCls[color] ?? "bg-[#f2f4f6] text-[#191c1e] border-[#d8dadc] hover:bg-[#eceef0]"}`}
+                            className={`shrink-0 px-2.5 py-1 text-[10px] font-semibold rounded-lg border transition-all ${btnCls[color] ?? "bg-[#e8f3ed] text-[#191c1e] border-[#d8dadc] hover:bg-[#eceef0]"}`}
                           >
                             Buy
                           </button>
@@ -1066,8 +1110,8 @@ export default function Landing() {
               })}
             </div>
 
-            {/* Flat-rate tools */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
+            {/* Flat-rate tools — 3 across, aligned with the writing tools above */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
               {paygFlatTools.map(({ tool, toolId, Icon, color, price, unit, note }) => {
                 const iconCls: Record<string,string> = { cyan: "text-teal-600", amber: "text-amber-600", emerald: "text-emerald-600", orange: "text-orange-600" };
                 const btnBg: Record<string,string>   = { cyan: "bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100", amber: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100", emerald: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100", orange: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100" };
@@ -1082,7 +1126,7 @@ export default function Landing() {
                     <p className="text-[10px] text-[#76777d] leading-relaxed flex-1">{note}</p>
                     <button
                       onClick={() => handleBuyPayg(toolId)}
-                      className={`mt-3 w-full py-1.5 text-[11px] font-semibold rounded-lg border transition-all ${btnBg[color] ?? "bg-[#f2f4f6] text-[#191c1e] border-[#d8dadc]"}`}
+                      className={`mt-3 w-full py-1.5 text-[11px] font-semibold rounded-lg border transition-all ${btnBg[color] ?? "bg-[#e8f3ed] text-[#191c1e] border-[#d8dadc]"}`}
                     >
                       Buy — {price}
                     </button>
@@ -1100,7 +1144,7 @@ export default function Landing() {
       </section>
 
       {/* ─── TESTIMONIALS ─── */}
-      <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#f7f9fb]">
+      <section className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#eef7f1]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8 sm:mb-10">
             <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">Real students</p>
@@ -1143,8 +1187,18 @@ export default function Landing() {
                 <Quote size={16} className="text-[#10b981]/30 mb-3" />
                 <p className="text-[#45464d] text-sm leading-relaxed flex-1 mb-5 italic">"{text}"</p>
                 <div className="flex items-center gap-3 mt-auto pt-4 border-t border-[#eceef0]">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColors[idx % 3]}`}>
-                    {initials}
+                  <div className={`relative w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold shrink-0 ${avatarColors[idx % 3]}`}>
+                    <span className="absolute inset-0 flex items-center justify-center">{initials}</span>
+                    <img
+                      src={pexels(STUDENT_PHOTOS[idx % STUDENT_PHOTOS.length].id, 72, 72)}
+                      srcSet={`${pexels(STUDENT_PHOTOS[idx % STUDENT_PHOTOS.length].id, 72, 72)} 1x, ${pexels(STUDENT_PHOTOS[idx % STUDENT_PHOTOS.length].id, 72, 72, 2)} 2x`}
+                      alt={name}
+                      width={36}
+                      height={36}
+                      loading="lazy"
+                      decoding="async"
+                      className="relative w-full h-full object-cover"
+                    />
                   </div>
                   <div>
                     <div className="font-bold text-[#191c1e] text-sm">{name}</div>
@@ -1157,8 +1211,37 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ─── STUDENT-LIFE PHOTO BAND ─── */}
+      <section className="py-14 sm:py-20 px-4 sm:px-6 bg-white border-t border-[#e0e3e5]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8 sm:mb-10">
+            <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">Made for real student life</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-[#131b2e]">From all-nighters to graduation day.</h2>
+            <p className="text-[#45464d] text-sm mt-3 max-w-xl mx-auto">Millions of students in libraries, dorms, cafés and lecture halls trust Light Speed Ghost to get the work done.</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            {STUDENT_PHOTOS.map((p, i) => (
+              <div
+                key={p.id}
+                className={`relative rounded-2xl overflow-hidden bg-[#e8f3ed] shadow-sm ${i === 0 || i === 6 ? "col-span-2 row-span-1" : ""}`}
+                style={{ aspectRatio: i === 0 || i === 6 ? "2 / 1" : "1 / 1" }}
+              >
+                <img
+                  src={pexels(p.id, i === 0 || i === 6 ? 640 : 360, i === 0 || i === 6 ? 320 : 360)}
+                  srcSet={`${pexels(p.id, i === 0 || i === 6 ? 640 : 360, i === 0 || i === 6 ? 320 : 360)} 1x, ${pexels(p.id, i === 0 || i === 6 ? 640 : 360, i === 0 || i === 6 ? 320 : 360, 2)} 2x`}
+                  alt={p.alt}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── FAQ ─── */}
-      <section id="faq" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#f2f4f6] border-t border-[#e0e3e5]">
+      <section id="faq" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 bg-[#e8f3ed] border-t border-[#e0e3e5]">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-8 sm:mb-12">
             <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3 sm:mb-4">FAQ</p>
@@ -1248,20 +1331,6 @@ export default function Landing() {
                   <a href="mailto:info@lightspeedghost.com" className="hover:text-[#10b981] transition-colors">info@lightspeedghost.com</a>
                 </div>
               </div>
-              <div className="flex items-center gap-3 mt-4">
-                <a href={siteContent.socialX || "https://x.com/lightspeedghost"} target="_blank" rel="noreferrer" aria-label="Light Speed Ghost on X"
-                  className="w-7 h-7 rounded-lg bg-white border border-[#d8dadc] hover:border-[#10b981] flex items-center justify-center text-[#45464d] hover:text-[#10b981] transition-all">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                </a>
-                <a href={siteContent.socialInstagram || "https://instagram.com/lightspeedghost"} target="_blank" rel="noreferrer" aria-label="Light Speed Ghost on Instagram"
-                  className="w-7 h-7 rounded-lg bg-white border border-[#d8dadc] hover:border-[#10b981] flex items-center justify-center text-[#45464d] hover:text-[#10b981] transition-all">
-                  <Instagram size={13} aria-hidden="true" />
-                </a>
-                <a href={siteContent.socialYoutube || "https://youtube.com/@lightspeedghost"} target="_blank" rel="noreferrer" aria-label="Light Speed Ghost on YouTube"
-                  className="w-7 h-7 rounded-lg bg-white border border-[#d8dadc] hover:border-[#10b981] flex items-center justify-center text-[#45464d] hover:text-[#10b981] transition-all">
-                  <Youtube size={13} aria-hidden="true" />
-                </a>
-              </div>
             </div>
 
             {/* Product links */}
@@ -1334,23 +1403,27 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* ── Payments + Apps ── */}
+          {/* ── Social + Apps ── */}
           <div className="border-t border-[#d8dadc] pt-7 pb-6 flex flex-col sm:flex-row items-center justify-between gap-5">
 
-            {/* Payments — Stripe + mobile money, marks only */}
-            <div className="flex flex-wrap items-center justify-center gap-2.5">
-              <div className="h-8 px-3.5 rounded-lg flex items-center shadow-sm" style={{ backgroundColor: "#635bff" }}>
-                <span className="text-white font-bold text-[14px] tracking-tight">stripe</span>
-              </div>
-              <div className="h-8 px-3 rounded-lg border bg-white flex items-center" style={{ borderColor: "#00a65166" }}>
-                <span className="font-bold" style={{ fontSize: "11px", color: "#00a651", letterSpacing: "0.03em" }}>M-PESA</span>
-              </div>
-              <div className="h-8 px-3 rounded-lg flex items-center" style={{ backgroundColor: "#ffcb05" }}>
-                <span className="font-bold" style={{ fontSize: "10px", color: "#17120e" }}>MTN MoMo</span>
-              </div>
-              <div className="h-8 px-3 rounded-lg border bg-white flex items-center" style={{ borderColor: "#ff000055" }}>
-                <span className="font-bold" style={{ fontSize: "10px", color: "#e11900" }}>Airtel Money</span>
-              </div>
+            {/* Follow us — QuillBot-style row of social icons */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-[#45464d] mr-1">Follow us</span>
+              {[
+                { label: "X", href: siteContent.socialX || "https://x.com/lightspeedghost",
+                  svg: <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
+                { label: "Instagram", href: siteContent.socialInstagram || "https://instagram.com/lightspeedghost", icon: Instagram },
+                { label: "YouTube", href: siteContent.socialYoutube || "https://youtube.com/@lightspeedghost", icon: Youtube },
+                { label: "LinkedIn", href: "https://www.linkedin.com/company/lightspeedghost", icon: Linkedin },
+                { label: "Facebook", href: "https://www.facebook.com/lightspeedghost", icon: Facebook },
+                { label: "TikTok", href: "https://www.tiktok.com/@lightspeedghost",
+                  svg: <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M16.6 5.82a4.28 4.28 0 0 1-1.05-2.82h-3.3v12.02a2.59 2.59 0 0 1-2.59 2.5 2.59 2.59 0 0 1-.6-5.1v-3.4a5.9 5.9 0 0 0-5.06 5.85A5.9 5.9 0 0 0 9.66 22a5.9 5.9 0 0 0 5.9-5.9V9.4a7.55 7.55 0 0 0 4.44 1.43V7.5a4.3 4.3 0 0 1-3.4-1.68z"/></svg> },
+              ].map(({ label, href, icon: Icon, svg }) => (
+                <a key={label} href={href} target="_blank" rel="noreferrer" aria-label={`Light Speed Ghost on ${label}`}
+                  className="w-9 h-9 rounded-full bg-white border border-[#d8dadc] hover:border-[#10b981] hover:bg-[#10b981]/5 flex items-center justify-center text-[#45464d] hover:text-[#10b981] transition-all">
+                  {svg ?? (Icon ? <Icon size={15} aria-hidden="true" /> : null)}
+                </a>
+              ))}
             </div>
 
             {/* Get the app — small badges */}
@@ -1427,7 +1500,7 @@ export default function Landing() {
             >
               <button
                 onClick={() => setShowExitIntent(false)}
-                className="absolute top-4 right-4 p-1.5 text-[#76777d] hover:text-[#191c1e] rounded-lg hover:bg-[#f2f4f6] transition-all"
+                className="absolute top-4 right-4 p-1.5 text-[#76777d] hover:text-[#191c1e] rounded-lg hover:bg-[#e8f3ed] transition-all"
               >
                 <X size={16} />
               </button>

@@ -40,7 +40,7 @@ export default function Contact() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased">
+    <div className="min-h-screen bg-[#eef7f1] text-[#191c1e] antialiased">
       <header className="border-b border-[#eceef0] px-6 h-16 flex items-center justify-between max-w-7xl mx-auto">
         <Link href="/"><Logo size={28} textSize="text-base" variant="light" className="cursor-pointer" /></Link>
         <Link href="/"><span className="flex items-center gap-1.5 text-sm text-[#76777d] hover:text-[#191c1e] transition-colors cursor-pointer"><ArrowLeft size={14} /> Back to home</span></Link>

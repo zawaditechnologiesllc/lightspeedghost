@@ -201,7 +201,7 @@ export default function Africa() {
 
   return (
     <LazyMotion features={domAnimation}>
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
+    <div className="min-h-screen bg-[#eef7f1] text-[#191c1e] antialiased overflow-x-hidden selection:bg-[#10b981]/20">
 
       {/* ─── NAV ─── */}
       <header className={`fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#e0e3e5] transition-all duration-300 ${scrolled ? "shadow-md bg-white/95 backdrop-blur-md" : ""}`}>
@@ -212,7 +212,7 @@ export default function Africa() {
 
           <nav className="hidden md:flex items-center gap-0.5">
             {navItems.map((item) => (
-              <a key={item.label} href={item.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors whitespace-nowrap">
+              <a key={item.label} href={item.href} className="px-3.5 py-2 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed] transition-colors whitespace-nowrap">
                 {item.label}
               </a>
             ))}
@@ -231,7 +231,7 @@ export default function Africa() {
 
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 text-[#45464d] hover:text-[#191c1e] rounded-lg hover:bg-[#f2f4f6] transition-colors"
+            className="md:hidden p-2 text-[#45464d] hover:text-[#191c1e] rounded-lg hover:bg-[#e8f3ed] transition-colors"
             aria-label="Toggle menu"
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
@@ -248,13 +248,13 @@ export default function Africa() {
               transition={{ duration: 0.2 }}
             >
               {navItems.map((item) => (
-                <a key={item.label} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#f2f4f6] transition-colors">
+                <a key={item.label} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center px-3 py-3 text-sm text-[#45464d] hover:text-[#10b981] rounded-lg hover:bg-[#e8f3ed] transition-colors">
                   {item.label}
                 </a>
               ))}
               <div className="pt-3 flex flex-col gap-2.5 border-t border-[#e0e3e5] mt-2">
                 <Link href="/auth">
-                  <span className="block text-center px-4 py-2.5 text-sm border border-[#c6c6cd] text-[#191c1e] rounded-lg cursor-pointer hover:bg-[#f2f4f6] transition-colors">Sign In</span>
+                  <span className="block text-center px-4 py-2.5 text-sm border border-[#c6c6cd] text-[#191c1e] rounded-lg cursor-pointer hover:bg-[#e8f3ed] transition-colors">Sign In</span>
                 </Link>
                 <Link href="/auth">
                   <span className="block text-center px-4 py-2.5 text-sm bg-[#10b981] hover:bg-[#059669] text-white font-semibold rounded-lg cursor-pointer transition-colors">Get Started</span>
@@ -338,7 +338,7 @@ export default function Africa() {
           >
             <div className="absolute -inset-4 bg-[#d1fae5]/40 rounded-[2rem] blur-2xl pointer-events-none" />
             <div className="relative bg-white rounded-2xl shadow-2xl border border-[#e0e3e5] overflow-hidden">
-              <div className="h-12 border-b border-[#e0e3e5] px-4 flex items-center justify-between bg-[#f2f4f6]">
+              <div className="h-12 border-b border-[#e0e3e5] px-4 flex items-center justify-between bg-[#e8f3ed]">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-red-400" />
                   <div className="w-3 h-3 rounded-full bg-yellow-400" />
@@ -436,7 +436,7 @@ export default function Africa() {
                 { icon: Globe, title: "No conversion fees", desc: "Pay exactly what you see" },
                 { icon: Smartphone, title: "No VPN required", desc: "Works on local IP addresses" },
               ].map(({ icon: Icon, title, desc }) => (
-                <div key={title} className="flex items-center gap-3 rounded-xl border border-[#e0e3e5] bg-[#f7f9fb] p-4">
+                <div key={title} className="flex items-center gap-3 rounded-xl border border-[#e0e3e5] bg-[#eef7f1] p-4">
                   <div className="w-9 h-9 rounded-lg bg-[#10b981]/10 flex items-center justify-center shrink-0">
                     <Icon size={16} className="text-[#10b981]" />
                   </div>
@@ -496,7 +496,7 @@ export default function Africa() {
       </section>
 
       {/* ─── WHY LightSpeed BEATS WESTERN TOOLS ─── */}
-      <section id="why" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-y border-[#e0e3e5] bg-[#f2f4f6]">
+      <section id="why" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-y border-[#e0e3e5] bg-[#e8f3ed]">
         <div className="max-w-6xl mx-auto">
           <FadeUp>
             <div className="text-center mb-10 sm:mb-14">
@@ -522,7 +522,7 @@ export default function Africa() {
           <FadeUp delay={0.1}>
             <div className="rounded-2xl border border-[#e0e3e5] bg-white overflow-hidden shadow-sm overflow-x-auto">
               <div className="min-w-[560px]">
-                <div className="grid grid-cols-4 bg-[#f2f4f6] border-b border-[#e0e3e5] text-xs font-bold text-[#76777d] uppercase tracking-wider">
+                <div className="grid grid-cols-4 bg-[#e8f3ed] border-b border-[#e0e3e5] text-xs font-bold text-[#76777d] uppercase tracking-wider">
                   <div className="p-4 col-span-2">Feature</div>
                   <div className="p-4 text-center text-[#10b981]">LightSpeed Ghost</div>
                   <div className="p-4 text-center">ChatGPT Plus</div>
@@ -537,7 +537,7 @@ export default function Africa() {
                   { feature: "STEM step-by-step solver", lsg: "✓ With photo upload", chatgpt: "⚠ General only" },
                   { feature: "Grade-targeted revision", lsg: "✓ Rubric upload", chatgpt: "✗ No rubric support" },
                 ].map(({ feature, lsg, chatgpt }, i) => (
-                  <div key={feature} className={`grid grid-cols-4 text-sm border-b border-[#eceef0] last:border-0 ${i % 2 === 0 ? "" : "bg-[#f7f9fb]"}`}>
+                  <div key={feature} className={`grid grid-cols-4 text-sm border-b border-[#eceef0] last:border-0 ${i % 2 === 0 ? "" : "bg-[#eef7f1]"}`}>
                     <div className="p-4 col-span-2 text-[#191c1e] font-medium">{feature}</div>
                     <div className="p-4 text-center text-[#10b981] font-semibold">{lsg}</div>
                     <div className="p-4 text-center text-[#76777d]">{chatgpt}</div>
@@ -610,7 +610,7 @@ export default function Africa() {
       </section>
 
       {/* ─── TESTIMONIALS ─── */}
-      <section id="testimonials" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-t border-[#e0e3e5] bg-[#f2f4f6]">
+      <section id="testimonials" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 border-t border-[#e0e3e5] bg-[#e8f3ed]">
         <div className="max-w-7xl mx-auto">
           <FadeUp>
             <div className="text-center mb-10 sm:mb-14">
@@ -664,7 +664,7 @@ export default function Africa() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/auth">
-                <span className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#10b981] hover:bg-[#f2f4f6] font-bold rounded-lg transition-all shadow-xl hover:-translate-y-0.5 text-sm sm:text-base cursor-pointer">
+                <span className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#10b981] hover:bg-[#e8f3ed] font-bold rounded-lg transition-all shadow-xl hover:-translate-y-0.5 text-sm sm:text-base cursor-pointer">
                   <Zap size={15} />
                   Create your free account
                 </span>

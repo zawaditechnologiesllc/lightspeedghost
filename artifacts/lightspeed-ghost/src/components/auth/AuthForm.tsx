@@ -144,7 +144,7 @@ export function AuthForm({
             type="button"
             onClick={handleGoogleLogin}
             disabled={status === "loading"}
-            className="w-full flex items-center justify-center gap-3 py-2.5 mb-4 bg-white hover:bg-[#f2f4f6] border border-[#c6c6cd] hover:border-[#76777d] rounded-lg text-[#191c1e] text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            className="w-full flex items-center justify-center gap-3 py-2.5 mb-4 bg-white hover:bg-[#e8f3ed] border border-[#c6c6cd] hover:border-[#76777d] rounded-lg text-[#191c1e] text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           >
             {GOOGLE_ICON}
             Continue with Google
