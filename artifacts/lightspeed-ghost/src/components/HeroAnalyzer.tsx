@@ -68,7 +68,7 @@ function Metric({ label, value, sub }: { label: string; value: string; sub?: str
   );
 }
 
-export function HeroAnalyzer() {
+export function HeroAnalyzer({ ctaMode = "signup" }: { ctaMode?: "signup" | "tool" } = {}) {
   const [text, setText] = useState("");
   const [tab, setTab] = useState<Tab>("ai");
   const [report, setReport] = useState<Report | null>(null);
@@ -275,14 +275,14 @@ export function HeroAnalyzer() {
               </div>
             )}
 
-            {/* Upgrade path */}
-            <div className="mt-3.5 flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-[#d1fae5] bg-[#f7f4ff] px-3.5 py-2.5">
+            {/* Upgrade path — app users are sent to the deep-scan tool, visitors to sign-up */}
+            <div className="mt-3.5 flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-[#d1fae5] bg-[#ecfdf5] px-3.5 py-2.5">
               <p className="text-[10.5px] text-[#45464d] leading-snug flex-1">
                 <span className="font-bold text-[#047857]">Want the full deep scan?</span> Check against 10B+ academic sources, humanize, or write from real research.
               </p>
-              <Link href="/auth">
+              <Link href={ctaMode === "tool" ? "/plagiarism" : "/auth"}>
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#10b981] hover:text-[#059669] cursor-pointer whitespace-nowrap">
-                  Create free account <ArrowRight size={11} />
+                  {ctaMode === "tool" ? "Run full AI & plagiarism scan" : "Create free account"} <ArrowRight size={11} />
                 </span>
               </Link>
             </div>

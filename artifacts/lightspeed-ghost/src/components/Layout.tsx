@@ -172,17 +172,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-0.5">
-          {/* New — start writing */}
-          <Link href="/write">
+          {/* New — go to the dashboard (the free command box), not straight into a paper */}
+          <Link href="/app">
             <span
-              title={collapsed ? "New paper" : undefined}
+              title={collapsed ? "New" : undefined}
               className={cn(
                 "group flex items-center rounded-lg cursor-pointer transition-opacity bg-sidebar-primary text-sidebar-primary-foreground shadow-sm hover:opacity-90",
                 collapsed ? "justify-center h-10 w-10 mx-auto" : "gap-2 px-3 py-2",
               )}
             >
               <Plus size={17} strokeWidth={2.5} className="shrink-0" />
-              {!collapsed && <span className="text-sm font-semibold">New paper</span>}
+              {!collapsed && <span className="text-sm font-semibold">New</span>}
             </span>
           </Link>
 
@@ -233,12 +233,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-1">
-              <Link href="/write">
+              <Link href="/app">
                 <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-sidebar-primary/10 cursor-pointer">
                   <span className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">
                     <Plus size={16} className="text-sidebar-primary-foreground" strokeWidth={2.5} />
                   </span>
-                  <span className="text-sm font-semibold text-sidebar-foreground">New paper</span>
+                  <span className="text-sm font-semibold text-sidebar-foreground">New</span>
                 </span>
               </Link>
               {navItems.map((item) => (
