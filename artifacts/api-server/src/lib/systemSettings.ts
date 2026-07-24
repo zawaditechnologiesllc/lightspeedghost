@@ -13,9 +13,12 @@ interface CachedSettings {
 const CACHE_TTL_MS = 30_000;
 
 const TOOL_KEYS: ToolName[] = ["paper", "revision", "humanizer", "stem", "study", "plagiarism", "outline", "assistant", "ebook"];
-const PLANS = ["starter", "student_pro_monthly", "pro", "campus", "institution"] as const;
+const PLANS = ["free", "starter", "student_pro_monthly", "pro", "campus", "institution"] as const;
 
 const DEFAULT_LIMITS: Record<string, PlanLimitMap> = {
+  // Free never touches an LLM: only local plagiarism/AI checks + the unlimited
+  // in-browser Writing Analyzer. AI generation is 0 (paywall → Pro or PAYG).
+  free:                 { paper: 0,  revision: 0,  humanizer: 0,  stem: 0,  study: 0,   plagiarism: 3,  outline: 0,  assistant: 0,   ebook: 0 },
   starter:              { paper: 3,  revision: 1,  humanizer: 0,  stem: 15, study: 20,  plagiarism: 5,  outline: 5,  assistant: 30,  ebook: 0 },
   student_pro_monthly:  { paper: 8,  revision: 4,  humanizer: 6,  stem: 40, study: 75,  plagiarism: 10, outline: 10, assistant: 150, ebook: 0 },
   pro:                  { paper: 15, revision: 20, humanizer: 20, stem: 60, study: 150, plagiarism: 20, outline: 20, assistant: 300, ebook: 0 },

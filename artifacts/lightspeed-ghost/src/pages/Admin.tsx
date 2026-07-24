@@ -192,6 +192,13 @@ interface SystemSettings {
   maintenance_mode: string;
   allow_signups: string;
   payg_enabled: string;
+  free_paper: string;
+  free_revision: string;
+  free_humanizer: string;
+  free_stem: string;
+  free_study: string;
+  free_plagiarism: string;
+  free_outline: string;
   starter_paper: string;
   starter_revision: string;
   starter_humanizer: string;
@@ -1116,7 +1123,7 @@ export default function Admin() {
                       <div className="bg-gradient-to-br from-violet-600/10 to-violet-500/5 border border-violet-500/12 rounded-xl p-4">
                         <p className="text-xs text-white/40 mb-2 font-medium">Plan Distribution</p>
                         <div className="space-y-1.5">
-                          {[["starter", "text-blue-400"], ["pro", "text-amber-400"], ["institution", "text-emerald-400"]].map(([plan, color]) => (
+                          {[["free", "text-emerald-300"], ["pro", "text-amber-400"], ["institution", "text-emerald-400"], ["starter", "text-white/50"]].map(([plan, color]) => (
                             <div key={plan} className="flex items-center justify-between">
                               <span className={`text-[11px] font-semibold capitalize ${color}`}>{planDisplayName(plan)}</span>
                               <span className="text-xs text-white/60 tabular-nums">{((stats.planDistribution[plan] ?? 0) + (plan === "institution" ? (stats.planDistribution["campus"] ?? 0) : 0)).toLocaleString()}</span>
@@ -2526,8 +2533,8 @@ export default function Admin() {
                       </div>
                     </SettingsCard>
 
-                    {/* Plan limits */}
-                    {(["starter", "student_pro_monthly", "pro", "institution"] as const).map((plan) => (
+                    {/* Plan limits — current plans (Free / Pro / Institution) */}
+                    {(["free", "pro", "institution"] as const).map((plan) => (
                       <SettingsCard key={plan} title={`${planDisplayName(plan)} Plan Monthly Limits`}>
                         <p className="text-[10px] text-white/30 mb-3">Changes take effect within 30 seconds across all active sessions.</p>
                         <div className="grid grid-cols-2 gap-3">
@@ -2613,10 +2620,11 @@ export default function Admin() {
               <select value={planEditValue} onChange={(e) => setPlanEditValue(e.target.value)}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/25 transition-all">
                 <option value="none">No Plan</option>
-                <option value="starter">Starter</option>
-                <option value="student_pro_monthly">Student Pro</option>
+                <option value="free">Free</option>
                 <option value="pro">Pro</option>
                 <option value="institution">Institution</option>
+                <option value="starter">Starter (legacy)</option>
+                <option value="student_pro_monthly">Student Pro (legacy)</option>
               </select>
             </div>
             <div className="bg-amber-500/8 border border-amber-500/15 rounded-xl px-3 py-2.5 text-xs text-amber-400/80">

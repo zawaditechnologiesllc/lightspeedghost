@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import {
   Wand2, BookOpen, SpellCheck2, Gauge, ArrowRight, Sparkles, Lock, Check,
-  Plus, FlaskConical, PenLine, LayoutGrid, X,
+  Plus, FlaskConical, PenLine, LayoutGrid, X, ShieldCheck, Loader2, ExternalLink,
 } from "lucide-react";
 import {
   analyzeAiLikelihood,
@@ -14,14 +14,16 @@ import {
   type GrammarIssue,
   type ToneResult,
 } from "@/lib/textAnalysis";
+import { apiFetch } from "@/lib/apiFetch";
 
-// ── Command box (the open hero) ───────────────────────────────────────────────
-// The landing IS the product: paste text into the command box and get an instant
-// writing report. Every calculation runs in the browser (lib/textAnalysis.ts) —
-// no login, no server call, and it NEVER touches an AI model, so it costs nothing
-// to run no matter how many visitors use it. The numbers match the Free plan's
-// local detection mode server-side. Laid out like a modern "one box, pick an
-// action" app shell: a big input, then a row of tool actions beneath it.
+// ── The free tool: one powerful AI + plagiarism + writing checker ─────────────
+// Two layers in a single box:
+//   1. Instant, in-browser report (AI-likelihood, readability, grammar, tone) —
+//      runs client-side, no login, never touches an AI model.
+//   2. The full AI & plagiarism scan (the deep check that used to be its own
+//      tool) — runs the real /plagiarism/check endpoint when signed in: measured
+//      AI score, similarity against live academic sources with links, and the
+//      most AI-sounding sections. Guests are prompted to sign in for it.
 
 type Tab = "ai" | "readability" | "grammar" | "tone";
 
@@ -32,10 +34,8 @@ const TABS: Array<{ id: Tab; label: string; icon: typeof Wand2 }> = [
   { id: "tone",        label: "Tone",         icon: BookOpen },
 ];
 
-// Tool actions shown beneath the box. The first runs the free in-browser
-// analyzer (AI + writing check); the rest deep-link into the real tools
-// (AuthGuard prompts sign-up). AI & plagiarism is blended into "Check my
-// writing" — not a separate action.
+// Tool shortcuts shown beneath the box. The first runs the instant in-browser
+// check; the rest deep-link into the real tools (AuthGuard prompts sign-up).
 const ACTIONS: Array<{ label: string; icon: typeof Wand2; href?: string; accent: string }> = [
   { label: "Check my writing", icon: Sparkles,     accent: "text-[#10b981]" },
   { label: "Write Paper",      icon: PenLine,      href: "/write",     accent: "text-emerald-600" },
@@ -54,10 +54,31 @@ interface Report {
   tone: ToneResult;
 }
 
+// Shape of the /plagiarism/check "done" payload (loosely typed — we render a subset).
+interface ScanSource { url: string; similarity: number; matchedText?: string; title?: string; authors?: string; year?: number; }
+interface ScanResult {
+  aiScore: number;
+  aiDetectionAvailable?: boolean;
+  plagiarismScore: number;
+  overallRisk: "low" | "medium" | "high";
+  plagiarismSources?: ScanSource[];
+  aiSections?: Array<{ text: string; score: number }>;
+  aiFlags?: string[];
+  burstiness?: number;
+  detectionModel?: string;
+  sourcesScanned?: string[];
+}
+
 function scoreColor(score: number): { text: string; bar: string; ring: string } {
   if (score < 35) return { text: "text-emerald-600", bar: "bg-emerald-500", ring: "border-emerald-200 bg-emerald-50" };
   if (score < 65) return { text: "text-amber-600", bar: "bg-amber-500", ring: "border-amber-200 bg-amber-50" };
   return { text: "text-red-600", bar: "bg-red-500", ring: "border-red-200 bg-red-50" };
+}
+
+function riskBadge(risk: "low" | "medium" | "high") {
+  if (risk === "low") return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (risk === "medium") return "text-amber-700 bg-amber-50 border-amber-200";
+  return "text-red-700 bg-red-50 border-red-200";
 }
 
 function Metric({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -70,11 +91,37 @@ function Metric({ label, value, sub }: { label: string; value: string; sub?: str
   );
 }
 
-export function HeroAnalyzer({ ctaMode = "signup" }: { ctaMode?: "signup" | "tool" } = {}) {
+// Big score dial used by the full scan (AI %, Similarity %).
+function ScoreDial({ label, score, sub }: { label: string; score: number; sub?: string }) {
+  const c = scoreColor(score);
+  return (
+    <div className={`rounded-xl border p-3 text-center ${c.ring}`}>
+      <div className={`text-2xl font-bold leading-none ${c.text}`}>{score}%</div>
+      <div className="text-[10px] font-bold text-[#45464d] uppercase tracking-wide mt-1">{label}</div>
+      {sub && <div className="text-[9px] text-[#76777d] mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+export function HeroAnalyzer({
+  authed = false,
+  onRequireAuth,
+}: {
+  /** True when a signed-in user is using the tool (dashboard). Enables the full scan inline. */
+  authed?: boolean;
+  /** Called when a guest tries to run the full scan (opens sign-in). */
+  onRequireAuth?: () => void;
+} = {}) {
   const [text, setText] = useState("");
   const [tab, setTab] = useState<Tab>("ai");
   const [report, setReport] = useState<Report | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Full AI + plagiarism scan (server) state
+  const [scanning, setScanning] = useState(false);
+  const [scanStep, setScanStep] = useState("");
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const wordCount = useMemo(() => text.split(/\s+/).filter(Boolean).length, [text]);
 
@@ -92,7 +139,67 @@ export function HeroAnalyzer({ ctaMode = "signup" }: { ctaMode?: "signup" | "too
   function loadSample(sample: string) {
     setText(sample);
     setReport(null);
+    setScanResult(null);
+    setScanError(null);
     requestAnimationFrame(() => taRef.current?.focus());
+  }
+
+  // Run the real AI + plagiarism scan (the deep check) inline.
+  async function runFullScan() {
+    if (!text.trim()) { taRef.current?.focus(); return; }
+    if (!authed) { onRequireAuth?.(); return; }
+    if (!report) analyze(); // make sure the instant report is shown too
+    setScanError(null);
+    setScanResult(null);
+    setScanning(true);
+    setScanStep("Starting scan…");
+    try {
+      const resp = await apiFetch("/plagiarism/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, checkAi: true, checkPlagiarism: true }),
+      });
+      if (!resp.ok || !resp.body) throw new Error("Scan failed — please try again.");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let event = "";
+      let terminal = false;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (terminal) continue;
+          if (line.startsWith("event: ")) {
+            event = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (event === "step") {
+                if (data.status === "running" && data.message) setScanStep(data.message);
+              } else if (event === "done") {
+                setScanResult(data as ScanResult);
+                terminal = true;
+              } else if (event === "error") {
+                setScanError(data.message ?? "Scan failed.");
+                terminal = true;
+              }
+            } catch { /* ignore parse errors */ }
+            event = "";
+          }
+        }
+      }
+      if (!terminal) throw new Error("Scan interrupted — please try again.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Scan failed — please try again.";
+      setScanError(msg.startsWith("{") ? "Scan failed — please try again." : msg);
+    } finally {
+      setScanning(false);
+    }
   }
 
   const ai = report?.ai;
@@ -101,11 +208,11 @@ export function HeroAnalyzer({ ctaMode = "signup" }: { ctaMode?: "signup" | "too
   return (
     <div className="w-full max-w-3xl mx-auto">
       {/* ── The command box ── */}
-      <div className="rounded-[26px] border border-[#e0e3e5] bg-white shadow-[0_18px_50px_-20px_rgba(19,27,46,0.28)] focus-within:border-[#10b981]/50 focus-within:shadow-[0_18px_50px_-16px_rgba(107,56,212,0.35)] transition-all overflow-hidden">
+      <div className="rounded-[26px] border border-[#e0e3e5] bg-white shadow-[0_18px_50px_-20px_rgba(19,27,46,0.28)] focus-within:border-[#10b981]/50 focus-within:shadow-[0_18px_50px_-16px_rgba(16,185,129,0.30)] transition-all overflow-hidden">
         <textarea
           ref={taRef}
           value={text}
-          onChange={(e) => { setText(e.target.value); setReport(null); }}
+          onChange={(e) => { setText(e.target.value); setReport(null); setScanResult(null); setScanError(null); }}
           placeholder="Write, paste, or upload your text — check it free, no account needed…"
           rows={4}
           className="w-full resize-none bg-transparent px-5 pt-5 pb-2 text-[15px] text-[#191c1e] placeholder:text-[#9aa0a6] focus:outline-none leading-relaxed"
@@ -122,7 +229,7 @@ export function HeroAnalyzer({ ctaMode = "signup" }: { ctaMode?: "signup" | "too
           {text && (
             <button
               type="button"
-              onClick={() => { setText(""); setReport(null); taRef.current?.focus(); }}
+              onClick={() => { setText(""); setReport(null); setScanResult(null); setScanError(null); taRef.current?.focus(); }}
               className="inline-flex items-center gap-1 text-[11px] font-medium text-[#76777d] hover:text-[#45464d] px-2 py-1 rounded-md hover:bg-[#f2f4f6] transition-colors"
             >
               <X size={12} /> Clear
@@ -144,7 +251,7 @@ export function HeroAnalyzer({ ctaMode = "signup" }: { ctaMode?: "signup" | "too
       <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
         {ACTIONS.map(({ label, icon: Icon, href, accent }) => {
           const inner = (
-            <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e3e5] bg-white text-sm font-semibold text-[#191c1e] hover:border-[#10b981]/50 hover:bg-[#faf9ff] cursor-pointer transition-all shadow-sm">
+            <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e3e5] bg-white text-sm font-semibold text-[#191c1e] hover:border-[#10b981]/50 hover:bg-[#f0fdf4] cursor-pointer transition-all shadow-sm">
               <Icon size={15} className={accent} /> {label}
             </span>
           );
@@ -156,7 +263,7 @@ export function HeroAnalyzer({ ctaMode = "signup" }: { ctaMode?: "signup" | "too
         })}
         <a
           href="#tools"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e3e5] bg-white text-sm font-semibold text-[#45464d] hover:border-[#10b981]/50 hover:bg-[#faf9ff] transition-all shadow-sm"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e3e5] bg-white text-sm font-semibold text-[#45464d] hover:border-[#10b981]/50 hover:bg-[#f0fdf4] transition-all shadow-sm"
         >
           <LayoutGrid size={15} className="text-[#76777d]" /> More
         </a>
@@ -164,16 +271,15 @@ export function HeroAnalyzer({ ctaMode = "signup" }: { ctaMode?: "signup" | "too
 
       {/* Sample + reassurance */}
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 mt-3.5 text-[11px] text-[#76777d]">
-        <span className="inline-flex items-center gap-1.5"><Lock size={11} className="text-emerald-600" /> Runs in your browser · never sent to an AI model</span>
+        <span className="inline-flex items-center gap-1.5"><Lock size={11} className="text-emerald-600" /> Instant check runs in your browser</span>
         <span className="hidden sm:inline text-[#c6c6cd]">·</span>
         <button type="button" onClick={() => loadSample(SAMPLE_AI)} className="font-semibold text-[#10b981] hover:underline">Try an AI-written sample</button>
         <button type="button" onClick={() => loadSample(SAMPLE_HUMAN)} className="font-semibold text-[#10b981] hover:underline">Try a human sample</button>
       </div>
 
-      {/* ── Results ── */}
+      {/* ── Instant client-side report ── */}
       {report && (
         <div className="mt-5 rounded-2xl border border-[#e0e3e5] bg-white shadow-lg overflow-hidden text-left">
-          {/* Result tabs */}
           <div className="flex items-center gap-1 px-3 pt-3 border-b border-[#eceef0] overflow-x-auto">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
@@ -254,7 +360,7 @@ export function HeroAnalyzer({ ctaMode = "signup" }: { ctaMode?: "signup" | "too
                   <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
                     {report.grammar.slice(0, 6).map((iss, i) => (
                       <div key={i} className="flex items-start gap-2 text-[10.5px] bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5">
-                        <span className={`shrink-0 mt-0.5 w-1.5 h-1.5 rounded-full ${iss.severity === "error" ? "bg-red-500" : iss.severity === "warning" ? "bg-amber-500" : "bg-sky-500"}`} />
+                        <span className={`shrink-0 mt-0.5 w-1.5 h-1.5 rounded-full ${iss.severity === "error" ? "bg-red-500" : iss.severity === "warning" ? "bg-amber-500" : "bg-emerald-500"}`} />
                         <span className="text-[#45464d] leading-snug">{iss.message}</span>
                       </div>
                     ))}
@@ -277,17 +383,105 @@ export function HeroAnalyzer({ ctaMode = "signup" }: { ctaMode?: "signup" | "too
               </div>
             )}
 
-            {/* Upgrade path — app users are sent to the deep-scan tool, visitors to sign-up */}
-            <div className="mt-3.5 flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-[#d1fae5] bg-[#ecfdf5] px-3.5 py-2.5">
-              <p className="text-[10.5px] text-[#45464d] leading-snug flex-1">
-                <span className="font-bold text-[#047857]">Want the full deep scan?</span> Check against 10B+ academic sources, humanize, or write from real research.
-              </p>
-              <Link href={ctaMode === "tool" ? "/plagiarism" : "/auth"}>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#10b981] hover:text-[#059669] cursor-pointer whitespace-nowrap">
-                  {ctaMode === "tool" ? "Run full AI & plagiarism scan" : "Create free account"} <ArrowRight size={11} />
-                </span>
-              </Link>
+            {/* Full AI & plagiarism scan launcher */}
+            <div className="mt-3.5 rounded-xl border border-[#d1fae5] bg-[#ecfdf5] px-3.5 py-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <p className="text-[11px] text-[#45464d] leading-snug flex-1">
+                  <span className="font-bold text-[#047857]">Full AI &amp; plagiarism scan.</span> Measured AI score + similarity against 10B+ live academic sources, with the exact matching sentences and sources.
+                </p>
+                {authed ? (
+                  <button
+                    type="button"
+                    onClick={runFullScan}
+                    disabled={scanning}
+                    className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#10b981] hover:bg-[#059669] disabled:opacity-60 text-white text-[11px] font-bold transition-colors whitespace-nowrap"
+                  >
+                    {scanning ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />}
+                    {scanning ? "Scanning…" : "Run full scan"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onRequireAuth?.()}
+                    className="inline-flex items-center justify-center gap-1.5 text-[11px] font-bold text-[#10b981] hover:text-[#059669] whitespace-nowrap"
+                  >
+                    Sign in to run the full scan <ArrowRight size={11} />
+                  </button>
+                )}
+              </div>
+
+              {scanning && scanStep && (
+                <p className="mt-2 text-[10.5px] text-[#047857] flex items-center gap-1.5">
+                  <Loader2 size={10} className="animate-spin" /> {scanStep}
+                </p>
+              )}
+              {scanError && (
+                <p className="mt-2 text-[10.5px] text-red-600">{scanError}</p>
+              )}
             </div>
+
+            {/* Full scan results */}
+            {scanResult && (
+              <div className="mt-3 rounded-xl border border-[#e0e3e5] bg-white p-3.5">
+                <div className="flex items-center justify-between mb-2.5">
+                  <p className="text-xs font-bold text-[#131b2e] flex items-center gap-1.5">
+                    <ShieldCheck size={13} className="text-[#10b981]" /> Full AI &amp; plagiarism report
+                  </p>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${riskBadge(scanResult.overallRisk)}`}>
+                    {scanResult.overallRisk} risk
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <ScoreDial label="AI content" score={scanResult.aiScore ?? 0} sub={scanResult.detectionModel} />
+                  <ScoreDial label="Similarity" score={scanResult.plagiarismScore ?? 0} sub="vs. academic sources" />
+                </div>
+
+                {/* Plagiarism sources */}
+                {scanResult.plagiarismSources && scanResult.plagiarismSources.length > 0 ? (
+                  <div className="space-y-1 mb-3">
+                    <p className="text-[9px] font-bold text-[#76777d] uppercase tracking-wider">Matching sources</p>
+                    {scanResult.plagiarismSources.slice(0, 5).map((s, i) => (
+                      <a
+                        key={i}
+                        href={s.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between gap-2 text-[10.5px] bg-[#f7f9fb] border border-[#e0e3e5] rounded-lg px-2.5 py-1.5 hover:border-[#10b981]/40 transition-colors"
+                      >
+                        <span className="truncate text-[#45464d]">
+                          {s.title || s.url}
+                          {s.matchedText && <span className="text-[#76777d]"> — "{s.matchedText.slice(0, 60)}"</span>}
+                        </span>
+                        <span className="shrink-0 flex items-center gap-1 font-bold text-[#76777d]">
+                          {Math.round(s.similarity)}% <ExternalLink size={10} />
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="flex items-center gap-1.5 text-[10.5px] font-semibold text-emerald-700 mb-3">
+                    <Check size={11} strokeWidth={3} /> No significant matching sources found
+                  </p>
+                )}
+
+                {/* Most AI-sounding sections */}
+                {scanResult.aiSections && scanResult.aiSections.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-bold text-[#76777d] uppercase tracking-wider">Most AI-sounding sections</p>
+                    {scanResult.aiSections.slice(0, 3).map((s, i) => (
+                      <p key={i} className="text-[10.5px] text-[#45464d] bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 leading-snug">
+                        "{s.text.length > 140 ? s.text.slice(0, 140) + "…" : s.text}" <span className="font-bold text-amber-700">{s.score}%</span>
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {scanResult.detectionModel && (
+                  <p className="text-[9px] text-[#9aa0a6] mt-2.5">Detection: {scanResult.detectionModel}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
