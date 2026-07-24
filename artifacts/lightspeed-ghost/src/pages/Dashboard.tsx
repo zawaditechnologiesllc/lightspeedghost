@@ -113,7 +113,7 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
-        <HeroAnalyzer ctaMode="tool" />
+        <HeroAnalyzer authed />
       </div>
 
       {/* First-visit onboarding banner */}

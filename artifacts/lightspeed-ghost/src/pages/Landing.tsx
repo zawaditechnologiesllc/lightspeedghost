@@ -600,7 +600,7 @@ export default function Landing() {
           </p>
 
           {/* The open, in-browser analyzer */}
-          <HeroAnalyzer />
+          <HeroAnalyzer authed={!!user} onRequireAuth={() => openAuth("login")} />
 
           {/* Suggestion starters */}
           <div className="mt-10">
