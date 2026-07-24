@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import {
   Wand2, BookOpen, SpellCheck2, Gauge, ArrowRight, Sparkles, Lock, Check,
-  Plus, FlaskConical, PenLine, LayoutGrid, X, ShieldCheck, Loader2, ExternalLink,
+  Plus, FlaskConical, PenLine, LayoutGrid, X, ShieldCheck, Loader2, ExternalLink, Download,
 } from "lucide-react";
 import {
   analyzeAiLikelihood,
@@ -15,6 +15,12 @@ import {
   type ToneResult,
 } from "@/lib/textAnalysis";
 import { apiFetch } from "@/lib/apiFetch";
+import {
+  buildHighlightSegments,
+  countHighlights,
+  buildScanReportHtml,
+  downloadScanReport,
+} from "@/lib/scanReport";
 
 // ── The free tool: one powerful AI + plagiarism + writing checker ─────────────
 // Two layers in a single box:
@@ -124,6 +130,49 @@ export function HeroAnalyzer({
   const [scanError, setScanError] = useState<string | null>(null);
 
   const wordCount = useMemo(() => text.split(/\s+/).filter(Boolean).length, [text]);
+
+  // Turnitin-style highlighting: locate the AI-flagged sentences (instant report
+  // + full-scan AI sections) and the plagiarism matches inside the original text,
+  // so we can colour-code exactly where each flag is. Recomputed whenever the
+  // report or the full-scan result changes.
+  const highlightSegments = useMemo(() => {
+    if (!report) return [];
+    const aiSnippets = [
+      ...report.ai.flaggedSentences.map((s) => s.text),
+      ...(scanResult?.aiSections?.map((s) => s.text) ?? []),
+    ];
+    const plagSnippets =
+      scanResult?.plagiarismSources?.map((s) => s.matchedText ?? "").filter(Boolean) ?? [];
+    return buildHighlightSegments(text, aiSnippets, plagSnippets);
+  }, [report, scanResult, text]);
+  const highlightCounts = useMemo(() => countHighlights(highlightSegments), [highlightSegments]);
+
+  // Deliver the "downloadable report you can keep as evidence" promise: build a
+  // self-contained, printable HTML report from whatever data is available
+  // (instant analysis always; full-scan scores + sources once scanned).
+  function handleDownloadReport() {
+    if (!report) return;
+    const html = buildScanReportHtml({
+      text,
+      segments: highlightSegments,
+      wordCount,
+      aiLikelihood: report.ai.score,
+      aiVerdict: report.ai.verdict,
+      scanAiScore: scanResult?.aiScore,
+      similarity: scanResult?.plagiarismScore,
+      risk: scanResult?.overallRisk,
+      detectionModel: scanResult?.detectionModel,
+      sources: scanResult?.plagiarismSources?.map((s) => ({
+        url: s.url,
+        similarity: s.similarity,
+        matchedText: s.matchedText,
+        title: s.title,
+      })),
+      flaggedSentences: report.ai.flaggedSentences,
+    });
+    const date = new Date().toISOString().slice(0, 10);
+    downloadScanReport(html, `lightspeedghost-report-${date}.html`);
+  }
 
   function analyze(input?: string) {
     const t = input ?? text;
@@ -383,6 +432,48 @@ export function HeroAnalyzer({
               </div>
             )}
 
+            {/* Highlighted document — shows exactly where AI + plagiarism are,
+                colour-coded inline like Turnitin, with a downloadable copy. */}
+            <div className="mt-3.5">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <p className="text-[9px] font-bold text-[#76777d] uppercase tracking-wider">Highlighted document</p>
+                <button
+                  type="button"
+                  onClick={handleDownloadReport}
+                  title="Download a copy of this report"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#10b981]/40 bg-[#ecfdf5] text-[#047857] text-[10px] font-bold hover:bg-[#d1fae5] transition-colors"
+                >
+                  <Download size={11} /> Download report
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-1.5 text-[9.5px] text-[#76777d]">
+                <span className="inline-flex items-center gap-1">
+                  <span className="inline-block w-3 h-3 rounded-sm bg-[#fef08a] border border-[#fde68a]" /> AI-flagged ({highlightCounts.ai})
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="inline-block w-3 h-3 rounded-sm bg-[#fecaca] border border-[#fca5a5]" /> Matched to a source ({highlightCounts.plag})
+                </span>
+                {!scanResult && (
+                  <span className="text-[#9aa0a6]">Run the full scan below to add source-match highlighting</span>
+                )}
+              </div>
+              <div className="max-h-56 overflow-y-auto rounded-xl border border-[#e0e3e5] bg-[#fbfdfc] px-3.5 py-3 text-[12.5px] leading-[1.9] text-[#2b2f36] whitespace-pre-wrap break-words">
+                {highlightSegments.length === 0 ? (
+                  <span className="text-[#9aa0a6]">Your highlighted text will appear here.</span>
+                ) : (
+                  highlightSegments.map((seg, i) =>
+                    seg.type === "ai" ? (
+                      <mark key={i} className="bg-[#fef08a] text-[#713f12] rounded-[3px] px-0.5">{seg.text}</mark>
+                    ) : seg.type === "plag" ? (
+                      <mark key={i} className="bg-[#fecaca] text-[#7f1d1d] rounded-[3px] px-0.5">{seg.text}</mark>
+                    ) : (
+                      <span key={i}>{seg.text}</span>
+                    ),
+                  )
+                )}
+              </div>
+            </div>
+
             {/* Full AI & plagiarism scan launcher */}
             <div className="mt-3.5 rounded-xl border border-[#d1fae5] bg-[#ecfdf5] px-3.5 py-3">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -423,13 +514,23 @@ export function HeroAnalyzer({
             {/* Full scan results */}
             {scanResult && (
               <div className="mt-3 rounded-xl border border-[#e0e3e5] bg-white p-3.5">
-                <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center justify-between gap-2 mb-2.5">
                   <p className="text-xs font-bold text-[#131b2e] flex items-center gap-1.5">
                     <ShieldCheck size={13} className="text-[#10b981]" /> Full AI &amp; plagiarism report
                   </p>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${riskBadge(scanResult.overallRisk)}`}>
-                    {scanResult.overallRisk} risk
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleDownloadReport}
+                      title="Download a copy of this report"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#10b981]/40 bg-[#ecfdf5] text-[#047857] text-[10px] font-bold hover:bg-[#d1fae5] transition-colors"
+                    >
+                      <Download size={10} /> Download
+                    </button>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${riskBadge(scanResult.overallRisk)}`}>
+                      {scanResult.overallRisk} risk
+                    </span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 mb-3">
