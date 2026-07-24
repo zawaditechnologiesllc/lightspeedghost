@@ -71,7 +71,7 @@ export function PaywallGate({ tool, tier, children }: PaywallGateProps) {
               {!isPro && (
                 <button
                   onClick={() => setShowSub(true)}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-sm font-semibold rounded-xl transition-all"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-sm font-semibold rounded-xl transition-all"
                 >
                   <Zap size={14} />
                   Upgrade to Pro — $29.99/mo

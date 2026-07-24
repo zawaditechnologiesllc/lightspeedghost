@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import {
   Wand2, BookOpen, SpellCheck2, Gauge, ArrowRight, Sparkles, Lock, Check,
-  Plus, ShieldCheck, PenLine, LayoutGrid, X,
+  Plus, FlaskConical, PenLine, LayoutGrid, X,
 } from "lucide-react";
 import {
   analyzeAiLikelihood,
@@ -33,12 +33,14 @@ const TABS: Array<{ id: Tab; label: string; icon: typeof Wand2 }> = [
 ];
 
 // Tool actions shown beneath the box. The first runs the free in-browser
-// analyzer; the rest deep-link into the real tools (AuthGuard prompts sign-up).
+// analyzer (AI + writing check); the rest deep-link into the real tools
+// (AuthGuard prompts sign-up). AI & plagiarism is blended into "Check my
+// writing" — not a separate action.
 const ACTIONS: Array<{ label: string; icon: typeof Wand2; href?: string; accent: string }> = [
-  { label: "Check my writing", icon: Sparkles,    accent: "text-[#10b981]" },
-  { label: "AI & Plagiarism",  icon: ShieldCheck, href: "/plagiarism", accent: "text-emerald-600" },
-  { label: "Humanizer",        icon: Wand2,       href: "/humanizer",  accent: "text-purple-600" },
-  { label: "Write Paper",      icon: PenLine,     href: "/write",      accent: "text-blue-600" },
+  { label: "Check my writing", icon: Sparkles,     accent: "text-[#10b981]" },
+  { label: "Write Paper",      icon: PenLine,      href: "/write",     accent: "text-emerald-600" },
+  { label: "Humanizer",        icon: Wand2,        href: "/humanizer", accent: "text-teal-700" },
+  { label: "STEM Solver",      icon: FlaskConical, href: "/stem",      accent: "text-green-600" },
 ];
 
 const SAMPLE_AI = `Furthermore, it is important to note that social media plays a crucial role in shaping adolescent development in today's world. Moreover, numerous studies have shown that excessive screen time has a significant impact on mental health outcomes. Additionally, it is essential to recognize that these multifaceted factors underscore the importance of digital literacy. In conclusion, it is clear that society must navigate the complexities of this evolving landscape in order to safeguard future generations.`;

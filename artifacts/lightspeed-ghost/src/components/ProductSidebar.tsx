@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import {
-  Plus, PenLine, ListTree, FileEdit, Wand2, ShieldCheck,
+  Plus, PenLine, ListTree, FileEdit, Wand2,
   FlaskConical, GraduationCap, BookOpen, X,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -19,15 +19,17 @@ export interface ToolNavItem {
   accent: string; // tailwind text color for the icon
 }
 
+// AI & Plagiarism is intentionally NOT a standalone tool here — that check is
+// blended into the free command box and still powers Write / Outline / Revision
+// under the hood. Accents stay in the emerald/teal family for brand consistency.
 export const TOOL_NAV: ToolNavItem[] = [
-  { label: "Write Paper",  href: "/write",      icon: PenLine,        accent: "text-blue-600" },
-  { label: "Outline",      href: "/outline",    icon: ListTree,       accent: "text-indigo-600" },
-  { label: "Revision",     href: "/revision",   icon: FileEdit,       accent: "text-violet-600" },
-  { label: "Humanizer",    href: "/humanizer",  icon: Wand2,          accent: "text-purple-600" },
-  { label: "AI & Plagiarism", href: "/plagiarism", icon: ShieldCheck, accent: "text-emerald-600" },
-  { label: "STEM Solver",  href: "/stem",       icon: FlaskConical,   accent: "text-cyan-600" },
-  { label: "Study",        href: "/study",      icon: GraduationCap,  accent: "text-amber-600" },
-  { label: "Ebooks",       href: "/ebooks",     icon: BookOpen,       accent: "text-orange-600" },
+  { label: "Write Paper",  href: "/write",      icon: PenLine,        accent: "text-emerald-600" },
+  { label: "Outline",      href: "/outline",    icon: ListTree,       accent: "text-teal-600" },
+  { label: "Revision",     href: "/revision",   icon: FileEdit,       accent: "text-emerald-500" },
+  { label: "Humanizer",    href: "/humanizer",  icon: Wand2,          accent: "text-teal-700" },
+  { label: "STEM Solver",  href: "/stem",       icon: FlaskConical,   accent: "text-green-600" },
+  { label: "Study",        href: "/study",      icon: GraduationCap,  accent: "text-emerald-700" },
+  { label: "Ebooks",       href: "/ebooks",     icon: BookOpen,       accent: "text-teal-500" },
 ];
 
 function RailItem({ item, onNavigate }: { item: ToolNavItem; onNavigate?: () => void }) {

@@ -17,7 +17,6 @@ import {
   ShoppingCart,
   BookMarked,
   DollarSign,
-  Plus,
   Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
@@ -35,13 +34,14 @@ import OfflineBanner from "@/components/OfflineBanner";
 // logo + wordmark top-left, then the tool list down the left. It defaults to
 // the expanded (labeled) view and collapses to an icon rail via the toggle.
 
+// AI & Plagiarism is not a standalone tool — it's blended into the free
+// command box (dashboard/landing) and still powers Write / Outline / Revision.
 const navItems = [
   { path: "/app",        label: "Dashboard",         icon: LayoutDashboard },
   { path: "/write",      label: "Write Paper",       icon: PenLine },
   { path: "/outline",    label: "Outline",           icon: BookOpen },
   { path: "/revision",   label: "Revision",          icon: Files },
   { path: "/humanizer",  label: "Humanizer",         icon: Wand2 },
-  { path: "/plagiarism", label: "AI & Plagiarism",   icon: ShieldCheck },
   { path: "/stem",       label: "STEM Solver",       icon: FlaskConical },
   { path: "/study",      label: "Study Assistant",   icon: GraduationCap },
   { path: "/ebooks",     label: "Ebooks",            icon: BookMarked },
@@ -50,10 +50,10 @@ const navItems = [
 ];
 
 const mobileBottomNav = [
+  { path: "/app",        label: "Home",     icon: LayoutDashboard },
   { path: "/write",      label: "Write",    icon: PenLine },
   { path: "/humanizer",  label: "Humanize", icon: Wand2 },
-  { path: "/revision",   label: "Revise",   icon: RotateCcw },
-  { path: "/plagiarism", label: "Check",    icon: ShieldCheck },
+  { path: "/stem",       label: "STEM",     icon: FlaskConical },
   { path: "/study",      label: "Study",    icon: GraduationCap },
 ];
 
@@ -172,22 +172,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-0.5">
-          {/* New — go to the dashboard (the free command box), not straight into a paper */}
-          <Link href="/app">
-            <span
-              title={collapsed ? "New" : undefined}
-              className={cn(
-                "group flex items-center rounded-lg cursor-pointer transition-opacity bg-sidebar-primary text-sidebar-primary-foreground shadow-sm hover:opacity-90",
-                collapsed ? "justify-center h-10 w-10 mx-auto" : "gap-2 px-3 py-2",
-              )}
-            >
-              <Plus size={17} strokeWidth={2.5} className="shrink-0" />
-              {!collapsed && <span className="text-sm font-semibold">New</span>}
-            </span>
-          </Link>
-
-          <div className={cn("my-1.5 border-t border-sidebar-border", collapsed ? "mx-2" : "mx-1")} />
-
           {navItems.map((item) => (
             <NavRow key={item.path} {...item} collapsed={collapsed} />
           ))}
@@ -233,14 +217,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-1">
-              <Link href="/app">
-                <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-sidebar-primary/10 cursor-pointer">
-                  <span className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">
-                    <Plus size={16} className="text-sidebar-primary-foreground" strokeWidth={2.5} />
-                  </span>
-                  <span className="text-sm font-semibold text-sidebar-foreground">New</span>
-                </span>
-              </Link>
               {navItems.map((item) => (
                 <DrawerItem key={item.path} {...item} onClick={() => setMobileOpen(false)} />
               ))}
