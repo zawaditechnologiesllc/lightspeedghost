@@ -529,6 +529,83 @@ export function getRubric(paperType: PaperType): Rubric {
   return RUBRICS[TYPE_FAMILY[paperType]];
 }
 
+// ── Auto-detection (no options asked of the user) ─────────────────────────────
+export function detectPaperType(text: string): PaperType {
+  const t = text.toLowerCase();
+  const words = text.split(/\s+/).filter(Boolean).length;
+  const has = (...kw: string[]) => kw.some((k) => t.includes(k));
+  if (has("annotated bibliography")) return "Annotated Bibliography";
+  if (has("literature review", "this review examines the literature")) return "Lit. Review";
+  if (has("dissertation")) return "Dissertation";
+  if (has("thesis") && has("chapter")) return "Thesis";
+  if (has("lab report") || (has("materials", "apparatus", "procedure") && has("results", "observed", "measured"))) return "Lab Report";
+  if (has("financial analysis") || (has("ratio", "cash flow", "ebitda") && has("balance sheet", "income statement", "revenue"))) return "Financial Analysis";
+  if (has("business plan") || (has("revenue", "market", "customer") && has("executive summary"))) return "Business Plan";
+  if (has("policy brief")) return "Policy Brief";
+  if (has("white paper")) return "White Paper";
+  if (has("position paper")) return "Position Paper";
+  if (has("research proposal")) return "Research Proposal";
+  if (has("grant proposal")) return "Grant Proposal";
+  if (has("case study") || has("this case", "the case of")) return "Case Study";
+  if (has("book review")) return "Book Review";
+  if (has("film review", "movie review") || (has("film", "movie", "director") && has("review", "cinematograph"))) return "Film/Movie Review";
+  if (has("article review") || (has("the article", "this article") && has("critique", "evaluate", "argues"))) return "Article Review";
+  if (has("personal statement")) return "Personal Statement";
+  if (has("admissions committee", "i am applying", "your program", "this university") && has("i ", "my ")) return "Admission Essay";
+  if (has("scholarship")) return "Scholarship Essay";
+  if (has("ladies and gentlemen", "thank you for listening", "good morning everyone", "today i want to talk")) return "Speech";
+  if (has("annotated")) return "Annotated Bibliography";
+  if (has("capstone")) return "Capstone Project";
+  if (has("term paper")) return "Term Paper";
+  if (has("critically analyse", "critically analyze", "critical analysis")) return "Critical Analysis";
+  if (has("reflect", "i learned", "looking back", "this experience taught")) return "Reflective Essay";
+  if (has("i remember", "that day", "the moment i")) return "Narrative Essay";
+  if (has("persuade", "you should", "imagine if you")) return "Persuasive Essay";
+  if (has("i argue", "this essay argues", "however, critics", "some argue", "must ", "should ")) return "Argumentative Essay";
+  if (has("proposal")) return "General Proposal";
+  if (has("abstract") && (has("methodology", "method", "hypothesis")) && (has("references", "et al", "doi"))) return words > 4000 ? "Thesis" : "Research Paper";
+  if (has("references", "works cited", "bibliography", "et al") || /\((?:19|20)\d{2}\)/.test(text)) return "Research Paper";
+  if (has("report")) return "Report";
+  return "Essay";
+}
+
+export function detectLevelFromGrade(text: string, readabilityGrade: number): AcademicLevel {
+  const t = text.toLowerCase();
+  const words = text.split(/\s+/).filter(Boolean).length;
+  const citeDensity = (text.match(/\bet al\b|\((?:19|20)\d{2}\)|\[\d+\]/g) || []).length;
+  if (t.includes("dissertation") || t.includes("ph.d") || t.includes("phd") || words > 8000) return "PhD";
+  if (t.includes("thesis") || words > 4000 || (t.includes("methodology") && citeDensity > 10)) return "Masters";
+  if (readabilityGrade >= 15 || citeDensity > 8) return "Honours";
+  if (readabilityGrade >= 13) return "UG Year 3–4";
+  if (readabilityGrade >= 10) return "UG Year 1–2";
+  return "High School";
+}
+
+export function detectLanguage(text: string): (typeof LANGUAGES)[number] {
+  const t = text.toLowerCase();
+  const uk = (t.match(/\b(colour|behaviour|organis|realis|recognis|analys|centre|theatre|labour|favour|honour|programme|defence|licence|travelled|modelling|catalogue|whilst)\w*/g) || []).length;
+  const us = (t.match(/\b(color|behavior|organiz|realiz|recogniz|analyz|center|theater|labor|favor|honor|defense|license|traveled|modeling|catalog)\w*/g) || []).length;
+  if (uk > us && uk >= 2) return "UK English";
+  return "US English";
+}
+
+export function detectCitationStylePublic(text: string): CitationStyle | null {
+  return detectCitationStyle(text).style;
+}
+
+// Detect all options from the text alone — the checker never asks the user.
+export function autoDetectOptions(text: string): PeerReviewOptions {
+  const grade = analyzeReadability(text).fleschKincaidGrade;
+  return {
+    paperType: detectPaperType(text),
+    citationStyle: detectCitationStyle(text).style ?? "apa",
+    spacing: "Double",
+    minSources: "auto",
+    language: detectLanguage(text),
+    level: detectLevelFromGrade(text, grade),
+  };
+}
+
 // ── Professors (imitated review lenses — not real people) ─────────────────────
 export interface Professor {
   id: "mit" | "harvard" | "yale";

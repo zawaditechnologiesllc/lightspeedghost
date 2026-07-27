@@ -248,3 +248,25 @@ export function downloadScanReport(html: string, filename = "lightspeedghost-rep
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+// Download as PDF via the browser's native print-to-PDF — no heavy PDF library,
+// so it stays off the landing critical path. Renders the report into an offscreen
+// iframe (avoids popup blockers) and opens the print dialog with "Save as PDF".
+export function downloadReportPdf(html: string): void {
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+  document.body.appendChild(iframe);
+  const cleanup = () => { setTimeout(() => { try { document.body.removeChild(iframe); } catch { /* already gone */ } }, 1500); };
+  const doc = iframe.contentWindow?.document;
+  if (!doc) { cleanup(); return; }
+  doc.open();
+  doc.write(html);
+  doc.close();
+  const win = iframe.contentWindow!;
+  win.onafterprint = cleanup;
+  // Give the browser a beat to lay out (and load the emoji favicon/fonts) first.
+  setTimeout(() => {
+    try { win.focus(); win.print(); } catch { cleanup(); }
+  }, 350);
+}
