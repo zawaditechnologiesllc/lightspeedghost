@@ -40,8 +40,8 @@ Available at: [lightspeedghost.com/outline](https://lightspeedghost.com/outline)
 Takes a student's existing draft and revises it toward a target grade (e.g. First, A, Distinction). Upload a grading rubric to align every revision with assessed criteria. Explains every change so students learn from it.
 Available at: [lightspeedghost.com/revision](https://lightspeedghost.com/revision)
 
-### 5. AI and Plagiarism Checker
-Detects AI-generated content patterns using lexical diversity analysis. Detects plagiarism using cosine similarity against academic sources. Highlights flagged sections.
+### 5. Free AI, Plagiarism & Peer Review Checker
+Free for everyone and never touches an AI model. One "Check my writing" pass over pasted text or an uploaded file (PDF/Word/text via the + button) runs: an AI-content detector (lexical diversity / burstiness); a plagiarism scan using cosine similarity against 10B+ indexed academic sources, with every match traced to its real source and highlighted inline (Turnitin-style); readability, grammar and tone; and a professor-style Peer Review. The Peer Review auto-detects the paper type (35 types), academic level (High School–PhD) and citation style — no forms — then applies a rubric, runs a three-reviewer panel imitating MIT/Harvard/Yale reviewers (systems, not real people), gives a grade estimate with band, lists gaps/mistakes/fixes, and generates 5–500 likely exam or defence questions scaled to length. Signed-in users get the full result and a downloadable PDF report.
 Available at: [lightspeedghost.com/plagiarism](https://lightspeedghost.com/plagiarism)
 
 ### 6. STEM Solver
@@ -79,8 +79,8 @@ Total coverage: 1B+ papers. Wikipedia is excluded. All sources require DOI or ve
 
 ## Pricing (as of 2026)
 
-- **Free**: $0 forever, no card required — unlimited in-browser Writing Analyzer (AI detector, readability, grammar, tone) + 3 plagiarism + AI checks/month using local statistical detection. Text is never sent to an AI model on the Free plan.
-- **Pro Monthly**: $29.99/month — 15 papers/month, 20 revisions, 60 STEM solves/month, 150 study sessions/month, 20 plagiarism + AI checks/month, LightSpeed Humanizer (20 jobs/month), priority AI processing
+- **Free**: $0 forever, no card required — the AI, Plagiarism & Peer Review checker (AI detector, readability, grammar, tone, and a professor-style peer review with grade estimate and likely questions) runs unlimited in your browser, plus 3 full plagiarism scans/month against live academic sources. Text is never sent to an AI model on the Free plan.
+- **Pro Monthly**: $29.99/month — 15 papers/month, 20 revisions, 40 STEM solves/month, 150 study sessions/month, 30 plagiarism + AI checks/month, LightSpeed Humanizer (20 jobs/month), priority AI processing
 - **Pro Annual**: $269/year ($22.42/month) — same as Pro Monthly, save 25%
 - **Institution**: custom pricing — custom seats, one invoice, admin dashboard, shared document library
 - **Ebooks Add-On**: $29.99/month — 15 AI ebooks/month, Amazon KDP + 40+ platforms, separate from academic plans
@@ -100,7 +100,7 @@ Total coverage: 1B+ papers. Wikipedia is excluded. All sources require DOI or ve
 ## Pricing (2026)
 
 - Free: $0 forever, no card required — unlimited in-browser Writing Analyzer (AI detector, readability, grammar, tone) + 3 local plagiarism + AI checks/month. Never touches an AI model.
-- Pro: $29.99/month or $269/year (most popular) — 15 papers (all lengths), 20 revisions, 20 humanizer jobs, 60 STEM solves, 150 study messages, 20 plagiarism checks, 20 outlines
+- Pro: $29.99/month or $269/year (most popular) — 15 papers (all lengths), 20 revisions, 20 humanizer jobs, 40 STEM solves, 150 study messages, 30 plagiarism checks, 20 outlines
 - Institution: custom pricing per seat — for universities, departments, and tutoring centers (https://lightspeedghost.com/enterprise)
 - Ebooks Add-On: $29.99/month — 15 AI-written ebooks/month for Amazon KDP and 40+ platforms
 - Pay-As-You-Go: from $1.99 per task, papers from $3.99 — credits never expire
