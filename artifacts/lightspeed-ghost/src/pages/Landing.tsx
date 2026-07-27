@@ -648,7 +648,7 @@ export default function Landing() {
                 </span>
               ))}
             </div>
-            <p className="text-[11px] text-[#76777d] mt-2.5">Never touches an AI model — so it's free. Sign in to run the full scan against live academic sources and download your report.</p>
+            <p className="text-[11px] text-[#76777d] mt-2.5">One click on <span className="font-semibold text-[#45464d]">Check my writing</span> runs it all — AI detector, plagiarism, peer review, readability, grammar and tone. Never touches an AI model, so it's free. Sign in to scan against live academic sources, unlock the full peer review, and download a PDF report.</p>
           </div>
 
           {/* Suggestion starters */}
