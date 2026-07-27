@@ -66,11 +66,11 @@ Upload your current draft and target grade (e.g. First, A, Distinction, 85%). Op
 Grade targets supported: First Class / Distinction (UK), A/A+ (US), any percentile target
 File types: PDF, DOCX, plain text
 
-### TOOL 5: AI and Plagiarism Checker
+### TOOL 5: Free AI, Plagiarism & Peer Review Checker
 URL: https://lightspeedghost.com/plagiarism
-One-line: Detects AI content patterns and text similarity before your professor does.
+One-line: One free check — AI detector, plagiarism, and a professor-style peer review — before your professor does. Never touches an AI model.
 
-Uses lexical diversity analysis to detect AI-generated content (AI text has lower unique-word ratio and repetitive sentence structures). Uses cosine similarity TF-vector comparison against academic corpus for plagiarism detection. Highlights every flagged sentence. Includes one-click humanization of flagged sections.
+Free for everyone. A single "Check my writing" pass over pasted text or an uploaded file (PDF/Word/text via the + button) runs all of the following with no AI model: lexical-diversity AI-content detection; plagiarism via cosine-similarity comparison against 10B+ indexed academic sources with every match traced to its real source and highlighted inline (Turnitin-style); readability, grammar and tone; and a professor-style Peer Review. The Peer Review auto-detects the paper type (35 types incl. research paper, essay, argumentative/persuasive/narrative/descriptive/expository/reflective essay, admission/scholarship essay, thesis, dissertation, literature review, annotated bibliography, research/grant/general proposal, report, lab report, case study, term paper, coursework, capstone, critical analysis, article/book/film review, personal statement, speech, presentation, position paper, policy brief, white paper, business plan, financial analysis), academic level (High School to PhD), and citation style — the user is never asked. It then applies a rubric, runs a three-reviewer panel imitating MIT/Harvard/Yale reviewers (systems that imitate their rigour, not real people), returns a grade estimate with percentage and band, lists gaps, mistakes and what to improve, highlights weak passages, and generates 5–500 likely exam/defence questions scaled to the length. Signed-in users get the full panel and can download a PDF report.
 
 ### TOOL 6: STEM Solver
 URL: https://lightspeedghost.com/stem
@@ -162,8 +162,8 @@ Non-peer-reviewed sources: excluded from all results
 ## PRICING (as of 2026-05-31)
 
 ### Free — $0 forever (no card required)
-- Unlimited in-browser Writing Analyzer: AI-likelihood detector, readability, grammar & style, tone
-- 3 plagiarism + AI detection checks/month (local statistical detection — burstiness + perplexity)
+- Unlimited in-browser AI, Plagiarism & Peer Review checker: AI-likelihood detector, readability, grammar & style, tone, and a professor-style Peer Review (auto-detected paper type, grade estimate, rubric, likely questions)
+- 3 full plagiarism scans/month against live academic sources
 - Text is never sent to an AI model on the Free plan
 - Pay-As-You-Go credits can be added anytime for any AI tool
 
@@ -171,9 +171,10 @@ Non-peer-reviewed sources: excluded from all results
 - 15 papers/month
 - 20 revisions/month
 - 20 LightSpeed Humanizer jobs/month
-- 60 STEM solves/month
+- 40 STEM solves/month
 - 150 study sessions/month
-- 20 plagiarism + AI detection checks/month
+- 30 plagiarism + AI detection checks/month
+- Free professor-style Peer Review (grade estimate, rubric, likely questions — no AI model)
 - Priority AI processing
 - 90-day document history
 
@@ -246,7 +247,7 @@ Q: What citation styles does Light Speed Ghost support?
 A: APA 7th edition, MLA 9th edition, Chicago (author-date and notes-bibliography), Harvard, and IEEE. All citations are pulled from real academic databases with real DOIs.
 
 Q: Is Light Speed Ghost free?
-A: Yes — the Free plan is $0 forever with no card required. It includes an unlimited in-browser Writing Analyzer (AI detector, readability, grammar, tone) and 3 plagiarism + AI checks per month using local statistical detection; your text is never sent to an AI model. AI generation (papers, revision, humanizer, STEM, study) requires Pro at $29.99/month or Pay-As-You-Go credits from $1.99 — credits never expire.
+A: Yes — the Free plan is $0 forever with no card required. It includes the unlimited in-browser AI, Plagiarism & Peer Review checker (AI detector, readability, grammar, tone, and a professor-style peer review with a grade estimate and likely questions) plus 3 full plagiarism scans per month against live academic sources; your text is never sent to an AI model. AI generation (papers, revision, humanizer, STEM, study) requires Pro at $29.99/month or Pay-As-You-Go credits from $1.99 — credits never expire.
 
 Q: Does Light Speed Ghost work for STEM subjects?
 A: Yes. The STEM Solver supports Mathematics, Physics, Chemistry, Biology, Computer Science, Engineering, and Statistics. You can type a problem, paste text, or photograph a homework sheet. Solutions include step-by-step reasoning, KaTeX equations, molecule diagrams for chemistry, and linked research papers.
