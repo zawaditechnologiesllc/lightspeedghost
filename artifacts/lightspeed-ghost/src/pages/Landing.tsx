@@ -629,7 +629,7 @@ export default function Landing() {
           <div className="mt-6 max-w-3xl mx-auto rounded-2xl border border-[#d1fae5] bg-[#f0fdf4] px-4 sm:px-5 py-4 text-left">
             <div className="flex flex-wrap items-center gap-2 mb-2.5">
               <ShieldCheck size={15} className="text-[#10b981]" />
-              <span className="text-sm font-bold text-[#131b2e]">Free AI &amp; Plagiarism Checker — built into the box above</span>
+              <span className="text-sm font-bold text-[#131b2e]">Free AI &amp; Plagiarism Checker + Peer Review — built into the box above</span>
               <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#10b981] text-white uppercase tracking-wide">Free</span>
             </div>
             <div className="grid sm:grid-cols-2 gap-x-5 gap-y-1.5">
@@ -640,6 +640,8 @@ export default function Landing() {
                 "Downloadable report you can keep as evidence",
                 "Structural code plagiarism — MOSS-style fingerprinting",
                 "Catches renamed variables & reshuffled logic",
+                "Professor-style peer review — rubric + grade estimate for 35 paper types",
+                "Likely exam & defence questions generated from your text",
               ].map((f) => (
                 <span key={f} className="flex items-start gap-2 text-[12px] text-[#45464d]">
                   <CheckCircle size={13} className="text-[#10b981] shrink-0 mt-0.5" /> {f}

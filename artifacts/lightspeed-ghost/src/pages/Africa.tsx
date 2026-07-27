@@ -303,7 +303,7 @@ export default function Africa() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-8">
               <Link href="/auth">
                 <span className="inline-flex items-center gap-2 px-7 py-4 bg-[#10b981] hover:bg-[#059669] text-white font-bold rounded-lg transition-all shadow-lg shadow-[#10b981]/25 hover:-translate-y-0.5 text-sm sm:text-base cursor-pointer">
-                  Get started — from $9.99/mo
+                  Start free · Pro $29.99/mo
                   <ArrowRight size={16} />
                 </span>
               </Link>
@@ -461,10 +461,10 @@ export default function Africa() {
             <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
               <p className="text-[#10b981] text-sm font-bold uppercase tracking-widest mb-3">What you get</p>
               <h2 className="text-3xl sm:text-4xl font-bold leading-tight mb-4 text-[#131b2e]">
-                Seven tools. One subscription.
+                A free checker. Every writing tool. One subscription.
               </h2>
               <p className="text-[#45464d] text-base sm:text-lg">
-                Everything from writing full research papers with real African and international citations, to solving STEM problems step-by-step, to an AI tutor that remembers what you studied last week.
+                Start with the free AI &amp; plagiarism checker and professor-style peer review (no AI model, no card). Then unlock everything: writing full research papers with real African and international citations, solving STEM problems step-by-step, and an AI tutor that remembers what you studied last week.
               </p>
             </div>
           </FadeUp>
@@ -528,7 +528,7 @@ export default function Africa() {
                   <div className="p-4 text-center">ChatGPT Plus</div>
                 </div>
                 {[
-                  { feature: "Price / month", lsg: "$9.99–$29.99", chatgpt: "$20" },
+                  { feature: "Price / month", lsg: "Free–$29.99", chatgpt: "$20" },
                   { feature: "Mobile money payment", lsg: "✓ M-Pesa, MTN, Airtel", chatgpt: "✗ Card only" },
                   { feature: "Works on mobile data", lsg: "✓ Optimised", chatgpt: "⚠ Heavy interface" },
                   { feature: "Real academic citations", lsg: "✓ 25+ live databases", chatgpt: "✗ Hallucinated" },

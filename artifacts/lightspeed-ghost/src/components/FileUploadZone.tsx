@@ -1,6 +1,9 @@
 import { useRef, useState, useCallback } from "react";
 import { Upload, FileText, Image, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+// NOTE: supabase is lazy-imported inside processFile (not at module scope) so this
+// component can be pulled into the prerendered landing (via the free checker's
+// Peer Review) without evaluating the supabase client, which throws on a missing
+// VITE_SUPABASE_URL during the SSR prerender.
 
 export interface ExtractedFile {
   text: string;
@@ -67,6 +70,7 @@ export default function FileUploadZone({
       formData.append("file", file);
 
       try {
+        const { supabase } = await import("@/lib/supabase");
         const { data: { session } } = await supabase.auth.getSession();
         const headers: HeadersInit = {};
         if (session?.access_token) {

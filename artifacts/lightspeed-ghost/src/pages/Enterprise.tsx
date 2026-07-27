@@ -65,6 +65,7 @@ const tiers = [
     desc: "For academic departments, research groups, and small faculties.",
     features: [
       "All 7 AI tools for every seat",
+      "Free AI & plagiarism checker + peer review for every student (no AI model)",
       "Admin dashboard with usage overview",
       "Monthly usage reports",
       "Custom onboarding session",
@@ -131,7 +132,7 @@ const toolList = [
   { name: "AI Paper Writer", note: "Writes from real papers — 35+ databases, real DOI citations" },
   { name: "Outline Builder", note: "Structure any assignment in seconds" },
   { name: "Paper Revision", note: "Grade-targeted rewrites with rubric upload" },
-  { name: "AI & Plagiarism Check", note: "Verify your own work across 99B+ sources" },
+  { name: "AI & Plagiarism Check + Peer Review", note: "Free, no AI model — similarity + AI scan, plus a professor-style peer review with a grade estimate" },
   { name: "LightSpeed Humanizer", note: "Natural, authentic academic voice in your own words" },
   { name: "STEM Solver", note: "Step-by-step working with photo upload, all subjects" },
   { name: "AI Study Assistant", note: "Reads your materials — flashcards, quizzes, weak-point focus" },

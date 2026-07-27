@@ -21,6 +21,7 @@ import {
   buildScanReportHtml,
   downloadScanReport,
 } from "@/lib/scanReport";
+import { PeerReview } from "@/components/PeerReview";
 
 // ── The free tool: one powerful AI + plagiarism + writing checker ─────────────
 // Two layers in a single box:
@@ -585,6 +586,18 @@ export function HeroAnalyzer({
             )}
           </div>
         </div>
+      )}
+
+      {/* Peer Review — professor-style, no-LLM read before submission. Lives
+          outside the instant-report block so an upload (which resets the report)
+          never hides it. Shown once there's text to review. */}
+      {text.trim() && (
+        <PeerReview
+          text={text}
+          authed={authed}
+          onRequireAuth={onRequireAuth}
+          onText={(t) => { setText(t); setReport(null); setScanResult(null); setScanError(null); }}
+        />
       )}
     </div>
   );
