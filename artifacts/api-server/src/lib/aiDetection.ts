@@ -20,6 +20,7 @@ import { computeBurstiness, sampleTextSections, computePerplexityProxy, scoreSen
 import { recordUsage } from "./apiCost.js";
 import { anthropic } from "./ai.js";
 import { WRITER_SOUL } from "./soul.js";
+import { detectAIML } from "./mlServices.js";
 
 export interface SentenceScore {
   text: string;
@@ -116,6 +117,11 @@ export async function detectAIScore(
     };
   }
 
+  // Optional open-source RoBERTa AI-detector (env-gated via HF_API_TOKEN).
+  // Returns null instantly when unconfigured or on any failure, so the paid
+  // gpt-4o-mini + burstiness path below is unchanged unless it's switched on.
+  const mlAiScore = await detectAIML(text);
+
   const MAX_RETRIES = 2;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -143,11 +149,17 @@ export async function detectAIScore(
       const burstinessPenalty = burstiness < 30 ? Math.round((30 - burstiness) * 0.5) : 0;
       // Perplexity penalty: high AI-trigram rate boosts score (Turnitin's predictability signal)
       const perplexityPenalty = perplexity > 40 ? Math.round((perplexity - 40) * 0.25) : 0;
-      const blendedScore = Math.min(98, gptScore + burstinessPenalty + perplexityPenalty);
+      let blendedScore = Math.min(98, gptScore + burstinessPenalty + perplexityPenalty);
+      const mlIndicators: string[] = [];
+      if (mlAiScore !== null) {
+        // Weighted blend with the open-source detector when available.
+        blendedScore = Math.min(98, Math.round(blendedScore * 0.55 + mlAiScore * 0.45));
+        mlIndicators.push(`Open-source RoBERTa detector: ${mlAiScore}% AI-likelihood`);
+      }
 
       return {
         score: blendedScore,
-        indicators: Array.isArray(raw.indicators) ? raw.indicators : [],
+        indicators: [...(Array.isArray(raw.indicators) ? raw.indicators : []), ...mlIndicators],
         burstiness,
         stdDev,
         perplexity,

@@ -55,4 +55,30 @@ router.post("/feedback", async (req: Request, res: Response) => {
   }
 });
 
+// ── The "learn" side of the loop ──────────────────────────────────────────────
+// Aggregate approval per tool over a window. Phase 2 uses this to (a) surface a
+// quality-trend widget in admin, and (b) nudge each tool's model/temperature and
+// inject top-rated exemplars into its prompt — a feedback→prompt loop with no
+// fine-tuning. Exposed for reuse by the tools + admin.
+export interface FeedbackStats { type: string; up: number; down: number; approval: number; total: number; }
+export async function getFeedbackStats(type: string, days = 30): Promise<FeedbackStats> {
+  try {
+    await ensureTable();
+    const { rows } = await pool.query<{ up: string; down: string }>(
+      `SELECT
+         COALESCE(SUM(CASE WHEN rating = 'up'   THEN 1 ELSE 0 END), 0) AS up,
+         COALESCE(SUM(CASE WHEN rating = 'down' THEN 1 ELSE 0 END), 0) AS down
+       FROM output_feedback
+       WHERE type = $1 AND created_at > NOW() - ($2 || ' days')::interval`,
+      [type, String(days)],
+    );
+    const up = parseInt(rows[0]?.up ?? "0", 10);
+    const down = parseInt(rows[0]?.down ?? "0", 10);
+    const total = up + down;
+    return { type, up, down, total, approval: total ? Math.round((up / total) * 100) : 0 };
+  } catch {
+    return { type, up: 0, down: 0, total: 0, approval: 0 };
+  }
+}
+
 export default router;
