@@ -8,6 +8,8 @@ import { recordUsage } from "../lib/apiCost";
 import { trackUsage, enforceLimit, quotaExceededMessage } from "../lib/usageTracker";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { detectAIScore } from "../lib/aiDetection.js";
+import { humanizeLocal } from "../lib/localHumanize";
+import { recordExemplar, buildExemplarBlock } from "../lib/learningEngine";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -23,7 +25,8 @@ async function humanizePass(
   tone: string,
   toneGuide: string,
   passNumber: number,
-  remainingIndicators: string[]
+  remainingIndicators: string[],
+  exemplarBlock = ""
 ): Promise<string> {
   const targetScore = 0;
   const focusNote =
@@ -105,7 +108,7 @@ NEVER use: "Furthermore," "Moreover," "Additionally," "In conclusion," "In summa
 • Academic register appropriate to the requested tone
 • The text's ORIGINAL PURPOSE and CENTRAL ARGUMENT — the reader must identify the same thesis, the same position, the same research question after transformation as before. Every section must still serve its structural function (introduction introduces, methodology explains methods, results present findings, conclusion synthesises). Never restructure the argument in a way that loses the paper's direct response to its prompt.
 
-Return ONLY the humanized text. No commentary, no JSON wrapper, no preamble, no explanation of changes.`;
+Return ONLY the humanized text. No commentary, no JSON wrapper, no preamble, no explanation of changes.${exemplarBlock}`;
 
   const resp = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
@@ -238,6 +241,62 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
     const tone = body.tone ?? (body.mode ? modeToTone[body.mode] : undefined) ?? "academic";
     const wordCount = body.text.split(/\s+/).filter(Boolean).length;
 
+    // ── Free plan → no LLM ────────────────────────────────────────────────────
+    // A deterministic, rule-based humanise that strips the mechanical AI tells
+    // detectors weigh most (robotic transitions, inflated verbs, throat-clearing
+    // openers) and adds natural cadence. Verification uses the local
+    // burstiness+perplexity detector — no AI model is ever called for free users.
+    if (quota.plan === "free") {
+      send("step", { id: "analyse", message: "Scanning for AI tells (local, no AI model)…", status: "running" });
+      const { score: beforeRaw } = await detectAIScore(body.text, "humanize-free-before", { localOnly: true });
+      const before = beforeRaw < 0 ? 0 : beforeRaw;
+      send("step", { id: "analyse", message: `Baseline AI score: ${before}%. Applying rule-based humanization…`, status: "done" });
+
+      send("step", { id: "humanize", message: "Rewriting robotic transitions, deflating inflated wording, naturalising cadence…", status: "running" });
+      const { text: humanized, changes, notes } = humanizeLocal(body.text, { tone });
+      send("step", { id: "humanize", message: `Rule-based humanization complete — ${changes} edits applied.`, status: "done" });
+
+      const { score: afterRaw } = await detectAIScore(humanized, "humanize-free-after", { localOnly: true });
+      const after = afterRaw < 0 ? 0 : afterRaw;
+      send("step", { id: "verify", message: `Local AI score after humanization: ${after}% (was ${before}%).`, status: "done" });
+
+      let documentId: number | undefined;
+      try {
+        const userId = req.userId ?? null;
+        const docNum = await getNextDocNumber(userId, "humanizer");
+        const [doc] = await db.insert(documentsTable).values({
+          userId,
+          title: formatDocTitle({ type: "humanizer", docNumber: docNum }),
+          content: humanized,
+          type: "humanizer",
+          docNumber: docNum,
+          wordCount: humanized.split(/\s+/).filter(Boolean).length,
+        }).returning();
+        documentId = doc.id;
+      } catch { /* non-fatal */ }
+
+      send("done", {
+        humanizedText: humanized,
+        changesSummary: [
+          `Baseline AI score: ${before}% → After: ${after}% (local detection)`,
+          ...notes,
+          "Free plan uses a rule-based humanizer (no AI model). Upgrade for the full multi-pass engine that targets 0% on all detectors.",
+        ],
+        estimatedAiScore: after,
+        toneApplied: tone,
+        modeApplied: body.mode ?? "academic",
+        aggressionLevel: 1,
+        wordCount: humanized.split(/\s+/).filter(Boolean).length,
+        originalWordCount: wordCount,
+        wordCountDrift: 0,
+        documentId,
+        passesApplied: 1,
+        bypasserDetected: false,
+        engine: "local-rule-based",
+      });
+      return;
+    }
+
     const toneGuide: Record<string, string> = {
       academic:
         "formal academic register — precise vocabulary, analytical hedging ('may suggest', 'this analysis contends'), discipline-appropriate jargon, no colloquialisms",
@@ -298,12 +357,17 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
       : "";
     const fullInstructions = aggressionNote + bypasserAwarenessNote + (additionalNote ? `\n${additionalNote}` : "");
 
+    // Self-learning: inject prior humanizations that verified as fully human
+    // (captured below when a run reaches ~0% AI) as the quality bar for this run.
+    const exemplarBlock = await buildExemplarBlock("humanizer", tone).catch(() => "");
+
     const pass1Text = await humanizePass(
       body.text + (fullInstructions ? `\n\n[INSTRUCTIONS: ${fullInstructions}]` : ""),
       tone,
       toneGuide[tone],
       1,
       baselineIndicators,
+      exemplarBlock,
     );
 
     send("step", {
@@ -348,6 +412,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
         toneGuide[tone],
         2,
         currentIndicators,
+        exemplarBlock,
       );
 
       send("step", {
@@ -391,6 +456,7 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
           toneGuide[tone],
           3,
           currentIndicators,
+          exemplarBlock,
         );
 
         send("step", {
@@ -455,6 +521,19 @@ router.post("/humanizer/humanize-stream", requireAuth, async (req, res) => {
         .returning();
       documentId = doc.id;
     } catch { /* non-fatal */ }
+
+    // Self-learning capture: a humanization that verified at/near 0% AI is a
+    // proven-good exemplar — store it so future runs (same tone) are steered by
+    // it. Only capture strong, substantial results. Fire-and-forget.
+    if (currentScore <= 5 && humanizedWordCount >= 60) {
+      recordExemplar({
+        tool: "humanizer",
+        subject: tone,
+        input: body.text,
+        output: currentText,
+        score: 100 - currentScore,
+      }).catch(() => {});
+    }
 
     const changesSummary = [
       `Baseline AI score: ${baselineScore}% → Final: ${currentScore}%`,

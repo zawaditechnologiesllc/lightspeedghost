@@ -240,3 +240,93 @@ export async function getAverageQualityScores(userId?: string): Promise<{
     return { avgPlagiarism: 0, avgAiDetection: 0, avgGrade: 0, totalSignals: 0 };
   }
 }
+
+// ── Exemplar loop — feedback → prompt (closes the self-learning loop) ──────────
+// When a tool produces an output that's proven good (a 👍 from the user, or an
+// automatic quality signal like a humanize that scored ~0% AI), we store it as
+// an *exemplar*. Before the next generation, the tool injects its top exemplars
+// into the prompt as "here's the standard to match". No fine-tuning, no training
+// job — the model steers itself toward what worked, and it compounds with use.
+
+const exemplarReady = pool
+  .query(`
+    CREATE TABLE IF NOT EXISTS tool_exemplars (
+      id            SERIAL PRIMARY KEY,
+      tool          TEXT NOT NULL,
+      subject       TEXT NOT NULL DEFAULT 'general',
+      input_excerpt TEXT,
+      output_excerpt TEXT NOT NULL,
+      score         NUMERIC,          -- higher = better (e.g. 100 - aiScore, or a rating weight)
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_tool_exemplars_lookup ON tool_exemplars (tool, subject, score DESC);
+  `)
+  .catch(() => {});
+
+export interface ExemplarInput {
+  tool: string;            // e.g. "humanizer", "study-summary", "paper-writer"
+  subject?: string;        // discipline / tone / paper type
+  input?: string;          // the prompt/source that produced it (optional)
+  output: string;          // the good output to learn from
+  score?: number;          // 0–100 quality weight (default 80)
+}
+
+/** Store a proven-good output as an exemplar (fire-and-forget safe). */
+export async function recordExemplar(ex: ExemplarInput): Promise<void> {
+  await exemplarReady;
+  if (!ex.output || ex.output.trim().length < 40) return;
+  const subject = (ex.subject ?? "general").toLowerCase().slice(0, 60) || "general";
+  try {
+    await pool.query(
+      `INSERT INTO tool_exemplars (tool, subject, input_excerpt, output_excerpt, score)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [ex.tool.slice(0, 60), subject, ex.input?.slice(0, 1200) ?? null, ex.output.slice(0, 2500), ex.score ?? 80],
+    );
+    // Keep the table lean: retain only the best ~50 exemplars per tool/subject.
+    await pool.query(
+      `DELETE FROM tool_exemplars
+       WHERE id IN (
+         SELECT id FROM tool_exemplars
+         WHERE tool = $1 AND subject = $2
+         ORDER BY score DESC, created_at DESC
+         OFFSET 50
+       )`,
+      [ex.tool.slice(0, 60), subject],
+    ).catch(() => {});
+  } catch {
+    /* non-fatal */
+  }
+}
+
+/** Fetch the top exemplar outputs for a tool (prefers the exact subject). */
+export async function getTopExemplars(tool: string, subject = "general", limit = 2): Promise<string[]> {
+  try {
+    await exemplarReady;
+    const subj = (subject ?? "general").toLowerCase().slice(0, 60) || "general";
+    const { rows } = await pool.query<{ output_excerpt: string }>(
+      `SELECT output_excerpt
+       FROM tool_exemplars
+       WHERE tool = $1 AND (subject = $2 OR subject = 'general')
+       ORDER BY (subject = $2) DESC, score DESC, created_at DESC
+       LIMIT $3`,
+      [tool.slice(0, 60), subj, limit],
+    );
+    return rows.map((r) => r.output_excerpt).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Build a ready-to-inject prompt block from a tool's top exemplars, or "" if
+ * none exist yet. Drop this into a system prompt to steer the model toward
+ * outputs the users (or quality signals) have already rewarded.
+ */
+export async function buildExemplarBlock(tool: string, subject = "general", limit = 2): Promise<string> {
+  const exemplars = await getTopExemplars(tool, subject, limit);
+  if (!exemplars.length) return "";
+  const body = exemplars
+    .map((e, i) => `Exemplar ${i + 1} (rated highly by real users — match this quality, do NOT copy it):\n"""\n${e.slice(0, 900)}\n"""`)
+    .join("\n\n");
+  return `\n\nLEARNED EXEMPLARS — outputs like these scored best with our users. Match their voice, structure, and quality; never reuse their wording:\n${body}\n`;
+}

@@ -5,6 +5,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { pool } from "@workspace/db";
+import { recordExemplar } from "../lib/learningEngine";
 
 const router = Router();
 
@@ -29,11 +30,12 @@ ensureTable().catch(() => {});
 
 // POST /api/feedback
 router.post("/feedback", async (req: Request, res: Response) => {
-  const { type, documentId, rating, subject } = req.body as {
+  const { type, documentId, rating, subject, output } = req.body as {
     type?: string;
     documentId?: number;
     rating?: string;
     subject?: string;
+    output?: string; // optional: the rated output text, used to seed exemplars
   };
 
   if (!type || !rating || !["up", "down"].includes(rating)) {
@@ -49,6 +51,11 @@ router.post("/feedback", async (req: Request, res: Response) => {
        VALUES ($1, $2, $3, $4, $5, NOW())`,
       [userId, type, documentId ?? null, rating, subject ?? null]
     );
+    // A 👍 with the output attached becomes an exemplar — closing the loop so
+    // this tool's future generations are steered toward what users rewarded.
+    if (rating === "up" && typeof output === "string" && output.trim().length >= 40) {
+      recordExemplar({ tool: type, subject, output, score: 90 }).catch(() => {});
+    }
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Failed to record feedback" });

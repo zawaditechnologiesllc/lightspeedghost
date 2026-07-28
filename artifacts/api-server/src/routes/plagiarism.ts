@@ -12,6 +12,8 @@ import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection";
 import { searchAllAcademicSources } from "../lib/academicSources";
 import { runOpenSourcePlagiarismCheck } from "../lib/openSourceSearch";
+import { semanticSimilarity } from "../lib/localSemantic";
+import { ingestSources, searchCorpus } from "../lib/plagiarismCorpus";
 
 const router = Router();
 
@@ -140,7 +142,25 @@ async function fetchLiveAcademicMatches(
       }),
     );
 
-    // Score each paper against the submitted text using real cosine similarity
+    // Feed every fetched abstract into the local self-building corpus so future
+    // scans can catch these sources instantly, in-database, with no external
+    // call (Turnitin-style pre-built index that compounds with real usage).
+    ingestSources(
+      allPapers
+        .filter((p) => p.abstract && p.abstract.length > 60)
+        .map((p) => ({
+          title: p.title,
+          authors: p.authors,
+          year: p.year,
+          url: p.doi ? `https://doi.org/${p.doi}` : p.url,
+          sourceType: "academic-live",
+          content: p.abstract!,
+        })),
+    ).catch(() => {});
+
+    // Score each paper against the submitted text. We take the STRONGER of two
+    // signals: classic TF-cosine (verbatim overlap) and our local semantic
+    // engine (catches paraphrase/word-swap that TF-cosine dilutes). No LLM.
     const scored = allPapers
       .filter(p => p.abstract && p.abstract.length > 60)
       .map(p => ({
@@ -148,15 +168,56 @@ async function fetchLiveAcademicMatches(
         title: p.title,
         authors: p.authors,
         year: p.year,
-        similarity: Math.round(computeCosineSimilarity(text, p.abstract!) * 10) / 10,
+        similarity: Math.round(Math.max(
+          computeCosineSimilarity(text, p.abstract!),
+          semanticSimilarity(text, p.abstract!),
+        ) * 10) / 10,
         matchedText: p.abstract!.slice(0, 120),
         sourceType: "academic-live" as const,
       }))
-      .filter(p => p.similarity > 1) // only papers with measurable vocabulary overlap
+      .filter(p => p.similarity > 1) // only papers with measurable overlap
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, 5);
 
     return scored;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Search the LOCAL corpus (pg_trgm, in-database) for passages similar to the
+ * submitted text. Instant, no external API, no LLM — and it grows every scan.
+ * Returns matches shaped like the live ones so they merge into the same report.
+ */
+async function fetchCorpusMatches(
+  text: string,
+): Promise<Array<{ url: string; title: string; authors: string; year: number; similarity: number; matchedText: string; sourceType: string }>> {
+  try {
+    const phrases = extractQueryPhrases(text);
+    const seen = new Set<string>();
+    const out: Array<{ url: string; title: string; authors: string; year: number; similarity: number; matchedText: string; sourceType: string }> = [];
+    const batches = await Promise.all(phrases.slice(0, 6).map((p) => searchCorpus(p, 3)));
+    for (const batch of batches) {
+      for (const m of batch) {
+        const key = m.url || m.title;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        // Confirm with the semantic engine against the full text so trigram
+        // near-misses don't inflate the score.
+        const sim = Math.max(m.similarity, semanticSimilarity(text, m.matchedText));
+        out.push({
+          url: m.url,
+          title: m.title,
+          authors: m.authors,
+          year: m.year ?? 0,
+          similarity: Math.round(sim * 10) / 10,
+          matchedText: m.matchedText,
+          sourceType: "academic-corpus",
+        });
+      }
+    }
+    return out.filter((m) => m.similarity > 5).sort((a, b) => b.similarity - a.similarity).slice(0, 4);
   } catch {
     return [];
   }
@@ -214,12 +275,14 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       { score: aiScore, indicators: aiIndicators, burstiness, stdDev, perplexity: aiPerplexity, bypasserDetected: aiBypasserDetected },
       readability,
       liveMatches,
+      corpusMatches,
       openSourceResult,
     ] = await Promise.all([
       localAnalysisPromise,
       detectAIScore(text, "plagiarism-check", { localOnly: localOnlyDetection }).then(r => { send("step", { id: "ai-detect", message: `AI detection complete — score: ${r.score >= 0 ? r.score + "%" : "unavailable"}`, status: "done" }); return r; }),
       readabilityPromise,
       fetchLiveAcademicMatches(text),
+      fetchCorpusMatches(text),
       runOpenSourcePlagiarismCheck(text).then(r => { send("step", { id: "plag-scan", message: `Plagiarism scan complete — ${r.totalSentencesChecked} sentences checked`, status: "done" }); return r; }),
     ]);
 
@@ -260,6 +323,21 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       sourceType: "academic-live",
     }));
 
+    // Local corpus hits (pg_trgm) — deduped against live results by URL.
+    const liveUrls = new Set(livePlagiarismSources.map((s) => s.url));
+    const corpusPlagiarismSources = corpusMatches
+      .filter((m) => m.url && !liveUrls.has(m.url))
+      .map((m) => ({
+        url: m.url,
+        similarity: m.similarity,
+        matchedText: m.matchedText,
+        title: m.title,
+        authors: m.authors,
+        year: m.year,
+        live: false,
+        sourceType: "academic-corpus",
+      }));
+
     const openSourceSources = openSourceResult.sourcesFound.slice(0, 4).map((s) => ({
       url: s.url,
       similarity: Math.round(openSourceResult.overallScore * (s.confidence / 100)),
@@ -273,6 +351,7 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
 
     const plagiarismSources = [
       ...livePlagiarismSources,
+      ...corpusPlagiarismSources,
       ...openSourceSources,
       ...localPlagiarismSources,
     ].slice(0, 8);
@@ -348,6 +427,7 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
         "OpenAlex (250M+ papers)", "Semantic Scholar (200M+ papers)", "CrossRef (145M+ DOIs)",
         "Open Library (20M+ books)", "Wikipedia", "Google Books", "Internet Archive",
         "PubMed NCBI", "Europe PMC", "arXiv", "CORE", "Zenodo", "DOAJ",
+        "LightSpeed local corpus (self-building index)",
       ],
     });
     res.end();
