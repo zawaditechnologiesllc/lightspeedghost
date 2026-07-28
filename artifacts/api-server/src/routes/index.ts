@@ -17,6 +17,8 @@ import assistantRouter from "./assistant";
 import ebooksRouter from "./ebooks";
 import seoRouter from "./seo";
 import contactRouter from "./contact";
+import citationsRouter from "./citations";
+import feedbackRouter from "./feedback";
 
 const router: IRouter = Router();
 
@@ -38,5 +40,7 @@ router.use(assistantRouter);
 router.use(ebooksRouter);
 router.use(seoRouter);
 router.use(contactRouter);
+router.use(citationsRouter);
+router.use(feedbackRouter);
 
 export default router;

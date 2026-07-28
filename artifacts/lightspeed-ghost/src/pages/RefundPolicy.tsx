@@ -13,7 +13,7 @@ export default function RefundPolicy() {
       <main className="max-w-3xl mx-auto px-6 py-16">
         <p className="text-[#10b981] text-xs font-semibold uppercase tracking-widest mb-3">Legal</p>
         <h1 className="text-4xl font-bold mb-3">Refund Policy</h1>
-        <p className="text-[#76777d] text-sm mb-12">Last updated: April 2025 · Effective immediately</p>
+        <p className="text-[#76777d] text-sm mb-12">Last updated: July 2026 · Effective immediately</p>
 
         <div className="space-y-10 text-[#45464d] leading-relaxed">
 

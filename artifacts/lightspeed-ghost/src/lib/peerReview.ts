@@ -644,6 +644,28 @@ export interface PeerReviewResult {
   highlights: HighlightSegment[];
   metrics: { words: number; sentences: number; paragraphs: number; citations: number; avgSentence: number; readingEase: number };
   citationStyleMatch: boolean;
+  /** Claim-like sentences that lack a citation — used to fetch real supporting
+   *  papers from the academic databases (the reviewer's citation-suggestion
+   *  feature). Empty when the paper type doesn't need citations. */
+  unsupportedClaims: string[];
+}
+
+// A sentence that asserts a claim but carries no in-text citation. Feeds the
+// "suggest 2–3 real supporting papers" reviewer feature (no LLM — the papers
+// come from the live academic-source search).
+export function extractUnsupportedClaims(text: string, wantsCitations: boolean, max = 8): string[] {
+  if (!wantsCitations) return [];
+  const out: string[] = [];
+  for (const s of splitSentences(text)) {
+    const low = s.toLowerCase();
+    const looksLikeClaim = CLAIM_MARKERS.some((c) => low.includes(c));
+    const hasCite = /\((?:19|20)\d{2}\)|\[\d+\]|et al/.test(s);
+    if (looksLikeClaim && !hasCite && s.split(/\s+/).length >= 6) {
+      out.push(s.length > 200 ? s.slice(0, 200) + "…" : s);
+      if (out.length >= max) break;
+    }
+  }
+  return out;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -904,6 +926,7 @@ export function runPeerReview(text: string, options: PeerReviewOptions): PeerRev
 
   // Highlights — weakest sentences (long / passive / AI-cliché / claim-without-citation)
   const highlights = buildWeaknessHighlights(text, sentences, rubric.wantsCitations);
+  const unsupportedClaims = extractUnsupportedClaims(text, rubric.wantsCitations);
 
   // Probable questions — 5..500 scaled to length
   const questions = buildQuestions(text, sentences, options, rubric.family, words);
@@ -934,6 +957,7 @@ export function runPeerReview(text: string, options: PeerReviewOptions): PeerRev
       readingEase: readability.fleschReadingEase,
     },
     citationStyleMatch,
+    unsupportedClaims,
   };
 }
 

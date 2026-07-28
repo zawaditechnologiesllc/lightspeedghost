@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import {
   Wand2, BookOpen, SpellCheck2, Gauge, ArrowRight, Sparkles, Lock, Check,
   Plus, FlaskConical, PenLine, LayoutGrid, X, ShieldCheck, Loader2, ExternalLink,
-  Download, GraduationCap, FileText,
+  Download, GraduationCap, FileText, ThumbsUp, ThumbsDown,
 } from "lucide-react";
 import {
   analyzeAiLikelihood,
@@ -140,6 +140,19 @@ export function HeroAnalyzer({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // Self-learning capture: a thumbs up/down on the check feeds output_feedback,
+  // which the aggregate loop uses to nudge each tool. Non-blocking, guest-safe.
+  const [feedbackSent, setFeedbackSent] = useState<null | "up" | "down">(null);
+  function sendFeedback(rating: "up" | "down") {
+    if (feedbackSent) return;
+    setFeedbackSent(rating);
+    void apiFetch("/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "free-checker", rating, subject: peerResult?.options.paperType }),
+    }).catch(() => {}); // fire-and-forget — never block or surface an error
+  }
+
   const wordCount = useMemo(() => text.split(/\s+/).filter(Boolean).length, [text]);
 
   const highlightSegments = useMemo(() => {
@@ -158,6 +171,7 @@ export function HeroAnalyzer({
     setPeerResult(null);
     setScanResult(null);
     setScanError(null);
+    setFeedbackSent(null);
     scannedTextRef.current = "";
   }
 
@@ -165,6 +179,7 @@ export function HeroAnalyzer({
   function analyze(input?: string) {
     const t = input ?? text;
     if (!t.trim()) { taRef.current?.focus(); return; }
+    setFeedbackSent(null);
     setReport({
       ai: analyzeAiLikelihood(t),
       readability: analyzeReadability(t),
@@ -585,6 +600,19 @@ export function HeroAnalyzer({
                   <span>Sign in free for the plagiarism scan, the full peer review, and a downloadable PDF report.</span>
                   <button type="button" onClick={() => onRequireAuth?.()} className="shrink-0 inline-flex items-center gap-1 font-bold text-[#10b981] hover:text-[#059669]">Unlock <ArrowRight size={11} /></button>
                 </p>
+              )}
+            </div>
+
+            {/* Was this helpful? — feeds the self-learning loop (output_feedback) */}
+            <div className="mt-3 pt-2.5 border-t border-[#eceef0] flex items-center justify-center gap-2 text-[10.5px] text-[#76777d]">
+              {feedbackSent ? (
+                <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700"><Check size={11} strokeWidth={3} /> Thanks — your feedback helps us improve.</span>
+              ) : (
+                <>
+                  <span className="font-semibold">Was this check helpful?</span>
+                  <button type="button" onClick={() => sendFeedback("up")} title="Yes, helpful" className="inline-flex items-center justify-center w-6 h-6 rounded-md border border-[#e0e3e5] text-[#45464d] hover:border-[#10b981] hover:text-[#10b981] transition-colors"><ThumbsUp size={12} /></button>
+                  <button type="button" onClick={() => sendFeedback("down")} title="Not helpful" className="inline-flex items-center justify-center w-6 h-6 rounded-md border border-[#e0e3e5] text-[#45464d] hover:border-red-400 hover:text-red-500 transition-colors"><ThumbsDown size={12} /></button>
+                </>
               )}
             </div>
           </div>

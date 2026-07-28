@@ -13,7 +13,7 @@ export default function PrivacyPolicy() {
       <main className="max-w-3xl mx-auto px-6 py-16">
         <p className="text-[#10b981] text-xs font-semibold uppercase tracking-widest mb-3">Legal</p>
         <h1 className="text-4xl font-bold mb-3">Privacy Policy</h1>
-        <p className="text-[#76777d] text-sm mb-12">Last updated: January 2025</p>
+        <p className="text-[#76777d] text-sm mb-12">Last updated: July 2026</p>
 
         <div className="prose prose-invert prose-sm max-w-none space-y-10 text-[#45464d] leading-relaxed">
 
@@ -53,7 +53,7 @@ export default function PrivacyPolicy() {
 
           <section>
             <h2 className="text-[#191c1e] text-xl font-semibold mb-4">5. Data Retention</h2>
-            <p>Your account data is retained as long as your account is active. Generated documents are retained for the duration of your plan (90 days for Pro, 7 days for Starter). You can delete your account and all associated data at any time by contacting us.</p>
+            <p>Your account data is retained as long as your account is active. Generated documents are retained for the duration of your plan (90 days on Pro). The free AI, plagiarism and peer-review checker runs in your browser and its text is never sent to an AI model or stored. You can delete your account and all associated data at any time by contacting us.</p>
           </section>
 
           <section>

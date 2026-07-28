@@ -1,8 +1,12 @@
+import { useState } from "react";
 import {
   Check, AlertTriangle, Lightbulb, ListChecks, HelpCircle, Lock, ArrowRight,
+  BookMarked, Loader2, Copy, ExternalLink,
 } from "lucide-react";
-import type { PeerReviewResult } from "@/lib/peerReview";
+import type { PeerReviewResult, CitationStyle } from "@/lib/peerReview";
 import type { HighlightSegment } from "@/lib/scanReport";
+import { apiFetch } from "@/lib/apiFetch";
+import { buildBibliography, formatCitation, type CitationSource } from "@/lib/citationFormat";
 
 // ── Peer Review results + combined report — 100% no-LLM ───────────────────────
 // The Peer Review runs inside the free checker's single "Check my writing" pass
@@ -223,6 +227,17 @@ export function PeerReviewResults({
         </ul>
       </div>
 
+      {/* Citation suggestions — real papers for uncited claims (no LLM) */}
+      {r.unsupportedClaims.length > 0 && (
+        <CitationSuggestions
+          claims={r.unsupportedClaims}
+          subject={r.options.paperType}
+          style={r.options.citationStyle}
+          authed={authed}
+          onRequireAuth={onRequireAuth}
+        />
+      )}
+
       {/* Probable questions */}
       <div>
         <p className="text-[9px] font-bold text-[#76777d] uppercase tracking-wider mb-1 flex items-center gap-1">
@@ -246,6 +261,100 @@ export function PeerReviewResults({
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white text-[11px] font-bold transition-colors">
             Unlock the full check <ArrowRight size={11} />
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Citation suggestions — Jenni-style, powered by our academic databases ─────
+// For every claim the reviewer flags as uncited, fetch real supporting papers
+// (no LLM) and let the user copy a citation or export a full bibliography in the
+// detected style. Signed-in only (it queries the live databases server-side).
+interface ClaimSources { claim: string; sources: CitationSource[] }
+function CitationSuggestions({
+  claims, subject, style, authed, onRequireAuth,
+}: {
+  claims: string[]; subject: string; style: CitationStyle; authed: boolean; onRequireAuth?: () => void;
+}) {
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [results, setResults] = useState<ClaimSources[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  async function fetchSuggestions() {
+    if (!authed) { onRequireAuth?.(); return; }
+    setState("loading");
+    try {
+      const resp = await apiFetch("/citations/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ claims: claims.slice(0, 6), subject }),
+      });
+      if (!resp.ok) throw new Error("failed");
+      const data = await resp.json() as { results: ClaimSources[] };
+      setResults(data.results ?? []);
+      setState("done");
+    } catch {
+      setState("error");
+    }
+  }
+
+  const allSources = results.flatMap((r) => r.sources);
+  function copyBibliography() {
+    if (!allSources.length) return;
+    navigator.clipboard?.writeText(buildBibliography(allSources, style)).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    }).catch(() => { /* clipboard blocked */ });
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <p className="text-[9px] font-bold text-[#0d9488] uppercase tracking-wider flex items-center gap-1">
+          <BookMarked size={11} /> Suggested citations for uncited claims ({claims.length})
+        </p>
+        {state === "done" && allSources.length > 0 && (
+          <button type="button" onClick={copyBibliography}
+            className="inline-flex items-center gap-1 text-[10px] font-bold text-[#0d9488] hover:text-[#0f766e]">
+            <Copy size={10} /> {copied ? "Copied!" : `Copy bibliography (${style.toUpperCase()})`}
+          </button>
+        )}
+      </div>
+
+      {state === "idle" && (
+        <button type="button" onClick={fetchSuggestions}
+          className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-[#c7e9d5] bg-[#f3fbf6] text-[#0f5132] text-[11px] font-bold hover:bg-[#e6f4ec] transition-colors">
+          <BookMarked size={12} /> {authed ? "Find real papers to support these claims" : "Sign in to find supporting papers"}
+        </button>
+      )}
+      {state === "loading" && (
+        <p className="text-[10.5px] text-[#047857] flex items-center gap-1.5 py-2 justify-center"><Loader2 size={12} className="animate-spin" /> Searching 13 academic databases…</p>
+      )}
+      {state === "error" && (
+        <p className="text-[10.5px] text-red-600 flex items-center gap-1.5"><AlertTriangle size={11} /> Couldn’t fetch suggestions — <button className="underline font-semibold" onClick={fetchSuggestions}>retry</button></p>
+      )}
+      {state === "done" && (
+        <div className="space-y-2">
+          {results.every((r) => r.sources.length === 0) ? (
+            <p className="text-[10.5px] text-[#76777d]">No close matches found in the databases — try rephrasing the claim or add your own source.</p>
+          ) : results.map((r, i) => r.sources.length > 0 && (
+            <div key={i} className="rounded-lg border border-[#e0e3e5] bg-[#fbfdfc] p-2">
+              <p className="text-[10px] text-[#45464d] italic mb-1">“{r.claim.length > 130 ? r.claim.slice(0, 130) + "…" : r.claim}”</p>
+              <ul className="space-y-1">
+                {r.sources.map((s, j) => (
+                  <li key={j} className="flex items-start justify-between gap-2 text-[10px]">
+                    <a href={s.url} target="_blank" rel="noreferrer" className="text-[#0d9488] hover:underline min-w-0">
+                      {s.title} <span className="text-[#76777d]">— {s.authors}, {s.year}</span> <ExternalLink size={9} className="inline" />
+                    </a>
+                    <button type="button" title="Copy citation"
+                      onClick={() => navigator.clipboard?.writeText(formatCitation(s, style))}
+                      className="shrink-0 text-[#76777d] hover:text-[#0d9488]"><Copy size={11} /></button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       )}
     </div>
