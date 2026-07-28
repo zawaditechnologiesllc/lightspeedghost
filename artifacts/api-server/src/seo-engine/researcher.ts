@@ -52,6 +52,45 @@ export interface ResearchData {
   summary: string;
   redditInsights: string;
   redditPostCount: number;
+  /** Real Google autocomplete suggestions (what people actually search). */
+  googleSuggests: string[];
+}
+
+// Google Autocomplete ("Suggest") is a stable, public JSON endpoint — the same
+// signal Ubersuggest/AnswerThePublic-style tools use. It reflects real,
+// high-volume, currently-trending queries, so it fills the "google search /
+// google trends" gap without scraping result pages. We expand the topic with
+// intent modifiers to surface long-tail questions people type.
+async function fetchGoogleSuggest(topic: string): Promise<string[]> {
+  const seeds = [
+    topic,
+    `how to ${topic}`,
+    `best ${topic}`,
+    `${topic} for students`,
+    `is ${topic}`,
+    `${topic} vs`,
+  ];
+  const out = new Set<string>();
+  await Promise.all(
+    seeds.map(async (seed) => {
+      try {
+        const url = `https://suggestqueries.google.com/complete/search?client=firefox&hl=en&q=${encodeURIComponent(seed)}`;
+        const res = await fetch(url, {
+          headers: { "User-Agent": BROWSER_UA, Accept: "application/json,text/javascript,*/*" },
+          signal: AbortSignal.timeout(8_000),
+        });
+        if (!res.ok) return;
+        const data = JSON.parse(await res.text());
+        const suggestions: unknown = Array.isArray(data) ? data[1] : null;
+        if (Array.isArray(suggestions)) {
+          for (const s of suggestions) if (typeof s === "string" && s.length > 3) out.add(s.toLowerCase());
+        }
+      } catch {
+        /* Suggest throttled/unreachable — Reddit + model knowledge still cover it */
+      }
+    }),
+  );
+  return [...out].slice(0, 25);
 }
 
 interface RedditPost {
@@ -125,9 +164,17 @@ export async function researchTopic(
   toolFocus: string,
   geminiClient: GoogleGenerativeAI,
 ): Promise<ResearchData> {
-  // ── Step 1: collect Reddit signal ─────────────────────────────────────────
-  const posts = await fetchRedditPosts(topic);
+  // ── Step 1: collect real community + search signal in parallel ────────────
+  const [posts, googleSuggests] = await Promise.all([
+    fetchRedditPosts(topic),
+    fetchGoogleSuggest(topic),
+  ]);
   const redditPostCount = posts.length;
+
+  const suggestContext =
+    googleSuggests.length > 0
+      ? googleSuggests.map((s, i) => `${i + 1}. "${s}"`).join("\n")
+      : "No Google autocomplete retrieved — use general search knowledge.";
 
   const redditContext =
     posts.length > 0
@@ -152,13 +199,16 @@ Platform tool to promote: "${toolFocus}" (LightspeedGhost — lightspeedghost.co
 REAL COMMUNITY DATA (Reddit — college/academic subreddits, top posts from last year)
 ${redditContext}
 
-Using the community data above AND your own knowledge about this topic:
+REAL GOOGLE AUTOCOMPLETE (what people are actually typing into Google right now — reflects live search volume + trends)
+${suggestContext}
+
+Using the Reddit data, the Google autocomplete queries above, AND your own knowledge (including the kinds of questions asked on Quora and shown in Google's "People also ask"):
 
 Return a JSON object with EXACTLY this structure:
 {
   "painPoints": [up to 8 specific, concrete pain points students experience],
-  "topQuestions": [up to 8 questions students actually search for — phrase as real Google queries],
-  "highVolumeKeywords": [up to 10 keywords ordered by estimated search volume, from head to long-tail],
+  "topQuestions": [up to 10 questions students actually search for — phrase as real Google queries. PRIORITISE the Google autocomplete queries and Quora / "People also ask" style questions that this exact page can answer directly and completely],
+  "highVolumeKeywords": [up to 12 keywords ordered by estimated search volume, from head to long-tail. Ground the head terms in the Google autocomplete data; each keyword must map to a DISTINCT search intent so pages never compete with each other for the same query (avoid keyword cannibalisation)],
   "competitorMentions": [up to 5 competing tools/services students mention when discussing this topic],
   "suggestedCompetitor": "the SINGLE most Googled competitor for a head-to-head comparison page — choose the one students compare most vs AI writing assistants (e.g. ChatGPT, QuillBot, Grammarly, Chegg, Course Hero, Turnitin, Jasper, Writesonic)",
   "keyStats": [up to 6 real, verifiable statistics about this topic — include source hint in brackets],
@@ -166,7 +216,7 @@ Return a JSON object with EXACTLY this structure:
   "redditInsights": "1–2 sentence summary of the specific angles, tone, and vocabulary the Reddit community uses about this topic"
 }
 
-Be specific and actionable. Every pain point and question must reflect something a real student would write or search.`;
+SEO strategy (Neil Patel playbook): match search intent exactly, answer the question in the first 100 words, go deeper and more specific than the top-ranking pages (skyscraper), use the searcher's own phrasing, and demonstrate first-hand experience/expertise (E-E-A-T). Be specific and actionable — every pain point and question must reflect something a real student would write or search.`;
 
   let research: ResearchData;
 
@@ -195,6 +245,7 @@ Be specific and actionable. Every pain point and question must reflect something
       summary:              String(parsed.summary ?? ""),
       redditInsights:       String(parsed.redditInsights ?? ""),
       redditPostCount,
+      googleSuggests,
     };
   } catch (err) {
     logger.error({ err, topic }, "[seo-research] Gemini synthesis failed — using minimal fallback");
@@ -208,6 +259,7 @@ Be specific and actionable. Every pain point and question must reflect something
       summary:             `Research for "${topic}" targeting students who need ${toolFocus} support.`,
       redditInsights:      "Community frequently discusses this topic in academic contexts.",
       redditPostCount,
+      googleSuggests,
     };
   }
 
