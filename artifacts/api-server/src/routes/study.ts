@@ -14,6 +14,8 @@ import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSource
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage, enforceLimit, quotaExceededMessage } from "../lib/usageTracker";
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
+import { summarizeStructured } from "../lib/localSummarize";
+import { buildExemplarBlock } from "../lib/learningEngine";
 import { z } from "zod";
 
 const router = Router();
@@ -375,12 +377,35 @@ router.post("/study/generate", requireAuth, async (req, res) => {
     const promptFn = GENERATE_PROMPTS[body.type];
     if (!promptFn) return res.status(400).json({ error: "Invalid type" });
 
+    // Free plan → no LLM: build a real extractive summary in-process (TextRank
+    // over the material's own sentences — never hallucinated). Only "summary"
+    // has a faithful no-LLM form; other types still require generation.
+    if (body.type === "summary" && quota.plan === "free") {
+      const local = summarizeStructured(body.content, body.subject ?? "General");
+      try {
+        const userId = req.userId ?? null;
+        const docNum = await getNextDocNumber(userId, "study");
+        await db.insert(documentsTable).values({
+          userId,
+          title: formatDocTitle({ type: "study", docNumber: docNum, studyType: body.type, subject: body.subject ?? "General" }),
+          content: JSON.stringify(local).slice(0, 4000),
+          type: "study",
+          subject: body.subject ?? "General",
+          docNumber: docNum,
+          wordCount: body.content.split(/\s+/).filter(Boolean).length,
+        });
+      } catch { /* non-fatal */ }
+      return res.json({ type: body.type, data: local, engine: "local-extractive" });
+    }
+
     const datasetAnalysis = body.datasetText?.trim() ? parseAndAnalyzeDataset(body.datasetText) : "";
     const enrichedContent = datasetAnalysis
       ? `${body.content}\n\n---\n\n${datasetAnalysis}`
       : body.content;
 
-    const prompt = promptFn(enrichedContent, subject, body.weakTopics);
+    // Inject top user-rated exemplars for this study type (self-learning loop).
+    const exemplarBlock = await buildExemplarBlock(`study-${body.type}`, subject).catch(() => "");
+    const prompt = promptFn(enrichedContent, subject, body.weakTopics) + exemplarBlock;
 
     // Build message content — include images as vision blocks if provided
     type ImageBlock = { type: "image"; source: { type: "base64"; media_type: string; data: string } };
@@ -412,6 +437,11 @@ router.post("/study/generate", requireAuth, async (req, res) => {
       parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
     } catch {
       req.log.error({ raw }, "Failed to parse study generate JSON");
+      // For summaries we can still return a faithful extractive result rather
+      // than failing the request outright.
+      if (body.type === "summary") {
+        return res.json({ type: body.type, data: summarizeStructured(body.content, subject), engine: "local-extractive-fallback" });
+      }
       return res.status(500).json({ error: "Failed to parse AI response" });
     }
 
