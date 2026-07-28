@@ -41,7 +41,17 @@ const TOOL_PATHS: Record<string, { name: string; path: string; cta: string; pric
     name:    "AI Paper Writer",
     path:    "/write",
     cta:     "Write my paper with verified citations →",
-    pricing: "Pay-as-you-go from $3.99 · included in Pro $29.99/month",
+    // Priced by length so long, high-value papers monetise well: short posts
+    // $3.99, essays $7.99, research papers $14.99, research proposals $24.99,
+    // and full dissertations/theses (6,000–15,000 words) $59.99 — no
+    // subscription needed. All lengths are also included in Pro at $29.99/month.
+    pricing: "Pay-as-you-go by length: $3.99 short posts · $7.99 essays · $14.99 research papers · $24.99 proposals · $59.99 dissertations & theses — or included in Pro $29.99/month",
+  },
+  dissertation: {
+    name:    "AI Dissertation & Thesis Writer",
+    path:    "/write",
+    cta:     "Draft my dissertation with verified citations →",
+    pricing: "Pay-as-you-go $59.99 per dissertation/thesis (6,000–15,000 words, 35+ live databases, real DOI citations) · $24.99 research proposals · or Pro $29.99/month",
   },
   humanizer: {
     name:    "LightSpeed Humanizer",
@@ -87,14 +97,44 @@ const TOOL_PATHS: Record<string, { name: string; path: string; cta: string; pric
   },
 };
 
-function slugify(text: string): string {
-  return text
+// Low-value words dropped from slugs to keep them short and keyword-focused
+// (Google guidance + Neil Patel: concise, descriptive, hyphenated URLs). We KEEP
+// high-intent words like how/what/why/best/free/vs because they carry search
+// intent ("how-to-write-an-essay", "best-ai-essay-writer").
+const SLUG_STOPWORDS = new Set([
+  "a", "an", "the", "and", "or", "of", "to", "in", "on", "for", "with", "as",
+  "at", "is", "are", "be", "this", "that", "your", "you",
+]);
+
+// Google-friendly slug: lowercase, ASCII, hyphen-separated, no stop words, no
+// mid-word truncation, no leading/trailing hyphens, never empty. Accepts raw LLM
+// output (titles, punctuation, emoji, years) and always returns a clean slug.
+export function slugify(text: string, maxLen = 60): string {
+  const words = String(text ?? "")
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
+    .normalize("NFKD").replace(/[̀-ͯ]/g, "") // strip accents: é → e
+    .replace(/&/g, " and ")
+    .replace(/['’`]/g, "")                              // don't → dont (no stray hyphen)
+    .replace(/[^a-z0-9]+/g, " ")                        // everything else → space
     .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 60);
+    .split(/\s+/)
+    .filter(Boolean);
+
+  // Drop stop words, but never strip the slug down to nothing.
+  let kept = words.filter((w) => !SLUG_STOPWORDS.has(w));
+  if (kept.length < 3) kept = words;
+
+  // Assemble up to maxLen on WORD boundaries — never cut a word in half.
+  const out: string[] = [];
+  let len = 0;
+  for (const w of kept) {
+    const add = (out.length ? 1 : 0) + w.length;
+    if (len + add > maxLen) break;
+    out.push(w);
+    len += add;
+  }
+  const finalWords = out.length ? out : kept.slice(0, 6);
+  return finalWords.join("-").replace(/^-+|-+$/g, "") || "page";
 }
 
 export function getToolInfo(toolFocus: string) {
@@ -118,7 +158,8 @@ export async function buildOutline(
 
   const researchContext = [
     `Pain points: ${research.painPoints.slice(0, 5).join(" | ")}`,
-    `Top questions: ${research.topQuestions.slice(0, 5).join(" | ")}`,
+    `Top questions (answer these directly): ${research.topQuestions.slice(0, 8).join(" | ")}`,
+    `Google autocomplete (real live searches — target these long-tail queries): ${(research.googleSuggests ?? []).slice(0, 15).join(" | ")}`,
     `High-volume keywords: ${research.highVolumeKeywords.slice(0, 8).join(", ")}`,
     `Competitor mentions: ${research.competitorMentions.join(", ")}`,
     `Key stats: ${research.keyStats.slice(0, 4).join(" | ")}`,
@@ -217,19 +258,36 @@ IMPORTANT:
     }
 
     const pages = parsed.slice(0, 5) as PageOutlineItem[];
+
+    // Never trust the model's raw slug — sanitise every one through slugify and
+    // guarantee they're unique within the cluster (a duplicate slug would
+    // cannibalise itself and lose one page to an overwrite).
+    const seen = new Set<string>();
+    for (const p of pages) {
+      let s = slugify(p.slug || `${topicSlug}-${p.pageType}`);
+      if (seen.has(s)) {
+        const base = s.slice(0, 52);
+        let n = 2;
+        while (seen.has(`${base}-${p.pageType || n}`)) n++;
+        s = `${base}-${p.pageType || n}`;
+      }
+      seen.add(s);
+      p.slug = s;
+    }
     logger.info({ topic, topicSlug, toolFocus, pages: pages.length }, "[seo-outliner] Outline built");
 
     return { topic, topicSlug, toolFocus, competitor: competitor || "ChatGPT", pages };
   } catch (err) {
     logger.error({ err, topic }, "[seo-outliner] Gemini outline failed — using fallback structure");
 
+    const YEAR = new Date().getFullYear(); // titles stay current automatically
     // Fallback minimal outline
     const pages: PageOutlineItem[] = [
       {
         pageNumber:     1,
         pageType:       "hook",
         slug:           `${topicSlug}-guide`,
-        title:          `${topic}: What Every Student Needs to Know [2025]`,
+        title:          `${topic}: What Every Student Needs to Know [${YEAR}]`,
         metaDescription: `Learn everything about ${topic}. Discover how LightSpeed Ghost helps students achieve better grades with AI writing assistance.`,
         h1:             `${topic}: The Complete Student Guide`,
         targetKeywords: [topic, `${topic} for students`, `how to use ${topic}`, `${topic} help`, `${topic} guide`],
@@ -243,9 +301,9 @@ IMPORTANT:
         pageNumber:     2,
         pageType:       "comparison",
         slug:           `best-${topicSlug}-tools`,
-        title:          `Best ${topic} Tools for Students in 2025`,
+        title:          `Best ${topic} Tools for Students in ${YEAR}`,
         metaDescription: `Compare the top ${topic} tools for students. See why LightSpeed Ghost ranks #1 for academic use.`,
-        h1:             `Best ${topic} Tools for Students: 2025 Comparison`,
+        h1:             `Best ${topic} Tools for Students: ${YEAR} Comparison`,
         targetKeywords: [`best ${topic} tools`, `${topic} comparison`, `${topic} alternatives`, `top ${topic}`, `${topic} review`],
         searchIntent:   "commercial",
         sections:       ["H2: Our Evaluation Criteria", `H2: Top ${topic} Tools Compared`, "H2: LightSpeed Ghost: The Academic Choice", "H2: Pricing Overview", "H2: Our Verdict"],
@@ -271,7 +329,7 @@ IMPORTANT:
         pageNumber:     4,
         pageType:       "alternative",
         slug:           `${topicSlug}-lightspeedghost-alternative`,
-        title:          `LightSpeed Ghost vs ${competitor || "ChatGPT"}: Honest 2025 Comparison`,
+        title:          `LightSpeed Ghost vs ${competitor || "ChatGPT"}: Honest ${YEAR} Comparison`,
         metaDescription: `LightSpeed Ghost vs ${competitor || "ChatGPT"} for ${topic}. Feature-by-feature comparison with real student results.`,
         h1:             `LightSpeed Ghost vs ${competitor || "ChatGPT"} for ${topic}`,
         targetKeywords: [`${competitor || "chatgpt"} alternative`, `lightspeedghost vs ${competitor || "chatgpt"}`, `${competitor || "chatgpt"} replacement`, `better than ${competitor || "chatgpt"}`, `${topic} ${competitor || "chatgpt"} alternative`],
@@ -285,7 +343,7 @@ IMPORTANT:
         pageNumber:     5,
         pageType:       "trust",
         slug:           `${topicSlug}-review`,
-        title:          `Does ${topic} Actually Work? Real Student Results [2025]`,
+        title:          `Does ${topic} Actually Work? Real Student Results [${YEAR}]`,
         metaDescription: `Honest ${topic} review with real student results, success rates, and risk assessment. Find out if it's worth it.`,
         h1:             `Does ${topic} Work? Real Results from Real Students`,
         targetKeywords: [`${topic} review`, `does ${topic} work`, `is ${topic} legit`, `${topic} results`, `${topic} worth it`],
