@@ -6,7 +6,7 @@
  * sources *instantly*, in-database.
  *
  * How it grows (ingestion pipeline): every time the live scan fetches abstracts
- * from the 13 academic databases, we UPSERT them here (deduped by content hash).
+ * from the 35 academic databases, we UPSERT them here (deduped by content hash).
  * So the corpus compounds with real usage — the more the tool is used, the more
  * it can catch locally without hitting the external APIs. That's the same
  * flywheel a pre-built index gives you, built from sources we already retrieve.

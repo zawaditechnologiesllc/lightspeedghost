@@ -19,30 +19,79 @@
  *
  * All functions are synchronous and deterministic.
  */
+import { canonicalizeForMatch } from "./localSpell";
 
 // A compact, curated academic synonym map: fold common interchangeable words to
 // a single canonical form so a thesaurus swap can't defeat the match. Kept small
 // and high-precision on purpose — only near-exact synonyms, no risky conflations.
+// Curated for PRECISION: only low-ambiguity synonyms (words unlikely to carry a
+// different literal meaning) are folded, so we never create a false match. Note
+// values are also stemmed downstream, so both sides converge on one token.
 const SYNONYM_CANON: Record<string, string> = {
   utilize: "use", utilise: "use", utilization: "use", employ: "use",
-  demonstrate: "show", demonstrates: "show", illustrate: "show", illustrates: "show", reveal: "show", reveals: "show",
-  facilitate: "help", facilitates: "help", assist: "help", aid: "help",
-  significant: "important", crucial: "important", vital: "important", essential: "important", critical: "important",
+  demonstrate: "show", illustrate: "show", reveal: "show",
+  facilitate: "help", assist: "help",
+  crucial: "important", vital: "important", essential: "important", significant: "important", paramount: "important",
   numerous: "many", various: "many", multiple: "many", several: "many",
-  obtain: "get", obtained: "get", acquire: "get", acquired: "get",
+  obtain: "get", acquire: "get",
   additionally: "also", furthermore: "also", moreover: "also",
-  however: "but", nevertheless: "but", nonetheless: "but", nonetheless2: "but",
+  nevertheless: "but", nonetheless: "but",
   therefore: "so", thus: "so", hence: "so", consequently: "so",
   approximately: "about", roughly: "about",
-  commence: "start", commenced: "start", initiate: "start", initiated: "start", begin: "start", began: "start",
-  terminate: "end", terminated: "end", conclude: "end", concluded: "end",
-  investigate: "study", investigated: "study", examine: "study", examined: "study", analyse: "study", analyze: "study",
-  methodology: "method", methodologies: "method",
+  commence: "start", initiate: "start", begin: "start",
+  terminate: "end", conclude: "end",
+  investigate: "study", examine: "study", analyse: "study", analyze: "study",
+  methodology: "method", methodologies: "method", approach: "method", technique: "method", procedure: "method",
   individuals: "people", persons: "people",
-  comprehend: "understand", comprehends: "understand",
+  comprehend: "understand",
   endeavour: "try", endeavor: "try", attempt: "try",
   subsequently: "later", previously: "before",
+  // Descriptive synonyms.
+  huge: "large", enormous: "large", immense: "large", massive: "large", substantial: "large",
+  tiny: "little", slight: "little",
+  quick: "fast", rapid: "fast", swift: "fast", speedy: "fast",
+  intelligent: "smart", clever: "smart",
+  strengthen: "improve", enhance: "improve", bolster: "improve", augment: "improve",
+  reduce: "decrease", lessen: "decrease", diminish: "decrease",
+  increase: "raise", growth: "raise", expand: "raise", escalate: "raise",
+  affect: "influence", influenced: "influence",
+  elucidate: "clarify",
+  imply: "indicate", denote: "indicate", signify: "indicate",
+  assert: "claim", contend: "claim", posit: "claim", contention: "claim", thesis: "claim",
+  prevalent: "widespread", ubiquitous: "widespread",
+  challenging: "difficult", arduous: "difficult",
+  precise: "accurate", exact: "accurate",
+  erroneous: "incorrect", flawed: "incorrect",
+  objective: "aim", purpose: "aim", intention: "aim",
+  outcome: "result", consequence: "result", finding: "result",
+  notion: "concept", theme: "concept",
+  obstacle: "issue", hurdle: "issue", difficulty: "issue",
+  teacher: "educator", instructor: "educator", tutor: "educator", professor: "educator", lecturer: "educator",
+  pupil: "student", learner: "student",
+  modify: "alter", transform: "alter", revise: "alter",
+  retain: "maintain", preserve: "maintain", sustain: "maintain",
+  // Domain synonyms that show up constantly in student writing.
+  teenage: "adolescent", teenager: "adolescent", teen: "adolescent", youth: "adolescent",
+  psychological: "mental", psychology: "mental",
+  wellbeing: "health", wellness: "health", welfare: "health",
 };
+
+// Conservative inflectional stemmer (no derivational stripping → low over-stem
+// risk). Folds plural / -ing / -ed / -ly so "argues", "arguing", "argued" match.
+// Char-trigrams below cover derivational overlap (educate ≈ education).
+function stem(w: string): string {
+  if (w.length <= 4) return w;
+  let s = w;
+  if (/ies$/.test(s) && s.length > 4) s = s.slice(0, -3) + "y";
+  else if (/(ches|shes|sses|xes|zes)$/.test(s)) s = s.slice(0, -2);
+  else if (/([^s])s$/.test(s) && !/(ss|us|is|ous)$/.test(s)) s = s.slice(0, -1);
+  if (/([a-z])\1ing$/.test(s)) s = s.slice(0, -4);          // running → run
+  else if (/ing$/.test(s) && s.length > 5) s = s.slice(0, -3);
+  else if (/([a-z])\1ed$/.test(s)) s = s.slice(0, -3);      // planned → plan
+  else if (/ed$/.test(s) && s.length > 4) s = s.slice(0, -2);
+  if (/ly$/.test(s) && s.length > 4) s = s.slice(0, -2);
+  return s.length >= 3 ? s : w;
+}
 
 const STOP = new Set([
   "the","a","an","and","or","but","in","on","at","to","for","of","with","by","from","as","is","was","are",
@@ -56,12 +105,24 @@ function normalize(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-/** Tokenise, drop stop-words + very short tokens, and canonicalise synonyms. */
+/**
+ * Tokenise, drop stop-words, and fold each token to a canonical form so
+ * spelling, synonym, and morphology variants all compare as equal:
+ *   typo-correct → synonym-canonicalise → inflectional stem.
+ */
 function contentTokens(text: string): string[] {
   return normalize(text)
     .split(" ")
     .filter((w) => w.length > 2 && !STOP.has(w))
-    .map((w) => SYNONYM_CANON[w] ?? w);
+    .map((w) => {
+      const spellFixed = canonicalizeForMatch(w);          // recieve → receive
+      const stemmed = stem(spellFixed);                    // improves/improved → improv
+      // Fold synonyms on BOTH the surface and the stem, so inflected synonyms
+      // ("affected", "influenced") still collapse to one canonical, then stem
+      // the canonical so both sides land on the same token.
+      const syn = SYNONYM_CANON[spellFixed] ?? SYNONYM_CANON[stemmed] ?? stemmed;
+      return stem(syn);
+    });
 }
 
 function ngramCounts(items: string[], n: number): Map<string, number> {

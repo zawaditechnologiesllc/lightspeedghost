@@ -10,6 +10,7 @@ import { usePaywallGuard } from "@/hooks/usePaywallGuard";
 import { PaywallFlow } from "@/components/checkout/PaywallFlow";
 import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone";
 import { ExportButtons } from "@/components/ExportButtons";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { renderInlineMd } from "@/lib/renderInline";
 import { apiFetch } from "@/lib/apiFetch";
@@ -661,6 +662,7 @@ export default function Humanizer() {
             </div>
             <div className="text-xs text-muted-foreground">Tone: <span className="text-foreground font-medium capitalize">{toneApplied}</span></div>
             <div className="text-xs text-muted-foreground">{wordCount.toLocaleString()} words · Passes Turnitin & GPTZero at most institutions</div>
+            <FeedbackWidget type="humanizer" documentId={humanizeResult.documentId} subject={toneApplied} output={humanizedText} className="ml-auto" />
           </div>
         </div>
 

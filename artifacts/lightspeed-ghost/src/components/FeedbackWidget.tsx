@@ -7,10 +7,12 @@ interface FeedbackWidgetProps {
   type: "paper" | "stem" | "study" | "outline" | "revision" | "humanizer";
   documentId?: number;
   subject?: string;
+  /** The rated output text — a 👍 seeds it as a learning exemplar for this tool. */
+  output?: string;
   className?: string;
 }
 
-export function FeedbackWidget({ type, documentId, subject, className }: FeedbackWidgetProps) {
+export function FeedbackWidget({ type, documentId, subject, output, className }: FeedbackWidgetProps) {
   const [rated, setRated] = useState<"up" | "down" | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -21,7 +23,8 @@ export function FeedbackWidget({ type, documentId, subject, className }: Feedbac
       await apiFetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, documentId, rating, subject }),
+        // Only send the output on 👍 (it's what seeds the exemplar), and cap size.
+        body: JSON.stringify({ type, documentId, rating, subject, output: rating === "up" ? output?.slice(0, 4000) : undefined }),
       });
       setRated(rating);
     } catch {

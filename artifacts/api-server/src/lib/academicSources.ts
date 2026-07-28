@@ -1638,7 +1638,7 @@ async function _fetchAllAcademicSources(
 
   // ── Budget allocation (over-request, then de-dup to `limit`) ─────────────────
   // Over-fetch per source so after deduplication we still hit the target limit.
-  const budget = Math.ceil(limit * 2.0);   // fetch ~100% more than needed across 13 sources
+  const budget = Math.ceil(limit * 2.0);   // fetch ~100% more than needed across 35 sources
 
   const openAlexLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.22 : 0.20));
   const crossRefLimit    = Math.ceil(budget * (isFinanceBusiness ? 0.14 : 0.12));
@@ -1811,6 +1811,53 @@ async function _fetchAllAcademicSources(
 
   return merged.slice(0, limit);
 }
+
+/**
+ * Canonical list of the 35 live academic databases every tool searches, in the
+ * same order they're merged. This is the SINGLE SOURCE OF TRUTH — the plagiarism
+ * scanner, the peer reviewer, the study RAG and any UI that names our coverage
+ * must import this so the count and names never drift (no more hard-coded "13").
+ */
+export const ACADEMIC_DATABASE_NAMES: readonly string[] = [
+  "OpenAlex (250M+ works)",
+  "CrossRef (145M+ DOIs)",
+  "Semantic Scholar (200M+ papers)",
+  "Europe PMC (43M+ life sciences)",
+  "PubMed NCBI (36M+ biomedical)",
+  "arXiv (2.4M+ preprints)",
+  "ERIC (2M+ education)",
+  "CORE (290M+ open access)",
+  "DOAJ (open-access journals)",
+  "Zenodo (research outputs)",
+  "BASE (300M+ documents)",
+  "DataCite (research data DOIs)",
+  "OpenAIRE (research graph)",
+  "PLOS (open science)",
+  "PubMed Central (open full-text)",
+  "bioRxiv / medRxiv (preprints)",
+  "SSRN (social sciences)",
+  "HAL (open archive)",
+  "EconBiz (economics)",
+  "DOAB (open-access books)",
+  "OAPEN (open-access books)",
+  "Unpaywall (open-access index)",
+  "ClinicalTrials.gov (trials)",
+  "WHO (global health)",
+  "DBLP (computer science)",
+  "Papers with Code (ML)",
+  "NBER (working papers)",
+  "World Bank (development data)",
+  "NCBI Bookshelf (biomedical books)",
+  "Dryad (research data)",
+  "Figshare (research outputs)",
+  "Google Books",
+  "Library of Congress",
+  "Internet Archive",
+  "Open Library (20M+ books)",
+] as const;
+
+/** The number of live databases every tool queries (currently 35). */
+export const ACADEMIC_DATABASE_COUNT = ACADEMIC_DATABASE_NAMES.length;
 
 /**
  * Cache-wrapped version of _fetchAllAcademicSources.
