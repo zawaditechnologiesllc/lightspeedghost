@@ -100,20 +100,40 @@ export async function detectAIScore(
 
   // Local-only mode (Free plan): score deterministically from burstiness +
   // perplexity — the same signals Turnitin weighs most — without any LLM call.
+  // FALSE-POSITIVE GUARDS (a wrong "AI" call on a real student's own writing is
+  // the worst outcome, so we bias hard toward "human" whenever the signal is weak):
   if (opts.localOnly) {
+    // 1. Short text: AI detectors are unreliable under ~80 words — never assert.
+    if (wordCount < 80) {
+      return {
+        score: 0,
+        indicators: ["Not enough text for a reliable AI reading — paste 80+ words for a score"],
+        burstiness, stdDev, perplexity, sentenceScores,
+        falsePositiveSuppressed: true, meetsMinimumWordCount, mode: "local",
+      };
+    }
     const burstinessContrib = (100 - burstiness) * 0.6;
     const perplexityContrib = perplexity * 0.4;
-    const localScore = Math.min(98, Math.max(0, Math.round(burstinessContrib + perplexityContrib)));
+    let localScore = Math.min(98, Math.max(0, Math.round(burstinessContrib + perplexityContrib)));
+
+    // 2. Require corroboration: only allow a HIGH score when BOTH signals agree
+    //    (low sentence-variety AND high predictability). If they disagree — e.g.
+    //    uniform-but-natural or varied-but-formulaic human prose — damp toward
+    //    human so we don't flag genuine writing.
+    const signalsAgree = burstiness < 42 && perplexity > 45;
+    if (!signalsAgree && localScore > 45) localScore = Math.round(45 + (localScore - 45) * 0.35);
+
+    // 3. Confidence floor: below 25, and any short-of-reliable score below 40,
+    //    is reported as clearly human and suppressed.
+    const suppressed = localScore < 25 || (!meetsMinimumWordCount && localScore < 40);
+    const reported = suppressed ? Math.min(localScore, 15) : localScore;
     return {
-      score: localScore,
-      indicators: ["Local statistical detection — burstiness + perplexity (no AI model used)"],
-      burstiness,
-      stdDev,
-      perplexity,
-      sentenceScores,
-      falsePositiveSuppressed: localScore < 20,
-      meetsMinimumWordCount,
-      mode: "local",
+      score: reported,
+      indicators: suppressed
+        ? ["Reads human — no reliable AI signal (local burstiness + perplexity, no AI model)"]
+        : ["Local statistical detection — burstiness + perplexity (no AI model used)"],
+      burstiness, stdDev, perplexity, sentenceScores,
+      falsePositiveSuppressed: suppressed, meetsMinimumWordCount, mode: "local",
     };
   }
 

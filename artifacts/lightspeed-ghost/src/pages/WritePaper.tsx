@@ -39,6 +39,7 @@ import FileUploadZone, { type ExtractedFile } from "@/components/FileUploadZone"
 import MathRenderer from "@/components/MathRenderer";
 import { detectPaperType, detectCitationStyle, extractTopic, extractSubject } from "@/lib/autofill";
 import { ExportButtons } from "@/components/ExportButtons";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { mdToBodyHtml, wrapDocHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { apiFetch } from "@/lib/apiFetch";
 import { useAuth } from "@/contexts/AuthContext";
@@ -743,6 +744,7 @@ export default function WritePaper() {
               filename={makeLsgFilename("paper", result.title || "PAPER")}
               formats={["docx", "pdf", "copy"]}
             />
+            <FeedbackWidget type="paper" documentId={result.documentId} subject={result.title} output={result.content} />
             <button
               onClick={() => { setPhase("config"); setResult(null); setStreamedContent(""); }}
               className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors"

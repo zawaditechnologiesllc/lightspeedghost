@@ -13,6 +13,7 @@
  *
  * Deterministic and synchronous.
  */
+import { correctTypos, countTypos } from "./localSpell";
 
 // Throat-clearing / filler openers detectors love — remove them, capitalise next.
 const FILLER_OPENERS = [
@@ -106,6 +107,14 @@ export function humanizeLocal(input: string, opts: LocalHumanizeOptions = {}): L
   let text = input;
   let changes = 0;
   const notes = new Set<string>();
+
+  // 0. Fix spelling so a typo'd request still yields correct, clean output.
+  const typoCount = countTypos(text);
+  if (typoCount > 0) {
+    text = correctTypos(text);
+    changes += typoCount;
+    notes.add(`Corrected ${typoCount} spelling error${typoCount === 1 ? "" : "s"}`);
+  }
 
   // 1. Drop throat-clearing openers.
   for (const filler of FILLER_OPENERS) {

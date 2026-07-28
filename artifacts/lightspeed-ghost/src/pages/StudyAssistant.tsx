@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
 import { ExportButtons } from "@/components/ExportButtons";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { wrapDocHtml, mdToBodyHtml, makeLsgFilename } from "@/lib/exportUtils";
 import { renderInlineMd } from "@/lib/renderInline";
 import { ALL_SUBJECTS } from "@/lib/subjects";
@@ -835,7 +836,18 @@ export default function StudyAssistant() {
 
               {/* Export buttons for exportable views */}
               {activeView && activeView !== "weakpoints" && (
-                <div className="flex justify-end -mt-1">
+                <div className="flex items-center justify-between gap-2 -mt-1">
+                  <FeedbackWidget
+                    type="study"
+                    subject={selectedSubject}
+                    output={
+                      activeView === "summary" && summary
+                        ? `${summary.overview} ${summary.takeaways.join(" ")}`
+                        : activeView === "studyguide" && studyGuide
+                        ? studyGuide.title
+                        : undefined
+                    }
+                  />
                   <ExportButtons
                     getHtml={() => {
                       if (activeView === "flashcards" && flashcards.length) {

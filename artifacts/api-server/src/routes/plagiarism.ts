@@ -10,10 +10,11 @@ import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { detectAIScore, humanizeTextOnce } from "../lib/aiDetection";
-import { searchAllAcademicSources } from "../lib/academicSources";
+import { searchAllAcademicSources, ACADEMIC_DATABASE_NAMES } from "../lib/academicSources";
 import { runOpenSourcePlagiarismCheck } from "../lib/openSourceSearch";
 import { semanticSimilarity } from "../lib/localSemantic";
 import { ingestSources, searchCorpus } from "../lib/plagiarismCorpus";
+import { correctTypos } from "../lib/localSpell";
 
 const router = Router();
 
@@ -66,7 +67,7 @@ function computeCosineSimilarity(text1: string, text2: string): number {
 
 /**
  * Extract the most distinctive / content-rich phrases from the text.
- * Used to build multi-angle queries so all 13 databases are searched
+ * Used to build multi-angle queries so all 35 databases are searched
  * against representative samples from beginning, middle, and key concepts.
  */
 // Build the search phrases used to query the live academic databases. Coverage
@@ -77,8 +78,11 @@ function computeCosineSimilarity(text1: string, text2: string): number {
 // fan out into hundreds of concurrent external requests and trip the free
 // academic APIs' rate limits.
 const PLAG_WINDOW_WORDS = 34;
-const PLAG_MAX_WINDOWS = 6; // ×13 databases = up to ~78 polite parallel lookups/scan
-function extractQueryPhrases(text: string): string[] {
+const PLAG_MAX_WINDOWS = 6; // ×35 databases = up to ~78 polite parallel lookups/scan
+function extractQueryPhrases(rawText: string): string[] {
+  // Spell-correct the text used to BUILD SEARCH QUERIES only (not the report /
+  // highlight text), so a submission with typos still matches real sources.
+  const text = correctTypos(rawText);
   const words = text.split(/\s+/).filter(Boolean);
   const queries: string[] = [];
   if (words.length === 0) return queries;
@@ -107,7 +111,7 @@ function extractQueryPhrases(text: string): string[] {
 }
 
 /**
- * Query all 13 live academic databases with multiple representative phrases
+ * Query all 35 live academic databases with multiple representative phrases
  * extracted from the submitted text, then compute REAL cosine similarity
  * between the submitted text and each returned paper abstract.
  *
@@ -120,7 +124,7 @@ async function fetchLiveAcademicMatches(
   try {
     const queries = extractQueryPhrases(text);
 
-    // Fan out to all 13 databases with each phrase, collect unique papers by DOI/URL
+    // Fan out to all 35 databases with each phrase, collect unique papers by DOI/URL
     const seenKeys = new Set<string>();
     const allPapers: Awaited<ReturnType<typeof searchAllAcademicSources>> = [];
 
@@ -175,7 +179,11 @@ async function fetchLiveAcademicMatches(
         matchedText: p.abstract!.slice(0, 120),
         sourceType: "academic-live" as const,
       }))
-      .filter(p => p.similarity > 1) // only papers with measurable overlap
+      // FALSE-POSITIVE GUARD: only report a paper as a "matching source" at a
+      // confident similarity. Topical overlap (same subject, original wording)
+      // lands ~5–15%; a real paraphrase/copy lands well above. 18 is the floor
+      // so we never accuse a student over shared vocabulary.
+      .filter(p => p.similarity >= 18)
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, 5);
 
@@ -217,7 +225,7 @@ async function fetchCorpusMatches(
         });
       }
     }
-    return out.filter((m) => m.similarity > 5).sort((a, b) => b.similarity - a.similarity).slice(0, 4);
+    return out.filter((m) => m.similarity >= 18).sort((a, b) => b.similarity - a.similarity).slice(0, 4);
   } catch {
     return [];
   }
@@ -232,7 +240,7 @@ async function fetchCorpusMatches(
  *
  * Plagiarism scoring layers two signals:
  *  1. Local cosine-similarity against ACADEMIC_CORPUS (fast, always available)
- *  2. Live database query against 13 real academic databases (async, non-blocking)
+ *  2. Live database query against 35 real academic databases (async, non-blocking)
  *     returning real paper titles and DOI links users can actually verify.
  */
 router.post("/plagiarism/check", requireAuth, async (req, res) => {
@@ -286,22 +294,28 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
       runOpenSourcePlagiarismCheck(text).then(r => { send("step", { id: "plag-scan", message: `Plagiarism scan complete — ${r.totalSentencesChecked} sentences checked`, status: "done" }); return r; }),
     ]);
 
-    const sentenceList = text.split(/(?<=[.!?])\s+/).filter((s) => s.length > 20);
-    const aiSections = sentenceList
-      .filter((sentence) => {
-        const lower = sentence.toLowerCase();
-        return /furthermore|moreover|in conclusion|it is (important|worth|essential)|this (paper|essay|study)|one (important|key|significant)|facilitate|utilize|demonstrate/.test(lower);
-      })
+    // Sentence-level AI highlights — FALSE-POSITIVE GUARDED. Human academic
+    // writing legitimately uses "furthermore", "this study", "demonstrate", etc.,
+    // so we ONLY surface sentence flags when the document as a whole reads AI
+    // (score ≥ 45), and we never claim a per-sentence score above the document
+    // score. On anything that reads human, zero sentences are flagged.
+    const docText: string = text;
+    const sentenceList: string[] = docText.split(/(?<=[.!?])\s+/).filter((s: string) => s.length > 20);
+    const AI_MARKERS = /furthermore|moreover|in conclusion|it is (?:important|worth|essential) to note|one (?:important|key|significant)|facilitate|utilize|delve into|navigate the complexities|it can be argued/g;
+    const docLooksAI = aiScore >= 45;
+    const aiSections = !docLooksAI ? [] : sentenceList
+      .map((sentence: string) => ({ sentence, markers: (sentence.toLowerCase().match(AI_MARKERS) ?? []).length }))
+      .filter((x) => x.markers >= 1)
+      .sort((a, b) => b.markers - a.markers)
       .slice(0, 4)
-      .map((sentence) => {
+      .map(({ sentence, markers }) => {
         const startIndex = text.indexOf(sentence);
-        const wordCount = sentence.split(/\s+/).length;
-        const sentenceScore = Math.min(60 + (wordCount > 20 ? 15 : 0) + aiIndicators.length * 5, 95);
+        const sentenceScore = Math.min(aiScore + markers * 3, 90);
         return { text: sentence, score: sentenceScore, startIndex, endIndex: startIndex + sentence.length };
       });
 
     const localPlagiarismSources = sourceMatches
-      .filter((s) => s.similarity > 5)
+      .filter((s) => s.similarity >= 18)
       .slice(0, 2)
       .map((s) => ({
         url: `https://scholar.google.com/search?q=${encodeURIComponent(s.label)}`,
@@ -424,9 +438,7 @@ router.post("/plagiarism/check", requireAuth, async (req, res) => {
         ? "burstiness + perplexity (local — Free plan)"
         : "gpt-4o-mini + burstiness",
       sourcesScanned: [
-        "OpenAlex (250M+ papers)", "Semantic Scholar (200M+ papers)", "CrossRef (145M+ DOIs)",
-        "Open Library (20M+ books)", "Wikipedia", "Google Books", "Internet Archive",
-        "PubMed NCBI", "Europe PMC", "arXiv", "CORE", "Zenodo", "DOAJ",
+        ...ACADEMIC_DATABASE_NAMES,
         "LightSpeed local corpus (self-building index)",
       ],
     });

@@ -329,7 +329,7 @@ function CitationSuggestions({
         </button>
       )}
       {state === "loading" && (
-        <p className="text-[10.5px] text-[#047857] flex items-center gap-1.5 py-2 justify-center"><Loader2 size={12} className="animate-spin" /> Searching 13 academic databases…</p>
+        <p className="text-[10.5px] text-[#047857] flex items-center gap-1.5 py-2 justify-center"><Loader2 size={12} className="animate-spin" /> Searching 35 academic databases…</p>
       )}
       {state === "error" && (
         <p className="text-[10.5px] text-red-600 flex items-center gap-1.5"><AlertTriangle size={11} /> Couldn’t fetch suggestions — <button className="underline font-semibold" onClick={fetchSuggestions}>retry</button></p>
