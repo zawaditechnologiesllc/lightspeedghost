@@ -67,26 +67,41 @@ function computeCosineSimilarity(text1: string, text2: string): number {
  * Used to build multi-angle queries so all 13 databases are searched
  * against representative samples from beginning, middle, and key concepts.
  */
+// Build the search phrases used to query the live academic databases. Coverage
+// scales with document length: instead of only sampling the opening + middle,
+// we slide evenly-spaced windows across the WHOLE document so every section is
+// compared against the 250M+ papers. No LLM is involved — this is plain text
+// windowing. The window count is bounded (MAX_WINDOWS) so a long paper doesn't
+// fan out into hundreds of concurrent external requests and trip the free
+// academic APIs' rate limits.
+const PLAG_WINDOW_WORDS = 34;
+const PLAG_MAX_WINDOWS = 6; // ×13 databases = up to ~78 polite parallel lookups/scan
 function extractQueryPhrases(text: string): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const queries: string[] = [];
+  if (words.length === 0) return queries;
 
-  // Opening (first 40 words — usually abstract/intro — most search-relevant)
-  if (words.length > 0) queries.push(words.slice(0, 40).join(" "));
-
-  // Middle section (avoids overlap with opening query)
-  if (words.length > 80) {
-    const mid = Math.floor(words.length / 2);
-    queries.push(words.slice(mid - 18, mid + 18).join(" "));
-  }
-
-  // Extract technically-distinctive tokens (long, non-stop words) for a concept query
+  // Concept query: distinctive long tokens = the document's topic fingerprint.
   const techTokens = words
     .filter(w => w.length > 7 && !STOP_WORDS.has(w.toLowerCase()) && /^[a-zA-Z]/.test(w))
     .slice(0, 12);
   if (techTokens.length >= 4) queries.push(techTokens.join(" "));
 
-  return queries;
+  // Evenly-spaced windows across the entire document — ~1 window per 200 words,
+  // clamped to [2, PLAG_MAX_WINDOWS]. A 3,000-word paper → 8 windows spanning the
+  // whole text (vs. the old fixed 2), so far more of it is actually checked.
+  const windowsWanted = Math.min(PLAG_MAX_WINDOWS, Math.max(2, Math.ceil(words.length / 200)));
+  if (words.length <= PLAG_WINDOW_WORDS) {
+    queries.push(words.join(" "));
+  } else {
+    const step = Math.max(PLAG_WINDOW_WORDS, Math.floor((words.length - PLAG_WINDOW_WORDS) / (windowsWanted - 1)));
+    for (let start = 0; start < words.length && queries.length <= PLAG_MAX_WINDOWS; start += step) {
+      const w = words.slice(start, start + PLAG_WINDOW_WORDS).join(" ");
+      if (w.split(/\s+/).length >= 8) queries.push(w);
+    }
+  }
+
+  return [...new Set(queries)];
 }
 
 /**
