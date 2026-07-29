@@ -1019,7 +1019,7 @@ export default function StemSolver() {
               {/* ── Graph ── */}
               {result.graphData && (
                 <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-                  <h3 className="font-bold text-sm mb-4 text-foreground">{result.graphData.labels?.title ?? "Graph"}</h3>
+                  <h3 className="font-bold text-sm mb-4 text-foreground">{String(result.graphData.labels?.title ?? "Graph")}</h3>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={result.graphData.data}>
@@ -1423,7 +1423,7 @@ function MoleculePanel({
 function ToolkitPanel({
   resources, expandedGroups, onToggle,
 }: {
-  resources: ReturnType<typeof stemResourcesBySubject[string]>;
+  resources: (typeof stemResourcesBySubject)[string];
   expandedGroups: Record<string, boolean>;
   onToggle: (label: string) => void;
 }) {
