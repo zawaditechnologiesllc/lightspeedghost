@@ -16,6 +16,7 @@ import { trackUsage, enforceLimit, quotaExceededMessage } from "../lib/usageTrac
 import { parseAndAnalyzeDataset } from "../lib/datasetAnalysis";
 import { summarizeStructured } from "../lib/localSummarize";
 import { buildExemplarBlock } from "../lib/learningEngine";
+import { buildGroundingContext } from "../lib/grounding";
 import { z } from "zod";
 
 const router = Router();
@@ -145,6 +146,10 @@ router.post("/study/ask", requireAuth, async (req, res) => {
     const memoryContext = buildMemoryContext(memory);
     const ragContext = buildRAGContext(ragPapers);
 
+    // Anti-hallucination grounding for finance / markets / current-events (live
+    // data + authoritative-source allowlist + no-fabrication rules). "" otherwise.
+    const grounding = await buildGroundingContext(body.question).catch(() => "");
+
     // 2. Load conversation history for context
     const history = await db
       .select()
@@ -184,7 +189,7 @@ INSTRUCTION: The student has uploaded their own notes/materials above. Base your
 ` : ""}${datasetAnalysis ? `
 ${datasetAnalysis}
 
-` : ""}${ragContext ? `${ragContext}\n\n` : ""}ANSWER QUALITY STANDARDS:
+` : ""}${ragContext ? `${ragContext}\n\n` : ""}${grounding ? `${grounding}\n` : ""}ANSWER QUALITY STANDARDS:
 • Accuracy target: 92%+ — ground every claim in the student's materials or the verified sources above
 • Do NOT cite Wikipedia or unverified sources
 • If you are uncertain, say so explicitly rather than speculating — never present uncertain claims as fact

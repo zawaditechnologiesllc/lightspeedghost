@@ -7,6 +7,7 @@ import { requireAuth } from "../middlewares/auth";
 import { getNextDocNumber, formatDocTitle } from "../lib/docLabels";
 import { anthropic, openai } from "../lib/ai";
 import { WRITER_SOUL } from "../lib/soul";
+import { buildGroundingContext } from "../lib/grounding";
 import { getVerifiedCitations } from "../lib/citationVerifier";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
 import { analyseTextPlagiarism } from "../lib/textAnalysis";
@@ -1024,9 +1025,14 @@ DO NOT write a generic paper body — the entire body IS the annotated entries.
 • If a citation is needed but none is available, write [citation needed] — do not invent a source.`
       : "";
 
+    // Finance / current-events grounding: for economics/finance/business topics,
+    // attach live market data + the authoritative-source allowlist and forbid
+    // fabricating figures. Empty for non-finance topics.
+    const financeGrounding = await buildGroundingContext(`${body.topic} ${body.subject}`).catch(() => "");
+
     const systemPrompt = `${WRITER_SOUL}
 
-${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${financialContext ? `FINANCIAL STATEMENTS ANALYSIS (PRIMARY DATA — cite specific figures, ratios, and trends from this analysis in your paper. Do NOT present raw data tables; interpret and cite the metrics):\n${financialContext}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${dataGroundingBlock ? `${dataGroundingBlock}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
+${body.referenceText ? `STUDENT-UPLOADED MATERIALS (PRIMARY SOURCE — read the format, structure, and content requirements here FIRST, then use the academic sources to support the arguments):\n${body.referenceText.slice(0, 8000)}\n\n` : ""}${financialContext ? `FINANCIAL STATEMENTS ANALYSIS (PRIMARY DATA — cite specific figures, ratios, and trends from this analysis in your paper. Do NOT present raw data tables; interpret and cite the metrics):\n${financialContext}\n\n` : ""}${datasetAnalysis ? `${datasetAnalysis}\n\n` : ""}${dataGroundingBlock ? `${dataGroundingBlock}\n\n` : ""}${financeGrounding ? `${financeGrounding}\n\n` : ""}${ragContext ? `BACKGROUND READING — Academic context to inform your arguments (DO NOT cite these directly; they are not in the verified citations list):\n${ragContext}\n\n` : ""}${internalStyleContext ? `${internalStyleContext}\n\n` : ""}${citationContext}
 
 ${stemBlock ? `${stemBlock}\n` : ""}${aGradeCriteria ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GRADING TARGET — ${aGradeCriteria}
