@@ -90,7 +90,7 @@ router.post("/stem/solve", requireAuth, async (req, res) => {
     // 4. Generate graph data if requested
     let graphData = null;
     if (body.generateGraph) {
-      graphData = await generateGraphForSubject(body.subject, body.problem, typeof coveResult?.finalAnswer === "string" ? coveResult.finalAnswer : JSON.stringify(coveResult ?? reactResult ?? "").slice(0, 2500));
+      graphData = await generateGraphForSubject(body.subject, body.problem, typeof coveResult?.verified === "string" ? coveResult.verified : JSON.stringify(coveResult ?? reactResult ?? "").slice(0, 2500));
     }
 
     // 5. Build final answer — use CoVe-verified version if corrections were made
@@ -351,7 +351,7 @@ router.post("/stem/solve-stream", requireAuth, async (req, res) => {
 
     let graphData = null;
     if (body.generateGraph) {
-      graphData = await generateGraphForSubject(body.subject, body.problem, typeof coveResult?.finalAnswer === "string" ? coveResult.finalAnswer : JSON.stringify(coveResult ?? reactResult ?? "").slice(0, 2500));
+      graphData = await generateGraphForSubject(body.subject, body.problem, typeof coveResult?.verified === "string" ? coveResult.verified : JSON.stringify(coveResult ?? reactResult ?? "").slice(0, 2500));
     }
 
     const finalAnswer = coveResult.passedVerification ? reactResult.finalAnswer : coveResult.verified;

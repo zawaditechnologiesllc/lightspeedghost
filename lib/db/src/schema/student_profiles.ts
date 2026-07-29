@@ -11,6 +11,7 @@ export const studentProfilesTable = pgTable("student_profiles", {
   preferredSubjects: text("preferred_subjects").notNull().default("[]"),
   recentTopics: text("recent_topics").notNull().default("[]"),
   notes: text("notes").notNull().default(""),
+  academicLevel: text("academic_level").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

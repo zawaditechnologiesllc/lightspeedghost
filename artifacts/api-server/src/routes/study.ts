@@ -412,16 +412,21 @@ router.post("/study/generate", requireAuth, async (req, res) => {
     const exemplarBlock = await buildExemplarBlock(`study-${body.type}`, subject).catch(() => "");
     const prompt = promptFn(enrichedContent, subject, body.weakTopics) + exemplarBlock;
 
-    // Build message content — include images as vision blocks if provided
-    type ImageBlock = { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+    // Build message content — include images as vision blocks if provided.
+    // media_type must be one of Anthropic's supported types, so coerce/guard it
+    // (an arbitrary string would be rejected by the API at runtime).
+    type SupportedMime = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+    const SUPPORTED_MIMES = new Set<string>(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+    type ImageBlock = { type: "image"; source: { type: "base64"; media_type: SupportedMime; data: string } };
     type TextBlock  = { type: "text"; text: string };
     type ContentBlock = ImageBlock | TextBlock;
 
     const userContent: ContentBlock[] = [];
     for (const img of body.images ?? []) {
+      const media_type: SupportedMime = SUPPORTED_MIMES.has(img.mimeType) ? (img.mimeType as SupportedMime) : "image/png";
       userContent.push({
         type: "image",
-        source: { type: "base64", media_type: img.mimeType, data: img.base64 },
+        source: { type: "base64", media_type, data: img.base64 },
       });
     }
     userContent.push({ type: "text", text: prompt });

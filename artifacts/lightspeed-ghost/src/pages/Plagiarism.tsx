@@ -2,6 +2,17 @@ import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useHumanizeText, compareCode } from "@workspace/api-client-react";
 import type { PlagiarismResult, CodeCompareResult } from "@workspace/api-client-react";
+
+// The /plagiarism/check response includes a few fields beyond the OpenAPI-
+// generated PlagiarismResult type — they exist at runtime (see the backend's
+// `done` event); the generated type just hasn't been regenerated to list them.
+type PlagiarismResultFull = PlagiarismResult & {
+  perplexity?: number | null;
+  bypasserDetected?: boolean;
+  sourcesScanned?: string[];
+  matchedSentences?: Array<{ sentence: string; matchScore: number; sources: Array<{ url: string; title: string; sourceType: string }> }>;
+  matchedWords?: string[];
+};
 import { apiFetch } from "@/lib/apiFetch";
 import {
   ShieldCheck, ShieldAlert, Zap, AlertTriangle, Code2, FileText,
@@ -86,7 +97,7 @@ function renderHighlightedCode(raw: string): string {
     .join("");
 }
 
-function buildReportHtml(result: PlagiarismResult, text: string): string {
+function buildReportHtml(result: PlagiarismResultFull, text: string): string {
   const date = new Date().toLocaleString();
   const wordCount = text.split(/\s+/).filter(Boolean).length;
   const hasHighlights = result.aiSections.length > 0;
@@ -567,7 +578,7 @@ export default function PlagiarismChecker() {
   const [textPhase, setTextPhase] = useState<TextPhase>("idle");
   useWakeLock(textPhase === "checking");
   const [checkError, setCheckError] = useState<string | null>(null);
-  const [result, setResult] = useState<PlagiarismResult | null>(null);
+  const [result, setResult] = useState<PlagiarismResultFull | null>(null);
   const [humanizedText, setHumanizedText] = useState<string | null>(null);
   const [intensityValue, setIntensityValue] = useState(50);
   const [copied, setCopied] = useState(false);

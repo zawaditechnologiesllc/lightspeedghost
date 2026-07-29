@@ -60,7 +60,11 @@ Available at: [lightspeedghost.com/ebooks](https://lightspeedghost.com/ebooks)
 
 35 live databases queried simultaneously on every paper request, with results ranked by citation count: OpenAlex (250M+ works), CrossRef (145M+ DOIs), Semantic Scholar (200M+ papers), Europe PMC (43M+), PubMed NCBI (36M+), arXiv (2.4M+), ERIC (2M+), CORE (290M+), DOAJ, Zenodo, BASE (300M+), DataCite, OpenAIRE, PLOS, PubMed Central, bioRxiv, medRxiv, SSRN, HAL, EconBiz, DOAB, OAPEN, Unpaywall, ClinicalTrials.gov, WHO, DBLP, Papers with Code, NBER, World Bank, NCBI Bookshelf, Dryad, Figshare, Google Books, Internet Archive, and Open Library.
 
+Between them these aggregators index scholarship published across JSTOR, Scopus, ProQuest, Elsevier, Springer, Wiley, Nature, Science, IEEE and ACM journals, so that literature surfaces too.
+
 Total coverage: 10B+ records. Wikipedia is excluded. All sources require DOI or verifiable URL. The plagiarism scanner queries these same 35 databases and also builds a local in-database corpus (Postgres pg_trgm) that grows with use.
+
+Supported paper types (35): argumentative/persuasive/narrative/expository essays, research papers, dissertations, theses, literature reviews, lab reports, case studies, reflective papers, annotated bibliographies, research proposals, discussion posts, methodology and results sections, and more (high-school to PhD). Data analysis: upload CSV/spreadsheets for descriptive statistics, Pearson correlations, regression-style relationships and trend analysis, plus a dedicated financial-statement analyser (ratios, IFRS/GAAP) — an alternative to reaching for SPSS, R, Stata, Excel or Python when you also need the written interpretation.
 
 ## Accuracy, grounding and anti-hallucination
 
