@@ -4,6 +4,7 @@ import { anthropic } from "../lib/ai";
 import { recordUsage } from "../lib/apiCost";
 import { trackUsage, isAtLimit, getUserPlan, getUsage, PLAN_LIMITS, enforceLimit, quotaExceededMessage } from "../lib/usageTracker";
 import { searchAllAcademicSources, buildRAGContext } from "../lib/academicSources";
+import { buildGroundingContext } from "../lib/grounding";
 import { z } from "zod";
 
 const router = Router();
@@ -165,6 +166,11 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
       } catch { /* non-fatal */ }
     }
 
+    // Anti-hallucination grounding for finance / markets / current-events: pulls
+    // real live quotes + a vetted authoritative-source shortlist the model must
+    // cite (and forbids fabricating figures). Empty for other questions.
+    const grounding = await buildGroundingContext(body.question).catch(() => "");
+
     type SupportedMime = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
     type ContentBlock =
@@ -188,6 +194,7 @@ router.post("/assistant/ask-stream", requireAuth, async (req, res) => {
 
     const questionText = [
       body.question.trim(),
+      grounding ? `\n${grounding}` : "",
       ragContext ? `\n\nAcademic reference context:\n${ragContext}` : "",
     ].filter(Boolean).join("");
 
