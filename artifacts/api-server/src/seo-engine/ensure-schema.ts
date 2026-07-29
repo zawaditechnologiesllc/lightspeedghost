@@ -135,7 +135,18 @@ export async function ensureSeoSchema(): Promise<void> {
     )
   `);
 
-  // 6. Indexes the hot paths use.
+  // 6. Redirect map — 301s from consolidated/archived slugs to their canonical
+  //    page, so fixing keyword cannibalisation never leaves a 404 and link
+  //    equity flows to the surviving page. Populated by scripts/seo-decannibalize.sql.
+  await run("redirects", `
+    CREATE TABLE IF NOT EXISTS seo_redirects (
+      from_slug  text PRIMARY KEY,
+      to_slug    text NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
+  // 7. Indexes the hot paths use.
   await run("idx.status",    `CREATE INDEX IF NOT EXISTS idx_seo_pages_status ON seo_pages(status)`);
   await run("idx.published", `CREATE INDEX IF NOT EXISTS idx_seo_pages_published ON seo_pages(published)`);
   await run("idx.cluster",   `CREATE INDEX IF NOT EXISTS idx_seo_pages_cluster ON seo_pages(cluster_id)`);
