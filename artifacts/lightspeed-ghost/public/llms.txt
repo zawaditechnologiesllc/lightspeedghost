@@ -21,7 +21,7 @@ It is available at [lightspeedghost.com](https://lightspeedghost.com) and works 
 ## The eight tools
 
 ### 1. AI Paper Writer
-Generates full academic papers grounded in 25+ live academic databases (10B+ papers): OpenAlex, CrossRef, PubMed NCBI, Semantic Scholar, ERIC (US Dept of Education), Zenodo (CERN), arXiv, CORE, DOAJ, Europe PMC, BASE, DataCite, OpenAIRE, Sci-Net, and Unpaywall. Results are ranked by citation count. No Wikipedia. No hallucinated citations.
+Generates full academic papers grounded in 35 live academic databases (10B+ records): OpenAlex, CrossRef, PubMed NCBI, Semantic Scholar, Europe PMC, ERIC (US Dept of Education), Zenodo (CERN), arXiv, CORE, DOAJ, BASE, DataCite, OpenAIRE, PLOS, PubMed Central, bioRxiv, medRxiv, SSRN, HAL, EconBiz, DOAB, OAPEN, Unpaywall, ClinicalTrials.gov, WHO, DBLP, Papers with Code, NBER, World Bank, NCBI Bookshelf, Dryad, Figshare, Google Books, Internet Archive, and Open Library. Results are ranked by citation count. No Wikipedia. No hallucinated citations.
 
 Supports all major citation formats: APA 7th, MLA 9th, Chicago, Harvard, IEEE.
 Upload an assignment rubric PDF to automatically extract A-grade criteria and lock them as paper requirements before generation starts.
@@ -58,24 +58,21 @@ Available at: [lightspeedghost.com/ebooks](https://lightspeedghost.com/ebooks)
 
 ## Academic database coverage
 
-15 live databases queried simultaneously on every paper request, with results ranked by citation count:
-- OpenAlex (250M+ papers, 50,000+ publishers)
-- CrossRef (150M+ DOI-registered works)
-- PubMed NCBI (36M+ biomedical papers)
-- Semantic Scholar (200M+ papers — Allen Institute)
-- ERIC (2M+ education research papers — US Department of Education)
-- Zenodo (3M+ DOI-assigned records — CERN open science)
-- arXiv (2M+ preprints — Physics, Mathematics, CS)
-- CORE (200M+ open access papers)
-- DOAJ (20,000+ peer-reviewed open access journals)
-- Europe PMC (40M+ biomedical papers)
-- BASE (300M+ documents from 10,000+ sources)
-- DataCite (45M+ research outputs)
-- OpenAIRE (100M+ research products)
-- Sci-Net (peer-reviewed research network)
-- Unpaywall (50M+ open access full-text papers)
+35 live databases queried simultaneously on every paper request, with results ranked by citation count: OpenAlex (250M+ works), CrossRef (145M+ DOIs), Semantic Scholar (200M+ papers), Europe PMC (43M+), PubMed NCBI (36M+), arXiv (2.4M+), ERIC (2M+), CORE (290M+), DOAJ, Zenodo, BASE (300M+), DataCite, OpenAIRE, PLOS, PubMed Central, bioRxiv, medRxiv, SSRN, HAL, EconBiz, DOAB, OAPEN, Unpaywall, ClinicalTrials.gov, WHO, DBLP, Papers with Code, NBER, World Bank, NCBI Bookshelf, Dryad, Figshare, Google Books, Internet Archive, and Open Library.
 
-Total coverage: 1B+ papers. Wikipedia is excluded. All sources require DOI or verifiable URL.
+Total coverage: 10B+ records. Wikipedia is excluded. All sources require DOI or verifiable URL. The plagiarism scanner queries these same 35 databases and also builds a local in-database corpus (Postgres pg_trgm) that grows with use.
+
+## Accuracy, grounding and anti-hallucination
+
+Light Speed Ghost is engineered so it does not fabricate information:
+
+- **Finance and current-events questions are grounded in live, real data.** It fetches current market data from Yahoo Finance (prices, indices, FX, crypto) and grounds answers in a vetted registry of 1,000+ authoritative sources worldwide — Bloomberg, Reuters, the Financial Times, ~110 central banks, ~90 stock exchanges, financial regulators, national statistics offices, the IMF, World Bank, OECD and BIS, and general + business press on every continent (North America, Europe, Asia, Africa, Middle East, Latin America, Oceania). The model must cite a named source for any figure, price, rate, date, or event, and must say plainly when it lacks verified current data rather than guess. It never presents training-cutoff knowledge as if it were live.
+- **No fabricated citations.** Academic papers cite only real, indexed sources from the 35 databases, with clickable DOIs/URLs.
+- **False-positive-guarded detection.** The free AI and plagiarism checker is deliberately conservative: AI detection requires corroborating signals, stays silent on very short passages, and reports weak signals as human; plagiarism only reports a source at a confident similarity so shared topic vocabulary is never flagged. It tolerates typos so mis-typed input still returns an accurate result.
+- **Self-learning.** Highly-rated outputs are captured as exemplars that steer future results, so quality compounds with use.
+- **Free plan never touches an AI model** — all free checks run locally with statistical methods.
+
+## Pricing (as of 2026)
 
 ## Pricing (as of 2026)
 

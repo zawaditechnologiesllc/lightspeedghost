@@ -108,6 +108,19 @@ publicRouter.get("/seo/:slug", async (req: Request, res: Response) => {
   try {
     const page = await getPublishedPage(slug);
     if (!page) {
+      // Consolidated/archived slug? 301 to its canonical so we resolve keyword
+      // cannibalisation without 404s and pass link equity to the survivor.
+      try {
+        const { rows } = await pool.query<{ to_slug: string }>(
+          `SELECT to_slug FROM seo_redirects WHERE from_slug = $1 LIMIT 1`,
+          [slug],
+        );
+        const to = rows[0]?.to_slug;
+        if (to && to !== slug) {
+          res.redirect(301, `/seo/${to}`);
+          return;
+        }
+      } catch { /* seo_redirects may not exist yet — fall through to 404 */ }
       res.status(404).send("Page not found");
       return;
     }
